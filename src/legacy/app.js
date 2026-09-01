@@ -4,15 +4,19 @@
 // build → env-vars → Firebase connect) কাজ করছে। কোনো Onboarding/Family/
 // Member feature এখনো এখানে নেই — সেগুলো এই ধাপ verify হওয়ার পরের কমিটে
 // যোগ হবে (Process Rule ১০ — Verify-before-proceed)।
-import { auth } from "./firebaseConfig.js";
+import { auth, initError } from "./firebaseConfig.js";
 
 const { useState, useEffect } = React;
 
 function BootCheck() {
   const [authState, setAuthState] = useState("checking");
-  const [projectId, setProjectId] = useState(import.meta.env.VITE_FIREBASE_PROJECT_ID || "(missing)");
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || "(missing)";
 
   useEffect(() => {
+    if (!auth) {
+      setAuthState("unavailable (Firebase init failed — নিচে দেখুন)");
+      return;
+    }
     const unsub = auth.onAuthStateChanged(
       () => setAuthState("connected"),
       (err) => setAuthState("error: " + err.message)
@@ -30,6 +34,17 @@ function BootCheck() {
       { style: { background: "#F5F5F0", padding: "12px", borderRadius: "8px", marginTop: "12px" } },
       React.createElement("div", null, "Firebase Project ID: ", React.createElement("b", null, projectId)),
       React.createElement("div", null, "Auth SDK status: ", React.createElement("b", null, authState))
+    ),
+    initError && React.createElement(
+      "div",
+      {
+        style: {
+          marginTop: "16px", padding: "12px", borderRadius: "8px",
+          background: "#FDECEA", border: "2px solid #C0392B", color: "#7A1F14",
+          fontFamily: "monospace", fontSize: "13px", whiteSpace: "pre-wrap"
+        }
+      },
+      "Firebase init error:\n" + initError
     )
   );
 }
