@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:rules": "firebase emulators:exec --project=demo-health-assistant --only firestore \"node --test tests/rules\""
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -15,6 +16,8 @@
   },
   "devDependencies": {
     "vite": "^5.4.0",
-    "@vitejs/plugin-react": "^4.3.1"
+    "@vitejs/plugin-react": "^4.3.1",
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase-tools": "^13.29.1"
   }
 }
