@@ -1,14 +1,17 @@
-// Walking Skeleton — Step 1: Hello World boot-check.
+// Walking Skeleton — Step 2: Anonymous auth bootstrap + UID display.
 //
-// উদ্দেশ্য শুধু এটা যাচাই করা যে পুরো পাইপলাইন (GitHub → Cloudflare Pages
-// build → env-vars → Firebase connect) কাজ করছে। কোনো Onboarding/Family/
-// Member feature এখনো এখানে নেই — সেগুলো এই ধাপ verify হওয়ার পরের কমিটে
-// যোগ হবে (Process Rule ১০ — Verify-before-proceed)।
+// DailyTask-এর প্রমাণিত pattern reuse (app.js-এর auth.onAuthStateChanged
+// bootstrap লজিক): প্রথমবার কোনো user না থাকলে auto signInAnonymously()।
+// এই UID-ই পরে familyIdentity.js/memberData.js-এ ownerUids/adminUids-এর
+// ভিত্তি হবে। এখানে শুধু UID দেখানো হচ্ছে যাতে আপনি সেটা কপি করে
+// firestore_rules_FINAL.md-এর OWNER_UID_PLACEHOLDER-এ বসাতে পারেন —
+// এখনো কোনো Family/Member ফিচার নেই (পরের কমিটে)।
 import { auth, initError } from "./firebaseConfig.js";
 
 const { useState, useEffect } = React;
 
 function BootCheck() {
+  const [uid, setUid] = useState(null);
   const [authState, setAuthState] = useState("checking");
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || "(missing)";
 
@@ -17,10 +20,17 @@ function BootCheck() {
       setAuthState("unavailable (Firebase init failed — নিচে দেখুন)");
       return;
     }
-    const unsub = auth.onAuthStateChanged(
-      () => setAuthState("connected"),
-      (err) => setAuthState("error: " + err.message)
-    );
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUid(user.uid);
+        setAuthState("connected (anonymous)");
+      } else {
+        setAuthState("signing in...");
+        auth.signInAnonymously().catch((err) => {
+          setAuthState("sign-in error: " + err.message);
+        });
+      }
+    }, (err) => setAuthState("error: " + err.message));
     return () => unsub();
   }, []);
 
@@ -33,7 +43,13 @@ function BootCheck() {
       "div",
       { style: { background: "#F5F5F0", padding: "12px", borderRadius: "8px", marginTop: "12px" } },
       React.createElement("div", null, "Firebase Project ID: ", React.createElement("b", null, projectId)),
-      React.createElement("div", null, "Auth SDK status: ", React.createElement("b", null, authState))
+      React.createElement("div", null, "Auth status: ", React.createElement("b", null, authState))
+    ),
+    uid && React.createElement(
+      "div",
+      { style: { marginTop: "16px", padding: "12px", borderRadius: "8px", background: "#E8F3EC", border: "2px solid #0E4B43" } },
+      React.createElement("div", { style: { fontSize: "13px", color: "#333", marginBottom: "6px" } }, "আপনার UID (rules-এর OWNER_UID_PLACEHOLDER-এ বসবে):"),
+      React.createElement("div", { style: { fontFamily: "monospace", fontSize: "13px", wordBreak: "break-all", userSelect: "all" } }, uid)
     ),
     initError && React.createElement(
       "div",
