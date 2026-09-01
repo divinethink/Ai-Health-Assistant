@@ -1,6 +1,12 @@
 // Firebase Setup — DailyTask pattern reuse + defensive error-capture
 // (Walking Skeleton debugging aid — non-coder owner-এর জন্য, যাতে blank
 // white-page-এর বদলে আসল error টেক্সট স্ক্রিনে দেখা যায়)
+//
+// FIX (এই থ্রেড): db.enablePersistence() সরানো হয়েছে — single-tab
+// offline-persistence একাধিক ব্রাউজার-ট্যাবে conflict করে "INTERNAL
+// ASSERTION FAILED" ও persistence-layer error তৈরি করছিল। Roadmap/
+// Architecture Plan-এ offline-persistence কোনো Confirmed requirement না,
+// তাই সম্পূর্ণ বাদ দেওয়া হলো (workaround না, root-cause fix)।
 
 let initError = null;
 let db = null;
@@ -40,7 +46,6 @@ try {
   }
 
   db = firebase.firestore();
-  db.enablePersistence().catch(() => {});
   auth = firebase.auth();
 } catch (err) {
   initError = (err && err.message) ? err.message : String(err);
