@@ -270,6 +270,38 @@ async function claimByKey(enteredKey, uid) {
   return { familyId, memberId };
 }
 
+// ---- নতুন (Step 5): Family Join-Request flow (accessRequests, Admin-approve) ----
+// DailyTask-এর accessRequests pattern reuse (FamilyManagement.jsx/AccessRequestsModal
+// + app.js-এর boot-time gate) — কিন্তু Health App-এ rules self-create শুধু
+// status:'pending'-এ allow করে (DailyTask-এর সাময়িক moderation-off/auto-approve
+// এখানে প্রযোজ্য না, firestore_rules_FINAL.md-এর accessRequests create-rule দ্রষ্টব্য)।
+// এটা member-profile claim (Key/Direct-Identify) থেকে আলাদা — শুধু family-level
+// "isFamilyMember" gate (roster/accessGrants ইত্যাদির prerequisite)।
+
+async function ensureAccessRequest(familyId, uid) {
+  const ref = db.collection("families").doc(familyId).collection("accessRequests").doc(uid);
+  const snap = await ref.get();
+  if (snap.exists) return snap.data();
+  const data = { status: "pending", requestedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  await ref.set(data);
+  return data;
+}
+function listenAccessRequest(familyId, uid, cb) {
+  return db.collection("families").doc(familyId).collection("accessRequests").doc(uid)
+    .onSnapshot((snap) => cb(snap.exists ? snap.data() : null));
+}
+async function listPendingAccessRequests(familyId) {
+  const snap = await db.collection("families").doc(familyId).collection("accessRequests")
+    .where("status", "==", "pending").get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+async function decideAccessRequest(familyId, requesterUid, decision) {
+  await db.collection("families").doc(familyId).collection("accessRequests").doc(requesterUid).update({
+    status: decision, // "approved" | "denied"
+    decidedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 // ---- ছোট UI primitives (Step 3-এর মতোই) ----
 
 function ErrorBox(msg) {
@@ -570,6 +602,115 @@ function MemberList({ familyId, isAdmin }) {
   );
 }
 
+// নতুন (Step 5): family-level join-request gate — member-profile না থাকা,
+// non-admin uid-এর জন্য। Live listener দিয়ে status বদলালে সাথে সাথে UI আপডেট হয়।
+function JoinRequestGate({ familyId, uid }) {
+  const [reqData, setReqData] = useState(undefined); // undefined=লোড হচ্ছে, null=নেই
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => listenAccessRequest(familyId, uid, setReqData), [familyId, uid]);
+
+  const send = useCallback(async () => {
+    setErr(null); setBusy(true);
+    try { await ensureAccessRequest(familyId, uid); }
+    catch (e) { setErr(e.message || String(e)); }
+    finally { setBusy(false); }
+  }, [familyId, uid]);
+
+  if (reqData === undefined) return Card("লোড হচ্ছে...");
+
+  if (reqData === null) {
+    return Card(
+      React.createElement(
+        React.Fragment, null,
+        React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "এই পরিবারে যোগ দিন"),
+        React.createElement("p", { style: { color: "#555", fontSize: "13px" } },
+          "আপনার এখনো এই পরিবারে কোনো প্রোফাইল নেই। যদি Admin আপনাকে একটা Key দিয়ে থাকেন, তাহলে ফিরে গিয়ে \"Key দিয়ে লগইন\" ব্যবহার করুন। Key না থাকলে, নিচের বাটনে যোগদানের অনুরোধ পাঠান — Admin অনুমোদন করলে আপনি পরিবারের অংশ হবেন।"
+        ),
+        err && ErrorBox(err),
+        PrimaryButton("যোগদানের অনুরোধ পাঠান", send, busy)
+      )
+    );
+  }
+
+  if (reqData.status === "pending") {
+    return Card(
+      React.createElement(
+        React.Fragment, null,
+        React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "অনুমোদনের অপেক্ষায়"),
+        React.createElement("p", { style: { color: "#555", fontSize: "13px" } }, "আপনার যোগদানের অনুরোধ Admin-এর কাছে পাঠানো হয়েছে। অনুমোদন হলে এই পাতা নিজে থেকেই আপডেট হবে।")
+      )
+    );
+  }
+
+  if (reqData.status === "denied") {
+    return Card(
+      React.createElement(
+        React.Fragment, null,
+        React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "অনুরোধ প্রত্যাখ্যাত"),
+        React.createElement("p", { style: { color: "#555", fontSize: "13px" } }, "আপনার যোগদানের অনুরোধ Admin প্রত্যাখ্যান করেছেন। প্রশ্ন থাকলে Admin-এর সাথে সরাসরি যোগাযোগ করুন।")
+      )
+    );
+  }
+
+  // status === "approved": family-level সদস্য হয়েছেন, কিন্তু এখনো নিজের
+  // Member profile/Key নেই — সেটা Admin-কে যোগ করতে হবে (আগের ধাপের ফিচার)।
+  return Card(
+    React.createElement(
+      React.Fragment, null,
+      React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "যোগদান অনুমোদিত ✓"),
+      React.createElement("p", { style: { color: "#555", fontSize: "13px" } }, "আপনি এখন এই পরিবারের অংশ। আপনার নিজের প্রোফাইল/Key-এর জন্য Admin-কে বলুন — Key পেলে \"Key দিয়ে লগইন\" থেকে claim করবেন।")
+    )
+  );
+}
+
+// নতুন (Step 5): Admin-only — pending join-request approve/deny panel।
+function AccessRequestsPanel({ familyId }) {
+  const [requests, setRequests] = useState(null);
+  const [err, setErr] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const reload = useCallback(() => {
+    listPendingAccessRequests(familyId).then(setRequests).catch((e) => setErr(e.message || String(e)));
+  }, [familyId]);
+  useEffect(() => { reload(); }, [reload]);
+
+  const decide = useCallback(async (requesterUid, decision) => {
+    setBusyId(requesterUid);
+    try { await decideAccessRequest(familyId, requesterUid, decision); reload(); }
+    catch (e) { setErr(e.message || String(e)); }
+    finally { setBusyId(null); }
+  }, [familyId, reload]);
+
+  if (err) return ErrorBox(err);
+  if (!requests) return null;
+
+  return React.createElement(
+    "div", { style: { marginTop: "14px" } },
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "যোগদানের অনুরোধ"),
+    requests.length === 0
+      ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "কোনো পেন্ডিং অনুরোধ নেই।")
+      : requests.map((r) =>
+          React.createElement(
+            "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+            React.createElement("span", null, "uid: " + r.id.slice(0, 10) + "…"),
+            React.createElement(
+              "div", { style: { display: "flex", gap: "6px" } },
+              React.createElement("button", {
+                onClick: () => decide(r.id, "approved"), disabled: busyId === r.id,
+                style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer" },
+              }, "অনুমোদন"),
+              React.createElement("button", {
+                onClick: () => decide(r.id, "denied"), disabled: busyId === r.id,
+                style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+              }, "প্রত্যাখ্যান")
+            )
+          )
+        )
+  );
+}
+
 function Dashboard({ familyId, familyDoc, memberDoc, isAdmin }) {
   const [refreshTick, setRefreshTick] = useState(0);
   return Card(
@@ -582,10 +723,11 @@ function Dashboard({ familyId, familyDoc, memberDoc, isAdmin }) {
         React.createElement("div", null, "আপনার ভূমিকা: ", React.createElement("b", null, memberDoc.role === "admin" ? "Admin" : memberDoc.role))
       ),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
-      isAdmin && React.createElement(MemberList, { key: refreshTick, familyId, isAdmin }),
+      isAdmin && React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin }),
+      isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "Walking Skeleton ধাপ ৪ সম্পন্ন — পরের ধাপ: family-join request flow, Health Record CRUD।"
+        "Walking Skeleton ধাপ ৫ সম্পন্ন — পরের ধাপ: Health Record CRUD (Condition/Observation)।"
       )
     )
   );
@@ -672,11 +814,7 @@ function App() {
     if (isAdmin) {
       return React.createElement(CreateOwnProfile, { familyId, uid, onProfileReady: () => loadFamilyAndMember(familyId, uid) });
     }
-    return Card(
-      React.createElement("p", { style: { color: "#555" } },
-        "এই পরিবারে আপনার কোনো প্রোফাইল এখনো তৈরি হয়নি। Admin-কে যোগাযোগ করুন। (Join/Take-Access ফ্লো পরের ধাপে আসবে।)"
-      )
-    );
+    return React.createElement(JoinRequestGate, { familyId, uid });
   }
 
   if (!memberDoc) return Card("লোড হচ্ছে...");
