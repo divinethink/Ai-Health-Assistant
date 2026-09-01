@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Health Assistant — পারিবারিক স্বাস্থ্য সহায়ক</title>
+<meta name="theme-color" content="#0E4B43" />
+
+<!-- Preconnect — DailyTask pattern reused -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<!-- Hind Siliguri — Architecture Plan §10.6-এ Doctor Export ফন্ট হিসেবে Confirmed;
+     সাধারণ UI-তেও একই বাংলা ফন্ট ব্যবহার করে visual-consistency রাখা হচ্ছে -->
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<script>
+  // cdn.tailwindcss.com-এর "production-এ ব্যবহার করবেন না" cosmetic warning suppress —
+  // DailyTask app-এর প্রমাণিত pattern, আচরণ অপরিবর্তিত
+  (function () {
+    const _origWarn = console.warn;
+    const SUPPRESSED_SUBSTRINGS = ["cdn.tailwindcss.com"];
+    console.warn = function (...args) {
+      const combined = args
+        .map((a) => (typeof a === "string" ? a : (a && a.message) || ""))
+        .join(" ");
+      if (SUPPRESSED_SUBSTRINGS.some((s) => combined.includes(s))) return;
+      _origWarn.apply(console, args);
+    };
+  })();
+</script>
+<script src="https://cdn.tailwindcss.com" defer></script>
+
+<style>
+  :root { --theme-primary: #0E4B43; }
+  html, body { background: #F4F7F1; margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+</style>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
