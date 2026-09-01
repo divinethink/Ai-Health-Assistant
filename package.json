@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:rules": "firebase emulators:exec --project=demo-health-assistant --only firestore \"node --test tests/rules\""
+    "test:rules": "firebase emulators:exec --project=demo-health-assistant --only firestore \"node --test tests/rules/health-assistant.rules.test.mjs\""
   },
   "dependencies": {
     "react": "^18.3.1",
