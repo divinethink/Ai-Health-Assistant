@@ -302,6 +302,86 @@ async function decideAccessRequest(familyId, requesterUid, decision) {
   });
 }
 
+// ---- নতুন (Step 6): Health Record CRUD (Condition/Observation/MedicationStatement/AllergyIntolerance) ----
+// Architecture Plan §2 অনুযায়ী একত্রিত `healthRecords/{id}` collection, resourceType
+// discriminator দিয়ে চারটা logical type আলাদা করা হয়। `firestore_rules_FINAL.md`-এর
+// healthRecords match-block অনুযায়ী rules নিজেই এই ৪টা resourceType allow করে ও
+// hasAccess(familyId, targetMemberId, callerMemberId) দিয়ে verify করে — তাই client-এর
+// দায়িত্ব শুধু সঠিক memberId (কার record) ও lastEditedByMemberId (caller নিজে কে,
+// permission-verification-only field, Architecture Plan §2 নোট অনুযায়ী — content-edit
+// audit-trail না) পাঠানো।
+
+const RESOURCE_TYPE_LABELS = {
+  condition: "Condition (রোগ/সমস্যা)",
+  observation: "Observation (পরিমাপ/টেস্ট)",
+  medicationStatement: "Medication (ওষুধ)",
+  allergy: "Allergy (এলার্জি)",
+};
+
+// resourceType-নির্দিষ্ট field-সেট আলাদা করা হলো (Architecture Plan §2 schema অনুযায়ী) —
+// অপ্রাসঙ্গিক ফর্ম-ফিল্ড payload-এ যাতে না যায় (rules-এ allowlist নেই এই collection-এ,
+// কিন্তু data-hygiene-এর জন্য এখানেই সীমিত রাখা হলো)।
+function buildHealthRecordFields(resourceType, fields) {
+  if (resourceType === "condition") {
+    return { name: fields.name.trim(), category: fields.category, status: fields.status, onsetDate: fields.date || null };
+  }
+  if (resourceType === "observation") {
+    return { type: fields.type.trim(), value: fields.value.trim(), unit: fields.unit.trim(), date: fields.date || null };
+  }
+  if (resourceType === "medicationStatement") {
+    return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null };
+  }
+  if (resourceType === "allergy") {
+    return { substance: fields.name.trim(), reaction: fields.reaction.trim(), severity: fields.severity };
+  }
+  throw new Error("অজানা resourceType: " + resourceType);
+}
+
+async function createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, fields) {
+  const ref = db.collection("families").doc(familyId).collection("healthRecords").doc();
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  await ref.set({
+    memberId: targetMemberId,
+    resourceType,
+    ...buildHealthRecordFields(resourceType, fields),
+    lastEditedByMemberId: callerMemberId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+// শুধু equality filter (memberId ==) — orderBy যোগ করলে composite index লাগত, তাই
+// client-side sort করা হচ্ছে (§3.4.5-এর memberId+resourceType composite index শুধু
+// resourceType-ফিল্টার-সহ query-র জন্য প্রয়োজন হবে, এই মুহূর্তে সেই query নেই)।
+async function listHealthRecords(familyId, targetMemberId) {
+  const snap = await db.collection("families").doc(familyId).collection("healthRecords")
+    .where("memberId", "==", targetMemberId).get();
+  const records = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  records.sort((a, b) => {
+    const at = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+    const bt = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+    return bt - at;
+  });
+  return records;
+}
+
+function describeHealthRecord(r) {
+  if (r.resourceType === "condition") {
+    return r.name + " — " + (r.status || "") + " (Category " + (r.category || "?") + ")" + (r.onsetDate ? ", onset: " + r.onsetDate : "");
+  }
+  if (r.resourceType === "observation") {
+    return r.type + ": " + r.value + (r.unit ? " " + r.unit : "") + (r.date ? " (" + r.date + ")" : "");
+  }
+  if (r.resourceType === "medicationStatement") {
+    return r.genericName + " — " + (r.tier || "") + ", " + (r.status || "") + (r.startDate ? ", শুরু: " + r.startDate : "");
+  }
+  if (r.resourceType === "allergy") {
+    return r.substance + " — " + (r.reaction || "") + " (" + (r.severity || "") + ")";
+  }
+  return "";
+}
+
 // ---- ছোট UI primitives (Step 3-এর মতোই) ----
 
 function ErrorBox(msg) {
@@ -338,6 +418,30 @@ function SecondaryButton(label, onClick, busy) {
 }
 function Card(children) {
   return React.createElement("div", { style: { padding: "24px", maxWidth: "420px", margin: "40px auto", fontFamily: "'Hind Siliguri', sans-serif" } }, children);
+}
+// নতুন (Step 6): TextField/date-input-এর মতোই ছোট reusable primitive — dropdown ও
+// date-picker-এর জন্য (Health Record ফর্মে বারবার লাগে)।
+function SelectField(label, value, onChange, options) {
+  return React.createElement(
+    "div", { style: { marginTop: "10px" } },
+    React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, label),
+    React.createElement(
+      "select", { value, onChange: (e) => onChange(e.target.value),
+        style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" } },
+      options.map(([v, l]) => React.createElement("option", { key: v, value: v }, l))
+    )
+  );
+}
+function DateField(label, value, onChange) {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  return React.createElement(
+    "div", { style: { marginTop: "10px" } },
+    React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, label),
+    React.createElement("input", {
+      type: "date", max: todayISO, value, onChange: (e) => onChange(e.target.value),
+      style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
+    })
+  );
 }
 
 // ---- Entry screen: family create / resume / Direct-Identify ----
@@ -711,7 +815,163 @@ function AccessRequestsPanel({ familyId }) {
   );
 }
 
-function Dashboard({ familyId, familyDoc, memberDoc, isAdmin }) {
+// ---- নতুন (Step 6): Health Record CRUD UI ----
+// resourceType অনুযায়ী form-field বদলায়, কিন্তু state/submit-logic একটাই component-এ
+// (§11-এর presentational-pattern-এর সাথে সংগতিপূর্ণ ছোট scope — আলাদা state/logic
+// module এখনো দরকার নেই, Walking Skeleton পর্যায়ে single-file-ই যথেষ্ট)।
+
+function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded }) {
+  const [resourceType, setResourceType] = useState("condition");
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("A");
+  const [status, setStatus] = useState("active");
+  const [obsType, setObsType] = useState("");
+  const [value, setValue] = useState("");
+  const [unit, setUnit] = useState("");
+  const [tier, setTier] = useState("otc-self-care");
+  const [reaction, setReaction] = useState("");
+  const [severity, setSeverity] = useState("mild");
+  const [date, setDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const resetFields = useCallback(() => {
+    setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
+  }, []);
+
+  const changeResourceType = useCallback((v) => {
+    setResourceType(v); resetFields(); setErr(null);
+  }, [resetFields]);
+
+  const submit = useCallback(async () => {
+    setErr(null);
+    if (resourceType === "condition" && !name.trim()) { setErr("Condition-এর নাম লিখুন।"); return; }
+    if (resourceType === "observation" && (!obsType.trim() || !value.trim())) { setErr("Observation-এর ধরন ও মান লিখুন।"); return; }
+    if (resourceType === "medicationStatement" && !name.trim()) { setErr("ওষুধের নাম লিখুন।"); return; }
+    if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
+    setBusy(true);
+    try {
+      await createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, {
+        name, category, status, type: obsType, value, unit, tier, reaction, severity, date,
+      });
+      resetFields();
+      onAdded();
+    } catch (e) {
+      setErr(e.code === "permission-denied"
+        ? "এই সদস্যের জন্য Health Record যোগ করার অনুমতি আপনার নেই।"
+        : (e.message || String(e)));
+    } finally {
+      setBusy(false);
+    }
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, onAdded, resetFields]);
+
+  const typeFields = [];
+  if (resourceType === "condition") {
+    typeFields.push(TextField("নাম", name, setName, "যেমন: জ্বর"));
+    typeFields.push(SelectField("Category", category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]]));
+    typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["resolved", "resolved"], ["chronic", "chronic"]]));
+    typeFields.push(DateField("Onset তারিখ (ঐচ্ছিক)", date, setDate));
+  } else if (resourceType === "observation") {
+    typeFields.push(TextField("ধরন", obsType, setObsType, "যেমন: Blood Sugar"));
+    typeFields.push(TextField("মান", value, setValue, "যেমন: 110"));
+    typeFields.push(TextField("একক", unit, setUnit, "যেমন: mg/dL"));
+    typeFields.push(DateField("তারিখ (ঐচ্ছিক)", date, setDate));
+  } else if (resourceType === "medicationStatement") {
+    typeFields.push(TextField("ওষুধের নাম", name, setName, "যেমন: Paracetamol"));
+    typeFields.push(SelectField("Tier", tier, setTier, [["otc-self-care", "otc-self-care"], ["requires-consult", "requires-consult"]]));
+    typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["stopped", "stopped"]]));
+    typeFields.push(DateField("শুরুর তারিখ (ঐচ্ছিক)", date, setDate));
+  } else if (resourceType === "allergy") {
+    typeFields.push(TextField("Substance", name, setName, "যেমন: Penicillin"));
+    typeFields.push(TextField("Reaction", reaction, setReaction, "যেমন: র‍্যাশ"));
+    typeFields.push(SelectField("Severity", severity, setSeverity, [["mild", "mild"], ["moderate", "moderate"], ["severe", "severe"]]));
+  }
+
+  return React.createElement(
+    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
+    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "নতুন Health Record যোগ করুন"),
+    SelectField("ধরন", resourceType, changeResourceType, [
+      ["condition", "Condition"], ["observation", "Observation"],
+      ["medicationStatement", "Medication"], ["allergy", "Allergy"],
+    ]),
+    ...typeFields,
+    err && ErrorBox(err),
+    PrimaryButton("Save করুন", submit, busy)
+  );
+}
+
+function HealthRecordList({ familyId, targetMemberId, refreshTick }) {
+  const [records, setRecords] = useState(null);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    setRecords(null);
+    setErr(null);
+    listHealthRecords(familyId, targetMemberId)
+      .then(setRecords)
+      .catch((e) => setErr(e.code === "permission-denied"
+        ? "এই সদস্যের Health Record দেখার অনুমতি আপনার নেই (Take-Access grant ছাড়া অন্য সদস্যের data দেখা যায় না)।"
+        : (e.message || String(e))));
+  }, [familyId, targetMemberId, refreshTick]);
+
+  if (err) return ErrorBox(err);
+  if (!records) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে...");
+  if (records.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "কোনো record নেই।");
+
+  return React.createElement(
+    "div", { style: { marginTop: "10px" } },
+    records.map((r) =>
+      React.createElement(
+        "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px" } },
+        React.createElement("div", null, React.createElement("b", null, RESOURCE_TYPE_LABELS[r.resourceType] || r.resourceType)),
+        React.createElement("div", { style: { color: "#555" } }, describeHealthRecord(r))
+      )
+    )
+  );
+}
+
+// Member-picker + form + list — কোন সদস্যের record দেখা/যোগ করা হচ্ছে তা বেছে নেওয়া
+// যায় (open roster থেকে, §3.1 অনুযায়ী)। Permission actual enforcement সবসময়
+// server-side rules করে — এই picker শুধু UI-convenience, security boundary না
+// (Process ফাইল Rule ৪-এর সাথে সংগতিপূর্ণ)। তাই non-admin/non-grant সদস্য বেছে নিলে
+// read/write উভয়েই permission-denied আসবে, যা Walking Skeleton-এর permission
+// smoke-test-এর জন্যই প্রয়োজনীয়।
+function HealthRecordsSection({ familyId, callerMemberId }) {
+  const [members, setMembers] = useState(null);
+  const [loadErr, setLoadErr] = useState(null);
+  const [targetMemberId, setTargetMemberId] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  useEffect(() => {
+    listMembers(familyId)
+      .then((list) => {
+        setMembers(list);
+        setTargetMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
+      })
+      .catch((e) => setLoadErr(e.message || String(e)));
+  }, [familyId, callerMemberId]);
+
+  if (loadErr) return ErrorBox(loadErr);
+  if (!members || !targetMemberId) {
+    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+  }
+
+  return React.createElement(
+    "div", { style: { marginTop: "20px" } },
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
+    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
+    React.createElement(HealthRecordForm, {
+      key: "form-" + targetMemberId,
+      familyId, targetMemberId, callerMemberId,
+      onAdded: () => setRefreshTick((t) => t + 1),
+    }),
+    React.createElement(HealthRecordList, {
+      key: "list-" + targetMemberId, familyId, targetMemberId, refreshTick,
+    })
+  );
+}
+
+function Dashboard({ familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const [refreshTick, setRefreshTick] = useState(0);
   return Card(
     React.createElement(
@@ -725,9 +985,10 @@ function Dashboard({ familyId, familyDoc, memberDoc, isAdmin }) {
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
       isAdmin && React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin }),
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
+      React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "Walking Skeleton ধাপ ৫ সম্পন্ন — পরের ধাপ: Health Record CRUD (Condition/Observation)।"
+        "Walking Skeleton ধাপ ৬ সম্পন্ন — পরের ধাপ: permission smoke-test (Admin অন্য সদস্যের data দেখতে পারা vs non-admin non-grant না পারা) ও Firebase Emulator rules unit-test।"
       )
     )
   );
@@ -819,7 +1080,7 @@ function App() {
 
   if (!memberDoc) return Card("লোড হচ্ছে...");
 
-  return React.createElement(Dashboard, { familyId, familyDoc, memberDoc, isAdmin });
+  return React.createElement(Dashboard, { familyId, familyDoc, memberId, memberDoc, isAdmin });
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
