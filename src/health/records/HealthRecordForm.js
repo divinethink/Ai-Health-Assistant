@@ -4,13 +4,16 @@
 // component-ই যথেষ্ট)। app.js থেকে split (Component-Split — অংশ A), কোনো
 // functional পরিবর্তন নেই।
 
-import { TextField, SelectField, DateField, ErrorBox, PrimaryButton } from "../../shared/ui.js";
-import { createHealthRecord } from "./healthRecordsData.js";
+import { TextField, SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
+import { createHealthRecord, updateHealthRecord } from "./healthRecordsData.js";
 
-const { useState, useCallback } = React;
+const { useState, useCallback, useEffect } = React;
 
-export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded }) {
-  const [resourceType, setResourceType] = useState("condition");
+// editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
+// না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
+export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit }) {
+  const isEdit = !!editingRecord;
+  const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : "condition");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("A");
   const [status, setStatus] = useState("active");
@@ -23,6 +26,28 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+
+  // edit-mode শুরু হলে (বা edit-target বদলালে) existing record-এর ভ্যালু দিয়ে fields prefill
+  useEffect(() => {
+    if (!editingRecord) {
+      // edit বাতিল/সম্পন্ন হয়ে create-mode-এ ফিরলে আগের edit-value থেকে যাওয়া ঠেকাতে reset
+      setResourceType("condition"); resetFields(); setErr(null);
+      return;
+    }
+    const r = editingRecord;
+    setResourceType(r.resourceType);
+    setName(r.name || r.genericName || r.substance || "");
+    setCategory(r.category || "A");
+    setStatus(r.status || "active");
+    setObsType(r.type || "");
+    setValue(r.value || "");
+    setUnit(r.unit || "");
+    setTier(r.tier || "otc-self-care");
+    setReaction(r.reaction || "");
+    setSeverity(r.severity || "mild");
+    setDate(r.onsetDate || r.date || r.startDate || "");
+    setErr(null);
+  }, [editingRecord]);
 
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
@@ -40,19 +65,24 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
     setBusy(true);
     try {
-      await createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, {
-        name, category, status, type: obsType, value, unit, tier, reaction, severity, date,
-      });
-      resetFields();
-      onAdded();
+      const fields = { name, category, status, type: obsType, value, unit, tier, reaction, severity, date };
+      if (isEdit) {
+        await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
+        onAdded();
+        onCancelEdit && onCancelEdit();
+      } else {
+        await createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, fields);
+        resetFields();
+        onAdded();
+      }
     } catch (e) {
       setErr(e.code === "permission-denied"
-        ? "এই সদস্যের জন্য Health Record যোগ করার অনুমতি আপনার নেই।"
+        ? "এই সদস্যের জন্য Health Record " + (isEdit ? "আপডেট" : "যোগ") + " করার অনুমতি আপনার নেই।"
         : (e.message || String(e)));
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, onAdded, resetFields]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
   const typeFields = [];
   if (resourceType === "condition") {
@@ -77,14 +107,17 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "নতুন Health Record যোগ করুন"),
-    SelectField("ধরন", resourceType, changeResourceType, [
-      ["condition", "Condition"], ["observation", "Observation"],
-      ["medicationStatement", "Medication"], ["allergy", "Allergy"],
-    ]),
+    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : undefined } },
+    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? "Health Record এডিট করুন" : "নতুন Health Record যোগ করুন"),
+    isEdit
+      ? React.createElement("div", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } }, "ধরন: " + resourceType + " (edit-এ বদলানো যায় না)")
+      : SelectField("ধরন", resourceType, changeResourceType, [
+          ["condition", "Condition"], ["observation", "Observation"],
+          ["medicationStatement", "Medication"], ["allergy", "Allergy"],
+        ]),
     ...typeFields,
     err && ErrorBox(err),
-    PrimaryButton("Save করুন", submit, busy)
+    PrimaryButton(isEdit ? "Update করুন" : "Save করুন", submit, busy),
+    isEdit && SecondaryButton("বাতিল", onCancelEdit, busy)
   );
 }

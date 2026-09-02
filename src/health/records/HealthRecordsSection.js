@@ -18,6 +18,7 @@ export function HealthRecordsSection({ familyId, callerMemberId }) {
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [editingRecord, setEditingRecord] = useState(null);
 
   useEffect(() => {
     listMembers(familyId)
@@ -36,14 +37,17 @@ export function HealthRecordsSection({ familyId, callerMemberId }) {
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
+    SelectField("সদস্য বাছাই করুন", targetMemberId, (v) => { setTargetMemberId(v); setEditingRecord(null); }, members.map((m) => [m.id, m.name])),
     React.createElement(HealthRecordForm, {
       key: "form-" + targetMemberId,
       familyId, targetMemberId, callerMemberId,
+      editingRecord, onCancelEdit: () => setEditingRecord(null),
       onAdded: () => setRefreshTick((t) => t + 1),
     }),
     React.createElement(HealthRecordList, {
-      key: "list-" + targetMemberId, familyId, targetMemberId, refreshTick,
+      key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
+      onEdit: setEditingRecord,
+      onDeleted: () => setRefreshTick((t) => t + 1),
     })
   );
 }

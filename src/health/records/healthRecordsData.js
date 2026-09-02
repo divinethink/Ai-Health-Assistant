@@ -10,6 +10,7 @@
 // audit-trail না) পাঠানো।
 
 import { db } from "../../legacy/firebaseConfig.js";
+import { notifyMember } from "../../legacy/accessGrants.js";
 
 export const RESOURCE_TYPE_LABELS = {
   condition: "Condition (রোগ/সমস্যা)",
@@ -49,6 +50,28 @@ export async function createHealthRecord(familyId, targetMemberId, callerMemberI
     updatedAt: now,
   });
   return ref.id;
+}
+
+// resourceType বদলানো যায় না (rules-এও locked, L413) — শুধু field-value edit।
+export async function updateHealthRecord(familyId, recordId, resourceType, callerMemberId, fields) {
+  const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
+  await ref.update({
+    ...buildHealthRecordFields(resourceType, fields),
+    lastEditedByMemberId: callerMemberId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+// roadmap §3.4 Admin delete-override safeguard (ক): নিজের record না হলে (অর্থাৎ
+// Admin অন্য সদস্যের record মুছছেন — rules-এ hasDeleteAccess শুধু Admin/self-কেই
+// অনুমতি দেয়, তাই targetMemberId != callerMemberId মানেই Admin-override) —
+// owner-কে notification। ２-ধাপ confirm UI-স্তরে (HealthRecordList)।
+export async function deleteHealthRecord(familyId, recordId, targetMemberId, callerMemberId) {
+  await db.collection("families").doc(familyId).collection("healthRecords").doc(recordId).delete();
+  if (targetMemberId !== callerMemberId) {
+    await notifyMember(familyId, targetMemberId, "record-deleted",
+      "আপনার একটি Health Record Admin কর্তৃক মুছে ফেলা হয়েছে।");
+  }
 }
 
 // শুধু equality filter (memberId ==) — orderBy যোগ করলে composite index লাগত, তাই
