@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// Document/Report upload (Roadmap §7, Checklist P2) — file bytes এখানে,
+// metadata Firestore-এর families/{familyId}/documents/{id}-এ (firestore.rules)।
+//
+// Storage Rules সরাসরি firestore.rules-এর function import করতে পারে না,
+// তাই hasAccess()-এর একই লজিক এখানে firestore.get()/firestore.exists()
+// দিয়ে duplicate করা হয়েছে (Cloud Storage Rules v2 supports this)। কোনো
+// লজিক-পরিবর্তন নয়, শুধু একই নীতির দ্বিতীয় enforcement-layer — Process Rule ৪
+// (client-side flag কখনো security boundary না) অনুযায়ী এটাই বাধ্যতামূলক;
+// শুধু Firestore rules দিয়ে file-bytes সুরক্ষিত হয় না।
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdminOfFamily(familyId) {
+      let p = /databases/(default)/documents/families/$(familyId);
+      return firestore.exists(p) && firestore.get(p).data.adminUids.hasAny([request.auth.uid]);
+    }
+
+    function callerMemberIdOf(familyId) {
+      let p = /databases/(default)/documents/families/$(familyId)/uidMemberIndex/$(request.auth.uid);
+      return firestore.exists(p) ? firestore.get(p).data.memberId : null;
+    }
+
+    function memberOwnerUids(familyId, memberId) {
+      let p = /databases/(default)/documents/families/$(familyId)/members/$(memberId);
+      let m = firestore.exists(p) ? firestore.get(p).data : null;
+      return (m == null) ? [] : (('ownerUids' in m) ? m.ownerUids : []);
+    }
+
+    function isOwnerOfMember(familyId, memberId) {
+      return memberOwnerUids(familyId, memberId).hasAny([request.auth.uid]);
+    }
+
+    function existsApprovedGrant(familyId, targetMemberId, callerMemberId) {
+      let p = /databases/(default)/documents/families/$(familyId)/accessGrants/$(targetMemberId + '_' + callerMemberId);
+      return firestore.exists(p)
+        && firestore.get(p).data.status == 'approved'
+        && firestore.get(p).data.scope == 'read+write';
+    }
+
+    function hasAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && existsApprovedGrant(familyId, targetMemberId, callerMemberId));
+    }
+
+    function hasDeleteAccess(familyId, targetMemberId) {
+      return isAdminOfFamily(familyId) || isOwnerOfMember(familyId, targetMemberId);
+    }
+
+    // Path: families/{familyId}/documents/{memberId}/{docId}/{fileName}
+    match /families/{familyId}/documents/{memberId}/{docId}/{fileName} {
+      allow read: if request.auth != null && hasAccess(familyId, memberId, callerMemberIdOf(familyId));
+
+      allow create: if request.auth != null
+        && hasAccess(familyId, memberId, callerMemberIdOf(familyId))
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+
+      // metadata (Firestore document, স্বতন্ত্র) অপরিবর্তিত রেখে ফাইল
+      // replace করা এই scope-এ প্রয়োজন নেই — overwrite করলে নতুন docId/path
+      // ব্যবহার করা হবে (client-side নীতি), তাই update/overwrite বন্ধ।
+      allow update: if false;
+
+      allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
+    }
+  }
+}

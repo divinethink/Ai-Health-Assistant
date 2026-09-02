@@ -415,6 +415,23 @@ service cloud.firestore {
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
+      // Document/Report upload metadata (Roadmap §7, Checklist P2) — file
+      // bytes Cloud Storage-এ (storage.rules), এখানে শুধু metadata। hasAccess()-
+      // এর ঠিক একই pattern healthRecords-এর মতো (একই permission model,
+      // §3.4)। storagePath immutable-once-set — metadata পরে অন্য ফাইল
+      // point করতে না পারে তা নিশ্চিত করতে।
+      match /documents/{id} {
+        allow read: if request.auth != null
+          && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && request.resource.data.storagePath == resource.data.storagePath
+          && hasAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
+      }
+
       match /healthEpisodes/{episodeId} {
         allow read: if request.auth != null
           && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
