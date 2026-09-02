@@ -23,7 +23,9 @@ async function memberOwnerUids(familyId, memberId) {
 
 // একজন সদস্যের সব claimed device (ownerUids, max ৩টা)-এই notification পাঠানো হয়,
 // কারণ member-এর notification target uid-ভিত্তিক (§3.5.2 schema অনুযায়ী)।
-async function notifyMember(familyId, memberId, type, message) {
+// exported — health-record delete-notification (roadmap §3.4 Admin delete-override
+// safeguard)-এও reuse হয় (Process ফাইল Rule ১১: duplicate notify-logic এড়ানো)
+export async function notifyMember(familyId, memberId, type, message) {
   const uids = await memberOwnerUids(familyId, memberId);
   await Promise.all(uids.map((uid) => createNotification(familyId, uid, type, message)));
 }
