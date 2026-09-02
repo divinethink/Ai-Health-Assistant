@@ -350,4 +350,181 @@ describe('Health Assistant — Firestore Rules', function () {
       getDocs(collection(dbAs('uidTotalStranger'), 'families', FAMILY_ID, 'members'))
     );
   });
+
+  // ============================================================
+  // 10. AccessGrant — Take-Access request (grantee self-request, §3.5)
+  // ============================================================
+  it('10. AccessGrant create — grantee নিজে নিজের memberId দিয়ে pending request পাঠাতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'granterA', { ownerUids: ['uidGranterA'] });
+    await seedMember(FAMILY_ID, 'granteeA', { ownerUids: ['uidGranteeA'] });
+    await seedUidIndex(FAMILY_ID, 'uidGranteeA', 'granteeA');
+    const ref = doc(dbAs('uidGranteeA'), 'families', FAMILY_ID, 'accessGrants', 'granterA_granteeA');
+    await assertSucceeds(
+      setDoc(ref, {
+        granterId: 'granterA', granteeId: 'granteeA',
+        scope: 'read+write', relationshipType: 'other',
+        status: 'pending', revocable: true,
+        createdAt: new Date(),
+      })
+    );
+  });
+
+  it('10b. AccessGrant create — granteeId স্পুফ করে অন্য সদস্যের নামে request পাঠানো যাবে না', async () => {
+    await seedMember(FAMILY_ID, 'granterB', { ownerUids: ['uidGranterB'] });
+    await seedMember(FAMILY_ID, 'granteeB', { ownerUids: ['uidGranteeB'] });
+    await seedMember(FAMILY_ID, 'imposterB', { ownerUids: ['uidImposterB'] });
+    const ref = doc(dbAs('uidImposterB'), 'families', FAMILY_ID, 'accessGrants', 'granterB_granteeB');
+    await assertFails(
+      setDoc(ref, {
+        granterId: 'granterB', granteeId: 'granteeB', // caller-এর নিজের memberId না
+        scope: 'read+write', relationshipType: 'other',
+        status: 'pending', revocable: true,
+        createdAt: new Date(),
+      })
+    );
+  });
+
+  // ============================================================
+  // 11. AccessGrant — granter approve/deny
+  // ============================================================
+  it('11. AccessGrant approve — granter pending request approve করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'granterC', { ownerUids: ['uidGranterC'] });
+    await seedMember(FAMILY_ID, 'granteeC', { ownerUids: ['uidGranteeC'] });
+    await seedUidIndex(FAMILY_ID, 'uidGranterC', 'granterC');
+    await seedGrant(FAMILY_ID, 'granterC', 'granteeC', 'pending');
+    const ref = doc(dbAs('uidGranterC'), 'families', FAMILY_ID, 'accessGrants', 'granterC_granteeC');
+    await assertSucceeds(updateDoc(ref, { status: 'approved', grantedAt: new Date() }));
+  });
+
+  it('11b. AccessGrant approve — granter ছাড়া অন্য কেউ decide করতে পারবেন না', async () => {
+    await seedMember(FAMILY_ID, 'granterD', { ownerUids: ['uidGranterD'] });
+    await seedMember(FAMILY_ID, 'granteeD', { ownerUids: ['uidGranteeD'] });
+    await seedMember(FAMILY_ID, 'strangerD', { ownerUids: ['uidStrangerD'] });
+    await seedGrant(FAMILY_ID, 'granterD', 'granteeD', 'pending');
+    const ref = doc(dbAs('uidStrangerD'), 'families', FAMILY_ID, 'accessGrants', 'granterD_granteeD');
+    await assertFails(updateDoc(ref, { status: 'approved', grantedAt: new Date() }));
+  });
+
+  // ============================================================
+  // 12. AccessGrant — cancel approved (either side, revocable)
+  // ============================================================
+  it('12. AccessGrant cancel — approved grant granter/grantee যেকোনো পক্ষ cancel করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'granterE', { ownerUids: ['uidGranterE'] });
+    await seedMember(FAMILY_ID, 'granteeE', { ownerUids: ['uidGranteeE'] });
+    await seedUidIndex(FAMILY_ID, 'uidGranteeE', 'granteeE');
+    await seedGrant(FAMILY_ID, 'granterE', 'granteeE', 'approved');
+    const ref = doc(dbAs('uidGranteeE'), 'families', FAMILY_ID, 'accessGrants', 'granterE_granteeE');
+    await assertSucceeds(
+      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'granteeE' })
+    );
+  });
+
+  // ============================================================
+  // 13. AccessGrant — re-request after denied/cancelled
+  // ============================================================
+  it('13. AccessGrant re-request — denied/cancelled থেকে grantee আবার pending করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'granterF', { ownerUids: ['uidGranterF'] });
+    await seedMember(FAMILY_ID, 'granteeF', { ownerUids: ['uidGranteeF'] });
+    await seedUidIndex(FAMILY_ID, 'uidGranteeF', 'granteeF');
+    await seedGrant(FAMILY_ID, 'granterF', 'granteeF', 'denied');
+    const ref = doc(dbAs('uidGranteeF'), 'families', FAMILY_ID, 'accessGrants', 'granterF_granteeF');
+    await assertSucceeds(updateDoc(ref, { status: 'pending' }));
+  });
+
+  // ============================================================
+  // 14. Structural (Admin) Parent-Child(<18) grant — create
+  // ============================================================
+  it('14. Structural grant create — Admin parent-child(<18) approved+non-revocable grant তৈরি করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'childA', { ownerUids: [] });
+    await seedMember(FAMILY_ID, 'guardianA', { ownerUids: ['uidGuardianA'] });
+    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'accessGrants', 'childA_guardianA');
+    await assertSucceeds(
+      setDoc(ref, {
+        granterId: 'childA', granteeId: 'guardianA',
+        scope: 'read+write', relationshipType: 'parent-child',
+        status: 'approved', revocable: false,
+        grantedAt: new Date(), createdAt: new Date(),
+      })
+    );
+  });
+
+  it('14b. Structural grant create — non-admin structural (parent-child) grant তৈরি করতে পারবেন না', async () => {
+    await seedMember(FAMILY_ID, 'childB', { ownerUids: [] });
+    await seedMember(FAMILY_ID, 'guardianB', { ownerUids: ['uidGuardianB'] });
+    const ref = doc(dbAs('uidGuardianB'), 'families', FAMILY_ID, 'accessGrants', 'childB_guardianB');
+    await assertFails(
+      setDoc(ref, {
+        granterId: 'childB', granteeId: 'guardianB',
+        scope: 'read+write', relationshipType: 'parent-child',
+        status: 'approved', revocable: false,
+        grantedAt: new Date(), createdAt: new Date(),
+      })
+    );
+  });
+
+  // ============================================================
+  // 15. Structural grant — Admin cancel (non-revocable)
+  // ============================================================
+  it('15. Structural grant cancel — Admin non-revocable parent-child grant cancel করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'childC', { ownerUids: [] });
+    await seedMember(FAMILY_ID, 'guardianC', { ownerUids: ['uidGuardianC'] });
+    await seed(async (db) => {
+      await setDoc(doc(db, 'families', FAMILY_ID, 'accessGrants', 'childC_guardianC'), {
+        granterId: 'childC', granteeId: 'guardianC',
+        scope: 'read+write', relationshipType: 'parent-child',
+        status: 'approved', revocable: false,
+        grantedAt: new Date(), createdAt: new Date(),
+      });
+    });
+    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'accessGrants', 'childC_guardianC');
+    await assertSucceeds(
+      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'admin' })
+    );
+  });
+
+  it('15b. Structural grant cancel — non-admin (guardian নিজেও) non-revocable grant cancel করতে পারবেন না', async () => {
+    await seedMember(FAMILY_ID, 'childD', { ownerUids: [] });
+    await seedMember(FAMILY_ID, 'guardianD', { ownerUids: ['uidGuardianD'] });
+    await seed(async (db) => {
+      await setDoc(doc(db, 'families', FAMILY_ID, 'accessGrants', 'childD_guardianD'), {
+        granterId: 'childD', granteeId: 'guardianD',
+        scope: 'read+write', relationshipType: 'parent-child',
+        status: 'approved', revocable: false,
+        grantedAt: new Date(), createdAt: new Date(),
+      });
+    });
+    const ref = doc(dbAs('uidGuardianD'), 'families', FAMILY_ID, 'accessGrants', 'childD_guardianD');
+    await assertFails(
+      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'guardianD' })
+    );
+  });
+
+  // ============================================================
+  // 16. Notification — create scope ও targetUid-based read isolation (§3.5.2)
+  // ============================================================
+  it('16. Notification create — family member valid targetUid (uidMemberIndex-এ আছে) এর জন্য notification তৈরি করতে পারবেন', async () => {
+    await seedMember(FAMILY_ID, 'notifTargetMember', { ownerUids: ['uidNotifTarget'] });
+    await seedUidIndex(FAMILY_ID, 'uidNotifTarget', 'notifTargetMember');
+    const ref = doc(collection(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'notifications'));
+    await assertSucceeds(
+      setDoc(ref, {
+        targetUid: 'uidNotifTarget', type: 'access-grant-request',
+        message: 'test', read: false, createdAt: new Date(),
+      })
+    );
+  });
+
+  it('16b. Notification read — শুধু targetUid নিজেই তার notification পড়তে পারবেন, অন্য কেউ না', async () => {
+    let notifId;
+    await seed(async (db) => {
+      const ref = doc(collection(db, 'families', FAMILY_ID, 'notifications'));
+      notifId = ref.id;
+      await setDoc(ref, {
+        targetUid: 'uidNotifOwner', type: 'access-grant-request',
+        message: 'test', read: false, createdAt: new Date(),
+      });
+    });
+    const ref = doc(dbAs('uidSomeoneElse'), 'families', FAMILY_ID, 'notifications', notifId);
+    await assertFails(getDoc(ref));
+  });
 });
