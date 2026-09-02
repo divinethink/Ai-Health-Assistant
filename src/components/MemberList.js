@@ -10,6 +10,7 @@ import { listMembers, fetchMemberKey } from "../legacy/familyIdentity.js";
 import { listOutgoingGrants, requestAccess, cancelPendingRequest, cancelApprovedGrant, checkAndFlip18Transition } from "../legacy/accessGrants.js";
 import { AccessGrantButton } from "./AccessGrantButton.js";
 import { RelationshipModal, RELATIONSHIP_OPTIONS } from "./RelationshipModal.js";
+import { HealthProfileModal } from "./HealthProfileModal.js";
 
 const { useState, useEffect, useCallback, useRef } = React;
 
@@ -22,6 +23,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
   const [grants, setGrants] = useState({}); // granterId(targetMemberId) -> outgoing grant doc
   const [busyId, setBusyId] = useState(null);
   const [relModalTarget, setRelModalTarget] = useState(null); // Member | null
+  const [profileModalTarget, setProfileModalTarget] = useState(null); // Member | null
   const did18CheckRef = useRef(false);
 
   const reload = useCallback(() => {
@@ -90,11 +92,19 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
             " — ", (m.ownerUids && m.ownerUids.length > 0) ? "claim হয়েছে" : "claim বাকি",
             relLabel ? " — " + relLabel : ""
           ),
+          (isSelf || isAdmin) && React.createElement("button", {
+            onClick: () => setProfileModalTarget(m),
+            title: "Health Profile এডিট করুন",
+            style: {
+              marginLeft: "auto", border: "none", background: "none", cursor: "pointer",
+              fontSize: "13px", color: "#0E4B43", padding: "2px 6px",
+            },
+          }, "🩺"),
           isAdmin && !isSelf && React.createElement("button", {
             onClick: () => setRelModalTarget(m),
             title: "সম্পর্ক ও অভিভাবকত্ব এডিট করুন",
             style: {
-              marginLeft: "auto", border: "none", background: "none", cursor: "pointer",
+              border: "none", background: "none", cursor: "pointer",
               fontSize: "14px", color: "#0E4B43", padding: "2px 6px",
             },
           }, "✎")
@@ -122,6 +132,11 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
     relModalTarget && React.createElement(RelationshipModal, {
       familyId, targetMember: relModalTarget, allMembers: members, myMemberId,
       onClose: () => setRelModalTarget(null),
+      onSaved: reload,
+    }),
+    profileModalTarget && React.createElement(HealthProfileModal, {
+      familyId, targetMember: profileModalTarget,
+      onClose: () => setProfileModalTarget(null),
       onSaved: reload,
     })
   );
