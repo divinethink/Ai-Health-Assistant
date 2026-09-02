@@ -18,9 +18,16 @@ service cloud.firestore {
 
     function isFamilyMember(familyId) {
       let reqPath = /databases/$(database)/documents/families/$(familyId)/accessRequests/$(request.auth.uid);
+      // FIXED (Thread 32) — আগে শুধু family-code join-request-approved uid-কে
+      // family-member ধরা হতো। Admin-direct-add + Direct-Identify Key-claim দিয়ে
+      // ঢোকা সদস্যদের (যাদের কখনো accessRequests doc তৈরি হয় না, শুধু
+      // uidMemberIndex write হয়) জন্য একটা নতুন OR-branch যোগ হলো — নতুন কোনো
+      // collection/write লাগেনি, uidMemberIndex আগে থেকেই claim-time-এ লেখা হয়।
+      let idxPath = /databases/$(database)/documents/families/$(familyId)/uidMemberIndex/$(request.auth.uid);
       return isAdminOfFamily(familyId)
         || isAppCreator()
-        || (exists(reqPath) && get(reqPath).data.status == 'approved');
+        || (exists(reqPath) && get(reqPath).data.status == 'approved')
+        || exists(idxPath);
     }
 
     function memberOwnerUids(familyId, memberId) {
