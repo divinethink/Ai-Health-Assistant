@@ -179,6 +179,25 @@ export async function addMemberByAdmin(familyId, { name, dob, sex }) {
   return { memberId, key };
 }
 
+// Health Profile UI (§6, checklist P2) — Member-এর static fields edit।
+// rules-এর members/{memberId} update rule (firestore.rules L202-258) শুধু
+// role/guardianMemberIds/relationshipLabel/ownerUids-কে বিশেষভাবে গার্ড করে —
+// name/dob/sex/bloodGroup-এর জন্য কোনো নতুন rule/field-allowlist লাগে না,
+// self (ownerUids-এ uid আছে) বা Admin যেই edit করুক ownerUids অপরিবর্তিত
+// থাকলেই বিদ্যমান rule pass করে। height/weight ইচ্ছাকৃতভাবে এখানে নেই —
+// Architecture Plan Part A §2/Part C §10.2 অনুযায়ী ওগুলো Observation
+// health-record হিসেবেই থাকে (trend-tracking-যোগ্য বলে)।
+export async function updateMemberProfile(familyId, memberId, { name, dob, sex, bloodGroup }) {
+  const ref = db.collection("families").doc(familyId).collection("members").doc(memberId);
+  await ref.update({
+    name: name.trim(),
+    dob,
+    sex,
+    bloodGroup: bloodGroup || null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 export async function fetchMemberKey(familyId, memberId) {
   const snap = await db.collection("families").doc(familyId).collection("members").doc(memberId)
     .collection("private").doc("key").get();
