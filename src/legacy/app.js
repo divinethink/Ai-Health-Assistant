@@ -8,7 +8,10 @@
 // `src/legacy/familyIdentity.js`/`accessRequests.js`-এ ভাগ হয়েছে — এই ফাইলে
 // এখন শুধু top-level App() state/wiring ও Dashboard composition থাকে (Process
 // ফাইল Rule ১১: state/business-logic core-layer-এ, UI presentational)।
-// কোনো functional পরিবর্তন হয়নি — শুধু re-organize।
+//
+// এই থ্রেডে নতুন — Take-Access/AccessGrant UI (Architecture Plan §11.1/§11.2):
+// MemberList এখন সবার জন্য visible (Member Roster open, §3.4.3), এবং
+// NotificationsPanel + AccessGrantRequestsPanel Dashboard-এ যোগ হলো।
 
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox } from "../shared/ui.js";
@@ -19,11 +22,13 @@ import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { JoinRequestGate } from "../components/JoinRequestGate.js";
 import { AccessRequestsPanel } from "../components/AccessRequestsPanel.js";
+import { AccessGrantRequestsPanel } from "../components/AccessGrantRequestsPanel.js";
+import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
-function Dashboard({ familyId, familyDoc, memberId, memberDoc, isAdmin }) {
+function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const [refreshTick, setRefreshTick] = useState(0);
   return Card(
     React.createElement(
@@ -34,13 +39,15 @@ function Dashboard({ familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         React.createElement("div", null, "পরিবারের কোড: ", React.createElement("b", null, familyDoc.familyCodeDisplay)),
         React.createElement("div", null, "আপনার ভূমিকা: ", React.createElement("b", null, memberDoc.role === "admin" ? "Admin" : memberDoc.role))
       ),
+      React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
-      isAdmin && React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin }),
+      React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
+      React.createElement(AccessGrantRequestsPanel, { key: "ag" + refreshTick, familyId, myMemberId: memberId, myName: memberDoc.name }),
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "Walking Skeleton ধাপ ৬ সম্পন্ন — পরের ধাপ: permission smoke-test (Admin অন্য সদস্যের data দেখতে পারা vs non-admin non-grant না পারা) ও Firebase Emulator rules unit-test।"
+        "Take-Access/AccessGrant UI যোগ হয়েছে — পরের ধাপ: relationshipLabel/guardianMemberIds Admin UI ও ১৮+ soft-notify transition।"
       )
     )
   );
@@ -132,7 +139,7 @@ function App() {
 
   if (!memberDoc) return Card("লোড হচ্ছে...");
 
-  return React.createElement(Dashboard, { familyId, familyDoc, memberId, memberDoc, isAdmin });
+  return React.createElement(Dashboard, { uid, familyId, familyDoc, memberId, memberDoc, isAdmin });
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
