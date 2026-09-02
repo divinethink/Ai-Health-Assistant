@@ -11,6 +11,7 @@
 let initError = null;
 let db = null;
 let auth = null;
+let storage = null;
 
 try {
   const firebaseConfig = {
@@ -47,9 +48,15 @@ try {
 
   db = firebase.firestore();
   auth = firebase.auth();
+  // Document/Report upload (Roadmap §7, Checklist P2) — Firebase Cloud
+  // Storage, Spark (Free) plan-এই available (5GB storage/1GB-per-day
+  // download quota), কোনো নতুন plan লাগে না। Firebase Console-এ Storage
+  // "Get started" না করা থাকলে প্রথম upload-এ error আসবে — one-time
+  // owner-side console setup প্রয়োজন (কোড দিয়ে enable করা যায় না)।
+  storage = firebase.storage();
 } catch (err) {
   initError = (err && err.message) ? err.message : String(err);
   console.error("Firebase init failed:", err);
 }
 
-export { db, auth, initError };
+export { db, auth, storage, initError };
