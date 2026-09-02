@@ -21,6 +21,7 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/firestore";
 import "firebase/compat/auth";
 import "firebase/compat/app-check";
+import "firebase/compat/storage";
 
 window.React = React;
 window.ReactDOM = ReactDOM;
