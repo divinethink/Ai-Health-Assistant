@@ -49,6 +49,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "নতুন Document/Report যোগ করুন"),
+    React.createElement("p", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } }, "ছবি বা PDF — আসল ফাইলই সংরক্ষিত হবে (পরে সম্পূর্ণ ডাউনলোড করা যাবে)।"),
     SelectField("ধরন", docType, setDocType, Object.entries(DOC_TYPE_LABELS).map(([v, l]) => [v, l])),
     DateField("তারিখ (ঐচ্ছিক)", date, setDate),
     React.createElement(
@@ -61,7 +62,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     ),
     React.createElement(
       "div", { style: { marginTop: "8px" } },
-      React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "ফাইল (ছবি/PDF, সর্বোচ্চ 10MB)"),
+      React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "ফাইল (ছবি/PDF, সর্বোচ্চ 20MB)"),
       React.createElement("input", {
         ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
         style: { fontSize: "13px" },
