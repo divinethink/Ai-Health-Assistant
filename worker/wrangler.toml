@@ -2,11 +2,11 @@ name = "health-assistant-media-proxy"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
-# প্লেইন config (secret না) — deploy করার আগে নিজের মান বসান।
+# প্লেইন config (secret না) — আপনার দেওয়া Cloudinary তথ্য বসানো হয়েছে।
 [vars]
 FIREBASE_PROJECT_ID = "REPLACE_WITH_YOUR_FIREBASE_PROJECT_ID"
-CLOUDINARY_CLOUD_NAME = "REPLACE_WITH_YOUR_CLOUDINARY_CLOUD_NAME"
-CLOUDINARY_API_KEY = "REPLACE_WITH_YOUR_CLOUDINARY_API_KEY"
+CLOUDINARY_CLOUD_NAME = "bs1c4agv"
+CLOUDINARY_API_KEY = "735557173398431"
 ALLOWED_ORIGIN = "*"
 
 # SECRET — plaintext টাইপ করবেন না এখানে। Deploy করার আগে টার্মিনালে চালান:
