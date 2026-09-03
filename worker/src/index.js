@@ -110,7 +110,7 @@ async function callGroq(env, payload, conversationHistory) {
       Authorization: `Bearer ${env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "qwen/qwen3-32b",
+      model: "qwen/qwen3.6-27b",
       messages,
       max_tokens: 1000,
     }),
