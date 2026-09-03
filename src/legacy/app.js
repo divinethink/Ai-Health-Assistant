@@ -53,7 +53,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "P3 শুরু — Symptom Check/Triage (emergency red-flag checklist) যোগ হয়েছে। পরের ধাপ: রোগ-নির্দিষ্ট (Fever/Diarrhea ইত্যাদি) triage rule ও Health Context Engine।"
+        "P3 চলছে — Symptom Check/Triage (emergency checklist + Fever/Diarrhea/Cough/Ear/Measles rule) ও Health Context Engine (dev-preview) যোগ হয়েছে। পরের ধাপ: Cloudflare Worker LLM-proxy (Groq)।"
       )
     )
   );
