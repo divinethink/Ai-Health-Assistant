@@ -1,29 +1,24 @@
 // Document/Report vault (Roadmap §7) — Cloudinary upload-signature + delete proxy।
+// + AI Orchestration (Roadmap §10.2.5, Architecture Plan Part B §6.7/§6.7.1) — Groq LLM-proxy।
 //
-// কেন এই Worker দরকার: Cloudinary API secret কখনো client bundle-এ যেতে পারবে না
-// (Process Rule ৪)। কিন্তু permission-decision (কে কোন memberId-এর জন্য upload/
-// delete করতে পারবে) আমরা এখানে ডুপ্লিকেট করিনি — সেটা সম্পূর্ণভাবে ইতিমধ্যে
-// deployed `firestore.rules`-এর hasAccess()/hasDeleteAccess()-কেই একমাত্র
-// source-of-truth রাখা হয়েছে। পদ্ধতি: caller-এর Firebase ID token দিয়ে
-// সরাসরি Firestore REST API-কে সেই নির্দিষ্ট document-এ GET/DELETE request
-// পাঠানো হয় — Firestore নিজেই rules অনুযায়ী allow/deny করে; Worker শুধু সেই
-// ফলাফল (success/fail) দেখে Cloudinary-action চালায় কিনা ঠিক করে। এতে দুই
-// জায়গায় (rules ফাইল + Worker কোড) একই permission-logic লিখে sync-ভুলের
-// ঝুঁকি — যেটা storage.rules approach-এ ছিল — সম্পূর্ণ এড়ানো গেছে।
+// কেন এই Worker দরকার: Cloudinary API secret ও Groq API key কখনো client bundle-এ
+// যেতে পারবে না (Process Rule ৪)। কিন্তু permission-decision (কে কোন memberId-এর
+// জন্য upload/delete/AI-chat করতে পারবে) আমরা এখানে ডুপ্লিকেট করি না — সেটা
+// সম্পূর্ণভাবে ইতিমধ্যে deployed `firestore.rules`-কেই একমাত্র source-of-truth
+// রাখা হয়েছে। পদ্ধতি: caller-এর Firebase ID token verify করে, তারপর সেই idToken
+// দিয়ে Firestore REST API-কে request পাঠানো হয় — Firestore নিজেই rules অনুযায়ী
+// allow/deny করে; Worker শুধু ফলাফল দেখে পরবর্তী action চালায় কিনা ঠিক করে।
 //
 // Endpoints:
 //   POST /upload-auth  { idToken, familyId, docId } -> { cloudName, apiKey, timestamp, signature, publicId, folder }
 //   POST /delete        { idToken, familyId, docId } -> { ok: true }
-//
-// নিরাপত্তা মডেল (owner-কে transparently জানানো, Process Rule ৪): Cloudinary
-// delivery type "upload" (default) ব্যবহার হচ্ছে — অর্থাৎ চূড়ান্ত `secure_url`
-// জানা থাকলে সরাসরি খোলা যায় (URL নিজেই দীর্ঘ/random public_id-ভিত্তিক বলে
-// guess করা কার্যত অসম্ভব, কিন্তু cryptographic access-control না)। এই URL
-// শুধু আমাদের নিজস্ব access-controlled Firestore document-এর ভেতরেই থাকে,
-// তাই "কে URL পায়" সম্পূর্ণভাবে hasAccess()-দিয়েই নিয়ন্ত্রিত — URL পাওয়ার পর
-// সেটা অন্য কাউকে ইচ্ছাকৃতভাবে forward করলে (যেমন screenshot/copy-paste) সেই
-// ঝুঁকি প্রায় সব consumer-app-এই সাধারণভাবে থাকে (Firestore-base64 approach-
-// এও একই প্রকৃতির সীমাবদ্ধতা ছিল)।
+//   POST /ai-chat        { idToken, familyId, memberId, payload, conversationHistory } -> { content, blocked, usage }
+
+import { jwtVerify, createRemoteJWKSet } from "jose";
+
+const GOOGLE_JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com")
+);
 
 function corsHeaders(env) {
   return {
@@ -61,6 +56,75 @@ async function sha1Hex(message) {
   return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// --- AI-চ্যাট (§6.7) সংযুক্ত হেল্পার ---
+
+// ধাপ ১: idToken-এর signature Firebase-এর public JWK দিয়ে verify করা (Admin SDK ছাড়াই, §6.7.1)।
+async function verifyFirebaseIdToken(env, idToken) {
+  const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
+    issuer: `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`,
+    audience: env.FIREBASE_PROJECT_ID,
+  });
+  return payload.user_id || payload.sub;
+}
+
+// ধাপ ২: family-membership নিশ্চিতকরণ — existing pattern reuse (uidMemberIndex, rules-gated GET)।
+async function verifyFamilyMembership(env, idToken, familyId, uid) {
+  const docPath = `families/${familyId}/uidMemberIndex/${uid}`;
+  const res = await fetch(firestoreDocUrl(env, docPath), {
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  return res.ok;
+}
+
+// Detection-layer (§6.4) — বাংলা (০-৯) + Latin (0-9) digit ও mg/ml/tablet/বার-জাতীয়
+// unit-শব্দ একসাথে থাকা pattern LLM output-এ পাওয়া গেলে dose-leak সন্দেহ করা হবে।
+const DOSE_PATTERN = new RegExp(
+  "[0-9০-৯]+(\\.[0-9০-৯]+)?\\s*(mg|ml|mcg|iu|মিগ্রা|মিলি|গ্রাম|ইউনিট|tablet|ট্যাবলেট|ক্যাপসুল|" +
+    "বার/দিন|বার\\s*/\\s*দিন|times a day|per day|/day)",
+  "i"
+);
+
+function scanForDoseLeak(text) {
+  return typeof text === "string" && DOSE_PATTERN.test(text);
+}
+
+const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI Health Assistant। কঠোরভাবে মেনে চলুন:
+- কখনো কোনো medicine-এর dose/frequency/duration/সংখ্যা নিজে থেকে বলবেন না — শুধু generic-level পরামর্শ দেবেন, dose সবসময় app-এর নিজস্ব verified database থেকে আসে, আপনার থেকে নয়।
+- chronic disease (ডায়াবেটিস/উচ্চ রক্তচাপ/থাইরয়েড/কিডনি)-এর existing medicine-এর dose পরিবর্তন/বন্ধ করার পরামর্শ কখনো দেবেন না।
+- কোনো ঔষধ prescribe/suggest করার সময় সংখ্যাসূচক dose উল্লেখ করবেন না।
+- আনুষ্ঠানিক "Prescription" জারি করবেন না — এটা "AI Health Guidance", প্রতিস্থাপন নয়, ডাক্তারের বিকল্প নয়।
+- Emergency/urgent risk মনে হলে সবসময় দ্রুত ডাক্তার/হাসপাতাল/৯৯৯-এর পরামর্শ দিন।
+- বাংলায় স্পষ্ট, সহজ ভাষায় উত্তর দিন।`;
+
+async function callGroq(env, payload, conversationHistory) {
+  const messages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: "স্বাস্থ্য-প্রসঙ্গ (JSON): " + JSON.stringify(payload) },
+    ...(Array.isArray(conversationHistory) ? conversationHistory : []),
+  ];
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "qwen/qwen3-32b",
+      messages,
+      max_tokens: 1000,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`groq-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content || "";
+  return { content, usage: data.usage || null };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(env) });
@@ -72,8 +136,6 @@ export default {
         if (!idToken || !familyId || !docId) return json(env, { error: "missing-params" }, 400);
 
         const docPath = `families/${familyId}/documents/${docId}`;
-        // এই GET-ই একমাত্র permission-check — Firestore rules-এর hasAccess()
-        // pass না করলে এখানেই non-200 আসবে।
         const getRes = await fetch(firestoreDocUrl(env, docPath), {
           headers: { Authorization: `Bearer ${idToken}` },
         });
@@ -82,8 +144,6 @@ export default {
         const timestamp = Math.floor(Date.now() / 1000);
         const folder = `health-docs/${familyId}`;
         const publicId = docId;
-        // Cloudinary signed-upload নিয়ম: sign করা হয় file/api_key/signature/
-        // cloud_name/resource_type বাদে বাকি সব param, key-alphabetical-sorted।
         const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${env.CLOUDINARY_API_SECRET}`;
         const signature = await sha1Hex(toSign);
 
@@ -101,7 +161,6 @@ export default {
         const docPath = `families/${familyId}/documents/${docId}`;
         const docUrl = firestoreDocUrl(env, docPath);
 
-        // ধাপ ১: doc read করে cloudinaryPublicId/resourceType বের করা (hasAccess()-গেটেড)।
         const getRes = await fetch(docUrl, { headers: { Authorization: `Bearer ${idToken}` } });
         if (!getRes.ok) return json(env, { error: "not-found-or-forbidden" }, 404);
         const doc = await getRes.json();
@@ -109,18 +168,41 @@ export default {
         const publicId = fields.cloudinaryPublicId || docId;
         const resourceType = fields.cloudinaryResourceType || "image";
 
-        // ধাপ ২: আসল delete — এখানেই hasDeleteAccess() (read-এর চেয়ে কড়া) verify
-        // হয়। এটা fail করলে Cloudinary-তে কিছু মোছা হবে না (fail-safe)।
         const delRes = await fetch(docUrl, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
         if (!delRes.ok) return json(env, { error: "forbidden" }, 403);
 
-        // ধাপ ৩: উপরের ধাপ pass করলে তবেই Cloudinary asset মোছা হয় (admin-secret,
-        // trusted server-call, per-request user-permission Worker আগেই verify করেছে)।
         const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
         const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${resourceType}/upload?public_ids[]=${encodeURIComponent(publicId)}`;
         await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
 
         return json(env, { ok: true });
+      }
+
+      if (request.method === "POST" && url.pathname === "/ai-chat") {
+        const { idToken, familyId, payload, conversationHistory } = await request.json();
+        if (!idToken || !familyId || !payload) return json(env, { error: "missing-params" }, 400);
+
+        let uid;
+        try {
+          uid = await verifyFirebaseIdToken(env, idToken);
+        } catch (e) {
+          return json(env, { error: "invalid-token" }, 401);
+        }
+        if (!uid) return json(env, { error: "invalid-token" }, 401);
+
+        const isMember = await verifyFamilyMembership(env, idToken, familyId, uid);
+        if (!isMember) return json(env, { error: "forbidden" }, 403);
+
+        const { content, usage } = await callGroq(env, payload, conversationHistory);
+        const blocked = scanForDoseLeak(content);
+
+        return json(env, {
+          content: blocked
+            ? "দুঃখিত, এই উত্তরে ওষুধের মাত্রা-সংক্রান্ত তথ্য সনাক্ত হয়েছে বলে এটি দেখানো যাচ্ছে না। ওষুধের dose/পরিবর্তন সংক্রান্ত যেকোনো প্রশ্নে সরাসরি ডাক্তার/pharmacist-এর সাথে যোগাযোগ করুন।"
+            : content,
+          blocked,
+          usage,
+        });
       }
 
       return json(env, { error: "not-found" }, 404);
