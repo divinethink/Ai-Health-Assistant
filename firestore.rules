@@ -415,11 +415,15 @@ service cloud.firestore {
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
-      // Document/Report upload metadata (Roadmap §7, Checklist P2) — file
-      // bytes Cloud Storage-এ (storage.rules), এখানে শুধু metadata। hasAccess()-
-      // এর ঠিক একই pattern healthRecords-এর মতো (একই permission model,
-      // §3.4)। storagePath immutable-once-set — metadata পরে অন্য ফাইল
-      // point করতে না পারে তা নিশ্চিত করতে।
+      // Document/Report upload (Roadmap §7, Checklist P2) — owner-decision:
+      // Firebase Storage/Cloudflare R2 (card বাধ্যতামূলক) ও Google Drive
+      // (no-phone design-principle ভাঙে) দুটোই বাতিল করে Cloudinary ব্যবহার
+      // হচ্ছে। এখানে শুধু metadata (memberId, docType, cloudinaryUrl/
+      // publicId ইত্যাদি) — আসল ফাইল Cloudinary-তে। Cloudinary API-secret
+      // আড়াল রাখতে আলাদা Cloudflare Worker (`worker/`) আছে, যেটা upload/
+      // delete-এর আগে ঠিক এই rule-দুটো (read/delete) দিয়েই permission verify
+      // করে caller-এর ID token দিয়ে সরাসরি Firestore REST API call করে —
+      // অর্থাৎ Worker কোনো permission-logic ডুপ্লিকেট করে না।
       match /documents/{id} {
         allow read: if request.auth != null
           && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
@@ -427,7 +431,6 @@ service cloud.firestore {
           && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId
-          && request.resource.data.storagePath == resource.data.storagePath
           && hasAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
