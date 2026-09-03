@@ -26,6 +26,7 @@ import { AccessGrantRequestsPanel } from "../components/AccessGrantRequestsPanel
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
 import { DocumentsSection } from "../health/documents/DocumentsSection.js";
+import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -47,6 +48,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
         "Take-Access/AccessGrant UI যোগ হয়েছে — পরের ধাপ: relationshipLabel/guardianMemberIds Admin UI ও ১৮+ soft-notify transition।"
