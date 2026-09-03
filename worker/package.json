@@ -1,0 +1,14 @@
+{
+  "name": "health-assistant-media-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}
