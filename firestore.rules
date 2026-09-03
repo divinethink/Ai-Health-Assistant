@@ -32,8 +32,13 @@ service cloud.firestore {
 
     function memberOwnerUids(familyId, memberId) {
       let memberPath = /databases/$(database)/documents/families/$(familyId)/members/$(memberId);
-      let m = exists(memberPath) ? get(memberPath).data : null;
-      return (m == null) ? [] : (('ownerUids' in m) ? m.ownerUids : []);
+      // আগে ternary-এর এক শাখায় map, আরেক শাখায় null রিটার্ন করত — Firestore
+      // rules-linter সেটাকে "Invalid type" warning দিত (harmless, deploy ব্লক
+      // করত না)। এখন দুই শাখাতেই list টাইপ রাখা হলো (cosmetic fix, behavior
+      // অপরিবর্তিত) — deploy-log পরিষ্কার রাখতে।
+      return (exists(memberPath) && ('ownerUids' in get(memberPath).data))
+        ? get(memberPath).data.ownerUids
+        : [];
     }
 
     function isOwnerOfMember(familyId, memberId) {
