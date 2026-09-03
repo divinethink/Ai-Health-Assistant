@@ -3,9 +3,9 @@
 // নয়, skip-অযোগ্য নয়)। HealthTimeline.js/HealthRecordsSection.js-এর member-picker
 // pattern reuse (Process ফাইল Rule ২ — Minimal Change)।
 
-import { ErrorBox, SelectField, PrimaryButton } from "../../shared/ui.js";
+import { ErrorBox, SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { deriveAgeGroup, getChecklistForAgeGroup, runTriage } from "./triageEngine.js";
+import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
 
 const { useState, useEffect } = React;
@@ -23,6 +23,10 @@ export function TriageForm({ familyId }) {
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
   const [checklist, setChecklist] = useState({});
+  const [chiefComplaint, setChiefComplaint] = useState("none");
+  const [feverDays, setFeverDays] = useState("");
+  const [diarrheaDays, setDiarrheaDays] = useState("");
+  const [bloodyStool, setBloodyStool] = useState(false);
   const [result, setResult] = useState(null);
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export function TriageForm({ familyId }) {
   function handleMemberChange(id) {
     setTargetMemberId(id);
     setChecklist({});
+    setChiefComplaint("none");
     setResult(null);
   }
 
@@ -50,7 +55,10 @@ export function TriageForm({ familyId }) {
   }
 
   function runCheck() {
-    setResult(runTriage({ ageGroup, checklist }));
+    setResult(runTriage({
+      ageGroup, checklist, chiefComplaint,
+      complaintInputs: { feverDays, diarrheaDays, bloodyStool },
+    }));
   }
 
   if (loadErr) return ErrorBox(loadErr);
@@ -83,6 +91,21 @@ export function TriageForm({ familyId }) {
           "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "6px 0", cursor: "pointer" } },
           React.createElement("input", { type: "checkbox", checked: !!checklist[it.id], onChange: () => toggleItem(it.id) }),
           it.label
+        )
+      )
+    ),
+
+    ageGroup && isPediatricAgeGroup(ageGroup) && React.createElement(
+      "div", { style: { marginTop: "12px" } },
+      SelectField("প্রধান সমস্যা (chief complaint)", chiefComplaint, (v) => { setChiefComplaint(v); setResult(null); }, CHIEF_COMPLAINTS),
+      chiefComplaint === "fever" && TextField("জ্বর কতদিন ধরে (দিন সংখ্যা)", feverDays, (v) => { setFeverDays(v); setResult(null); }, "যেমন: 2"),
+      chiefComplaint === "diarrhea" && React.createElement(
+        React.Fragment, null,
+        TextField("ডায়রিয়া কতদিন ধরে (দিন সংখ্যা)", diarrheaDays, (v) => { setDiarrheaDays(v); setResult(null); }, "যেমন: 3"),
+        React.createElement(
+          "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "8px 0", cursor: "pointer" } },
+          React.createElement("input", { type: "checkbox", checked: bloodyStool, onChange: () => { setBloodyStool((v) => !v); setResult(null); } }),
+          "মলে রক্ত আছে"
         )
       )
     ),

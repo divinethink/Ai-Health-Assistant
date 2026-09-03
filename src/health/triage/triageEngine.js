@@ -60,8 +60,46 @@ export function getChecklistForAgeGroup(ageGroup) {
 
 const EMERGENCY_CONTACT = { name: "৯৯৯ (জাতীয় জরুরি সেবা)", number: "999", type: "emergency-police-fire" };
 
-// checklist: { [itemId]: boolean } — Structured Trigger Layer থেকে আসা yes/no toggle
-export function runTriage({ ageGroup, checklist }) {
+const SEVERITY_RANK = { emergency: 4, urgent: 3, "needs-attention": 2, routine: 1, "self-care": 0 };
+const ACTION_BY_RISK = {
+  emergency: "call-emergency",
+  urgent: "see-doctor-today",
+  "needs-attention": "see-doctor-soon",
+  routine: "self-care-with-monitoring",
+  "self-care": "self-care-with-monitoring",
+};
+
+// রোগ-নির্দিষ্ট IMCI rule (Architecture Plan Part B §4.1, শুধু pediatric — IMCI মূলত
+// ৫ বছরের নিচের শিশুর জন্য, বাংলাদেশ non-malaria-area default)। chiefComplaint ও
+// complaintInputs Structured Trigger Layer থেকে আসে।
+export const CHIEF_COMPLAINTS = [
+  ["none", "নির্দিষ্ট কিছু না (শুধু emergency-checklist)"],
+  ["fever", "জ্বর"],
+  ["diarrhea", "ডায়রিয়া / পাতলা পায়খানা"],
+];
+
+function checkFever({ feverDays }) {
+  const days = Number(feverDays);
+  if (!isNaN(days) && days >= 7) {
+    return { riskLevel: "urgent", ruleId: "IMCI-FEVER-002", ruleSource: "WHO IMCI Fever classification", description: "প্রতিদিন জ্বর ৭ দিনের বেশি", suggestedTimeframe: "সরাসরি ডাক্তার-assessment প্রয়োজন" };
+  }
+  return { riskLevel: "needs-attention", ruleId: "IMCI-FEVER-001", ruleSource: "WHO IMCI Fever classification", description: "জ্বর (danger sign ছাড়া)", suggestedTimeframe: "জ্বর থাকলে ২ দিন পর পুনরায় দেখান" };
+}
+
+function checkDiarrhea({ diarrheaDays, bloodyStool }) {
+  if (bloodyStool) {
+    return { riskLevel: "needs-attention", ruleId: "IMCI-DIAR-001", ruleSource: "WHO IMCI Diarrhea classification", description: "মলে রক্ত (Dysentery)", suggestedTimeframe: "২ দিন পর ফিরে আসুন" };
+  }
+  const days = Number(diarrheaDays);
+  if (!isNaN(days) && days >= 14) {
+    return { riskLevel: "routine", ruleId: "IMCI-DIAR-002", ruleSource: "WHO IMCI Diarrhea classification", description: "১৪+ দিন ধরে ডায়রিয়া (Persistent, non-severe)", suggestedTimeframe: "৫ দিন পর ফিরে আসুন যদি না কমে" };
+  }
+  return { riskLevel: "self-care", ruleId: "IMCI-DIAR-003", ruleSource: "WHO IMCI Diarrhea classification", description: "সাধারণ acute diarrhea (dehydration নেই ধরে নেওয়া হচ্ছে)", suggestedTimeframe: "ORS চালিয়ে যান; না কমলে বা নতুন উপসর্গ দেখা দিলে ডাক্তার দেখান" };
+}
+
+// checklist: { [itemId]: boolean }, chiefComplaint: "none"|"fever"|"diarrhea",
+// complaintInputs: { feverDays, diarrheaDays, bloodyStool }
+export function runTriage({ ageGroup, checklist, chiefComplaint = "none", complaintInputs = {} }) {
   const pediatric = isPediatricAgeGroup(ageGroup);
   const items = getChecklistForAgeGroup(ageGroup);
   const triggeredItems = items.filter((it) => checklist && checklist[it.id]);
@@ -72,45 +110,64 @@ export function runTriage({ ageGroup, checklist }) {
     sourceReference: pediatric ? "WHO IMCI Chart Booklet" : "Standard adult emergency guideline / AHA-CDC FAST",
   }];
 
+  // Multi-Rule Priority — max-severity-wins (roadmap §9.1): সব candidate rule জমা করে
+  // সবচেয়ে বেশি severity-টা জিতবে, কিন্তু triggeredRules-এ সবগুলোই থাকবে (traceable)।
+  const candidates = [];
+
   if (triggeredItems.length > 0) {
     const isFast = !pediatric && triggeredItems.some((it) => FAST_IDS.includes(it.id));
-    return {
+    candidates.push({
       riskLevel: "emergency",
-      triggeredRules: [{
-        ruleId: pediatric ? "IMCI-GDS-001" : (isFast ? "FAST-STROKE-001" : "ADULT-EMERGENCY-001"),
-        ruleSource: pediatric ? "WHO IMCI danger signs" : (isFast ? "FAST stroke protocol" : "Adult emergency warning signs"),
-        description: triggeredItems.map((it) => it.label).join("; "),
-        suggestedTimeframe: "তাৎক্ষণিক",
-      }],
-      uncertaintyLevel: "low",
-      missingInformation: [],
+      ruleId: pediatric ? "IMCI-GDS-001" : (isFast ? "FAST-STROKE-001" : "ADULT-EMERGENCY-001"),
+      ruleSource: pediatric ? "WHO IMCI danger signs" : (isFast ? "FAST stroke protocol" : "Adult emergency warning signs"),
+      description: triggeredItems.map((it) => it.label).join("; "),
+      suggestedTimeframe: "তাৎক্ষণিক",
+    });
+  }
+
+  if (pediatric && chiefComplaint === "fever") {
+    candidates.push(checkFever(complaintInputs));
+    triageSource.push({ rulesetName: "WHO IMCI Fever classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" });
+  }
+  if (pediatric && chiefComplaint === "diarrhea") {
+    candidates.push(checkDiarrhea(complaintInputs));
+    triageSource.push({ rulesetName: "WHO IMCI Diarrhea classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" });
+  }
+
+  if (candidates.length === 0) {
+    // কোনো rule-ই প্রযোজ্য না (adult/elderly + কোনো emergency red-flag নেই, chiefComplaint
+    // fever/diarrhea না) — honest scope-limited fallback, false-reassurance এড়াতে।
+    return {
+      riskLevel: "routine",
+      triggeredRules: [],
+      uncertaintyLevel: "high",
+      missingInformation: [
+        "এই সংস্করণে শুধু জরুরি (emergency) red-flag checklist ও শিশুর Fever/Diarrhea rule চেক হয়েছে — বাকি রোগ-নির্দিষ্ট triage rule এখনো যুক্ত হয়নি।",
+      ],
       recommendedAction: {
-        action: "call-emergency",
-        timeframe: "তাৎক্ষণিক",
-        timeframeSource: "rule-specific",
-        emergencyContact: EMERGENCY_CONTACT,
+        action: "self-care-with-monitoring",
+        timeframe: "লক্ষণ বাড়লে, না কমলে, বা নতুন উপসর্গ দেখা দিলে ডাক্তার দেখান",
+        timeframeSource: "riskLevel-default",
+        emergencyContact: null,
       },
       ageGroupContext: ageGroup,
       triageSource,
     };
   }
 
-  // কোনো emergency red-flag trigger হয়নি — এই MVP সংস্করণে শুধু emergency-checklist
-  // চেক করা হয়েছে, তাই স্পষ্টভাবে uncertaintyLevel: high ও missingInformation-এ
-  // জানানো হচ্ছে যে সম্পূর্ণ triage (Fever/Diarrhea ইত্যাদি disease-specific rule)
-  // এখনো implement হয়নি — false-reassurance এড়াতে (roadmap §9 নীতির সাথে সংগতিপূর্ণ)।
+  candidates.sort((a, b) => SEVERITY_RANK[b.riskLevel] - SEVERITY_RANK[a.riskLevel]);
+  const winner = candidates[0];
+
   return {
-    riskLevel: "routine",
-    triggeredRules: [],
-    uncertaintyLevel: "high",
-    missingInformation: [
-      "এই সংস্করণে শুধু জরুরি (emergency) red-flag checklist চেক হয়েছে — রোগ-নির্দিষ্ট (fever/diarrhea/cough ইত্যাদি) triage rule এখনো যুক্ত হয়নি।",
-    ],
+    riskLevel: winner.riskLevel,
+    triggeredRules: candidates.map((c) => ({ ruleId: c.ruleId, ruleSource: c.ruleSource, description: c.description, suggestedTimeframe: c.suggestedTimeframe })),
+    uncertaintyLevel: "low",
+    missingInformation: [],
     recommendedAction: {
-      action: "self-care-with-monitoring",
-      timeframe: "লক্ষণ বাড়লে, না কমলে, বা নতুন উপসর্গ দেখা দিলে ডাক্তার দেখান",
-      timeframeSource: "riskLevel-default",
-      emergencyContact: null,
+      action: ACTION_BY_RISK[winner.riskLevel],
+      timeframe: winner.suggestedTimeframe,
+      timeframeSource: "rule-specific",
+      emergencyContact: winner.riskLevel === "emergency" ? EMERGENCY_CONTACT : null,
     },
     ageGroupContext: ageGroup,
     triageSource,
