@@ -7,6 +7,7 @@ import { ErrorBox, SelectField, TextField, PrimaryButton } from "../../shared/ui
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
+import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 
 const { useState, useEffect } = React;
 
@@ -46,9 +47,11 @@ export function TriageForm({ familyId }) {
   const [measlesEyeMouth, setMeaslesEyeMouth] = useState(false);
   const [measlesCurrent, setMeaslesCurrent] = useState(false);
   const [result, setResult] = useState(null);
+  const [healthContext, setHealthContext] = useState(null);
+  const [contextErr, setContextErr] = useState(null);
 
   function check(setter) {
-    return () => { setter((v) => !v); setResult(null); };
+    return () => { setter((v) => !v); setResult(null); setHealthContext(null); };
   }
 
   useEffect(() => {
@@ -77,7 +80,7 @@ export function TriageForm({ familyId }) {
   }
 
   function runCheck() {
-    setResult(runTriage({
+    const triageResult = runTriage({
       ageGroup, checklist, chiefComplaint,
       complaintInputs: {
         feverDays, diarrheaDays, bloodyStool,
@@ -85,7 +88,15 @@ export function TriageForm({ familyId }) {
         earSwellingTender, earPainDischarge, earDurationDays,
         measlesSevere, measlesEyeMouth, measlesCurrent,
       },
-    }));
+    });
+    setResult(triageResult);
+    setHealthContext(null);
+    setContextErr(null);
+    // Health Context Engine — শুধু in-memory assemble/preview, কোনো Firestore write
+    // বা cloud/AI call এখানে নেই (Cloudflare Worker LLM-proxy পরের ধাপে যোগ হবে)।
+    assembleHealthContext(familyId, targetMemberId, triageResult, { symptoms: chiefComplaint })
+      .then(setHealthContext)
+      .catch((e) => setContextErr(e.message || String(e)));
   }
 
   if (loadErr) return ErrorBox(loadErr);
@@ -154,6 +165,13 @@ export function TriageForm({ familyId }) {
 
     checklistItems.length > 0 && PrimaryButton("চেক করুন", runCheck),
 
-    result && React.createElement(TriageResultView, { result })
+    result && React.createElement(TriageResultView, { result }),
+
+    contextErr && React.createElement("div", { style: { fontSize: "11px", color: "#C0392B", marginTop: "8px" } }, "Health Context তৈরি করা যায়নি: " + contextErr),
+    healthContext && React.createElement(
+      "details", { style: { marginTop: "10px", fontSize: "11px", color: "#666" } },
+      React.createElement("summary", null, "Health Context (dev-preview, AI-তে এখনো পাঠানো হচ্ছে না)"),
+      React.createElement("pre", { style: { whiteSpace: "pre-wrap", background: "#F5F5F0", padding: "8px", borderRadius: "6px" } }, JSON.stringify(healthContext, null, 2))
+    )
   );
 }
