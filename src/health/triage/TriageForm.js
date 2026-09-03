@@ -10,6 +10,14 @@ import { TriageResultView } from "./TriageResultView.js";
 
 const { useState, useEffect } = React;
 
+function checkboxLine(label, checked, onChange) {
+  return React.createElement(
+    "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "6px 0", cursor: "pointer" } },
+    React.createElement("input", { type: "checkbox", checked, onChange }),
+    label
+  );
+}
+
 const AGE_GROUP_LABELS = {
   neonate: "নবজাতক (< ২৮ দিন)",
   infant: "শিশু (< ২ বছর)",
@@ -27,7 +35,21 @@ export function TriageForm({ familyId }) {
   const [feverDays, setFeverDays] = useState("");
   const [diarrheaDays, setDiarrheaDays] = useState("");
   const [bloodyStool, setBloodyStool] = useState(false);
+  const [stridorCalm, setStridorCalm] = useState(false);
+  const [chestIndrawing, setChestIndrawing] = useState(false);
+  const [fastBreathing, setFastBreathing] = useState(false);
+  const [cough14Days, setCough14Days] = useState(false);
+  const [earSwellingTender, setEarSwellingTender] = useState(false);
+  const [earPainDischarge, setEarPainDischarge] = useState(false);
+  const [earDurationDays, setEarDurationDays] = useState("");
+  const [measlesSevere, setMeaslesSevere] = useState(false);
+  const [measlesEyeMouth, setMeaslesEyeMouth] = useState(false);
+  const [measlesCurrent, setMeaslesCurrent] = useState(false);
   const [result, setResult] = useState(null);
+
+  function check(setter) {
+    return () => { setter((v) => !v); setResult(null); };
+  }
 
   useEffect(() => {
     listMembers(familyId)
@@ -57,7 +79,12 @@ export function TriageForm({ familyId }) {
   function runCheck() {
     setResult(runTriage({
       ageGroup, checklist, chiefComplaint,
-      complaintInputs: { feverDays, diarrheaDays, bloodyStool },
+      complaintInputs: {
+        feverDays, diarrheaDays, bloodyStool,
+        stridorCalm, chestIndrawing, fastBreathing, cough14Days,
+        earSwellingTender, earPainDischarge, earDurationDays,
+        measlesSevere, measlesEyeMouth, measlesCurrent,
+      },
     }));
   }
 
@@ -102,11 +129,26 @@ export function TriageForm({ familyId }) {
       chiefComplaint === "diarrhea" && React.createElement(
         React.Fragment, null,
         TextField("ডায়রিয়া কতদিন ধরে (দিন সংখ্যা)", diarrheaDays, (v) => { setDiarrheaDays(v); setResult(null); }, "যেমন: 3"),
-        React.createElement(
-          "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "8px 0", cursor: "pointer" } },
-          React.createElement("input", { type: "checkbox", checked: bloodyStool, onChange: () => { setBloodyStool((v) => !v); setResult(null); } }),
-          "মলে রক্ত আছে"
-        )
+        checkboxLine("মলে রক্ত আছে", bloodyStool, check(setBloodyStool))
+      ),
+      chiefComplaint === "cough" && React.createElement(
+        React.Fragment, null,
+        checkboxLine("শিশু স্থির/শান্ত থাকা অবস্থায়ও শ্বাসের সাথে শব্দ (stridor)", stridorCalm, check(setStridorCalm)),
+        checkboxLine("শ্বাস নেওয়ার সময় বুক দেবে যাচ্ছে (chest indrawing)", chestIndrawing, check(setChestIndrawing)),
+        checkboxLine("দ্রুত শ্বাস-প্রশ্বাস (fast breathing)", fastBreathing, check(setFastBreathing)),
+        checkboxLine("কাশি ১৪ দিনের বেশি ধরে", cough14Days, check(setCough14Days))
+      ),
+      chiefComplaint === "ear" && React.createElement(
+        React.Fragment, null,
+        checkboxLine("কানের পেছনে ফোলা/ব্যথা (tenderness)", earSwellingTender, check(setEarSwellingTender)),
+        checkboxLine("কানে ব্যথা/স্রাব হচ্ছে", earPainDischarge, check(setEarPainDischarge)),
+        earPainDischarge && TextField("কতদিন ধরে (দিন সংখ্যা)", earDurationDays, (v) => { setEarDurationDays(v); setResult(null); }, "যেমন: 5")
+      ),
+      chiefComplaint === "measles" && React.createElement(
+        React.Fragment, null,
+        checkboxLine("গুরুতর জটিলতা (খুব অসুস্থ/গভীর মুখের ঘা/কর্নিয়া মেঘলা)", measlesSevere, check(setMeaslesSevere)),
+        checkboxLine("চোখ/মুখে হালকা জটিলতা (পুঁজ/ঘা)", measlesEyeMouth, check(setMeaslesEyeMouth)),
+        checkboxLine("বর্তমানে বা গত ৩ মাসে হাম হয়েছে, জটিলতা ছাড়া", measlesCurrent, check(setMeaslesCurrent))
       )
     ),
 

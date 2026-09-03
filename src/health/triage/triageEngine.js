@@ -76,6 +76,9 @@ export const CHIEF_COMPLAINTS = [
   ["none", "নির্দিষ্ট কিছু না (শুধু emergency-checklist)"],
   ["fever", "জ্বর"],
   ["diarrhea", "ডায়রিয়া / পাতলা পায়খানা"],
+  ["cough", "কাশি / সর্দি"],
+  ["ear", "কানে ব্যথা / স্রাব"],
+  ["measles", "হাম (Measles)"],
 ];
 
 function checkFever({ feverDays }) {
@@ -97,8 +100,58 @@ function checkDiarrhea({ diarrheaDays, bloodyStool }) {
   return { riskLevel: "self-care", ruleId: "IMCI-DIAR-003", ruleSource: "WHO IMCI Diarrhea classification", description: "সাধারণ acute diarrhea (dehydration নেই ধরে নেওয়া হচ্ছে)", suggestedTimeframe: "ORS চালিয়ে যান; না কমলে বা নতুন উপসর্গ দেখা দিলে ডাক্তার দেখান" };
 }
 
-// checklist: { [itemId]: boolean }, chiefComplaint: "none"|"fever"|"diarrhea",
-// complaintInputs: { feverDays, diarrheaDays, bloodyStool }
+// Pneumonia/Cough-Cold, Ear Problem, Measles family (Architecture Plan Part B §4.1.1)।
+// Feeding/Nutrition family (VERY LOW WEIGHT FOR AGE) ইচ্ছাকৃতভাবে বাদ — growth-chart/
+// weight-for-age percentile data এখনো system-এ নেই, ভুল-classification এড়াতে deferred।
+
+function checkCough({ stridorCalm, chestIndrawing, fastBreathing, cough14Days }) {
+  if (stridorCalm) {
+    return { riskLevel: "emergency", ruleId: "IMCI-COUGH-001", ruleSource: "WHO IMCI Pneumonia classification", description: "স্থির অবস্থায় stridor (Severe Pneumonia/Very Severe Disease)", suggestedTimeframe: "তাৎক্ষণিক" };
+  }
+  if (chestIndrawing || fastBreathing) {
+    return { riskLevel: "urgent", ruleId: "IMCI-COUGH-002", ruleSource: "WHO IMCI Pneumonia classification", description: "বুক দেবে যাওয়া/দ্রুত শ্বাস-প্রশ্বাস (Pneumonia)", suggestedTimeframe: "আজই ডাক্তার দেখান, ২ দিন পর ফলো-আপ" };
+  }
+  if (cough14Days) {
+    return { riskLevel: "needs-attention", ruleId: "IMCI-COUGH-003", ruleSource: "WHO IMCI Pneumonia classification", description: "কাশি ১৪ দিনের বেশি (TB সন্দেহ)", suggestedTimeframe: "TB পরীক্ষার জন্য ডাক্তার দেখান" };
+  }
+  return { riskLevel: "self-care", ruleId: "IMCI-COUGH-004", ruleSource: "WHO IMCI Pneumonia classification", description: "সাধারণ কাশি/সর্দি (No Pneumonia)", suggestedTimeframe: "ঘরোয়া যত্ন; ৩ দিন পর ফলো-আপ, না কমলে" };
+}
+
+function checkEar({ earSwellingTender, earPainDischarge, earDurationDays }) {
+  if (earSwellingTender) {
+    return { riskLevel: "emergency", ruleId: "IMCI-EAR-001", ruleSource: "WHO IMCI Ear classification", description: "কানের পেছনে ফোলা/tenderness (Mastoiditis)", suggestedTimeframe: "তাৎক্ষণিক" };
+  }
+  if (earPainDischarge) {
+    const days = Number(earDurationDays);
+    const chronic = !isNaN(days) && days >= 14;
+    return {
+      riskLevel: "needs-attention",
+      ruleId: chronic ? "IMCI-EAR-003" : "IMCI-EAR-002",
+      ruleSource: "WHO IMCI Ear classification",
+      description: chronic ? "কানে স্রাব ১৪+ দিন (Chronic Ear Infection)" : "কানে ব্যথা/স্রাব ১৪ দিনের কম (Acute Ear Infection)",
+      suggestedTimeframe: "৫ দিন পর ফলো-আপ" + (chronic ? " (কান শুকনো রাখার guidance-সহ)" : ""),
+    };
+  }
+  return null;
+}
+
+function checkMeasles({ measlesSevere, measlesEyeMouth, measlesCurrent }) {
+  if (measlesSevere) {
+    return { riskLevel: "emergency", ruleId: "IMCI-MEASLES-001", ruleSource: "WHO IMCI Measles classification", description: "গুরুতর জটিলতাসহ হাম (Severe Complicated Measles)", suggestedTimeframe: "তাৎক্ষণিক" };
+  }
+  if (measlesEyeMouth) {
+    return { riskLevel: "urgent", ruleId: "IMCI-MEASLES-002", ruleSource: "WHO IMCI Measles classification", description: "চোখ/মুখে জটিলতাসহ হাম", suggestedTimeframe: "Vitamin A + ২ দিন পর ফলো-আপ" };
+  }
+  if (measlesCurrent) {
+    return { riskLevel: "routine", ruleId: "IMCI-MEASLES-003", ruleSource: "WHO IMCI Measles classification", description: "হাম (বর্তমান/গত ৩ মাসে), জটিলতা ছাড়া", suggestedTimeframe: "২ দিন পর ফলো-আপ, না কমলে" };
+  }
+  return null;
+}
+
+// checklist: { [itemId]: boolean }, chiefComplaint: CHIEF_COMPLAINTS-এর কোনো একটা value,
+// complaintInputs: { feverDays, diarrheaDays, bloodyStool, stridorCalm, chestIndrawing,
+// fastBreathing, cough14Days, earSwellingTender, earPainDischarge, earDurationDays,
+// measlesSevere, measlesEyeMouth, measlesCurrent }
 export function runTriage({ ageGroup, checklist, chiefComplaint = "none", complaintInputs = {} }) {
   const pediatric = isPediatricAgeGroup(ageGroup);
   const items = getChecklistForAgeGroup(ageGroup);
@@ -132,6 +185,18 @@ export function runTriage({ ageGroup, checklist, chiefComplaint = "none", compla
   if (pediatric && chiefComplaint === "diarrhea") {
     candidates.push(checkDiarrhea(complaintInputs));
     triageSource.push({ rulesetName: "WHO IMCI Diarrhea classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" });
+  }
+  if (pediatric && chiefComplaint === "cough") {
+    candidates.push(checkCough(complaintInputs));
+    triageSource.push({ rulesetName: "WHO IMCI Pneumonia classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" });
+  }
+  if (pediatric && chiefComplaint === "ear") {
+    const r = checkEar(complaintInputs);
+    if (r) { candidates.push(r); triageSource.push({ rulesetName: "WHO IMCI Ear classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" }); }
+  }
+  if (pediatric && chiefComplaint === "measles") {
+    const r = checkMeasles(complaintInputs);
+    if (r) { candidates.push(r); triageSource.push({ rulesetName: "WHO IMCI Measles classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" }); }
   }
 
   if (candidates.length === 0) {
