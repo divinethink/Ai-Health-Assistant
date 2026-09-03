@@ -27,6 +27,7 @@ import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
 import { DocumentsSection } from "../health/documents/DocumentsSection.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
+import { TriageForm } from "../health/triage/TriageForm.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -49,9 +50,10 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(TriageForm, { key: "triage" + refreshTick, familyId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "Take-Access/AccessGrant UI যোগ হয়েছে — পরের ধাপ: relationshipLabel/guardianMemberIds Admin UI ও ১৮+ soft-notify transition।"
+        "P3 শুরু — Symptom Check/Triage (emergency red-flag checklist) যোগ হয়েছে। পরের ধাপ: রোগ-নির্দিষ্ট (Fever/Diarrhea ইত্যাদি) triage rule ও Health Context Engine।"
       )
     )
   );
