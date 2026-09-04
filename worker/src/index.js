@@ -207,7 +207,12 @@ export default {
 
       return json(env, { error: "not-found" }, 404);
     } catch (e) {
-      return json(env, { error: (e && e.message) || String(e) }, 500);
+      const msg = (e && e.message) || String(e);
+      // Rate-Limit Mitigation (§10.2.2) — Groq 429 হলে client নির্ভরযোগ্যভাবে
+      // detect করে exponential-backoff retry করতে পারে সেজন্য generic 500-এর
+      // বদলে proper 429 status ফেরত দেওয়া হচ্ছে (aiClient.js-এ retry-logic)।
+      const status = /groq-error-429/.test(msg) ? 429 : 500;
+      return json(env, { error: msg }, status);
     }
   },
 };
