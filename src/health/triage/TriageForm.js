@@ -8,6 +8,7 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
+import { askAI } from "../../ai/aiClient.js";
 
 const { useState, useEffect } = React;
 
@@ -49,6 +50,9 @@ export function TriageForm({ familyId }) {
   const [result, setResult] = useState(null);
   const [healthContext, setHealthContext] = useState(null);
   const [contextErr, setContextErr] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState(null);
+  const [aiErr, setAiErr] = useState(null);
 
   function check(setter) {
     return () => { setter((v) => !v); setResult(null); setHealthContext(null); };
@@ -92,11 +96,24 @@ export function TriageForm({ familyId }) {
     setResult(triageResult);
     setHealthContext(null);
     setContextErr(null);
+    setAiResponse(null);
+    setAiErr(null);
     // Health Context Engine — শুধু in-memory assemble/preview, কোনো Firestore write
     // বা cloud/AI call এখানে নেই (Cloudflare Worker LLM-proxy পরের ধাপে যোগ হবে)।
     assembleHealthContext(familyId, targetMemberId, triageResult, { symptoms: chiefComplaint })
       .then(setHealthContext)
       .catch((e) => setContextErr(e.message || String(e)));
+  }
+
+  function handleAskAI() {
+    if (!healthContext) return;
+    setAiLoading(true);
+    setAiErr(null);
+    setAiResponse(null);
+    askAI(familyId, healthContext)
+      .then((data) => setAiResponse(data && data.content))
+      .catch((e) => setAiErr(e.message || String(e)))
+      .finally(() => setAiLoading(false));
   }
 
   if (loadErr) return ErrorBox(loadErr);
@@ -170,8 +187,24 @@ export function TriageForm({ familyId }) {
     contextErr && React.createElement("div", { style: { fontSize: "11px", color: "#C0392B", marginTop: "8px" } }, "Health Context তৈরি করা যায়নি: " + contextErr),
     healthContext && React.createElement(
       "details", { style: { marginTop: "10px", fontSize: "11px", color: "#666" } },
-      React.createElement("summary", null, "Health Context (dev-preview, AI-তে এখনো পাঠানো হচ্ছে না)"),
+      React.createElement("summary", null, "Health Context (dev-preview)"),
       React.createElement("pre", { style: { whiteSpace: "pre-wrap", background: "#F5F5F0", padding: "8px", borderRadius: "6px" } }, JSON.stringify(healthContext, null, 2))
+    ),
+
+    healthContext && React.createElement(
+      "div", { style: { marginTop: "12px" } },
+      PrimaryButton(aiLoading ? "AI ভাবছে..." : "AI-কে জিজ্ঞাসা করুন", handleAskAI)
+    ),
+
+    aiErr && React.createElement(
+      "div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "8px" } },
+      "AI response পাওয়া যায়নি: " + aiErr
+    ),
+
+    aiResponse && React.createElement(
+      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
+      React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance (dev-preview — এখনো chat-history save হচ্ছে না)"),
+      React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
     )
   );
 }
