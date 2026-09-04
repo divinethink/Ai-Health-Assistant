@@ -50,10 +50,10 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(TriageForm, { key: "triage" + refreshTick, familyId }),
+      React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
-        "P3 চলছে — Symptom Check/Triage (emergency checklist + Fever/Diarrhea/Cough/Ear/Measles rule) ও Health Context Engine (dev-preview) যোগ হয়েছে। পরের ধাপ: Cloudflare Worker LLM-proxy (Groq)।"
+        "P3 চলছে — Symptom Check/Triage, AI Guidance, Health Episode session-save (§9), ও Rate-Limit retry (§10.2.2) যোগ হয়েছে।"
       )
     )
   );
