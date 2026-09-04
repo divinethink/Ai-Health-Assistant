@@ -121,7 +121,7 @@ async function callGroq(env, payload, conversationHistory) {
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || "";
+  const content = (data.choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
   return { content, usage: data.usage || null };
 }
 
