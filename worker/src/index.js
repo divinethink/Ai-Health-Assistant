@@ -88,6 +88,18 @@ function scanForDoseLeak(text) {
   return typeof text === "string" && DOSE_PATTERN.test(text);
 }
 
+// Detection-layer, §6.4.1 (highRiskFlag medicine — Clonazepam/Flupentixol+Melitracen-এর
+// মতো dependency/narrow-therapeutic-index ওষুধ) — dose-gap/adjustment আলোচনা ও
+// herbal/lifestyle-complementary suggestion phrase একসাথে ধরার pattern। শুধু তখনই
+// active থাকে যখন conversation-এ কোনো highRiskFlag: true medicine reference পাওয়া
+// গেছে (নিচে highRiskContext flag)।
+const HIGH_RISK_SUPPRESS_PATTERN =
+  /(ভেষজ|হার্বাল|প্রাকৃতিক\s*(উপায়|চিকিৎসা)?|ঘরোয়া\s*(উপায়|চিকিৎসা)?|আয়ুর্বেদ|হোমিওপ্যাথি|ডোজ\s*(কমিয়ে|বাড়িয়ে|পরিবর্তন|গ্যাপ)|মিস\s*হলে|বাদ\s*দিলে|বন্ধ\s*করলে|ধীরে\s*ধীরে\s*কমিয়ে|taper|withdrawal)/i;
+
+function scanForHighRiskLeak(text) {
+  return typeof text === "string" && HIGH_RISK_SUPPRESS_PATTERN.test(text);
+}
+
 // --- Dose Enforcement — Prevention Layer, Option A: Pre-Lookup Injection ---
 // (roadmap §6.4/§10.2.1, owner-approved Option A over native tool-calling — কম
 // ঝুঁকি, model-নির্ভরতা কম)। LLM কখনো dose-সংখ্যা নিজে generate করে না — user
@@ -281,6 +293,19 @@ function buildDoseFactMessage(resolution) {
     "note-only-no-dose": "এই বয়সের জন্য শুধু সতর্কতা আছে, নির্দিষ্ট dose নেই",
   };
   if (resolution.blocked) {
+    // §6.4.1 — highRiskFlag medicine-এ normal Tier-2 block-message-এর চেয়েও সংকীর্ণ
+    // নির্দেশনা: dose-gap/adjustment আলোচনা ও herbal/lifestyle-complementary
+    // guidance দুটোই suppress, শুধু generic-info + interaction-warning + urgent-referral।
+    if (resolution.reason === "high-risk-flag") {
+      return (
+        `সিস্টেম-নোট (app-এর verified database থেকে, বাধ্যতামূলক পালনীয়): "${resolution.genericName || ""}" ` +
+        `high-risk (dependency/narrow-therapeutic-index) ক্যাটাগরির ওষুধ। কোনো dose-সংখ্যা, dose-পরিবর্তন/গ্যাপ, ` +
+        `বা "মিস হলে কী করবেন" জাতীয় আলোচনায় একেবারেই যাবেন না। কোনো ভেষজ/হোমিওপ্যাথি/ঘরোয়া/lifestyle-complementary ` +
+        `পরামর্শও দেবেন না — শুধু সাধারণ generic-level শিক্ষামূলক তথ্য, সম্ভাব্য interaction-সতর্কতা, ও সরাসরি ` +
+        `ডাক্তার/pharmacist-এর কাছে জরুরি যোগাযোগের পরামর্শ দিন।` +
+        (resolution.riskNote ? ` অতিরিক্ত নোট: ${resolution.riskNote}` : "")
+      );
+    }
     const reasonText = REASON_TEXT[resolution.reason] || "dose তথ্য দেখানো যাবে না";
     return (
       `সিস্টেম-নোট (app-এর verified database থেকে, বাধ্যতামূলক পালনীয়): "${resolution.genericName || ""}"-এর ` +
@@ -436,6 +461,9 @@ export default {
         // (§6.6 PII-minimized payload নীতি অক্ষত)। lookup ব্যর্থ/অনির্ধারিত হলে
         // safe-default: কিছুই inject হবে না, system-prompt-ই backstop থাকে।
         let doseFactNote = null;
+        // §6.4.1 Prevention-layer flag — true হলে detection-layer-এ high-risk
+        // suppress-pattern-ও scan হবে (নিচে)।
+        let highRiskContext = false;
         try {
           const lastUserMsg = Array.isArray(conversationHistory)
             ? [...conversationHistory].reverse().find((m) => m && m.role === "user")
@@ -451,18 +479,23 @@ export default {
               activeMedicationNames: payload?.relevantClinicalContext?.relevantMedications || [],
             });
             doseFactNote = buildDoseFactMessage(resolution);
+            highRiskContext = resolution.reason === "high-risk-flag";
           }
         } catch (e) {
           doseFactNote = null;
+          highRiskContext = false;
         }
 
         const { content, usage } = await callGroq(env, payload, conversationHistory, doseFactNote);
-        const blocked = scanForDoseLeak(content);
+        const doseLeak = scanForDoseLeak(content);
+        const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
+        const blocked = doseLeak || highRiskLeak;
+        const fallbackMessage = highRiskLeak
+          ? "এই ওষুধ সম্পর্কে dose/পরিবর্তন সংক্রান্ত যেকোনো প্রশ্নে সরাসরি ডাক্তার/pharmacist-এর সাথে যোগাযোগ করুন।"
+          : "দুঃখিত, এই উত্তরে ওষুধের মাত্রা-সংক্রান্ত তথ্য সনাক্ত হয়েছে বলে এটি দেখানো যাচ্ছে না। ওষুধের dose/পরিবর্তন সংক্রান্ত যেকোনো প্রশ্নে সরাসরি ডাক্তার/pharmacist-এর সাথে যোগাযোগ করুন।";
 
         return json(env, {
-          content: blocked
-            ? "দুঃখিত, এই উত্তরে ওষুধের মাত্রা-সংক্রান্ত তথ্য সনাক্ত হয়েছে বলে এটি দেখানো যাচ্ছে না। ওষুধের dose/পরিবর্তন সংক্রান্ত যেকোনো প্রশ্নে সরাসরি ডাক্তার/pharmacist-এর সাথে যোগাযোগ করুন।"
-            : content,
+          content: blocked ? fallbackMessage : content,
           blocked,
           usage,
         });
