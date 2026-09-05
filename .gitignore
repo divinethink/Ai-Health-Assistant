@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Firebase Admin SDK service-account key — কখনো git-এ commit করা যাবে না
+# (Process Rule ৪, scripts/populateMedicineDb.js-এ ব্যবহৃত)
+scripts/serviceAccountKey.json
+
+*.log
+.DS_Store
