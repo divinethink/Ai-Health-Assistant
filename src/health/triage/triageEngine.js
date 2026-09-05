@@ -13,6 +13,18 @@
 // (Firestore/React ছাড়াই) unit-testable। Process ফাইল Rule ৫ (Medical Safety —
 // deterministic, non-bypassable) ও Rule ১১ (state/logic core-layer-এ) অনুযায়ী।
 
+// Dosing Rule Engine (§5.4/§6.4)-এর জন্য পূর্ণসংখ্যা নয় এমন সঠিক বয়স (বছরে,
+// fractional — যেমন ৩ মাস = 0.25) প্রয়োজন; deriveAgeGroup()-এর ভেতরের হিসাব-ই
+// এখানে export করে reuse করা হলো (duplicate logic এড়াতে, Process Rule ২)।
+export function getAgeInYears(dob) {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const now = new Date();
+  const ageDays = (now - birth) / (1000 * 60 * 60 * 24);
+  return ageDays / 365.25;
+}
+
 export function deriveAgeGroup(dob) {
   if (!dob) return null;
   const birth = new Date(dob);
