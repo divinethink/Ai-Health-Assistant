@@ -12,7 +12,7 @@
 // Endpoints:
 //   POST /upload-auth  { idToken, familyId, docId } -> { cloudName, apiKey, timestamp, signature, publicId, folder }
 //   POST /delete        { idToken, familyId, docId } -> { ok: true }
-//   POST /ai-chat        { idToken, familyId, memberId, payload, conversationHistory } -> { content, blocked, usage }
+//   POST /ai-chat        { idToken, familyId, payload, conversationHistory, ageYears? } -> { content, blocked, usage }
 
 import { jwtVerify, createRemoteJWKSet } from "jose";
 
@@ -88,6 +88,214 @@ function scanForDoseLeak(text) {
   return typeof text === "string" && DOSE_PATTERN.test(text);
 }
 
+// --- Dose Enforcement — Prevention Layer, Option A: Pre-Lookup Injection ---
+// (roadmap §6.4/§10.2.1, owner-approved Option A over native tool-calling — কম
+// ঝুঁকি, model-নির্ভরতা কম)। LLM কখনো dose-সংখ্যা নিজে generate করে না — user
+// কোনো নির্দিষ্ট medicine-এর নাম উল্লেখ করলে, Groq-কে কল করার **আগেই** এখানে
+// deterministic lookup করে ফলাফল (dose-fact বা block-reason) একটা অতিরিক্ত
+// system-নোট হিসেবে messages-এ inject করা হয় — LLM শুধু সেটা বাংলায় ব্যাখ্যা
+// করে, সংখ্যা নিজে বসায় না। Detection-layer (scanForDoseLeak, উপরে) backstop
+// হিসেবে অপরিবর্তিত থাকছে (defense-in-depth)।
+//
+// **নোট — কেন duplicate, import না:** src/legacy/doseEnforcement.js-এ একই pure
+// function আছে (client-side ব্যবহারের জন্য, ইতিমধ্যে ৭টা case দিয়ে verify করা)।
+// এখানে duplicate রাখা হলো কারণ Worker আলাদা bundling-context (Wrangler/esbuild)
+// এবং cross-directory import আসলে deploy করে পরীক্ষা না করে নিশ্চিত হওয়া যাচ্ছে
+// না — production Worker না ভাঙার জন্য এই ছোট, ইতিমধ্যে-verified logic-ই এখানে
+// আলাদাভাবে রাখা নিরাপদ (Zero-Risk Discipline)। দুই ফাইল ভবিষ্যতে একসাথে বদলাতে
+// হবে যদি dose-logic নিজেই বদলায় (এই কমেন্টই সেই reminder)।
+
+function medicineDocId(genericName) {
+  return String(genericName).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function findDosingRuleForAge(dosingRules, ageYears) {
+  if (!Array.isArray(dosingRules) || ageYears == null) return null;
+  return (
+    dosingRules.find((r) => {
+      const min = r.ageMin ?? 0;
+      const max = r.ageMax;
+      return ageYears >= min && (max == null || ageYears < max);
+    }) || null
+  );
+}
+
+function checkAllergyBlock(genericName, allergySubstances) {
+  if (!genericName) return false;
+  const target = genericName.toLowerCase();
+  return (allergySubstances || []).some((s) => {
+    const sub = String(s).toLowerCase();
+    return sub && (target.includes(sub) || sub.includes(target));
+  });
+}
+
+function checkInteractionFlags(medicineEntry, activeMedicationNames) {
+  if (!medicineEntry || !Array.isArray(medicineEntry.interactsWith)) return [];
+  const flags = [];
+  for (const activeMed of activeMedicationNames || []) {
+    if (!activeMed) continue;
+    const activeLower = activeMed.toLowerCase();
+    const matchedNote = medicineEntry.interactsWith.find((i) => String(i).toLowerCase().includes(activeLower));
+    if (matchedNote) flags.push({ withGenericName: activeMed, note: matchedNote });
+  }
+  return flags;
+}
+
+function resolveDoseForMember({ medicineEntry, ageYears, allergySubstances, activeMedicationNames }) {
+  if (!medicineEntry) return { blocked: true, reason: "no-verified-data" };
+  if (medicineEntry.tier === "requires-consult") {
+    return { blocked: true, reason: "requires-consult", genericName: medicineEntry.genericName, educationalUseNote: medicineEntry.educationalUseNote || null };
+  }
+  if (checkAllergyBlock(medicineEntry.genericName, allergySubstances)) {
+    return { blocked: true, reason: "allergy-contraindication", genericName: medicineEntry.genericName };
+  }
+  const interactionFlags = checkInteractionFlags(medicineEntry, activeMedicationNames);
+  if (interactionFlags.length > 0) {
+    return { blocked: true, reason: "interaction-flag", genericName: medicineEntry.genericName, interactionFlags };
+  }
+  if (medicineEntry.highRiskFlag) {
+    return { blocked: true, reason: "high-risk-flag", genericName: medicineEntry.genericName, riskNote: medicineEntry.riskNote || null };
+  }
+  const rule = findDosingRuleForAge(medicineEntry.dosingRules, ageYears);
+  if (!rule) return { blocked: true, reason: "no-matching-age-rule", genericName: medicineEntry.genericName };
+  const hasDoseValue = !!(rule.fixedDose || rule.dosePerKg);
+  if (!hasDoseValue) return { blocked: true, reason: "note-only-no-dose", genericName: medicineEntry.genericName, note: rule.note || null };
+  return {
+    blocked: false,
+    genericName: medicineEntry.genericName,
+    dose: rule.fixedDose || rule.dosePerKg,
+    frequency: rule.frequency || null,
+    maxDurationDays: rule.maxDurationDays || null,
+    contraindications: medicineEntry.contraindications || [],
+    source: medicineEntry.source || [],
+  };
+}
+
+// Firestore REST value-conversion — medicineDatabase entry-তে nested array/map/
+// double/null থাকে, existing fsFieldsToPlain() (উপরে) শুধু flat string/int/bool-এর
+// জন্য (অন্য endpoint-এ ব্যবহৃত, ওটা অপরিবর্তিত রাখা হলো — Process Rule ২)।
+function fsValueToPlain(v) {
+  if (!v || v.nullValue !== undefined) return null;
+  if (v.stringValue !== undefined) return v.stringValue;
+  if (v.integerValue !== undefined) return Number(v.integerValue);
+  if (v.doubleValue !== undefined) return Number(v.doubleValue);
+  if (v.booleanValue !== undefined) return v.booleanValue;
+  if (v.arrayValue !== undefined) return (v.arrayValue.values || []).map(fsValueToPlain);
+  if (v.mapValue !== undefined) return fsDocFieldsToPlain(v.mapValue.fields);
+  return null;
+}
+function fsDocFieldsToPlain(fields) {
+  const out = {};
+  for (const k in fields || {}) out[k] = fsValueToPlain(fields[k]);
+  return out;
+}
+
+// শুধু verified, non-emergency-only entry ফেরত দেয় — draft/unverified হলে rules
+// নিজেই deny করবে (non-ok response), সেটা catch করে null (safe-default block)।
+async function fetchMedicineEntry(env, idToken, genericName) {
+  try {
+    const res = await fetch(firestoreDocUrl(env, `medicineDatabase/${medicineDocId(genericName)}`), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) return null;
+    const doc = await res.json();
+    const data = fsDocFieldsToPlain(doc.fields);
+    if (data.status !== "verified" || data.emergencyBystanderOnly) return null;
+    return { genericName, ...data };
+  } catch (e) {
+    return null;
+  }
+}
+
+const KNOWN_MEDICINES = [
+  { term: "ors", genericName: "ORS (Oral Rehydration Salts)" },
+  { term: "paracetamol", genericName: "Paracetamol" },
+  { term: "zinc sulfate", genericName: "Zinc Sulfate" },
+  { term: "ibuprofen", genericName: "Ibuprofen" },
+  { term: "esomeprazole", genericName: "Esomeprazole" },
+  { term: "pantoprazole", genericName: "Pantoprazole" },
+  { term: "antacid plus", genericName: "Antacid Plus (+Simethicone)" },
+  { term: "antacid", genericName: "Antacid (Al(OH)3+Mg(OH)2)" },
+  { term: "bilastine", genericName: "Bilastine" },
+  { term: "fexofenadine", genericName: "Fexofenadine" },
+  { term: "cetirizine", genericName: "Cetirizine" },
+  { term: "chlorpheniramine", genericName: "Chlorpheniramine" },
+  { term: "salbutamol", genericName: "Salbutamol" },
+  { term: "ketotifen", genericName: "Ketotifen" },
+  { term: "domperidone", genericName: "Domperidone" },
+  { term: "ambroxol", genericName: "Ambroxol" },
+  { term: "montelukast", genericName: "Montelukast" },
+  { term: "doxofylline", genericName: "Doxofylline" },
+  { term: "azithromycin", genericName: "Azithromycin" },
+  { term: "loperamide", genericName: "Loperamide" },
+  { term: "metronidazole", genericName: "Metronidazole" },
+  { term: "itopride", genericName: "Itopride" },
+  { term: "naproxen", genericName: "Naproxen" },
+  { term: "levothyroxine", genericName: "Levothyroxine" },
+  { term: "amlodipine", genericName: "Amlodipine" },
+  { term: "losartan", genericName: "Losartan" },
+  { term: "metformin", genericName: "Metformin" },
+  { term: "ondansetron", genericName: "Ondansetron" },
+  { term: "clonazepam", genericName: "Clonazepam" },
+  { term: "flupentixol", genericName: "Flupentixol + Melitracen (combination)" },
+  { term: "pizotifen", genericName: "Pizotifen" },
+  { term: "clotrimazole", genericName: "Clotrimazole" },
+  { term: "povidone-iodine", genericName: "Povidone-Iodine" },
+  { term: "antibiotic ointment", genericName: "Antibiotic Ointment (Mupirocin/Fusidic Acid)" },
+  { term: "mefenamic acid", genericName: "Mefenamic Acid" },
+  { term: "vitamin d3", genericName: "Vitamin D3 (Cholecalciferol)" },
+  { term: "calcium", genericName: "Calcium (Carbonate/Citrate)" },
+  { term: "iron", genericName: "Iron + Folic Acid (combination)" },
+  { term: "dextromethorphan", genericName: "Dextromethorphan" },
+  { term: "diclofenac", genericName: "Diclofenac (topical gel)" },
+  { term: "lactulose", genericName: "Lactulose" },
+  { term: "psyllium husk", genericName: "Psyllium Husk (Isabgol)" },
+  { term: "bisacodyl", genericName: "Bisacodyl" },
+  { term: "hydrocortisone", genericName: "Hydrocortisone + Local Anesthetic (topical hemorrhoid cream)" },
+  { term: "benzydamine", genericName: "Benzydamine (oral rinse/gel)" },
+  { term: "triamcinolone acetonide", genericName: "Triamcinolone Acetonide (dental paste)" },
+  // "Aspirin" ইচ্ছাকৃতভাবে বাদ — emergencyBystanderOnly entry, fetchMedicineEntry()
+  // এমনিতেই এটা filter করে (§5.4.1.1 normal-flow-এ কখনো accessible না), কিন্তু
+  // এখানে না রাখাই স্পষ্টতর।
+];
+
+function detectMentionedMedicine(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  for (const { term, genericName } of KNOWN_MEDICINES) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp("\\b" + escaped + "\\b", "i").test(lower)) return genericName;
+  }
+  return null;
+}
+
+function buildDoseFactMessage(resolution) {
+  if (!resolution) return null;
+  const REASON_TEXT = {
+    "no-verified-data": "এই ওষুধের কোনো verified তথ্য এখনো app database-এ নেই",
+    "requires-consult": "এই ওষুধ শুধুমাত্র ডাক্তারের পরামর্শে ব্যবহারযোগ্য (Tier 2/requires-consult)",
+    "allergy-contraindication": "এই সদস্যের প্রোফাইলে সংশ্লিষ্ট এলার্জি রেকর্ড আছে",
+    "interaction-flag": "এই সদস্যের চলমান অন্য ওষুধের সাথে সম্ভাব্য interaction আছে",
+    "high-risk-flag": "এই ওষুধ high-risk (dependency/narrow-therapeutic-index) ক্যাটাগরির",
+    "no-matching-age-rule": "এই বয়সের জন্য কোনো নির্দিষ্ট dosing-নিয়ম verified database-এ নেই",
+    "note-only-no-dose": "এই বয়সের জন্য শুধু সতর্কতা আছে, নির্দিষ্ট dose নেই",
+  };
+  if (resolution.blocked) {
+    const reasonText = REASON_TEXT[resolution.reason] || "dose তথ্য দেখানো যাবে না";
+    return (
+      `সিস্টেম-নোট (app-এর verified database থেকে, বাধ্যতামূলক পালনীয়): "${resolution.genericName || ""}"-এর ` +
+      `কোনো dose/সংখ্যা উল্লেখ করবেন না। কারণ: ${reasonText}। শুধু generic/সাধারণ তথ্য দিন এবং সরাসরি ডাক্তার/` +
+      `pharmacist-এর সাথে যোগাযোগের পরামর্শ দিন — নিজে থেকে কোনো dose-সংখ্যা কল্পনা করবেন না।`
+    );
+  }
+  return (
+    `সিস্টেম-নোট (app-এর verified database থেকে, বাধ্যতামূলক পালনীয় — শুধু এই সংখ্যাগুলোই ব্যবহার করুন, ` +
+    `নিজে থেকে ভিন্ন কোনো সংখ্যা বলবেন না): "${resolution.genericName}" — dose: ${resolution.dose}, frequency: ` +
+    `${resolution.frequency || "N/A"}${resolution.maxDurationDays ? ", সর্বোচ্চ মেয়াদ: " + resolution.maxDurationDays + " দিন" : ""}। ` +
+    `উৎস: ${(resolution.source || []).join(", ")}। contraindication: ${(resolution.contraindications || []).join(", ") || "উল্লেখযোগ্য কিছু নেই"}।`
+  );
+}
+
 const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI Health Assistant। কঠোরভাবে মেনে চলুন:
 - কখনো কোনো medicine-এর dose/frequency/duration/সংখ্যা নিজে থেকে বলবেন না — শুধু generic-level পরামর্শ দেবেন, dose সবসময় app-এর নিজস্ব verified database থেকে আসে, আপনার থেকে নয়।
 - chronic disease (ডায়াবেটিস/উচ্চ রক্তচাপ/থাইরয়েড/কিডনি)-এর existing medicine-এর dose পরিবর্তন/বন্ধ করার পরামর্শ কখনো দেবেন না।
@@ -96,10 +304,11 @@ const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI 
 - Emergency/urgent risk মনে হলে সবসময় দ্রুত ডাক্তার/হাসপাতাল/৯৯৯-এর পরামর্শ দিন।
 - বাংলায় স্পষ্ট, সহজ ভাষায় উত্তর দিন।`;
 
-async function callGroq(env, payload, conversationHistory) {
+async function callGroq(env, payload, conversationHistory, doseFactNote) {
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: "স্বাস্থ্য-প্রসঙ্গ (JSON): " + JSON.stringify(payload) },
+    ...(doseFactNote ? [{ role: "system", content: doseFactNote }] : []),
     ...(Array.isArray(conversationHistory) ? conversationHistory : []),
   ];
 
@@ -179,7 +388,7 @@ export default {
       }
 
       if (request.method === "POST" && url.pathname === "/ai-chat") {
-        const { idToken, familyId, payload, conversationHistory } = await request.json();
+        const { idToken, familyId, payload, conversationHistory, ageYears } = await request.json();
         if (!idToken || !familyId || !payload) return json(env, { error: "missing-params" }, 400);
 
         let uid;
@@ -193,7 +402,33 @@ export default {
         const isMember = await verifyFamilyMembership(env, idToken, familyId, uid);
         if (!isMember) return json(env, { error: "forbidden" }, 403);
 
-        const { content, usage } = await callGroq(env, payload, conversationHistory);
+        // Dose Enforcement — Prevention Layer, Option A (উপরে বিস্তারিত কমেন্ট)।
+        // ageYears এখানেই শুধু ব্যবহৃত হয় — `payload`-এ কখনো merge করা হয় না,
+        // তাই callGroq()-এ পাঠানো JSON.stringify(payload)-এ এটা কখনো যাবে না
+        // (§6.6 PII-minimized payload নীতি অক্ষত)। lookup ব্যর্থ/অনির্ধারিত হলে
+        // safe-default: কিছুই inject হবে না, system-prompt-ই backstop থাকে।
+        let doseFactNote = null;
+        try {
+          const lastUserMsg = Array.isArray(conversationHistory)
+            ? [...conversationHistory].reverse().find((m) => m && m.role === "user")
+            : null;
+          const scanText = [payload?.relevantClinicalContext?.symptoms, lastUserMsg?.content].filter(Boolean).join(" ");
+          const mentioned = detectMentionedMedicine(scanText);
+          if (mentioned) {
+            const entry = await fetchMedicineEntry(env, idToken, mentioned);
+            const resolution = resolveDoseForMember({
+              medicineEntry: entry,
+              ageYears: typeof ageYears === "number" ? ageYears : null,
+              allergySubstances: payload?.relevantClinicalContext?.relevantAllergies || [],
+              activeMedicationNames: payload?.relevantClinicalContext?.relevantMedications || [],
+            });
+            doseFactNote = buildDoseFactMessage(resolution);
+          }
+        } catch (e) {
+          doseFactNote = null;
+        }
+
+        const { content, usage } = await callGroq(env, payload, conversationHistory, doseFactNote);
         const blocked = scanForDoseLeak(content);
 
         return json(env, {
