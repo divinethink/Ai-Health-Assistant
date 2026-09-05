@@ -3,7 +3,7 @@
 
 import { listMembers } from "./familyIdentity.js";
 import { listHealthRecords } from "../health/records/healthRecordsData.js";
-import { deriveAgeGroup } from "../health/triage/triageEngine.js";
+import { deriveAgeGroup, getAgeInYears } from "../health/triage/triageEngine.js";
 
 // Pure function — Firebase dependency নেই, unit-testable। §6.6 exclude-list অনুযায়ী
 // নাম/DOB/phone/address/treatingPhysician-contact/অন্য-সদস্যের-তথ্য/bulk-history কখনো
@@ -39,10 +39,16 @@ export function buildHealthContext({ member, records = [], triageResult = null, 
 
 // Thin async wrapper — existing familyIdentity.js/healthRecordsData.js read-function
 // reuse করে, কোনো নতুন Firestore query/collection লাগে না।
+//
+// **গুরুত্বপূর্ণ (roadmap §6.4/Dose Enforcement, Option A):** `ageYears` এখানে
+// আলাদাভাবে (context object-এর বাইরে) ফেরত দেওয়া হয় — যাতে ভুলেও এটা
+// `context`-এর ভেতরে ঢুকে Groq-বাউন্ড payload-এ (§6.6 PII-minimized payload)
+// চলে না যায়। `context`/buildHealthContext() shape সম্পূর্ণ অপরিবর্তিত।
 export async function assembleHealthContext(familyId, targetMemberId, triageResult, symptomInputs = {}) {
   const members = await listMembers(familyId);
   const member = members.find((m) => m.id === targetMemberId);
   if (!member) throw new Error("সদস্য পাওয়া যায়নি: " + targetMemberId);
   const records = await listHealthRecords(familyId, targetMemberId);
-  return buildHealthContext({ member, records, triageResult, symptomInputs });
+  const context = buildHealthContext({ member, records, triageResult, symptomInputs });
+  return { context, ageYears: getAgeInYears(member.dob) };
 }
