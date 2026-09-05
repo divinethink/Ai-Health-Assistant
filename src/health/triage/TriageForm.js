@@ -12,7 +12,7 @@
 // Rate-Limit (429) Mitigation (§10.2.2) — askAI()-এর retry-callback দিয়ে
 // non-alarming "একটু অপেক্ষা করুন" note দেখানো হয়, raw error না।
 
-import { ErrorBox, SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
+import { ErrorBox, SelectField, TextField, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
@@ -333,6 +333,18 @@ export function TriageForm({ familyId, callerMemberId }) {
       "Episode/conversation history সংরক্ষণ করা যায়নি (triage/AI ফলাফল অপ্রভাবিত): " + episodeSaveErr
     ),
 
+    // Cloud AI Hosting Disclosure (roadmap §13) — AI-call-এর আগে স্পষ্ট, non-intrusive
+    // transparency নোটিস (existing details/summary pattern reuse, healthContext dev-
+    // preview block-এর মতোই)।
+    healthContext && React.createElement(
+      "details", { style: { marginTop: "12px", fontSize: "11px", color: "#555", background: "#F3F6F5", padding: "8px 10px", borderRadius: "6px", border: "1px solid #D8E3E0" } },
+      React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "#0E4B43" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
+      React.createElement(
+        "div", { style: { marginTop: "6px", lineHeight: "1.5" } },
+        "এই প্রশ্নোত্তরের জন্য ক্লাউড-ভিত্তিক AI (Groq) ব্যবহার করা হচ্ছে। Zero Data Retention (ZDR) মোড সক্রিয় থাকায় Groq এই তথ্য দিয়ে কোনো মডেল ট্রেইন করে না। আপনার নাম, ফোন নম্বর বা সরাসরি পরিচয়সূচক কোনো তথ্য কখনো পাঠানো হয় না — শুধু বয়স-গ্রুপ ও প্রাসঙ্গিক লক্ষণ/স্বাস্থ্য-তথ্য পাঠানো হয়।"
+      )
+    ),
+
     healthContext && React.createElement(
       "div", { style: { marginTop: "12px" } },
       PrimaryButton("AI-কে জিজ্ঞাসা করুন", handleAskAI, aiLoading),
@@ -344,8 +356,11 @@ export function TriageForm({ familyId, callerMemberId }) {
       "AI response পাওয়া যায়নি: " + aiErr
     ),
 
+    // roadmap §12.0 — output কখনো "Prescription" হিসেবে উপস্থাপন করা যাবে না,
+    // স্পষ্ট লেবেল বাধ্যতামূলক।
     aiResponse && React.createElement(
       "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
+      React.createElement("div", { style: { fontSize: "10px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
       React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
       React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
     ),
@@ -366,6 +381,18 @@ export function TriageForm({ familyId, callerMemberId }) {
           },
           React.createElement("b", null, m.role === "user" ? "আপনি: " : "AI: "), m.content
         ))
+      ),
+      // Re-triage nudge (§10.3 স্তর-৩) — নতুন/ভিন্ন উপসর্গে deterministic triage
+      // আবার চালানো উচিত; কোনো AI-based auto-detection না (triage bright-line
+      // non-bypassable থাকার নীতি, Process Rule ৫)। existing handleArchiveAndStartNew
+      // reuse — নতুন logic/state নেই।
+      React.createElement(
+        "div", { style: { fontSize: "11px", color: "#7A5B00", marginBottom: "8px" } },
+        "⚠️ নতুন বা ভিন্ন উপসর্গ দেখা দিলে, দয়া করে আলোচনা চালিয়ে যাওয়ার বদলে নতুন Symptom Check চালান।",
+        React.createElement(
+          "div", { style: { marginTop: "6px" } },
+          SecondaryButton("নতুন Symptom Check শুরু করুন", handleArchiveAndStartNew)
+        )
       ),
       TextField("আরও জিজ্ঞাসা করুন (ঐচ্ছিক)", followUpText, setFollowUpText, "যেমন: এটার সাথে কি কিছু খাওয়া নিরাপদ?"),
       PrimaryButton("পাঠান", handleSendFollowUp, followUpLoading),
