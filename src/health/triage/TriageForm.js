@@ -68,6 +68,7 @@ export function TriageForm({ familyId, callerMemberId }) {
   const [measlesCurrent, setMeaslesCurrent] = useState(false);
   const [result, setResult] = useState(null);
   const [healthContext, setHealthContext] = useState(null);
+  const [memberAgeYears, setMemberAgeYears] = useState(null); // Groq-payload-এ যায় না, শুধু Worker dose-lookup-এর জন্য (§6.6 প্রাইভেসি)
   const [contextErr, setContextErr] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
@@ -91,7 +92,7 @@ export function TriageForm({ familyId, callerMemberId }) {
   }
 
   function check(setter) {
-    return () => { setter((v) => !v); setResult(null); setHealthContext(null); };
+    return () => { setter((v) => !v); setResult(null); setHealthContext(null); setMemberAgeYears(null); };
   }
 
   useEffect(() => {
@@ -123,7 +124,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     setChecklist({});
     setChiefComplaint("none");
     setResult(null);
-    setHealthContext(null);
+    setHealthContext(null); setMemberAgeYears(null);
     setAiResponse(null);
     setAiErr(null);
     resetEpisodeState();
@@ -145,7 +146,7 @@ export function TriageForm({ familyId, callerMemberId }) {
       },
     });
     setResult(triageResult);
-    setHealthContext(null);
+    setHealthContext(null); setMemberAgeYears(null);
     setContextErr(null);
     setAiResponse(null);
     setAiErr(null);
@@ -153,7 +154,7 @@ export function TriageForm({ familyId, callerMemberId }) {
 
     // Health Context Engine — dev-preview assemble, কোনো Firestore write না।
     assembleHealthContext(familyId, targetMemberId, triageResult, { symptoms: chiefComplaint })
-      .then(setHealthContext)
+      .then(({ context, ageYears }) => { setHealthContext(context); setMemberAgeYears(ageYears); })
       .catch((e) => setContextErr(e.message || String(e)));
 
     // Episode/TriageResult/structured-trigger-message persist — non-fatal:
@@ -183,6 +184,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     try {
       const data = await askAI(familyId, healthContext, conversationTurns, {
         onRetry: (attempt, max) => setAiRetryNote("একটু অপেক্ষা করুন... (retry " + attempt + "/" + max + ")"),
+        ageYears: memberAgeYears,
       });
       const content = data && data.content;
       setAiResponse(content);
@@ -215,6 +217,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     try {
       const data = await askAI(familyId, healthContext, newHistory, {
         onRetry: (attempt, max) => setFollowUpRetryNote("একটু অপেক্ষা করুন... (retry " + attempt + "/" + max + ")"),
+        ageYears: memberAgeYears,
       });
       const content = data && data.content;
       setConversationTurns([...newHistory, { role: "assistant", content }]);
@@ -240,7 +243,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     setChecklist({});
     setChiefComplaint("none");
     setResult(null);
-    setHealthContext(null);
+    setHealthContext(null); setMemberAgeYears(null);
     setContextErr(null);
     setAiResponse(null);
     setAiErr(null);
