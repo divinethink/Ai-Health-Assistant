@@ -321,7 +321,17 @@ async function callGroq(env, payload, conversationHistory, doseFactNote) {
     body: JSON.stringify({
       model: "qwen/qwen3.6-27b",
       messages,
-      max_tokens: 1000,
+      max_tokens: 1500,
+      // reasoning_effort:"none" — dual-mode (thinking/non-thinking) model-এ
+      // thinking mode বন্ধ করে দেয়। আমাদের বাংলা health-guidance conversational
+      // use-case-এ জটিল multi-step reasoning দরকার নেই, আর thinking mode-ই
+      // দেখা গেছে মাঝে মাঝে টোকেন-বাজেট শেষ করে ফেলে/loop-এ আটকে যায় (owner
+      // screenshot, ২০২৬-০৯-০৫)।
+      reasoning_effort: "none",
+      // reasoning_format:"hidden" — defense-in-depth: reasoning_effort ভবিষ্যতে
+      // কোনো কারণে override/ignore হলেও, এটা raw <think> content API-স্তরেই
+      // suppress করে (Groq docs: শুধু final answer content ফেরত আসে)।
+      reasoning_format: "hidden",
     }),
   });
 
@@ -330,7 +340,25 @@ async function callGroq(env, payload, conversationHistory, doseFactNote) {
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
-  const content = (data.choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  let content = data.choices?.[0]?.message?.content || "";
+
+  // তৃতীয় স্তর — client-side backstop, উপরের API-parameter দুটো কোনো কারণে
+  // কাজ না করলেও raw reasoning/অসম্পূর্ণ-think কখনো user-কে দেখানো হবে না।
+  // Closed <think>...</think> স্বাভাবিকভাবে strip হয়; কিন্তু token-limit-এ
+  // কেটে গিয়ে closing ট্যাগ না থাকলে (owner screenshot-এর মতো), <think>-এর
+  // পর থেকে সবটাই বাদ দেওয়া হয় — partial raw-reasoning/garbage-loop leak
+  // কখনো দেখানো হবে না।
+  if (content.includes("<think>")) {
+    const closeIdx = content.indexOf("</think>");
+    content = closeIdx !== -1 ? content.replace(/<think>[\s\S]*?<\/think>/gi, "") : content.slice(0, content.indexOf("<think>"));
+  }
+  content = content.trim();
+
+  // পুরোটাই reasoning/খালি হয়ে গেলে raw কিছু না দেখিয়ে বন্ধুত্বপূর্ণ retry-বার্তা।
+  if (!content) {
+    content = "দুঃখিত, উত্তরটা ঠিকভাবে তৈরি হয়নি। আরেকবার চেষ্টা করুন, বা প্রশ্নটা একটু ছোট করে জিজ্ঞাসা করুন।";
+  }
+
   return { content, usage: data.usage || null };
 }
 
