@@ -10,6 +10,7 @@ import { ErrorBox, SelectField } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthRecordList } from "./HealthRecordList.js";
+import { TrendChartSection } from "../reports/TrendChartSection.js";
 
 const { useState, useEffect } = React;
 
@@ -48,6 +49,9 @@ export function HealthRecordsSection({ familyId, callerMemberId }) {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
       onEdit: setEditingRecord,
       onDeleted: () => setRefreshTick((t) => t + 1),
+    }),
+    React.createElement(TrendChartSection, {
+      key: "trend-" + targetMemberId, familyId, targetMemberId, refreshTick,
     })
   );
 }
