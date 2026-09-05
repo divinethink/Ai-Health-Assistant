@@ -27,7 +27,20 @@ export function buildHealthRecordFields(resourceType, fields) {
     return { name: fields.name.trim(), category: fields.category, status: fields.status, onsetDate: fields.date || null };
   }
   if (resourceType === "observation") {
-    return { type: fields.type.trim(), value: fields.value.trim(), unit: fields.unit.trim(), date: fields.date || null };
+    // source/extractionMethod/extractionConfidence/originalOcrValue/userVerified —
+    // Architecture Plan Part A §2 schema-তে আগে থেকেই সংজ্ঞায়িত ছিল, P5 Report
+    // Intelligence verification-form (ReportVerificationForm.js) এখন এগুলো পাঠাবে।
+    // ম্যানুয়াল entry (HealthRecordForm.js) এই field গুলো পাঠায় না বলে default
+    // "manual"/userVerified:true হয় — এটাই সঠিক আচরণ (ব্যবহারকারী নিজে টাইপ
+    // করেছেন মানেই verified, roadmap §8-এর userVerified-gate নীতির সাথে সংগতিপূর্ণ)।
+    return {
+      type: fields.type.trim(), value: fields.value.trim(), unit: fields.unit.trim(), date: fields.date || null,
+      source: fields.source || "manual",
+      extractionMethod: fields.extractionMethod || null,
+      extractionConfidence: fields.extractionConfidence || null,
+      originalOcrValue: fields.originalOcrValue || null,
+      userVerified: fields.userVerified !== undefined ? fields.userVerified : true,
+    };
   }
   if (resourceType === "medicationStatement") {
     return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null };
