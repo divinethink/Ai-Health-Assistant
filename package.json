@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:rules": "firebase emulators:exec --project=demo-health-assistant --only firestore \"mocha tests/rules/health-assistant.rules.test.mjs --timeout 20000 --exit\""
+    "test:rules": "firebase emulators:exec --project=demo-health-assistant --only firestore \"mocha tests/rules/health-assistant.rules.test.mjs --timeout 20000 --exit\"",
+    "db:populate-medicine": "node scripts/populateMedicineDb.js"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -19,6 +20,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "@firebase/rules-unit-testing": "^3.0.4",
     "firebase-tools": "^13.29.1",
-    "mocha": "^10.7.3"
+    "mocha": "^10.7.3",
+    "firebase-admin": "^12.6.0"
   }
 }
