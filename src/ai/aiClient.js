@@ -25,7 +25,7 @@ const WORKER_BASE_URL = import.meta.env.VITE_MEDIA_WORKER_URL || "";
  * @returns {Promise<{ content: string, blocked?: boolean, usage?: object }>}
  */
 export async function askAI(familyId, payload, conversationHistory = [], options = {}) {
-  const { onRetry, maxRetries = 2, baseDelayMs = 1500 } = options;
+  const { onRetry, maxRetries = 2, baseDelayMs = 1500, ageYears = null } = options;
 
   if (!WORKER_BASE_URL) {
     throw new Error("VITE_MEDIA_WORKER_URL env-var missing — worker URL not configured.");
@@ -42,7 +42,10 @@ export async function askAI(familyId, payload, conversationHistory = [], options
     const res = await fetch(`${WORKER_BASE_URL}/ai-chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, familyId, payload, conversationHistory }),
+      body: JSON.stringify({ idToken, familyId, payload, conversationHistory, ageYears }),
+      // ageYears `payload`-এর বাইরে, আলাদা top-level field — Worker শুধু নিজস্ব
+      // dose pre-lookup-এ ব্যবহার করবে, Groq-কে পাঠানো কনটেক্সটে কখনো যাবে না
+      // (roadmap §6.6 PII-minimized payload নীতি)।
     });
 
     let data;
