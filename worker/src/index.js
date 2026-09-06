@@ -354,6 +354,10 @@ const SPECIALTY_NOTES = {
     "প্রাসঙ্গিক specialty context: প্রশ্নটি হরমোন/দীর্ঘমেয়াদি রোগ (থাইরয়েড/ডায়াবেটিস/উচ্চ-রক্তচাপ) সম্পর্কিত হতে পারে — chronic-disease bright-line rule (কোনো নতুন dose/পরিবর্তন-পরামর্শ না) বিশেষভাবে মনে রাখুন।",
   "physical-medicine":
     "প্রাসঙ্গিক specialty context: প্রশ্নটি জয়েন্ট/হাড়/মাংসপেশি-সম্পর্কিত (Physical Medicine) — movement/lifestyle-সচেতন সাধারণ পরামর্শ দিন, নির্দিষ্ট diagnosis দাবি করবেন না।",
+  // নতুন (P7, roadmap §11/§11.2) — client-side NutritionGuidance.js এই key
+  // সরাসরি সেট করে পাঠায় (keyword-detection না, definitional override)।
+  "nutrition-fitness":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি সাধারণ nutrition/diet/fitness-সংক্রান্ত (treatment mode/medical diagnosis না) — সরকারি/professional সোর্স-ভিত্তিক সাধারণ lifestyle guidance দিন, কোনো medicine/dose/supplement-ডোজ উল্লেখ করবেন না, existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং জটিল/মেডিকেল প্রশ্নে ডাক্তার/nutritionist-consult এর পরামর্শ দিন।",
 };
 
 async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote) {
