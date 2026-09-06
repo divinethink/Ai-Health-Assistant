@@ -329,10 +329,38 @@ const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI 
 - Emergency/urgent risk মনে হলে সবসময় দ্রুত ডাক্তার/হাসপাতাল/৯৯৯-এর পরামর্শ দিন।
 - বাংলায় স্পষ্ট, সহজ ভাষায় উত্তর দিন।`;
 
-async function callGroq(env, payload, conversationHistory, doseFactNote) {
+// --- Medical Science — Specialty-Context Routing (roadmap §4.1, P6 ধাপ ৩) ---
+// client-side `specialtyRouter.js` (src/health/treatment-modes/) deterministic-
+// ভাবে age/symptom-keyword দিয়ে specialty ঠিক করে, `payload.specialty`-তে পাঠায়।
+// এখানে শুধু সেই key অনুযায়ী একটা ছোট অতিরিক্ত system-নোট বেছে নেওয়া হয় —
+// existing doseFactNote injection-এর ঠিক একই প্যাটার্নে (নিচে messages-এ)।
+// **এটা কোনো safety-rule bypass/override করে না** — উপরের SYSTEM_PROMPT-এর সব
+// bright-line rule অপরিবর্তিতভাবে প্রযোজ্য থাকে; এই নোট শুধু response-এর
+// context/vocabulary একটু বেশি relevant করে তোলে (soft hint)। "general-medicine"
+// (ডিফল্ট)-এ কোনো নোট লাগে না — SYSTEM_PROMPT-ই যথেষ্ট, extra token খরচ এড়ানো
+// হয়েছে (§10.2.2 token-efficient prompt design)।
+//
+// **নোট — কেন duplicate, import না:** client-side `SPECIALTY_LABELS`-এর মতোই
+// ছোট static map, Worker আলাদা bundling-context বলে (উপরের dose-enforcement
+// duplicate-এর একই যুক্তি) এখানে আলাদাভাবে রাখা হলো।
+const SPECIALTY_NOTES = {
+  pediatrics:
+    "প্রাসঙ্গিক specialty context: এই সদস্য শিশু/নবজাতক — Pediatrics-এর দৃষ্টিভঙ্গি থেকে উত্তর দিন (বয়স-উপযোগী ভাষা, WHO IMCI-সংগতিপূর্ণ সতর্কতা), তবে সব বিদ্যমান নিয়ম অপরিবর্তিত থাকবে।",
+  "gynecology-obstetrics":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি গাইনি/প্রসূতি-সম্পর্কিত হতে পারে — প্রয়োজনে স্পর্শকাতর/stigma-conscious ভাষা ব্যবহার করুন, abnormal bleeding-জাতীয় বিষয়ে ডাক্তার-পরামর্শে উৎসাহ দিন।",
+  dermatology:
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি ত্বক/চুল/নখ-সম্পর্কিত (Dermatology) — dermatologist-backed guidance-কে অগ্রাধিকার দিন, marketing/influencer-দাবি এড়িয়ে চলুন।",
+  "endocrinology-medicine":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি হরমোন/দীর্ঘমেয়াদি রোগ (থাইরয়েড/ডায়াবেটিস/উচ্চ-রক্তচাপ) সম্পর্কিত হতে পারে — chronic-disease bright-line rule (কোনো নতুন dose/পরিবর্তন-পরামর্শ না) বিশেষভাবে মনে রাখুন।",
+  "physical-medicine":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি জয়েন্ট/হাড়/মাংসপেশি-সম্পর্কিত (Physical Medicine) — movement/lifestyle-সচেতন সাধারণ পরামর্শ দিন, নির্দিষ্ট diagnosis দাবি করবেন না।",
+};
+
+async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote) {
   const messages = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: "স্বাস্থ্য-প্রসঙ্গ (JSON): " + JSON.stringify(payload) },
+    ...(specialtyNote ? [{ role: "system", content: specialtyNote }] : []),
     ...(doseFactNote ? [{ role: "system", content: doseFactNote }] : []),
     ...(Array.isArray(conversationHistory) ? conversationHistory : []),
   ];
@@ -455,6 +483,11 @@ export default {
         const isMember = await verifyFamilyMembership(env, idToken, familyId, uid);
         if (!isMember) return json(env, { error: "forbidden" }, 403);
 
+        // Specialty-context routing (roadmap §4.1, উপরে বিস্তারিত কমেন্ট) —
+        // পুরোপুরি soft/non-blocking, lookup ব্যর্থ/অজানা হলে safe-default:
+        // কিছুই inject হবে না, SYSTEM_PROMPT-ই backstop থাকে।
+        const specialtyNote = payload?.specialty && SPECIALTY_NOTES[payload.specialty] ? SPECIALTY_NOTES[payload.specialty] : null;
+
         // Dose Enforcement — Prevention Layer, Option A (উপরে বিস্তারিত কমেন্ট)।
         // ageYears এখানেই শুধু ব্যবহৃত হয় — `payload`-এ কখনো merge করা হয় না,
         // তাই callGroq()-এ পাঠানো JSON.stringify(payload)-এ এটা কখনো যাবে না
@@ -486,7 +519,7 @@ export default {
           highRiskContext = false;
         }
 
-        const { content, usage } = await callGroq(env, payload, conversationHistory, doseFactNote);
+        const { content, usage } = await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote);
         const doseLeak = scanForDoseLeak(content);
         const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
         const blocked = doseLeak || highRiskLeak;
