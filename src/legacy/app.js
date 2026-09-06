@@ -29,6 +29,7 @@ import { DocumentsSection } from "../health/documents/DocumentsSection.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 import { TriageForm } from "../health/triage/TriageForm.js";
 import { RemedySection } from "../health/treatment-modes/RemedySection.js";
+import { NutritionGuidance } from "../health/nutrition-fitness/NutritionGuidance.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -53,6 +54,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(RemedySection, { key: "remedy" + refreshTick }),
+      React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
         "P3 চলছে — Symptom Check/Triage, AI Guidance, Health Episode session-save (§9), ও Rate-Limit retry (§10.2.2) যোগ হয়েছে।"
