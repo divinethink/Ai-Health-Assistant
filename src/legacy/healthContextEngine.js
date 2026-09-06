@@ -4,6 +4,7 @@
 import { listMembers } from "./familyIdentity.js";
 import { listHealthRecords } from "../health/records/healthRecordsData.js";
 import { deriveAgeGroup, getAgeInYears } from "../health/triage/triageEngine.js";
+import { detectSpecialty } from "../health/treatment-modes/specialtyRouter.js";
 
 // Pure function — Firebase dependency নেই, unit-testable। §6.6 exclude-list অনুযায়ী
 // নাম/DOB/phone/address/treatingPhysician-contact/অন্য-সদস্যের-তথ্য/bulk-history কখনো
@@ -21,10 +22,16 @@ export function buildHealthContext({ member, records = [], triageResult = null, 
     .filter((r) => r.resourceType === "medicationStatement" && r.status === "active")
     .map((r) => r.genericName);
 
+  const ageGroup = deriveAgeGroup(member.dob);
+
   return {
     memberPseudonymId: member.id,
-    ageGroup: deriveAgeGroup(member.dob),
+    ageGroup,
     sex: member.sex || null,
+    // Medical Science Specialty-Context Routing (roadmap §4.1, P6 ধাপ ৩) — নতুন,
+    // deterministic (কোনো AI-call/PII না), শুধু worker-কে একটা soft context-hint
+    // দেয় (§6.6 payload-এ নতুন field, non-PII, exclude-list-এর কোনোটা লঙ্ঘন করে না)।
+    specialty: detectSpecialty({ ageGroup, symptoms: symptomInputs.symptoms, relevantConditions }),
     relevantClinicalContext: {
       symptoms: symptomInputs.symptoms || null,
       duration: symptomInputs.duration || null,
