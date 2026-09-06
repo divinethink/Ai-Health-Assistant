@@ -6,6 +6,7 @@ import { ErrorBox, SelectField } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
+import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 
 const { useState, useEffect } = React;
 
@@ -37,6 +38,10 @@ export function DocumentsSection({ familyId, callerMemberId }) {
       key: "upload-" + targetMemberId,
       familyId, targetMemberId, callerMemberId,
       onUploaded: () => setRefreshTick((t) => t + 1),
+    }),
+    React.createElement(ReportAnalysisPanel, {
+      key: "analyze-" + targetMemberId,
+      familyId, targetMemberId, callerMemberId,
     }),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
