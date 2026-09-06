@@ -24,6 +24,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [reaction, setReaction] = useState("");
   const [severity, setSeverity] = useState("mild");
   const [date, setDate] = useState("");
+  // Treating Physician Contact — শুধু condition-এর জন্য (roadmap §12.5)
+  const [physicianName, setPhysicianName] = useState("");
+  const [physicianContact, setPhysicianContact] = useState("");
+  const [physicianHospital, setPhysicianHospital] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -46,11 +50,16 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setReaction(r.reaction || "");
     setSeverity(r.severity || "mild");
     setDate(r.onsetDate || r.date || r.startDate || "");
+    const tp = r.treatingPhysician || {};
+    setPhysicianName(tp.name || "");
+    setPhysicianContact(tp.chamberContact || "");
+    setPhysicianHospital(tp.hospital || "");
     setErr(null);
   }, [editingRecord]);
 
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
+    setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital("");
   }, []);
 
   const changeResourceType = useCallback((v) => {
@@ -65,7 +74,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
     setBusy(true);
     try {
-      const fields = { name, category, status, type: obsType, value, unit, tier, reaction, severity, date };
+      const fields = { name, category, status, type: obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital };
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -82,7 +91,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
   const typeFields = [];
   if (resourceType === "condition") {
@@ -90,6 +99,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     typeFields.push(SelectField("Category", category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]]));
     typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["resolved", "resolved"], ["chronic", "chronic"]]));
     typeFields.push(DateField("Onset তারিখ (ঐচ্ছিক)", date, setDate));
+    typeFields.push(React.createElement("div", { style: { fontSize: "12px", color: "#888", margin: "8px 0 2px" } }, "Treating Physician Contact (ঐচ্ছিক)"));
+    typeFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
+    typeFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));
+    typeFields.push(TextField("হাসপাতাল/চেম্বার", physicianHospital, setPhysicianHospital, "যেমন: হাসপাতালের নাম"));
   } else if (resourceType === "observation") {
     typeFields.push(TextField("ধরন", obsType, setObsType, "যেমন: Blood Sugar"));
     typeFields.push(TextField("মান", value, setValue, "যেমন: 110"));

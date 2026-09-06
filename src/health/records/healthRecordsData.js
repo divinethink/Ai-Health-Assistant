@@ -24,7 +24,16 @@ export const RESOURCE_TYPE_LABELS = {
 // কিন্তু data-hygiene-এর জন্য এখানেই সীমিত রাখা হলো)।
 export function buildHealthRecordFields(resourceType, fields) {
   if (resourceType === "condition") {
-    return { name: fields.name.trim(), category: fields.category, status: fields.status, onsetDate: fields.date || null };
+    // Treating Physician Contact (roadmap §12.5, Architecture Plan Part A §2 —
+    // schema আগে থেকেই সংজ্ঞায়িত ছিল, এখন প্রথমবার UI থেকে populate হচ্ছে)।
+    // তিনটাই optional; সব খালি হলে treatingPhysician: null (existing record ভাঙবে না)।
+    const physName = (fields.physicianName || "").trim();
+    const physContact = (fields.physicianContact || "").trim();
+    const physHospital = (fields.physicianHospital || "").trim();
+    const treatingPhysician = (physName || physContact || physHospital)
+      ? { name: physName || null, chamberContact: physContact || null, hospital: physHospital || null }
+      : null;
+    return { name: fields.name.trim(), category: fields.category, status: fields.status, onsetDate: fields.date || null, treatingPhysician };
   }
   if (resourceType === "observation") {
     // source/extractionMethod/extractionConfidence/originalOcrValue/userVerified —
@@ -104,7 +113,11 @@ export async function listHealthRecords(familyId, targetMemberId) {
 
 export function describeHealthRecord(r) {
   if (r.resourceType === "condition") {
-    return r.name + " — " + (r.status || "") + " (Category " + (r.category || "?") + ")" + (r.onsetDate ? ", onset: " + r.onsetDate : "");
+    const tp = r.treatingPhysician;
+    const tpText = tp && (tp.name || tp.hospital || tp.chamberContact)
+      ? " | ডাক্তার: " + (tp.name || "?") + (tp.hospital ? " (" + tp.hospital + ")" : "") + (tp.chamberContact ? ", যোগাযোগ: " + tp.chamberContact : "")
+      : "";
+    return r.name + " — " + (r.status || "") + " (Category " + (r.category || "?") + ")" + (r.onsetDate ? ", onset: " + r.onsetDate : "") + tpText;
   }
   if (r.resourceType === "observation") {
     return r.type + ": " + r.value + (r.unit ? " " + r.unit : "") + (r.date ? " (" + r.date + ")" : "");
