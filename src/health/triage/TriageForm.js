@@ -19,6 +19,7 @@ import { TriageResultView } from "./TriageResultView.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 import { createEpisode, saveTriageResult, addMessage, archiveEpisode } from "../episodes/episodesData.js";
+import { RiskBasedTreatmentModes } from "../treatment-modes/RiskBasedTreatmentModes.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -360,13 +361,34 @@ export function TriageForm({ familyId, callerMemberId }) {
     ),
 
     // roadmap §12.0 — output কখনো "Prescription" হিসেবে উপস্থাপন করা যাবে না,
-    // স্পষ্ট লেবেল বাধ্যতামূলক।
-    aiResponse && React.createElement(
-      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
-      React.createElement("div", { style: { fontSize: "10px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-      React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
-      React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
-    ),
+    // স্পষ্ট লেবেল বাধ্যতামূলক। §4.3 Risk-Based Presentation (P6 ধাপ ৬) — riskLevel/
+    // ageGroupContext অনুযায়ী Medical Science primary/expanded (high-risk-এ) বা
+    // তিন mode পাশাপাশি (low-risk-এ) সাজানো হয়। Herbal/Homeopathy এখানে নিজস্ব
+    // AI-content generate করে না — শুধু নিচের RemedySection (verified remedy
+    // reference)-এর দিকে পয়েন্ট করে, dose/prescription-জাতীয় কিছু bypass হয় না।
+    aiResponse && React.createElement(RiskBasedTreatmentModes, {
+      riskLevel: result && result.riskLevel,
+      ageGroupContext: result && result.ageGroupContext,
+      // TODO (ভবিষ্যতে সংযোজনযোগ্য): সংশ্লিষ্ট Condition.chronicManagement flag
+      // এখানে যুক্ত করা যায় — আপাতত conservative false রাখা হলো, তাই
+      // pediatric/pregnant/emergency-urgent-needs-attention trigger অপরিবর্তিতভাবে
+      // কাজ করছে, শুধু chronic-condition-based trigger এই মুহূর্তে সক্রিয় না।
+      chronicManagement: false,
+      medicalScienceNode: React.createElement(
+        "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
+        React.createElement("div", { style: { fontSize: "10px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
+        React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
+        React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
+      ),
+      herbalNode: React.createElement(
+        "div", { style: { fontSize: "12px", color: "#555" } },
+        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified herbal remedy দেখুন।"
+      ),
+      homeopathyNode: React.createElement(
+        "div", { style: { fontSize: "12px", color: "#555" } },
+        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified homeopathy remedy দেখুন।"
+      ),
+    }),
 
     // Post-Guidance Discussion Layer (স্তর-৩, §10.3) — শুধু প্রথম AI-response আসার পর সক্রিয়।
     aiResponse && React.createElement(
