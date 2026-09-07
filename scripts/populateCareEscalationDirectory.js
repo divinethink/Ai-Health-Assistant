@@ -48,10 +48,14 @@ try {
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-function docIdFor(type, name) {
-  return `${type}-${name}`
+function docIdFor(type, contact) {
+  // নোট (bug-fix): আগে `name` দিয়ে slug তৈরি হতো, কিন্তু বাংলা টেক্সট
+  // [^a-z0-9]-regex-এ সব বাদ পড়ে যাওয়ায় একই type-এর একাধিক entry একই
+  // doc-ID-তে collide করেছিল (৯৯৯/১০০ ও ৩৩৩/১০৬/১০৫ কেস)। `contact`
+  // (ফোন-নম্বর/ডোমেইন, সবসময় ASCII ও unique) দিয়ে ID তৈরি করাই নিরাপদ।
+  return `${type}-${contact}`
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^a-z0-9.]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
 
@@ -76,7 +80,7 @@ async function run() {
   let willSkip = 0;
 
   for (const entry of ENTRIES) {
-    const id = docIdFor(entry.type, entry.name);
+    const id = docIdFor(entry.type, entry.contact);
     const ref = db.collection("careEscalationDirectory").doc(id);
     const existingSnap = await ref.get();
 
