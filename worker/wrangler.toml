@@ -12,3 +12,9 @@ ALLOWED_ORIGIN = "*"
 # SECRET — plaintext টাইপ করবেন না এখানে। Deploy করার আগে টার্মিনালে চালান:
 #   wrangler secret put CLOUDINARY_API_SECRET
 #   wrangler secret put GROQ_API_KEY
+#   wrangler secret put MISTRAL_API_KEY
+#   (Architecture Plan Part B §6.5 Phase 2 — Mistral secondary/failover। এই
+#   secret set না করলে আগের মতোই শুধু Groq active থাকবে, কোনো ভাঙা পরিবর্তন না।
+#   Mistral La Plateforme-এ signup করে free "Experiment" tier API key নিন।
+#   ঐচ্ছিক: model বদলাতে চাইলে [vars]-এ MISTRAL_MODEL = "mistral-small-latest"
+#   (বা অন্য কোনো Mistral model) যোগ করা যায়, না দিলে ডিফল্ট mistral-small-latest।)
