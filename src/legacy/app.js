@@ -32,6 +32,7 @@ import { RemedySection } from "../health/treatment-modes/RemedySection.js";
 import { NutritionGuidance } from "../health/nutrition-fitness/NutritionGuidance.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
+import { DoctorExportSection } from "../health/doctor-export/DoctorExportSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -59,6 +60,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
       React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
+      React.createElement(DoctorExportSection, { key: "doctor-export" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
         "P3 চলছে — Symptom Check/Triage, AI Guidance, Health Episode session-save (§9), ও Rate-Limit retry (§10.2.2) যোগ হয়েছে।"
