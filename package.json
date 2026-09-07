@@ -16,7 +16,8 @@
     "react-dom": "^18.3.1",
     "firebase": "10.12.2",
     "pdfjs-dist": "^4.6.82",
-    "tesseract.js": "^5.1.1"
+    "tesseract.js": "^5.1.1",
+    "docx": "^8.5.0"
   },
   "devDependencies": {
     "vite": "^5.4.0",
