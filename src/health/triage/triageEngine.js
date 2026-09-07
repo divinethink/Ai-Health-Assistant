@@ -93,6 +93,14 @@ export const CHIEF_COMPLAINTS = [
   ["measles", "হাম (Measles)"],
 ];
 
+// Suspected Heart-Attack Bystander Aspirin — narrow-scope trigger checklist
+// (Architecture Plan Part B §5.4.1.1, roadmap §9.4/§19 amendment, P8 ধাপ ১)।
+// শুধু adult chestPain checkbox select হলেই দেখানো হবে, TriageForm.js-এ।
+export const CARDIAC_BYSTANDER_QUESTIONS = [
+  { id: "cardiacPersistent", label: "বুকে ব্যথা/চাপ কয়েক মিনিটের বেশি স্থায়ী বা বারবার আসছে?" },
+  { id: "cardiacAssociated", label: "সাথে আছে: হাত/চোয়াল/পিঠে ব্যথা ছড়ানো, শ্বাসকষ্ট, ঘাম, বা বমি-বমি ভাব?" },
+];
+
 function checkFever({ feverDays }) {
   const days = Number(feverDays);
   if (!isNaN(days) && days >= 7) {
@@ -164,7 +172,7 @@ function checkMeasles({ measlesSevere, measlesEyeMouth, measlesCurrent }) {
 // complaintInputs: { feverDays, diarrheaDays, bloodyStool, stridorCalm, chestIndrawing,
 // fastBreathing, cough14Days, earSwellingTender, earPainDischarge, earDurationDays,
 // measlesSevere, measlesEyeMouth, measlesCurrent }
-export function runTriage({ ageGroup, checklist, chiefComplaint = "none", complaintInputs = {} }) {
+export function runTriage({ ageGroup, checklist, chiefComplaint = "none", complaintInputs = {}, cardiacBystanderAnswers = {} }) {
   const pediatric = isPediatricAgeGroup(ageGroup);
   const items = getChecklistForAgeGroup(ageGroup);
   const triggeredItems = items.filter((it) => checklist && checklist[it.id]);
@@ -209,6 +217,23 @@ export function runTriage({ ageGroup, checklist, chiefComplaint = "none", compla
   if (pediatric && chiefComplaint === "measles") {
     const r = checkMeasles(complaintInputs);
     if (r) { candidates.push(r); triageSource.push({ rulesetName: "WHO IMCI Measles classification", version: "MVP-v1", sourceReference: "WHO IMCI Chart Booklet" }); }
+  }
+
+  // Cardiac-pattern chest pain — Bystander-Aspirin trigger (Architecture Plan Part B
+  // §5.4.1.1)। শুধু additive candidate — chestPain checklist-item এমনিতেই আলাদা
+  // ADULT-EMERGENCY-001/FAST candidate তৈরি করে (riskLevel অপরিবর্তিত থাকে,
+  // existing winner-selection ভাঙে না); এটা শুধু traceability-র জন্য
+  // triggeredRules-এ যোগ হয়, যাতে UI নির্ভরযোগ্যভাবে aspirin-eligibility detect
+  // করতে পারে।
+  if (!pediatric && checklist && checklist.chestPain && cardiacBystanderAnswers.cardiacPersistent && cardiacBystanderAnswers.cardiacAssociated) {
+    candidates.push({
+      riskLevel: "emergency",
+      ruleId: "CARDIAC-BYSTANDER-001",
+      ruleSource: "AHA/Red Cross bystander first-aid guideline",
+      description: "Cardiac-pattern বৈশিষ্ট্য মিলেছে (bystander-aspirin বিবেচনাযোগ্য)",
+      suggestedTimeframe: "তাৎক্ষণিক",
+    });
+    triageSource.push({ rulesetName: "AHA/Red Cross bystander first-aid guideline", version: "MVP-v1", sourceReference: "AHA/Red Cross bystander first-aid protocol" });
   }
 
   if (candidates.length === 0) {

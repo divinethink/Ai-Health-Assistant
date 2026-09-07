@@ -14,12 +14,15 @@
 
 import { ErrorBox, SelectField, TextField, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS } from "./triageEngine.js";
+import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS, CARDIAC_BYSTANDER_QUESTIONS, getAgeInYears } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 import { createEpisode, saveTriageResult, addMessage, archiveEpisode } from "../episodes/episodesData.js";
 import { RiskBasedTreatmentModes } from "../treatment-modes/RiskBasedTreatmentModes.js";
+import { listHealthRecords } from "../records/healthRecordsData.js";
+import { checkAspirinContraindication } from "../emergency/bystanderAspirin.js";
+import { BystanderAspirinCard } from "../emergency/BystanderAspirinCard.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -68,6 +71,8 @@ export function TriageForm({ familyId, callerMemberId }) {
   const [measlesEyeMouth, setMeaslesEyeMouth] = useState(false);
   const [measlesCurrent, setMeaslesCurrent] = useState(false);
   const [result, setResult] = useState(null);
+  const [cardiacAnswers, setCardiacAnswers] = useState({ cardiacPersistent: false, cardiacAssociated: false });
+  const [aspirinCheck, setAspirinCheck] = useState(null);
   const [healthContext, setHealthContext] = useState(null);
   const [memberAgeYears, setMemberAgeYears] = useState(null); // Groq-payload-এ যায় না, শুধু Worker dose-lookup-এর জন্য (§6.6 প্রাইভেসি)
   const [contextErr, setContextErr] = useState(null);
@@ -93,7 +98,12 @@ export function TriageForm({ familyId, callerMemberId }) {
   }
 
   function check(setter) {
-    return () => { setter((v) => !v); setResult(null); setHealthContext(null); setMemberAgeYears(null); };
+    return () => { setter((v) => !v); setResult(null); setHealthContext(null); setMemberAgeYears(null); setAspirinCheck(null); };
+  }
+
+  function toggleCardiacAnswer(id) {
+    setResult(null); setAspirinCheck(null);
+    setCardiacAnswers((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
   useEffect(() => {
@@ -125,6 +135,8 @@ export function TriageForm({ familyId, callerMemberId }) {
     setChecklist({});
     setChiefComplaint("none");
     setResult(null);
+    setCardiacAnswers({ cardiacPersistent: false, cardiacAssociated: false });
+    setAspirinCheck(null);
     setHealthContext(null); setMemberAgeYears(null);
     setAiResponse(null);
     setAiErr(null);
@@ -133,6 +145,7 @@ export function TriageForm({ familyId, callerMemberId }) {
 
   function toggleItem(id) {
     setResult(null);
+    setAspirinCheck(null);
     setChecklist((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
@@ -145,6 +158,7 @@ export function TriageForm({ familyId, callerMemberId }) {
         earSwellingTender, earPainDischarge, earDurationDays,
         measlesSevere, measlesEyeMouth, measlesCurrent,
       },
+      cardiacBystanderAnswers: cardiacAnswers,
     });
     setResult(triageResult);
     setHealthContext(null); setMemberAgeYears(null);
@@ -152,6 +166,24 @@ export function TriageForm({ familyId, callerMemberId }) {
     setAiResponse(null);
     setAiErr(null);
     resetEpisodeState(); // নতুন "চেক করুন" ক্লিক = নতুন Health Episode (§9)
+
+    // Bystander-Aspirin contraindication auto-verify (Architecture Plan Part B
+    // §5.4.1.1) — সম্পূর্ণ deterministic, profile-lookup-ভিত্তিক, কোনো AI-call
+    // না। শুধু CARDIAC-BYSTANDER-001 rule trigger হলেই চলে (non-blocking —
+    // ব্যর্থ হলেও triage/emergency-contact bright-line অপ্রভাবিত)।
+    const cardiacTriggered = triageResult.triggeredRules.some((r) => r.ruleId === "CARDIAC-BYSTANDER-001");
+    if (cardiacTriggered) {
+      const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
+      listHealthRecords(familyId, targetMemberId)
+        .then((records) => {
+          const allergyRecords = records.filter((r) => r.resourceType === "allergy");
+          const conditionRecords = records.filter((r) => r.resourceType === "condition");
+          setAspirinCheck(checkAspirinContraindication({ ageYears, allergyRecords, conditionRecords }));
+        })
+        .catch(() => setAspirinCheck({ blocked: true, reason: "প্রোফাইল যাচাই করা যায়নি (safe-default: block)" }));
+    } else {
+      setAspirinCheck(null);
+    }
 
     // Health Context Engine — dev-preview assemble, কোনো Firestore write না।
     assembleHealthContext(familyId, targetMemberId, triageResult, { symptoms: chiefComplaint })
@@ -244,6 +276,8 @@ export function TriageForm({ familyId, callerMemberId }) {
     setChecklist({});
     setChiefComplaint("none");
     setResult(null);
+    setCardiacAnswers({ cardiacPersistent: false, cardiacAssociated: false });
+    setAspirinCheck(null);
     setHealthContext(null); setMemberAgeYears(null);
     setContextErr(null);
     setAiResponse(null);
@@ -291,6 +325,19 @@ export function TriageForm({ familyId, callerMemberId }) {
       )
     ),
 
+    // Cardiac-pattern sub-checklist — শুধু adult "বুকে ব্যথা/চাপ/অস্বস্তি" checkbox
+    // select হলেই দেখানো হয় (Architecture Plan Part B §5.4.1.1)।
+    checklist.chestPain && React.createElement(
+      "div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #E8C46B" } },
+      React.createElement(
+        "div", { style: { fontSize: "12px", fontWeight: 600, color: "#7A5B00", marginBottom: "6px" } },
+        "বুকে ব্যথা সংক্রান্ত অতিরিক্ত প্রশ্ন (bystander-aspirin বিবেচনার জন্য):"
+      ),
+      CARDIAC_BYSTANDER_QUESTIONS.map((q) =>
+        checkboxLine(q.label, !!cardiacAnswers[q.id], () => toggleCardiacAnswer(q.id))
+      )
+    ),
+
     ageGroup && isPediatricAgeGroup(ageGroup) && React.createElement(
       "div", { style: { marginTop: "12px" } },
       SelectField("প্রধান সমস্যা (chief complaint)", chiefComplaint, (v) => { setChiefComplaint(v); setResult(null); }, CHIEF_COMPLAINTS),
@@ -324,6 +371,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     checklistItems.length > 0 && PrimaryButton("চেক করুন", runCheck),
 
     result && React.createElement(TriageResultView, { result }),
+    result && aspirinCheck && React.createElement(BystanderAspirinCard, { check: aspirinCheck }),
 
     contextErr && React.createElement("div", { style: { fontSize: "11px", color: "#C0392B", marginTop: "8px" } }, "Health Context তৈরি করা যায়নি: " + contextErr),
     healthContext && React.createElement(
