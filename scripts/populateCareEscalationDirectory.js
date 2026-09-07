@@ -19,7 +19,8 @@
 // নিরাপত্তা: existing entry থাকলে overwrite করবে না (--force দিলে করবে) —
 // Process Rule ৩ (Zero Data Loss)।
 
-import admin from "firebase-admin";
+import { initializeApp, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -40,8 +41,12 @@ try {
   process.exit(1);
 }
 
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-const db = admin.firestore();
+// নোট: modular API (firebase-admin/app, firebase-admin/firestore) ব্যবহার করা
+// হয়েছে — namespaced `admin.credential.cert(...)` স্টাইলের চেয়ে বেশি
+// version-robust (ESM/CJS interop-এ কিছু firebase-admin ভার্সনে namespace
+// অসম্পূর্ণ resolve হওয়ার পরিচিত সমস্যা এড়াতে)।
+initializeApp({ credential: cert(serviceAccount) });
+const db = getFirestore();
 
 function docIdFor(type, name) {
   return `${type}-${name}`
@@ -88,7 +93,7 @@ async function run() {
       notes: entry.notes,
       verifiedBy: "owner",
       lastVerifiedDate: null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     console.log(`${CONFIRM ? "✍️  write" : "🔍 preview"}: ${id} (${entry.name})`);
