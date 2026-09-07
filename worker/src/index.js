@@ -1,5 +1,6 @@
 // Document/Report vault (Roadmap §7) — Cloudinary upload-signature + delete proxy।
-// + AI Orchestration (Roadmap §10.2.5, Architecture Plan Part B §6.7/§6.7.1) — Groq LLM-proxy।
+// + AI Orchestration (Roadmap §10.2.5, Architecture Plan Part B §6.7/§6.7.1) — Groq LLM-proxy
+// (primary) + Mistral (secondary/failover, §6.5 Phase 2, Thread-এ activated ২০২৬-০৯-০৭)।
 //
 // কেন এই Worker দরকার: Cloudinary API secret ও Groq API key কখনো client bundle-এ
 // যেতে পারবে না (Process Rule ৪)। কিন্তু permission-decision (কে কোন memberId-এর
@@ -360,14 +361,33 @@ const SPECIALTY_NOTES = {
     "প্রাসঙ্গিক specialty context: প্রশ্নটি সাধারণ nutrition/diet/fitness-সংক্রান্ত (treatment mode/medical diagnosis না) — সরকারি/professional সোর্স-ভিত্তিক সাধারণ lifestyle guidance দিন, কোনো medicine/dose/supplement-ডোজ উল্লেখ করবেন না, existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং জটিল/মেডিকেল প্রশ্নে ডাক্তার/nutritionist-consult এর পরামর্শ দিন।",
 };
 
-async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote) {
-  const messages = [
+function buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote) {
+  return [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: "স্বাস্থ্য-প্রসঙ্গ (JSON): " + JSON.stringify(payload) },
     ...(specialtyNote ? [{ role: "system", content: specialtyNote }] : []),
     ...(doseFactNote ? [{ role: "system", content: doseFactNote }] : []),
     ...(Array.isArray(conversationHistory) ? conversationHistory : []),
   ];
+}
+
+// দুই provider-ই শেয়ার করে — raw/অসম্পূর্ণ <think> reasoning-leak কখনো
+// user-কে দেখানো হবে না (§6.4.1/Thread 21 learning, provider-নিরপেক্ষ)।
+function cleanLLMContent(rawContent) {
+  let content = rawContent || "";
+  if (content.includes("<think>")) {
+    const closeIdx = content.indexOf("</think>");
+    content = closeIdx !== -1 ? content.replace(/<think>[\s\S]*?<\/think>/gi, "") : content.slice(0, content.indexOf("<think>"));
+  }
+  content = content.trim();
+  if (!content) {
+    content = "দুঃখিত, উত্তরটা ঠিকভাবে তৈরি হয়নি। আরেকবার চেষ্টা করুন, বা প্রশ্নটা একটু ছোট করে জিজ্ঞাসা করুন।";
+  }
+  return content;
+}
+
+async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+  const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -397,26 +417,55 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
-  let content = data.choices?.[0]?.message?.content || "";
-
-  // তৃতীয় স্তর — client-side backstop, উপরের API-parameter দুটো কোনো কারণে
-  // কাজ না করলেও raw reasoning/অসম্পূর্ণ-think কখনো user-কে দেখানো হবে না।
-  // Closed <think>...</think> স্বাভাবিকভাবে strip হয়; কিন্তু token-limit-এ
-  // কেটে গিয়ে closing ট্যাগ না থাকলে (owner screenshot-এর মতো), <think>-এর
-  // পর থেকে সবটাই বাদ দেওয়া হয় — partial raw-reasoning/garbage-loop leak
-  // কখনো দেখানো হবে না।
-  if (content.includes("<think>")) {
-    const closeIdx = content.indexOf("</think>");
-    content = closeIdx !== -1 ? content.replace(/<think>[\s\S]*?<\/think>/gi, "") : content.slice(0, content.indexOf("<think>"));
-  }
-  content = content.trim();
-
-  // পুরোটাই reasoning/খালি হয়ে গেলে raw কিছু না দেখিয়ে বন্ধুত্বপূর্ণ retry-বার্তা।
-  if (!content) {
-    content = "দুঃখিত, উত্তরটা ঠিকভাবে তৈরি হয়নি। আরেকবার চেষ্টা করুন, বা প্রশ্নটা একটু ছোট করে জিজ্ঞাসা করুন।";
-  }
-
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
   return { content, usage: data.usage || null };
+}
+
+// Secondary/fallback provider (Architecture Plan Part B §6.5, Phase 2) — শুধু তখনই
+// call হয় যখন Groq (primary) ব্যর্থ হয় এবং env.MISTRAL_API_KEY set করা আছে (owner
+// `wrangler secret put MISTRAL_API_KEY` চালালেই সক্রিয় হয়, না চালালে Phase 1-এর
+// মতোই আচরণ অপরিবর্তিত থাকে — কোনো ভাঙা পরিবর্তন না)। OpenAI-compatible endpoint।
+async function callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+  const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
+
+  const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.MISTRAL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: env.MISTRAL_MODEL || "mistral-small-latest",
+      messages,
+      max_tokens: 1500,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`mistral-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null };
+}
+
+// Provider Adapter routing (§6.5) — primary Groq, silent failover secondary Mistral।
+// শুধু rate-limit (429) বা provider-error/outage-এ failover হয় — অন্য কোনো error
+// (যেমন auth/network কোড-বাগ) হলেও safety অক্ষুণ্ণ রাখতে Mistral একবার try করা হয়,
+// কিন্তু ব্যর্থ হলে caller-এর কাছে সবসময় primary (Groq)-এর error/status ফেরত যায়
+// (existing 429-detection/client-retry logic অপরিবর্তিত থাকে)।
+async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+  try {
+    return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote);
+  } catch (primaryErr) {
+    if (!env.MISTRAL_API_KEY) throw primaryErr;
+    try {
+      return await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote);
+    } catch (secondaryErr) {
+      throw primaryErr;
+    }
+  }
 }
 
 export default {
@@ -523,7 +572,7 @@ export default {
           highRiskContext = false;
         }
 
-        const { content, usage } = await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote);
+        const { content, usage } = await callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote);
         const doseLeak = scanForDoseLeak(content);
         const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
         const blocked = doseLeak || highRiskLeak;
