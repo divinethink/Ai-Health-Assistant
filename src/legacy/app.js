@@ -33,11 +33,21 @@ import { NutritionGuidance } from "../health/nutrition-fitness/NutritionGuidance
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { DoctorExportSection } from "../health/doctor-export/DoctorExportSection.js";
+import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const [refreshTick, setRefreshTick] = useState(0);
+  // General Chat — Admin-only, health-flow-এর সম্পূর্ণ বাইরে একটা আলাদা
+  // full-screen special UI (নতুন, এই থ্রেড)। toggle true হলে পুরো Dashboard-এর
+  // বদলে GeneralChatSection render হয় (onExit দিয়ে ফিরে আসা যায়)।
+  const [showGeneralChat, setShowGeneralChat] = useState(false);
+
+  if (isAdmin && showGeneralChat) {
+    return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
+  }
+
   return Card(
     React.createElement(
       React.Fragment, null,
@@ -46,6 +56,13 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         "div", { style: { background: "#F5F5F0", padding: "12px", borderRadius: "8px", marginTop: "12px", fontSize: "14px" } },
         React.createElement("div", null, "পরিবারের কোড: ", React.createElement("b", null, familyDoc.familyCodeDisplay)),
         React.createElement("div", null, "আপনার ভূমিকা: ", React.createElement("b", null, memberDoc.role === "admin" ? "Admin" : memberDoc.role))
+      ),
+      isAdmin && React.createElement(
+        "button", {
+          onClick: () => setShowGeneralChat(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #1B2430", borderRadius: "8px", background: "#1B2430", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "🌐 General Chat খুলুন (Admin-only, স্বাধীন আলোচনা — কোনো health-restriction নেই)"
       ),
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
