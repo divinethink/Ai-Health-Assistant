@@ -143,6 +143,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // General Chat — কুইক-লিংক ডিরেক্টরি (নতুন, এই থ্রেড)। careEscalationDirectory-
+    // এর হুবহু একই pattern: global, family-independent, শুধু trusted local
+    // Admin-SDK script (scripts/populateGeneralChatQuickLinks.js) দিয়ে populate/
+    // edit হয় — নতুন লিংক যোগ/সম্পাদনা করতে হলে script চালিয়ে redeploy লাগবে না,
+    // শুধু script রি-রান করলেই চলবে।
+    match /generalChatQuickLinks/{linkId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // ============================================================
     // FAMILY-SCOPED DATA
     // ============================================================
@@ -196,6 +206,19 @@ service cloud.firestore {
           && request.resource.data.status in ['approved', 'denied']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt']);
         allow delete: if false;
+      }
+
+      // General Chat — সেভ করা নোট (নতুন, এই থ্রেড)। Admin-only (health-content
+      // hasAccess() pattern এখানে প্রযোজ্য না — এটা কোনো member-এর health-record
+      // না, শুধু Admin-এর নিজের General-Chat সেশনের নির্বাচিত নোট)। ডিফল্টে কোনো
+      // চ্যাট save হয় না — শুধু explicit "সেভ করুন" ক্লিকে এই collection-এ write হয়।
+      match /generalChatNotes/{noteId} {
+        allow read: if request.auth != null && isAdminOfFamily(familyId);
+        allow create: if request.auth != null
+          && isAdminOfFamily(familyId)
+          && request.resource.data.savedByUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if request.auth != null && isAdminOfFamily(familyId);
       }
 
       match /members/{memberId} {
