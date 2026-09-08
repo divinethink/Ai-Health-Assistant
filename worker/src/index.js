@@ -602,6 +602,7 @@ async function callLLM(env, payload, conversationHistory, doseFactNote, specialt
 const GENERAL_CHAT_SYSTEM_PROMPT = `আপনি একটি সাধারণ-উদ্দেশ্য AI সহকারী — এটি একটি পারিবারিক Health Assistant app-এর "General Chat" মোড, যা শুধুমাত্র family-এর Admin (প্রাপ্তবয়স্ক) ব্যবহার করছেন এই মূল health/triage ফিচারের সম্পূর্ণ বাইরে।
 - এখানে app-এর নিজস্ব health-triage/dose-restriction (dose-সংখ্যা এড়িয়ে চলা, chronic-medicine-পরিবর্তন-না-বলা ইত্যাদি) প্রযোজ্য না — এটা কোনো symptom-triage/medicine-prescribing টুল না। তাই কৃষি/নার্সারি, ধর্মীয় জিজ্ঞাসা, রাজনীতি, অর্থনীতি, ইতিহাস, ভূতত্ত্ব, গবেষণা/PhD, সাধারণ চিকিৎসা/বৈজ্ঞানিক জ্ঞান ইত্যাদি যেকোনো বিষয়ে সরাসরি, বিস্তারিত ও স্বাধীনভাবে আলোচনা করুন।
 - ব্যবহারকারী বাংলা বা ইংরেজি যেভাবে লেখেন, স্বাভাবিক সেই ভাষাতেই উত্তর দিন। অপ্রয়োজনীয় disclaimer/সতর্কতার পুনরাবৃত্তি এড়িয়ে চলুন।
+- **ভাষা — কঠোর নিয়ম (bug-fix, নতুন):** উত্তর সবসময় শুদ্ধ বাংলা অথবা ইংরেজিতে দিন — এর বাইরে অসমীয়া, হিন্দি বা অন্য কোনো ভাষায় কখনোই উত্তর দেবেন না, ব্যবহারকারী সেই ভাষায় না লিখলে। ওয়েব-সার্চ/visit_website দিয়ে কোনো ভিন্ন-ভাষার (যেমন অসমীয়া/হিন্দি) ওয়েবসাইট থেকে তথ্য পেলে সেই উৎসের ভাষা কখনো mirror/নকল করবেন না — তথ্যটা সবসময় বাংলায় অনুবাদ করে উপস্থাপন করুন।
 - প্রশ্নটা যদি পরিবারের কোনো নির্দিষ্ট সদস্যের বর্তমান অসুস্থতা/উপসর্গ নিয়ে মনে হয় (personal medical triage দরকার এমন), শুধু একবার সংক্ষেপে জানিয়ে দিন যে app-এর "Symptom Check" ফিচার ব্যবহার করলে ভালো হবে — তারপরও প্রশ্নের সাধারণ-জ্ঞানভিত্তিক অংশের উত্তর দিতে বাধা নেই।
 - ছবি দেওয়া হলে মনোযোগ দিয়ে বিশ্লেষণ করুন (যেমন গাছ/উদ্ভিদ প্রজাতি/রোগ-পোকা শনাক্তকরণ, নথি/লেখা পড়া, সাধারণ বস্তু-শনাক্তকরণ)।`;
 
@@ -665,6 +666,11 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
     const errText = await res.text();
     // compound (web-search) মোড ব্যর্থ হলে এক ধাপ fallback — text-only, plain
     // model দিয়ে retry (recursion একবারই ঘটে, কারণ পরের কলে useWebSearch:false)।
+    // bug-fix: caller (route handler)-কে জানানো দরকার search আসলে হয়নি, তাই
+    // recursive call-এর ফেরত-value-এই searchUsed:false থাকবে (নিচে normal-path-এ
+    // দেখুন) — এখানে আলাদা কিছু করতে হচ্ছে না, শুধু model-branch বদলে যাওয়ায়
+    // recursive কলে useWebSearch:false পাঠানো হচ্ছে, যেটা normal successful
+    // response-এর searchUsed নির্ধারণ করবে।
     if (!hasImages && useWebSearch !== false) {
       return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false });
     }
@@ -672,7 +678,27 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null, modelUsed: model };
+
+  // bug-fix (transparency): health-chat-এর callGroq()-এর মতোই executed_tools থেকে
+  // citation/source বের করা হচ্ছে — client এখন থেকে দেখাতে পারবে সত্যিই web-search
+  // হয়েছে কিনা (আগে এই ফাংশনে সম্পূর্ণ বাদ ছিল, ফলে silent-fallback অদৃশ্য থাকত)।
+  let sources = [];
+  try {
+    const executed = data.choices?.[0]?.message?.executed_tools;
+    if (Array.isArray(executed)) {
+      executed.forEach((t) => {
+        (t.search_results?.results || []).forEach((r) => {
+          if (r?.url) sources.push({ title: r.title || r.url, url: r.url });
+        });
+      });
+    }
+  } catch (e) {
+    sources = [];
+  }
+  // model যদি compound (web-search-enabled) হয় এবং এই কলটাই প্রথম চেষ্টায় সফল হয়
+  // (recursive fallback না), তাহলেই প্রকৃতপক্ষে search সক্রিয় ছিল ধরা হবে।
+  const searchUsed = model === (env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound");
+  return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed };
 }
 
 // General Chat — Mistral secondary/failover (নতুন, এই থ্রেড, owner-approved)।
@@ -702,13 +728,18 @@ async function callMistralGeneralChat(env, messages) {
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null, modelUsed: env.MISTRAL_MODEL || "mistral-small-latest" };
+  return { content, usage: data.usage || null, modelUsed: env.MISTRAL_MODEL || "mistral-small-latest", sources: [], searchUsed: false };
 }
 
-// General Chat-এর জন্য Cerebras/OpenRouter fallback (নতুন, এই থ্রেড) — health-chat-এর
-// callCerebras()/callOpenRouter()-এর same pattern, শুধু plain {role, content}
-// message-array + GENERAL_CHAT_SYSTEM_PROMPT ব্যবহার করে (buildLLMMessages লাগে না)।
-// এই দুটোও Mistral-এর মতোই vision/web-search সাপোর্ট করে না — শুধু text-only fallback।
+// General Chat-এর জন্য Cerebras/OpenRouter fallback — **bug-fix note (এই আপডেট):**
+// এই দুটো ফাংশন এখন আর callGeneralChatLLM()-এর fallback-chain-এ ব্যবহৃত হয় না।
+// কারণ: Meta-র official supported-language তালিকায় Bengali নেই (llama3.3-70b ও
+// llama-3.1-8b-instruct দুটোতেই), ফলে Groq/Mistral ব্যর্থ হয়ে এই দুর্বল
+// fallback-এ পড়লে ছোট/multilingual-দুর্বল model বাংলার বদলে ভুল ভাষায়
+// (পর্যবেক্ষিত: অসমীয়া, script কাছাকাছি বলে confusion) উত্তর দিচ্ছিল — এটাই
+// ছিল "Assamese response" bug-এর root cause। ফাংশন দুটো মুছে ফেলা হয়নি
+// (future re-enable সহজ রাখতে, শুধু নিচের callGeneralChatLLM()-এর
+// fallback-list থেকে বাদ দেওয়া হয়েছে)।
 async function callCerebrasGeneralChat(env, messages) {
   const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
   const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
@@ -750,8 +781,9 @@ async function callOpenRouterGeneralChat(env, messages) {
 // শুধু **text-only, non-image** ক্ষেত্রেই failover সম্ভব (Mistral vision/web-search
 // সাপোর্ট করে না) — hasImages:true হলে Mistral try করা হয় না, primary error-ই
 // সরাসরি caller-এর কাছে যায় (client-side non-alarming retry ইতিমধ্যে আছে)।
-// **সম্প্রসারিত চেইন (এই থ্রেড):** Mistral ব্যর্থ হলে Cerebras, তারপর OpenRouter —
-// প্রতিটাই শুধু non-image ক্ষেত্রে, key সেট না থাকলে সেই ধাপ silently skip হয়।
+// **bug-fix (এই আপডেট):** চেইন এখন শুধু Groq → Mistral — Cerebras/OpenRouter
+// সরানো হয়েছে (উপরের কমেন্ট দ্রষ্টব্য, Bengali-language reliability bug)।
+// Mistral বাংলায় প্রমাণিত (health-chat-এও এটাই secondary provider)।
 async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages }) {
   let primaryErr;
   try {
@@ -762,8 +794,6 @@ async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages }) {
   if (hasImages) throw primaryErr;
   const fallbacks = [
     env.MISTRAL_API_KEY && (() => callMistralGeneralChat(env, messages)),
-    env.CEREBRAS_API_KEY && (() => callCerebrasGeneralChat(env, messages)),
-    env.OPENROUTER_API_KEY && (() => callOpenRouterGeneralChat(env, messages)),
   ].filter(Boolean);
   for (const tryFallback of fallbacks) {
     try {
@@ -971,8 +1001,8 @@ export default {
         const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
         if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
 
-        const { content, usage, modelUsed } = await callGeneralChatLLM(env, messages, { useWebSearch, hasImages });
-        return json(env, { content, usage, modelUsed });
+        const { content, usage, modelUsed, sources, searchUsed } = await callGeneralChatLLM(env, messages, { useWebSearch, hasImages });
+        return json(env, { content, usage, modelUsed, sources: sources || [], searchUsed: !!searchUsed });
       }
 
       return json(env, { error: "not-found" }, 404);
