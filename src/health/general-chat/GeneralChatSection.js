@@ -36,6 +36,10 @@ export function GeneralChatSection({ familyId, onExit }) {
   const [sessions, setSessions] = useState([newSession()]);
   const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
   const [activeCategory, setActiveCategory] = useState("misc");
+  // UI-fix: sidebar এখন collapsible overlay-drawer — ডিফল্ট বন্ধ, যাতে ফোনে চ্যাট
+  // এরিয়ার width কখনো সংকুচিত না হয় (আগে sidebar সবসময় খোলা থাকায় ছোট স্ক্রিনে
+  // চ্যাট এরিয়া প্রায় অর্ধেকের কমে নেমে যাচ্ছিল)।
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [text, setText] = useState("");
   const [pendingImage, setPendingImage] = useState(null); // {secureUrl, publicId, resourceType, uploading}
   const [useWebSearch, setUseWebSearch] = useState(true);
@@ -210,6 +214,13 @@ export function GeneralChatSection({ familyId, onExit }) {
     "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#12181F", color: "#fff" } },
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+      // UI-fix: hamburger toggle — sidebar-drawer খোলা/বন্ধ করার একমাত্র entry-point
+      React.createElement(
+        "button", {
+          onClick: () => setSidebarOpen((v) => !v), title: "Quick Links",
+          style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "16px", padding: "4px 10px", borderRadius: "6px", cursor: "pointer" },
+        }, "☰"
+      ),
       React.createElement("button", { onClick: onExit, style: { background: "none", border: "none", color: "#A9C4DE", fontSize: "14px", cursor: "pointer" } }, "← ফিরে যান"),
       React.createElement("span", { style: { fontSize: "15px", fontWeight: 700 } }, "🌐 General Chat"),
       React.createElement("span", { style: { fontSize: "11px", color: "#8FA0B3", border: "1px solid #3A4756", borderRadius: "4px", padding: "1px 6px" } }, "Admin")
@@ -326,8 +337,25 @@ export function GeneralChatSection({ familyId, onExit }) {
     headerBar,
     tabsBar,
     React.createElement(
-      "div", { style: { flex: 1, display: "flex", minHeight: 0 } },
-      React.createElement(GeneralChatQuickLinks, { activeCategory, onSelectCategory: setActiveCategory }),
+      // UI-fix: position:relative container — drawer এখন এর ভেতরে absolute
+      // overlay হিসেবে বসে, চ্যাট এরিয়া (নিচের flex:1 div) সবসময় পূর্ণ width পায়।
+      "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },
+      sidebarOpen && React.createElement(
+        React.Fragment, null,
+        // backdrop — বাইরে ট্যাপ করলে drawer বন্ধ হবে
+        React.createElement("div", {
+          onClick: () => setSidebarOpen(false),
+          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 20 },
+        }),
+        React.createElement(
+          "div", { style: { position: "absolute", top: 0, left: 0, bottom: 0, width: "78%", maxWidth: "260px", zIndex: 21, boxShadow: "3px 0 10px rgba(0,0,0,0.4)" } },
+          React.createElement(GeneralChatQuickLinks, {
+            activeCategory,
+            onSelectCategory: (cat) => { setActiveCategory(cat); setSidebarOpen(false); },
+            onClose: () => setSidebarOpen(false),
+          })
+        )
+      ),
       React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, messagesArea, composer)
     ),
     React.createElement(

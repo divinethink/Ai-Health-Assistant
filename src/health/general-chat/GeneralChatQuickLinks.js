@@ -7,7 +7,7 @@ import { listGeneralChatQuickLinks, CATEGORY_LABELS, CATEGORY_ORDER } from "./ge
 
 const { useState, useEffect } = React;
 
-export function GeneralChatQuickLinks({ activeCategory, onSelectCategory }) {
+export function GeneralChatQuickLinks({ activeCategory, onSelectCategory, onClose }) {
   const [links, setLinks] = useState(null);
   const [err, setErr] = useState(null);
   const [openGroups, setOpenGroups] = useState({});
@@ -29,8 +29,14 @@ export function GeneralChatQuickLinks({ activeCategory, onSelectCategory }) {
   });
 
   return React.createElement(
-    "div", { style: { width: "220px", minWidth: "220px", borderRight: "1px solid #2A3542", background: "#1B2430", color: "#D6DEE6", overflowY: "auto", padding: "10px 0" } },
-    React.createElement("div", { style: { padding: "0 12px 8px", fontSize: "11px", fontWeight: 700, color: "#8FA0B3", letterSpacing: "0.4px" } }, "QUICK LINKS"),
+    // UI-fix: fixed width বাদ, drawer-container (GeneralChatSection.js) নিজেই
+    // width নিয়ন্ত্রণ করে; height:100% যোগ যাতে overlay-drawer-এ পুরো উচ্চতা ঢাকে।
+    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D6DEE6", overflowY: "auto", padding: "10px 0" } },
+    React.createElement(
+      "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px 8px" } },
+      React.createElement("div", { style: { fontSize: "11px", fontWeight: 700, color: "#8FA0B3", letterSpacing: "0.4px" } }, "QUICK LINKS"),
+      onClose && React.createElement("span", { onClick: onClose, style: { cursor: "pointer", fontSize: "16px", color: "#8FA0B3", padding: "0 4px" } }, "✕")
+    ),
 
     err && React.createElement("div", { style: { padding: "8px 12px", fontSize: "11px", color: "#E88" } }, err),
 
