@@ -1,6 +1,9 @@
 // Document/Report vault (Roadmap §7) — Cloudinary upload-signature + delete proxy।
 // + AI Orchestration (Roadmap §10.2.5, Architecture Plan Part B §6.7/§6.7.1) — Groq LLM-proxy
 // (primary) + Mistral (secondary/failover, §6.5 Phase 2, Thread-এ activated ২০২৬-০৯-০৭)।
+// General Chat (/general-chat)-এও একই Groq→Mistral text-only failover যোগ হয়েছে
+// (এই থ্রেড, owner-approved) — শুধু non-image ক্ষেত্রে, Mistral vision/web-search
+// সাপোর্ট করে না বলে।
 //
 // কেন এই Worker দরকার: Cloudinary API secret ও Groq API key কখনো client bundle-এ
 // যেতে পারবে না (Process Rule ৪)। কিন্তু permission-decision (কে কোন memberId-এর
@@ -501,22 +504,78 @@ async function callMistral(env, payload, conversationHistory, doseFactNote, spec
   return { content, usage: data.usage || null, sources: [] };
 }
 
+// ৩য়/৪র্থ fallback (নতুন, এই থ্রেড, owner-approved — family health-triage কখনো
+// আটকে না-যাওয়ার জন্য চেইন আরও লম্বা করা হয়েছে)। দুটোই OpenAI-compatible
+// endpoint, তাই callMistral()-এর হুবহু same shape — শুধু URL/model/header ভিন্ন।
+// কোনো tool-calling/dose-lookup schema এখানে নেই (dose enforcement Option A
+// "pre-lookup text-injection" pattern, provider-independent — route handler-এ
+// callLLM()-এর পরে scanForDoseLeak() সব provider-এর output-এই সমানভাবে চলে,
+// তাই নতুন provider যোগ করলেও dose-safety detection-layer bypass হয় না)।
+async function callCerebras(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+  const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
+  const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.CEREBRAS_API_KEY}` },
+    body: JSON.stringify({ model: env.CEREBRAS_MODEL || "llama3.3-70b", messages, max_tokens: 1500 }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`cerebras-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, sources: [] };
+}
+
+async function callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+  const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
+    body: JSON.stringify({
+      model: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
+      messages,
+      max_tokens: 1500,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`openrouter-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, sources: [] };
+}
+
 // Provider Adapter routing (§6.5) — primary Groq, silent failover secondary Mistral।
 // শুধু rate-limit (429) বা provider-error/outage-এ failover হয় — অন্য কোনো error
 // (যেমন auth/network কোড-বাগ) হলেও safety অক্ষুণ্ণ রাখতে Mistral একবার try করা হয়,
 // কিন্তু ব্যর্থ হলে caller-এর কাছে সবসময় primary (Groq)-এর error/status ফেরত যায়
 // (existing 429-detection/client-retry logic অপরিবর্তিত থাকে)।
+// **সম্প্রসারিত চেইন (এই থ্রেড):** Mistral-ও ব্যর্থ হলে Cerebras, তারপর
+// OpenRouter — যে env-key সেট নেই সেই ধাপ silently skip হয় (Phase 1/2-এর মতোই
+// backward-compatible, কোনো key সেট না থাকলে আচরণ আগের মতোই)। শেষ পর্যন্ত সব
+// ব্যর্থ হলে সবসময় primaryErr (Groq-এর) ফেরত যায়।
 async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
+  let primaryErr;
   try {
     return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
-  } catch (primaryErr) {
-    if (!env.MISTRAL_API_KEY) throw primaryErr;
+  } catch (err) {
+    primaryErr = err;
+  }
+  const fallbacks = [
+    env.MISTRAL_API_KEY && (() => callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote)),
+    env.CEREBRAS_API_KEY && (() => callCerebras(env, payload, conversationHistory, doseFactNote, specialtyNote)),
+    env.OPENROUTER_API_KEY && (() => callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote)),
+  ].filter(Boolean);
+  for (const tryFallback of fallbacks) {
     try {
-      return await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote);
-    } catch (secondaryErr) {
-      throw primaryErr;
+      return await tryFallback();
+    } catch (e) {
+      // পরের fallback-এ চেষ্টা চালিয়ে যাও
     }
   }
+  throw primaryErr;
 }
 
 // ============================================================
@@ -614,6 +673,106 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
   return { content, usage: data.usage || null, modelUsed: model };
+}
+
+// General Chat — Mistral secondary/failover (নতুন, এই থ্রেড, owner-approved)।
+// health-chat-এর callMistral()-এর same pattern, কিন্তু General Chat-এর message-array
+// আগে থেকেই plain {role, content} ফরম্যাটে থাকে (buildLLMMessages transform লাগে না)।
+// **সীমাবদ্ধতা (গুরুত্বপূর্ণ):** Mistral vision/web-search সাপোর্ট করে না — তাই এই
+// fallback শুধু hasImages:false ক্ষেত্রেই call হয় (নিচে callGeneralChatLLM দ্রষ্টব্য)।
+async function callMistralGeneralChat(env, messages) {
+  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+
+  const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.MISTRAL_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: env.MISTRAL_MODEL || "mistral-small-latest",
+      messages: fullMessages,
+      max_tokens: 2000,
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`mistral-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, modelUsed: env.MISTRAL_MODEL || "mistral-small-latest" };
+}
+
+// General Chat-এর জন্য Cerebras/OpenRouter fallback (নতুন, এই থ্রেড) — health-chat-এর
+// callCerebras()/callOpenRouter()-এর same pattern, শুধু plain {role, content}
+// message-array + GENERAL_CHAT_SYSTEM_PROMPT ব্যবহার করে (buildLLMMessages লাগে না)।
+// এই দুটোও Mistral-এর মতোই vision/web-search সাপোর্ট করে না — শুধু text-only fallback।
+async function callCerebrasGeneralChat(env, messages) {
+  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+  const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.CEREBRAS_API_KEY}` },
+    body: JSON.stringify({ model: env.CEREBRAS_MODEL || "llama3.3-70b", messages: fullMessages, max_tokens: 2000 }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`cerebras-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, modelUsed: env.CEREBRAS_MODEL || "llama3.3-70b" };
+}
+
+async function callOpenRouterGeneralChat(env, messages) {
+  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
+    body: JSON.stringify({
+      model: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
+      messages: fullMessages,
+      max_tokens: 2000,
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`openrouter-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, modelUsed: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free" };
+}
+
+// Provider Adapter routing for General Chat (§6.5 নীতির General-Chat-সম্প্রসারণ,
+// owner-approved এই থ্রেড) — primary Groq, silent failover secondary Mistral।
+// শুধু **text-only, non-image** ক্ষেত্রেই failover সম্ভব (Mistral vision/web-search
+// সাপোর্ট করে না) — hasImages:true হলে Mistral try করা হয় না, primary error-ই
+// সরাসরি caller-এর কাছে যায় (client-side non-alarming retry ইতিমধ্যে আছে)।
+// **সম্প্রসারিত চেইন (এই থ্রেড):** Mistral ব্যর্থ হলে Cerebras, তারপর OpenRouter —
+// প্রতিটাই শুধু non-image ক্ষেত্রে, key সেট না থাকলে সেই ধাপ silently skip হয়।
+async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages }) {
+  let primaryErr;
+  try {
+    return await callGroqGeneralChat(env, messages, { useWebSearch, hasImages });
+  } catch (err) {
+    primaryErr = err;
+  }
+  if (hasImages) throw primaryErr;
+  const fallbacks = [
+    env.MISTRAL_API_KEY && (() => callMistralGeneralChat(env, messages)),
+    env.CEREBRAS_API_KEY && (() => callCerebrasGeneralChat(env, messages)),
+    env.OPENROUTER_API_KEY && (() => callOpenRouterGeneralChat(env, messages)),
+  ].filter(Boolean);
+  for (const tryFallback of fallbacks) {
+    try {
+      return await tryFallback();
+    } catch (e) {
+      // পরের fallback-এ চেষ্টা চালিয়ে যাও
+    }
+  }
+  throw primaryErr;
 }
 
 export default {
@@ -812,7 +971,7 @@ export default {
         const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
         if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
 
-        const { content, usage, modelUsed } = await callGroqGeneralChat(env, messages, { useWebSearch, hasImages });
+        const { content, usage, modelUsed } = await callGeneralChatLLM(env, messages, { useWebSearch, hasImages });
         return json(env, { content, usage, modelUsed });
       }
 
