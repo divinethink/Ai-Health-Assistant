@@ -361,6 +361,23 @@ const SPECIALTY_NOTES = {
     "প্রাসঙ্গিক specialty context: প্রশ্নটি সাধারণ nutrition/diet/fitness-সংক্রান্ত (treatment mode/medical diagnosis না) — সরকারি/professional সোর্স-ভিত্তিক সাধারণ lifestyle guidance দিন, কোনো medicine/dose/supplement-ডোজ উল্লেখ করবেন না, existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং জটিল/মেডিকেল প্রশ্নে ডাক্তার/nutritionist-consult এর পরামর্শ দিন।",
 };
 
+// Controlled Web Search (Architecture Plan Part B §6.3.1, roadmap §10.1) —
+// শুধু এই whitelisted domain-list-এর মধ্যেই Groq compound-model search করবে
+// (`search_settings.include_domains`, Groq API-level enforcement — LLM নিজে
+// এড়িয়ে যেতে পারে না)। **bright-line অপরিবর্তিত:** dosing/safety-critical তথ্য
+// কখনো web-search থেকে আসে না — সবসময় verified `medicineDatabase` lookup-tool
+// থেকে (§12.1, উপরের dose-enforcement)। এই list শুধু general knowledge-refresh
+// (guideline/recall/nutrition-fitness-beauty reference)-এর জন্য, roadmap §10.1।
+const WEB_SEARCH_WHITELIST_DOMAINS = [
+  "who.int", "cochranelibrary.com", "fda.gov", "nhs.uk", "patient.info", "cdc.gov",
+  "*.gov.bd", "icddrb.org", "medex.com.bd", "dimsbd.com",
+  "doctime.com.bd", "sebaghar.com", "medeasy.health",
+  "medlineplus.gov", "msdmanuals.com", "nice.org.uk", "mohfw.gov.in", "drugs.com",
+  "acsm.org", "odphp.health.gov", "nin.res.in", "ods.od.nih.gov", "bfsa.gov.bd", "eatright.org",
+  "aad.org", "bad.org.uk", "iadvl.org", "dgdagov.info",
+  "ema.europa.eu", "ccras.nic.in", "hamdard.com.bd", "nccih.nih.gov", "nch.org.in",
+];
+
 function buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote) {
   return [
     { role: "system", content: SYSTEM_PROMPT },
@@ -386,39 +403,71 @@ function cleanLLMContent(rawContent) {
   return content;
 }
 
-async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
   const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
+
+  const body = { messages, max_tokens: 1500 };
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
+
+  if (useWebSearch) {
+    // Controlled Web Search (§6.3.1/§10.1) — Groq-এর নিজস্ব `groq/compound`
+    // built-in web-search tool, কিন্তু `search_settings.include_domains` দিয়ে
+    // শুধু whitelisted domain-এই সীমাবদ্ধ (Groq API-level enforcement)। এই মোডে
+    // reasoning_effort/format param প্রযোজ্য না (compound model-এর নিজস্ব
+    // orchestration, qwen3.6-এর thinking-mode-config-এর সাথে সম্পর্কহীন)।
+    body.model = "groq/compound";
+    body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
+    body.search_settings = { include_domains: WEB_SEARCH_WHITELIST_DOMAINS };
+    headers["Groq-Model-Version"] = "latest";
+  } else {
+    body.model = "qwen/qwen3.6-27b";
+    // reasoning_effort:"none" — dual-mode (thinking/non-thinking) model-এ
+    // thinking mode বন্ধ করে দেয়। আমাদের বাংলা health-guidance conversational
+    // use-case-এ জটিল multi-step reasoning দরকার নেই, আর thinking mode-ই
+    // দেখা গেছে মাঝে মাঝে টোকেন-বাজেট শেষ করে ফেলে/loop-এ আটকে যায় (owner
+    // screenshot, ২০২৬-০৯-০৫)।
+    body.reasoning_effort = "none";
+    // reasoning_format:"hidden" — defense-in-depth: reasoning_effort ভবিষ্যতে
+    // কোনো কারণে override/ignore হলেও, এটা raw <think> content API-স্তরেই
+    // suppress করে (Groq docs: শুধু final answer content ফেরত আসে)।
+    body.reasoning_format = "hidden";
+  }
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "qwen/qwen3.6-27b",
-      messages,
-      max_tokens: 1500,
-      // reasoning_effort:"none" — dual-mode (thinking/non-thinking) model-এ
-      // thinking mode বন্ধ করে দেয়। আমাদের বাংলা health-guidance conversational
-      // use-case-এ জটিল multi-step reasoning দরকার নেই, আর thinking mode-ই
-      // দেখা গেছে মাঝে মাঝে টোকেন-বাজেট শেষ করে ফেলে/loop-এ আটকে যায় (owner
-      // screenshot, ২০২৬-০৯-০৫)।
-      reasoning_effort: "none",
-      // reasoning_format:"hidden" — defense-in-depth: reasoning_effort ভবিষ্যতে
-      // কোনো কারণে override/ignore হলেও, এটা raw <think> content API-স্তরেই
-      // suppress করে (Groq docs: শুধু final answer content ফেরত আসে)।
-      reasoning_format: "hidden",
-    }),
+    headers,
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const errText = await res.text();
+    // Controlled web-search ব্যর্থ হলে (model unavailable/tool-error ইত্যাদি)
+    // একবার plain non-search মোডে fallback — general-chat-এর একই pattern
+    // (§10.1 নীতি অক্ষুণ্ণ: search ব্যর্থ হলে "কম সাহায্য" দিকেই ঝোঁকা, error না)।
+    if (useWebSearch) {
+      return callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, false);
+    }
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null };
+  // executed_tools[].search_results — citation/source তালিকা, "silently মিশিয়ে
+  // দেওয়া হবে না; reference হিসেবে দেখানো হবে" নীতির (§10.1) বাস্তবায়ন — client
+  // এই sources আলাদাভাবে "সূত্র" হিসেবে দেখাবে, answer-টেক্সটের ভেতরে মেশানো হয় না।
+  let sources = [];
+  try {
+    const executed = data.choices?.[0]?.message?.executed_tools;
+    if (Array.isArray(executed)) {
+      executed.forEach((t) => {
+        (t.search_results?.results || []).forEach((r) => {
+          if (r?.url) sources.push({ title: r.title || r.url, url: r.url });
+        });
+      });
+    }
+  } catch (e) {
+    sources = [];
+  }
+  return { content, usage: data.usage || null, sources };
 }
 
 // Secondary/fallback provider (Architecture Plan Part B §6.5, Phase 2) — শুধু তখনই
@@ -447,7 +496,9 @@ async function callMistral(env, payload, conversationHistory, doseFactNote, spec
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null };
+  // Mistral compound/web-search সাপোর্ট করে না — sources সবসময় খালি array,
+  // caller-side destructure-shape callGroq()-এর সাথে অভিন্ন রাখতে (§6.5 abstraction)।
+  return { content, usage: data.usage || null, sources: [] };
 }
 
 // Provider Adapter routing (§6.5) — primary Groq, silent failover secondary Mistral।
@@ -455,9 +506,9 @@ async function callMistral(env, payload, conversationHistory, doseFactNote, spec
 // (যেমন auth/network কোড-বাগ) হলেও safety অক্ষুণ্ণ রাখতে Mistral একবার try করা হয়,
 // কিন্তু ব্যর্থ হলে caller-এর কাছে সবসময় primary (Groq)-এর error/status ফেরত যায়
 // (existing 429-detection/client-retry logic অপরিবর্তিত থাকে)।
-async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
   try {
-    return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote);
+    return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
   } catch (primaryErr) {
     if (!env.MISTRAL_API_KEY) throw primaryErr;
     try {
@@ -619,7 +670,7 @@ export default {
       }
 
       if (request.method === "POST" && url.pathname === "/ai-chat") {
-        const { idToken, familyId, payload, conversationHistory, ageYears } = await request.json();
+        const { idToken, familyId, payload, conversationHistory, ageYears, useWebSearch } = await request.json();
         if (!idToken || !familyId || !payload) return json(env, { error: "missing-params" }, 400);
 
         let uid;
@@ -669,7 +720,7 @@ export default {
           highRiskContext = false;
         }
 
-        const { content, usage } = await callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote);
+        const { content, usage, sources } = await callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
         const doseLeak = scanForDoseLeak(content);
         const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
         const blocked = doseLeak || highRiskLeak;
@@ -681,6 +732,9 @@ export default {
           content: blocked ? fallbackMessage : content,
           blocked,
           usage,
+          // blocked হলে sources-ও suppress করা হচ্ছে — defense-in-depth,
+          // suppressed-response-এর সাথে কোনো আংশিক তথ্যও যেন না যায়।
+          sources: blocked ? [] : sources || [],
         });
       }
 
