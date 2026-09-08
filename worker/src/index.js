@@ -468,6 +468,103 @@ async function callLLM(env, payload, conversationHistory, doseFactNote, specialt
   }
 }
 
+// ============================================================
+// General Chat — Admin-only, health-restriction-free (নতুন এই থ্রেড)
+// ============================================================
+// roadmap-এ নতুন সংযোজন হিসেবে আলোচিত: family-health-triage-এর বাইরে, শুধু
+// Admin-এর জন্য একটা সম্পূর্ণ আলাদা "General Chat" মোড — যেকোনো বিষয়ে
+// (কৃষি/নার্সারি, ধর্মীয়, রাজনীতি, অর্থনীতি, ইতিহাস, ভূতত্ত্ব, গবেষণা/PhD,
+// সাধারণ চিকিৎসা-জ্ঞান ইত্যাদি) খোলামেলা আলোচনা, ওয়েব-ব্রাউজ ও ছবি-বিশ্লেষণ সহ।
+//
+// **স্পষ্টীকরণ (গুরুত্বপূর্ণ, ভবিষ্যতের রক্ষণাবেক্ষণকারীর জন্য):** এখানে যা
+// "বাদ" দেওয়া হয়েছে তা শুধু এই **app-এর নিজস্ব** health-specific restriction
+// (dose-numeric-scanner, highRiskFlag-suppression, chronic-medicine bright-line,
+// domain-whitelist) — এগুলো এই ফিচারের জন্য প্রাসঙ্গিক না (এটা member-specific
+// clinical dose-suggestion tool না)। Groq/Mistral নিজেদের platform-level
+// content-safety এখানে অপরিবর্তিতভাবে প্রযোজ্য থাকে — সেটা bypass করার কোনো
+// instruction এখানে নেই।
+//
+// **Endpoint আলাদা রাখার কারণ (Process Rule ২, Zero-Risk Discipline):**
+// existing `/ai-chat` (health-triage) route/logic একদম অপরিবর্তিত রাখতে এখানে
+// সম্পূর্ণ নতুন, independent function/route তৈরি হয়েছে — কোনো শাখা-শর্ত পুরনো
+// কোডে যোগ করা হয়নি।
+
+const GENERAL_CHAT_SYSTEM_PROMPT = `আপনি একটি সাধারণ-উদ্দেশ্য AI সহকারী — এটি একটি পারিবারিক Health Assistant app-এর "General Chat" মোড, যা শুধুমাত্র family-এর Admin (প্রাপ্তবয়স্ক) ব্যবহার করছেন এই মূল health/triage ফিচারের সম্পূর্ণ বাইরে।
+- এখানে app-এর নিজস্ব health-triage/dose-restriction (dose-সংখ্যা এড়িয়ে চলা, chronic-medicine-পরিবর্তন-না-বলা ইত্যাদি) প্রযোজ্য না — এটা কোনো symptom-triage/medicine-prescribing টুল না। তাই কৃষি/নার্সারি, ধর্মীয় জিজ্ঞাসা, রাজনীতি, অর্থনীতি, ইতিহাস, ভূতত্ত্ব, গবেষণা/PhD, সাধারণ চিকিৎসা/বৈজ্ঞানিক জ্ঞান ইত্যাদি যেকোনো বিষয়ে সরাসরি, বিস্তারিত ও স্বাধীনভাবে আলোচনা করুন।
+- ব্যবহারকারী বাংলা বা ইংরেজি যেভাবে লেখেন, স্বাভাবিক সেই ভাষাতেই উত্তর দিন। অপ্রয়োজনীয় disclaimer/সতর্কতার পুনরাবৃত্তি এড়িয়ে চলুন।
+- প্রশ্নটা যদি পরিবারের কোনো নির্দিষ্ট সদস্যের বর্তমান অসুস্থতা/উপসর্গ নিয়ে মনে হয় (personal medical triage দরকার এমন), শুধু একবার সংক্ষেপে জানিয়ে দিন যে app-এর "Symptom Check" ফিচার ব্যবহার করলে ভালো হবে — তারপরও প্রশ্নের সাধারণ-জ্ঞানভিত্তিক অংশের উত্তর দিতে বাধা নেই।
+- ছবি দেওয়া হলে মনোযোগ দিয়ে বিশ্লেষণ করুন (যেমন গাছ/উদ্ভিদ প্রজাতি/রোগ-পোকা শনাক্তকরণ, নথি/লেখা পড়া, সাধারণ বস্তু-শনাক্তকরণ)।`;
+
+// ID-token থেকেই uid বের হয় (verifyFirebaseIdToken, উপরে) — এখানে শুধু সেই uid
+// পরিবারের `adminUids`-এ আছে কিনা যাচাই হয়। `families/{familyId}` doc যেকোনো
+// authenticated ব্যবহারকারী GET করতে পারেন (firestore.rules-এ আগে থেকেই allow
+// get: if request.auth != null আছে) — তাই এখানে কোনো নতুন rules-পরিবর্তন লাগেনি,
+// admin-membership যাচাই সম্পূর্ণ এই Worker-এর application-logic-এ হচ্ছে।
+async function verifyIsAdminOfFamily(env, idToken, familyId, uid) {
+  try {
+    const res = await fetch(firestoreDocUrl(env, `families/${familyId}`), {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    if (!res.ok) return false;
+    const doc = await res.json();
+    const values =
+      (doc.fields &&
+        doc.fields.adminUids &&
+        doc.fields.adminUids.arrayValue &&
+        doc.fields.adminUids.arrayValue.values) ||
+      [];
+    return values.some((v) => v.stringValue === uid);
+  } catch (e) {
+    return false;
+  }
+}
+
+// hasImages হলে vision-capable model (এখনো Groq-এ multimodal support সহ,
+// একই model যা health-chat-এও ব্যবহৃত হচ্ছে — নতুন model যাচাই লাগেনি)।
+// নাহলে (ও useWebSearch !== false হলে) Groq-এর built-in `groq/compound`
+// system — এটাই ওয়েব-ব্রাউজ দেয়, কোনো নতুন/paid third-party search-API-key
+// লাগে না (Process Rule ৮, free-tier-first)। compound ব্যর্থ হলে (যেমন
+// account-এ অনুপলব্ধ) plain text-model দিয়ে স্বয়ংক্রিয় fallback — conversation
+// আটকে থাকবে না, শুধু সেই turn-এ web-search ছাড়াই উত্তর আসবে।
+async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
+  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+
+  let model;
+  const body = { max_tokens: 2000 };
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
+
+  if (hasImages) {
+    model = env.GENERAL_CHAT_VISION_MODEL || "qwen/qwen3.6-27b";
+  } else if (useWebSearch !== false) {
+    model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
+    body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
+    headers["Groq-Model-Version"] = "latest";
+  } else {
+    model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
+  }
+  body.model = model;
+  body.messages = fullMessages;
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    // compound (web-search) মোড ব্যর্থ হলে এক ধাপ fallback — text-only, plain
+    // model দিয়ে retry (recursion একবারই ঘটে, কারণ পরের কলে useWebSearch:false)।
+    if (!hasImages && useWebSearch !== false) {
+      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false });
+    }
+    throw new Error(`groq-error-${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  return { content, usage: data.usage || null, modelUsed: model };
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(env) });
@@ -585,6 +682,84 @@ export default {
           blocked,
           usage,
         });
+      }
+
+      // --- General Chat routes (Admin-only, উপরে বিস্তারিত কমেন্ট) ---
+
+      if (request.method === "POST" && url.pathname === "/general-chat-upload-auth") {
+        const { idToken, familyId } = await request.json();
+        if (!idToken || !familyId) return json(env, { error: "missing-params" }, 400);
+
+        let uid;
+        try {
+          uid = await verifyFirebaseIdToken(env, idToken);
+        } catch (e) {
+          return json(env, { error: "invalid-token" }, 401);
+        }
+        if (!uid) return json(env, { error: "invalid-token" }, 401);
+
+        const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
+        if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
+
+        // নতুন, আলাদা Cloudinary folder — health-document vault
+        // (`health-docs/{familyId}`)-এর থেকে সম্পূর্ণ আলাদা রাখা হলো, কারণ এই
+        // ছবিগুলো clinical/health-record না এবং কোনো Firestore metadata-doc
+        // ছাড়াই ephemeral-ভাবে upload হয় (§ history না-সেভ নীতি)।
+        const timestamp = Math.floor(Date.now() / 1000);
+        const folder = `general-chat/${familyId}`;
+        const publicId = "gc-" + timestamp + "-" + Math.random().toString(36).slice(2, 10);
+        const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${env.CLOUDINARY_API_SECRET}`;
+        const signature = await sha1Hex(toSign);
+
+        return json(env, {
+          cloudName: env.CLOUDINARY_CLOUD_NAME,
+          apiKey: env.CLOUDINARY_API_KEY,
+          timestamp, signature, publicId, folder,
+        });
+      }
+
+      // ব্যবহারকারী কোনো ছবি "সেভ" না করলে client নিজেই এই endpoint কল করে
+      // Cloudinary থেকে asset মুছে দেয় (AI response পাওয়ার পরপরই বা সেশন শেষে) —
+      // কোনো Firestore doc নেই বলে সরাসরি Cloudinary delete API।
+      if (request.method === "POST" && url.pathname === "/general-chat-delete-asset") {
+        const { idToken, familyId, publicId, resourceType } = await request.json();
+        if (!idToken || !familyId || !publicId) return json(env, { error: "missing-params" }, 400);
+
+        let uid;
+        try {
+          uid = await verifyFirebaseIdToken(env, idToken);
+        } catch (e) {
+          return json(env, { error: "invalid-token" }, 401);
+        }
+        if (!uid) return json(env, { error: "invalid-token" }, 401);
+
+        const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
+        if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
+
+        const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
+        const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${resourceType || "image"}/upload?public_ids[]=${encodeURIComponent(publicId)}`;
+        await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+
+        return json(env, { ok: true });
+      }
+
+      if (request.method === "POST" && url.pathname === "/general-chat") {
+        const { idToken, familyId, messages, useWebSearch, hasImages } = await request.json();
+        if (!idToken || !familyId || !Array.isArray(messages)) return json(env, { error: "missing-params" }, 400);
+
+        let uid;
+        try {
+          uid = await verifyFirebaseIdToken(env, idToken);
+        } catch (e) {
+          return json(env, { error: "invalid-token" }, 401);
+        }
+        if (!uid) return json(env, { error: "invalid-token" }, 401);
+
+        const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
+        if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
+
+        const { content, usage, modelUsed } = await callGroqGeneralChat(env, messages, { useWebSearch, hasImages });
+        return json(env, { content, usage, modelUsed });
       }
 
       return json(env, { error: "not-found" }, 404);
