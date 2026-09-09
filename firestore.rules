@@ -208,17 +208,27 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // General Chat — সেভ করা নোট (নতুন, এই থ্রেড)। Admin-only (health-content
-      // hasAccess() pattern এখানে প্রযোজ্য না — এটা কোনো member-এর health-record
-      // না, শুধু Admin-এর নিজের General-Chat সেশনের নির্বাচিত নোট)। ডিফল্টে কোনো
-      // চ্যাট save হয় না — শুধু explicit "সেভ করুন" ক্লিকে এই collection-এ write হয়।
-      match /generalChatNotes/{noteId} {
-        allow read: if request.auth != null && isAdminOfFamily(familyId);
-        allow create: if request.auth != null
-          && isAdminOfFamily(familyId)
-          && request.resource.data.savedByUid == request.auth.uid;
-        allow update: if false;
-        allow delete: if request.auth != null && isAdminOfFamily(familyId);
+      // General Chat — সেশন/মেসেজ (auto-save মডেল, replaces আগের per-message
+      // "generalChatNotes" bookmark — সিদ্ধান্ত-পরিবর্তন এই থ্রেডে)। Admin-only,
+      // HealthEpisode/EpisodeMessage-এর হুবহু structural pattern reuse। পুরো
+      // session delete-ই একমাত্র delete-scope (owner-approved) — individual
+      // message আলাদা মোছার rule ইচ্ছাকৃতভাবে নেই।
+      match /generalChatSessions/{sessionId} {
+        allow read, create, update, delete: if request.auth != null && isAdminOfFamily(familyId);
+
+        match /messages/{messageId} {
+          allow read, create: if request.auth != null && isAdminOfFamily(familyId);
+          allow update: if false;
+          allow delete: if request.auth != null && isAdminOfFamily(familyId);
+        }
+      }
+
+      // General Chat — Project (Knowledge + Instructions, lightweight, নতুন)।
+      // Admin-only, family-scoped। vector-DB/RAG না — শুধু free-text field,
+      // client-side length-cap দিয়ে token-বাজেট রক্ষা হয় (rules-level enforce
+      // করা হয়নি — soft-limit, hard-enforce করলে UX জটিল হতো, অপ্রয়োজনীয়)।
+      match /generalChatProjects/{projectId} {
+        allow read, create, update, delete: if request.auth != null && isAdminOfFamily(familyId);
       }
 
       match /members/{memberId} {
