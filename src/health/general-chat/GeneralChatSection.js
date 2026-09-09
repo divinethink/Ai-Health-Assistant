@@ -259,6 +259,7 @@ export function GeneralChatSection({ familyId, onExit }) {
       const aiMsg = {
         id: aiMsgId, role: "assistant", text: data && data.content, tag: activeCategory,
         sources: (data && data.sources) || [], searchUsed: !!(data && data.searchUsed), searchNotUsed,
+        searchError: (data && data.searchError) || null,
       };
       setActiveMessages((prev) => [...prev, aiMsg]);
       refreshSessions(); // updatedAt বদলেছে, list-order refresh
@@ -442,7 +443,15 @@ export function GeneralChatSection({ familyId, onExit }) {
           // থাকলেও provider আসলে search করেনি বোঝালে স্পষ্ট জানানো হবে।
           m.searchNotUsed && React.createElement(
             "div", { style: { marginTop: "6px", fontSize: "10px", color: "#A66A00" } },
-            "⚠️ এই উত্তরে ওয়েব-সার্চ সক্রিয় হয়নি (সাধারণ জ্ঞান থেকে উত্তর দেওয়া হয়েছে)।"
+            "⚠️ এই উত্তরে ওয়েব-সার্চ সক্রিয় হয়নি (সাধারণ জ্ঞান থেকে উত্তর দেওয়া হয়েছে)।",
+            // debug (owner-reported, "কেন সার্চ হচ্ছে না বোঝা যাচ্ছে না") — Groq
+            // থেকে আসল error (HTTP status + message) এখন সরাসরি এখানে দেখানো
+            // হচ্ছে, wrangler tail লাগবে না। এটা শুধু ডায়াগনস্টিক টেক্সট, কোনো
+            // sensitive/health data না (§4 Security নীতির সাথে সাংঘর্ষিক না)।
+            m.searchError && React.createElement(
+              "div", { style: { marginTop: "2px", color: "#B00020", wordBreak: "break-word" } },
+              `কারণ: ${m.searchError}`
+            )
           )
         ),
         // fix (owner-reported): টেক্সট-লেবেল বাদ, শুধু আইকন — মেসেজ-বাবলের ঠিক
