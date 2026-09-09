@@ -421,6 +421,11 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     body.model = "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
     body.search_settings = { include_domains: WEB_SEARCH_WHITELIST_DOMAINS };
+    // bug-fix (এই থ্রেড, "ওয়েব সার্চ পূর্ণভাবে ফিক্স"): compound নিজে থেকে
+    // সিদ্ধান্ত নিতে পারত সার্চ করবে কি না (Groq docs: "selectively" ব্যবহার
+    // করে) — "required" দিয়ে বাধ্যতামূলক করা হলো, যখনই web-search মোড চাওয়া
+    // হয়েছে (useWebSearch), enabled tool-এর একটা অবশ্যই call হবে।
+    body.tool_choice = "required";
     headers["Groq-Model-Version"] = "latest";
   } else {
     body.model = "qwen/qwen3.6-27b";
@@ -552,30 +557,24 @@ async function callOpenRouter(env, payload, conversationHistory, doseFactNote, s
 // (যেমন auth/network কোড-বাগ) হলেও safety অক্ষুণ্ণ রাখতে Mistral একবার try করা হয়,
 // কিন্তু ব্যর্থ হলে caller-এর কাছে সবসময় primary (Groq)-এর error/status ফেরত যায়
 // (existing 429-detection/client-retry logic অপরিবর্তিত থাকে)।
-// **সম্প্রসারিত চেইন (এই থ্রেড):** Mistral-ও ব্যর্থ হলে Cerebras, তারপর
-// OpenRouter — যে env-key সেট নেই সেই ধাপ silently skip হয় (Phase 1/2-এর মতোই
-// backward-compatible, কোনো key সেট না থাকলে আচরণ আগের মতোই)। শেষ পর্যন্ত সব
-// ব্যর্থ হলে সবসময় primaryErr (Groq-এর) ফেরত যায়।
+// **owner-decision (এই থ্রেড):** health-chat চেইন আবার শুধু Groq→Mistral-এ সীমিত —
+// Cerebras/OpenRouter-এর মডেল বাংলা officially সাপোর্ট করে না (Assamese-bug-এর
+// root cause এটাই ছিল, General Chat audit-এ ধরা পড়েছিল); family-facing
+// health-guidance-এ ভুল-ভাষার ঝুঁকি নেওয়া হচ্ছে না। General Chat (personal/
+// non-critical ব্যবহার)-এ এই দুটো এখনো আছে, forceEnglish-guard সহ (নিচে
+// callGeneralChatLLM দ্রষ্টব্য)। callCerebras()/callOpenRouter() ফাংশন মুছে
+// ফেলা হয়নি (future re-enable সহজ রাখতে), শুধু এই চেইন থেকে বাদ।
 async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
-  let primaryErr;
   try {
     return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
-  } catch (err) {
-    primaryErr = err;
-  }
-  const fallbacks = [
-    env.MISTRAL_API_KEY && (() => callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote)),
-    env.CEREBRAS_API_KEY && (() => callCerebras(env, payload, conversationHistory, doseFactNote, specialtyNote)),
-    env.OPENROUTER_API_KEY && (() => callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote)),
-  ].filter(Boolean);
-  for (const tryFallback of fallbacks) {
+  } catch (primaryErr) {
+    if (!env.MISTRAL_API_KEY) throw primaryErr;
     try {
-      return await tryFallback();
-    } catch (e) {
-      // পরের fallback-এ চেষ্টা চালিয়ে যাও
+      return await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote);
+    } catch (secondaryErr) {
+      throw primaryErr;
     }
   }
-  throw primaryErr;
 }
 
 // ============================================================
@@ -637,8 +636,32 @@ async function verifyIsAdminOfFamily(env, idToken, familyId, uid) {
 // লাগে না (Process Rule ৮, free-tier-first)। compound ব্যর্থ হলে (যেমন
 // account-এ অনুপলব্ধ) plain text-model দিয়ে স্বয়ংক্রিয় fallback — conversation
 // আটকে থাকবে না, শুধু সেই turn-এ web-search ছাড়াই উত্তর আসবে।
-async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
-  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+// Project (Knowledge+Instructions, নতুন এই থ্রেড) — শুধু আরেকটা system-message
+// হিসেবে জোড়া লাগে, আলাদা কোনো RAG/vector-lookup না (§ lightweight নীতি)।
+function buildGeneralChatSystemMessages(projectContext, forceEnglish) {
+  const msgs = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }];
+  // owner-approved (এই থ্রেড): Groq+Mistral দুটোই ব্যর্থ হলে Cerebras/OpenRouter
+  // ব্যবহার হয় — এই দুই মডেল বাংলা officially সাপোর্ট করে না বলে বাংলায় লিখতে
+  // গেলে ভুল-ভাষা (অসমীয়া)-বাগ হতে পারে। তাই এই fallback-এ পড়লে ইংরেজিতে
+  // আলোচনা চালিয়ে যাওয়ার সুস্পষ্ট নির্দেশ (বাংলায় ভুল উত্তরের চেয়ে ভালো)।
+  if (forceEnglish) {
+    msgs.push({
+      role: "system",
+      content:
+        "IMPORTANT: The primary providers are temporarily unavailable, and this fallback model does not reliably support Bengali. Continue this conversation in English only from now on, regardless of the language the user writes in. Start your reply with one short English sentence noting you're continuing in English for reliability, then answer normally.",
+    });
+  }
+  if (projectContext && (projectContext.instructions || projectContext.knowledge)) {
+    let block = "এই নির্দিষ্ট Project-এর অতিরিক্ত নির্দেশনা/জ্ঞান — উপরের সাধারণ নিয়মের পাশাপাশি এটাও অনুসরণ করুন:";
+    if (projectContext.instructions) block += `\n\nInstructions:\n${projectContext.instructions}`;
+    if (projectContext.knowledge) block += `\n\nKnowledge:\n${projectContext.knowledge}`;
+    msgs.push({ role: "system", content: block });
+  }
+  return msgs;
+}
+
+async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext }) {
+  const fullMessages = [...buildGeneralChatSystemMessages(projectContext), ...(Array.isArray(messages) ? messages : [])];
 
   let model;
   const body = { max_tokens: 2000 };
@@ -649,6 +672,7 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
   } else if (useWebSearch !== false) {
     model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
+    body.tool_choice = "required"; // bug-fix, উপরের callGroq()-এর same fix
     headers["Groq-Model-Version"] = "latest";
   } else {
     model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
@@ -672,7 +696,7 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
     // recursive কলে useWebSearch:false পাঠানো হচ্ছে, যেটা normal successful
     // response-এর searchUsed নির্ধারণ করবে।
     if (!hasImages && useWebSearch !== false) {
-      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false });
+      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false, projectContext });
     }
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
@@ -706,8 +730,8 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages }) {
 // আগে থেকেই plain {role, content} ফরম্যাটে থাকে (buildLLMMessages transform লাগে না)।
 // **সীমাবদ্ধতা (গুরুত্বপূর্ণ):** Mistral vision/web-search সাপোর্ট করে না — তাই এই
 // fallback শুধু hasImages:false ক্ষেত্রেই call হয় (নিচে callGeneralChatLLM দ্রষ্টব্য)।
-async function callMistralGeneralChat(env, messages) {
-  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+async function callMistralGeneralChat(env, messages, projectContext) {
+  const fullMessages = [...buildGeneralChatSystemMessages(projectContext), ...(Array.isArray(messages) ? messages : [])];
 
   const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
@@ -731,17 +755,14 @@ async function callMistralGeneralChat(env, messages) {
   return { content, usage: data.usage || null, modelUsed: env.MISTRAL_MODEL || "mistral-small-latest", sources: [], searchUsed: false };
 }
 
-// General Chat-এর জন্য Cerebras/OpenRouter fallback — **bug-fix note (এই আপডেট):**
-// এই দুটো ফাংশন এখন আর callGeneralChatLLM()-এর fallback-chain-এ ব্যবহৃত হয় না।
-// কারণ: Meta-র official supported-language তালিকায় Bengali নেই (llama3.3-70b ও
-// llama-3.1-8b-instruct দুটোতেই), ফলে Groq/Mistral ব্যর্থ হয়ে এই দুর্বল
-// fallback-এ পড়লে ছোট/multilingual-দুর্বল model বাংলার বদলে ভুল ভাষায়
-// (পর্যবেক্ষিত: অসমীয়া, script কাছাকাছি বলে confusion) উত্তর দিচ্ছিল — এটাই
-// ছিল "Assamese response" bug-এর root cause। ফাংশন দুটো মুছে ফেলা হয়নি
-// (future re-enable সহজ রাখতে, শুধু নিচের callGeneralChatLLM()-এর
-// fallback-list থেকে বাদ দেওয়া হয়েছে)।
-async function callCerebrasGeneralChat(env, messages) {
-  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+// General Chat-এর জন্য Cerebras/OpenRouter fallback — **পুনরায় সক্রিয় (এই থ্রেড,
+// owner-approved), forceEnglish-guard সহ।** এই দুটো মডেল বাংলা officially
+// সাপোর্ট করে না (Assamese-bug-এর root cause ছিল এটাই) — তাই এখন যখনই এই
+// fallback ব্যবহৃত হয়, buildGeneralChatSystemMessages(projectContext, true)
+// দিয়ে conversation-কে জোর করে ইংরেজিতে চালানো হয় (owner-decision: ভুল-ভাষার
+// চেয়ে ইংরেজিতে চালিয়ে যাওয়া ভালো)।
+async function callCerebrasGeneralChat(env, messages, projectContext, forceEnglish) {
+  const fullMessages = [...buildGeneralChatSystemMessages(projectContext, forceEnglish), ...(Array.isArray(messages) ? messages : [])];
   const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.CEREBRAS_API_KEY}` },
@@ -753,11 +774,11 @@ async function callCerebrasGeneralChat(env, messages) {
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null, modelUsed: env.CEREBRAS_MODEL || "llama3.3-70b" };
+  return { content, usage: data.usage || null, modelUsed: env.CEREBRAS_MODEL || "llama3.3-70b", sources: [], searchUsed: false };
 }
 
-async function callOpenRouterGeneralChat(env, messages) {
-  const fullMessages = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, ...(Array.isArray(messages) ? messages : [])];
+async function callOpenRouterGeneralChat(env, messages, projectContext, forceEnglish) {
+  const fullMessages = [...buildGeneralChatSystemMessages(projectContext, forceEnglish), ...(Array.isArray(messages) ? messages : [])];
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
@@ -773,29 +794,37 @@ async function callOpenRouterGeneralChat(env, messages) {
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  return { content, usage: data.usage || null, modelUsed: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free" };
+  return { content, usage: data.usage || null, modelUsed: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free", sources: [], searchUsed: false };
 }
 
-// Provider Adapter routing for General Chat (§6.5 নীতির General-Chat-সম্প্রসারণ,
-// owner-approved এই থ্রেড) — primary Groq, silent failover secondary Mistral।
-// শুধু **text-only, non-image** ক্ষেত্রেই failover সম্ভব (Mistral vision/web-search
-// সাপোর্ট করে না) — hasImages:true হলে Mistral try করা হয় না, primary error-ই
-// সরাসরি caller-এর কাছে যায় (client-side non-alarming retry ইতিমধ্যে আছে)।
-// **bug-fix (এই আপডেট):** চেইন এখন শুধু Groq → Mistral — Cerebras/OpenRouter
-// সরানো হয়েছে (উপরের কমেন্ট দ্রষ্টব্য, Bengali-language reliability bug)।
-// Mistral বাংলায় প্রমাণিত (health-chat-এও এটাই secondary provider)।
-async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages }) {
+// Provider Adapter routing for General Chat (owner-approved, এই থ্রেড) —
+// Groq → Mistral (উভয়ই বাংলা-নির্ভরযোগ্য, health-chat-এর মতোই) → Cerebras →
+// OpenRouter। শেষ দুইটা fallback-এ forceEnglish:true পাঠানো হয় (উপরের কমেন্ট
+// দ্রষ্টব্য) — বাংলা-ভুল এড়াতে conversation ইংরেজিতে চলবে, সম্পূর্ণ বন্ধ হওয়ার
+// চেয়ে ভালো (owner-approved)। hasImages হলে কোনো fallback-ই নেই (কোনো
+// secondary provider vision সাপোর্ট করে না) — primary error সরাসরি যায়।
+async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages, projectContext }) {
   let primaryErr;
   try {
-    return await callGroqGeneralChat(env, messages, { useWebSearch, hasImages });
+    return await callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext });
   } catch (err) {
     primaryErr = err;
   }
   if (hasImages) throw primaryErr;
-  const fallbacks = [
-    env.MISTRAL_API_KEY && (() => callMistralGeneralChat(env, messages)),
+
+  if (env.MISTRAL_API_KEY) {
+    try {
+      return await callMistralGeneralChat(env, messages, projectContext);
+    } catch (e) {
+      // Mistral-ও ব্যর্থ — নিচে English-fallback চেষ্টা হবে
+    }
+  }
+
+  const englishFallbacks = [
+    env.CEREBRAS_API_KEY && (() => callCerebrasGeneralChat(env, messages, projectContext, true)),
+    env.OPENROUTER_API_KEY && (() => callOpenRouterGeneralChat(env, messages, projectContext, true)),
   ].filter(Boolean);
-  for (const tryFallback of fallbacks) {
+  for (const tryFallback of englishFallbacks) {
     try {
       return await tryFallback();
     } catch (e) {
@@ -987,7 +1016,7 @@ export default {
       }
 
       if (request.method === "POST" && url.pathname === "/general-chat") {
-        const { idToken, familyId, messages, useWebSearch, hasImages } = await request.json();
+        const { idToken, familyId, messages, useWebSearch, hasImages, projectContext } = await request.json();
         if (!idToken || !familyId || !Array.isArray(messages)) return json(env, { error: "missing-params" }, 400);
 
         let uid;
@@ -1001,7 +1030,33 @@ export default {
         const isAdmin = await verifyIsAdminOfFamily(env, idToken, familyId, uid);
         if (!isAdmin) return json(env, { error: "forbidden-admin-only" }, 403);
 
-        const { content, usage, modelUsed, sources, searchUsed } = await callGeneralChatLLM(env, messages, { useWebSearch, hasImages });
+        let result = await callGeneralChatLLM(env, messages, { useWebSearch, hasImages, projectContext });
+
+        // Language auto-retry guard (নতুন, owner-approved) — ৰ/ৱ (U+09F0/U+09F1)
+        // শুধু অসমীয়া লিপিতে ব্যবহৃত হয়, বাংলায় না (দুই ভাষার Unicode-block অভিন্ন
+        // বলে block-ভিত্তিক ডিটেকশন কাজ করত না — এই দুই character-ই সবচেয়ে
+        // নির্ভরযোগ্য marker)। ব্যবহারকারী নিজে সেই লিপিতে না লিখলে, একবার
+        // corrective retry — infinite-loop এড়াতে শুধু single retry, ব্যর্থ হলে
+        // আগের result-ই ফেরত যায় (কিছু-না-দেখানোর চেয়ে ভালো)।
+        const ASSAMESE_MARKER_RE = /[\u09F0\u09F1]/;
+        if (!hasImages && result.content && ASSAMESE_MARKER_RE.test(result.content)) {
+          const userWroteInThatScript = messages.some(
+            (m) => m.role === "user" && typeof m.content === "string" && ASSAMESE_MARKER_RE.test(m.content)
+          );
+          if (!userWroteInThatScript) {
+            const retryMessages = [
+              ...messages,
+              { role: "user", content: "(system-note) আগের উত্তরে ভুল ভাষা/লিপি (অসমীয়া) চলে এসেছিল — এবার সম্পূর্ণ শুদ্ধ বাংলায় আবার উত্তর দিন।" },
+            ];
+            try {
+              result = await callGeneralChatLLM(env, retryMessages, { useWebSearch: false, hasImages: false, projectContext });
+            } catch (e) {
+              // retry ব্যর্থ হলে আগের result-ই থাকবে
+            }
+          }
+        }
+
+        const { content, usage, modelUsed, sources, searchUsed } = result;
         return json(env, { content, usage, modelUsed, sources: sources || [], searchUsed: !!searchUsed });
       }
 
