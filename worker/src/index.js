@@ -664,7 +664,12 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   const fullMessages = [...buildGeneralChatSystemMessages(projectContext), ...(Array.isArray(messages) ? messages : [])];
 
   let model;
-  const body = { max_tokens: 2000 };
+  // bug-fix (owner-reported, "ওয়েব সার্চ করছে না"): max_tokens আগে ২০০০ ছিল,
+  // যা Groq account-এর OTPM (output-tokens-per-minute) বাজেট ছাড়িয়ে বারবার
+  // 429 দিচ্ছিল — compound (web-search) কল ব্যর্থ হয়ে সবসময় silent fallback-এ
+  // চলে যাচ্ছিল, ফলে search বাস্তবে কখনো সম্পন্নই হতো না। health-chat-এর
+  // প্রমাণিত-safe মান (১৫০০)-এর সাথে সামঞ্জস্যপূর্ণ করা হলো।
+  const body = { max_tokens: 1500 };
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
 
   if (hasImages) {
@@ -672,7 +677,13 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   } else if (useWebSearch !== false) {
     model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
-    body.tool_choice = "required"; // bug-fix, উপরের callGroq()-এর same fix
+    // bug-fix (owner-reported): আগে tool_choice:"required" জোর করে প্রতিটা
+    // সাধারণ প্রশ্নেও search-call বাধ্যতামূলক করছিল (এমনকি "অযু করার নিয়ম"-এর
+    // মতো general-knowledge প্রশ্নেও) — এতে token-খরচ/latency বাড়ছিল এবং
+    // compound model-এর নিজস্ব orchestration-এর সাথে conflict করে মাঝে মাঝে
+    // request-ই ব্যর্থ হচ্ছিল। এখন compound নিজে থেকেই প্রয়োজন বুঝে search
+    // করবে (Groq-প্রস্তাবিত default আচরণ) — checkbox অন থাকলে tool উপলব্ধ
+    // থাকবে, কিন্তু জোর করা হবে না।
     headers["Groq-Model-Version"] = "latest";
   } else {
     model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
@@ -1066,7 +1077,10 @@ export default {
       // Rate-Limit Mitigation (§10.2.2) — Groq 429 হলে client নির্ভরযোগ্যভাবে
       // detect করে exponential-backoff retry করতে পারে সেজন্য generic 500-এর
       // বদলে proper 429 status ফেরত দেওয়া হচ্ছে (aiClient.js-এ retry-logic)।
-      const status = /groq-error-429/.test(msg) ? 429 : 500;
+      // bug-fix: আগে শুধু "groq-error-429" match হতো — Mistral/Cerebras/
+      // OpenRouter fallback-ও ব্যর্থ হয়ে 429 দিলে সেটা ধরা পড়ত না, client
+      // ভুলভাবে non-retryable 500 পেত। এখন যেকোনো provider-এর -429 ধরা হচ্ছে।
+      const status = /-error-429\b/.test(msg) ? 429 : 500;
       return json(env, { error: msg }, status);
     }
   },
