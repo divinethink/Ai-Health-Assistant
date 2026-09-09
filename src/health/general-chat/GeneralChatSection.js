@@ -242,16 +242,21 @@ export function GeneralChatSection({ familyId, onExit }) {
       refreshSessions(); // updatedAt বদলেছে, list-order refresh
     } catch (e) {
       const msg = e.message || String(e);
-      setErr(msg.includes("admin-only") ? "শুধু Admin General Chat ব্যবহার করতে পারবেন।" : msg);
+      // bug-fix (owner-reported): provider-level raw error (JSON dump, যেমন
+      // Groq OTPM-429 বার্তা) আগে সরাসরি user-কে দেখানো হতো — এখন সবসময়
+      // পরিষ্কার বাংলা বার্তা দেখানো হবে, raw detail শুধু console-এ থাকবে।
+      console.error("General Chat error:", msg);
+      if (msg.includes("admin-only")) setErr("শুধু Admin General Chat ব্যবহার করতে পারবেন।");
+      else if (/-429\b|rate.?limit/i.test(msg)) setErr("⚠️ এই মুহূর্তে AI সার্ভারে চাপ বেশি — কিছুক্ষণ পর আবার চেষ্টা করুন।");
+      else setErr("⚠️ এই মুহূর্তে উত্তর তৈরি করা যায়নি। একটু পরে আবার চেষ্টা করুন।");
     } finally {
       setLoading(false);
       setRetryNote(null);
     }
   }
 
-  function handleCopy(t) {
-    if (navigator.clipboard) navigator.clipboard.writeText(t || "");
-  }
+  // handleCopy সরানো হয়েছে (owner-request) — এখন standard long-press/select
+  // দিয়েই টেক্সট কপি করা যায়, আলাদা "📋 কপি" UI লাগে না।
 
   // ---------------- Project editor (inline, ছোট modal) ----------------
 
@@ -290,7 +295,6 @@ export function GeneralChatSection({ familyId, onExit }) {
     "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#12181F", color: "#fff" } },
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 } },
-      React.createElement("button", { onClick: onExit, style: { background: "none", border: "none", color: "#A9C4DE", fontSize: "14px", cursor: "pointer", flexShrink: 0 } }, "← ফিরে যান"),
       React.createElement(
         "button", {
           onClick: () => setSidebarOpen((v) => !v), title: "মেনু",
@@ -394,10 +398,6 @@ export function GeneralChatSection({ familyId, onExit }) {
             m.sources.slice(0, 5).map((s, si) =>
               React.createElement("a", { key: si, href: s.url, target: "_blank", rel: "noopener noreferrer", style: { display: "block", color: "#3B7DBF", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title || s.url)
             )
-          ),
-          React.createElement(
-            "div", { style: { marginTop: "6px", display: "flex", gap: "10px" } },
-            React.createElement("span", { onClick: () => handleCopy(m.text), style: { fontSize: "11px", cursor: "pointer", color: m.role === "user" ? "#CFE7E1" : "#888" } }, "📋 কপি")
           )
         )
       )
@@ -502,8 +502,9 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, messagesArea, composer)
     ),
     React.createElement(
-      "div", { style: { padding: "4px 16px", background: "#12181F", color: "#5A6B7D", fontSize: "10px" } },
-      "🔒 ক্লাউড-ভিত্তিক AI ব্যবহার হচ্ছে। এই মোডে app-এর নিজস্ব health-restriction প্রযোজ্য নয়; ব্যক্তিগত স্বাস্থ্য-পরামর্শের জন্য মূল Symptom Check ব্যবহার করুন।"
+      "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "6px 16px", background: "#12181F", color: "#5A6B7D", fontSize: "10px" } },
+      React.createElement("button", { onClick: onExit, style: { background: "none", border: "1px solid #3A4756", color: "#A9C4DE", fontSize: "11px", padding: "3px 10px", borderRadius: "6px", cursor: "pointer", flexShrink: 0 } }, "← ফিরে যান"),
+      React.createElement("span", null, "🔒 ক্লাউড-ভিত্তিক AI ব্যবহার হচ্ছে। এই মোডে app-এর নিজস্ব health-restriction প্রযোজ্য নয়; ব্যক্তিগত স্বাস্থ্য-পরামর্শের জন্য মূল Symptom Check ব্যবহার করুন।")
     ),
     projectEditorModal
   );
