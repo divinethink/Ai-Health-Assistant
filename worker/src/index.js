@@ -681,7 +681,20 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
     model = env.GENERAL_CHAT_VISION_MODEL || "qwen/qwen3.6-27b";
   } else if (useWebSearch !== false) {
     model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
-    body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
+    // bug-fix round-৪ (এই থ্রেড, owner-reported HTTP 413 "request_too_large" —
+    // এখন প্রথমবারের মতো visible হলো round-৩-এর error-surfacing fix-এর কারণে):
+    // `visit_website` পুরো ওয়েবপেজের full content fetch করে model-context-এ
+    // ঢোকায় (compound সর্বোচ্চ ১০টা tool-call পর্যন্ত করতে পারে) — broad/vague
+    // query-তে (যেমন "আজকের প্রধান সংবাদ") একাধিক পূর্ণ পাতা visit করলে সহজেই
+    // request-size model-এর context-limit ছাড়িয়ে যায়, Groq তখন generic
+    // "Request Entity Too Large" (413) দেয় (এটা TPM rate-limit না, body-size)।
+    // `web_search` একাই যথেষ্ট ও হালকা — শুধু snippet/summary ফেরত দেয় (Groq
+    // docs: "performs a single search and retrieves text snippets"), full-page
+    // fetch করে না। health-chat-এর callGroq()-ও শুরু থেকেই শুধু `web_search`
+    // ব্যবহার করে (line ~422) — এই থ্রেডে General Chat-ও একই, প্রমাণিত-নিরাপদ
+    // সেটে align করা হলো। Functionality সামান্য কমে (পুরো পাতা পড়া যাবে না,
+    // শুধু search-snippet), কিন্তু search কাজ করাটাই এখন অগ্রাধিকার।
+    body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
     // bug-fix round-৩ (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"):
     // `tool_choice: "required"` compound_custom-based built-in-tools request-এ
     // বৈধ প্যারামিটার না (Groq/OpenAI-compatible API-তে `tool_choice` শুধু
