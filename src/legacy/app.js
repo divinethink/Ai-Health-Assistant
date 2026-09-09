@@ -62,7 +62,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
           onClick: () => setShowGeneralChat(true),
           style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #1B2430", borderRadius: "8px", background: "#1B2430", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
         },
-        "🌐 General Chat খুলুন (Admin-only, স্বাধীন আলোচনা — কোনো health-restriction নেই)"
+        "🌐 General Chat"
       ),
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
