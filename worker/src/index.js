@@ -680,20 +680,21 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   if (hasImages) {
     model = env.GENERAL_CHAT_VISION_MODEL || "qwen/qwen3.6-27b";
   } else if (useWebSearch !== false) {
-    model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
-    // bug-fix round-৪ (এই থ্রেড, owner-reported HTTP 413 "request_too_large" —
-    // এখন প্রথমবারের মতো visible হলো round-৩-এর error-surfacing fix-এর কারণে):
-    // `visit_website` পুরো ওয়েবপেজের full content fetch করে model-context-এ
-    // ঢোকায় (compound সর্বোচ্চ ১০টা tool-call পর্যন্ত করতে পারে) — broad/vague
-    // query-তে (যেমন "আজকের প্রধান সংবাদ") একাধিক পূর্ণ পাতা visit করলে সহজেই
-    // request-size model-এর context-limit ছাড়িয়ে যায়, Groq তখন generic
-    // "Request Entity Too Large" (413) দেয় (এটা TPM rate-limit না, body-size)।
-    // `web_search` একাই যথেষ্ট ও হালকা — শুধু snippet/summary ফেরত দেয় (Groq
-    // docs: "performs a single search and retrieves text snippets"), full-page
-    // fetch করে না। health-chat-এর callGroq()-ও শুরু থেকেই শুধু `web_search`
-    // ব্যবহার করে (line ~422) — এই থ্রেডে General Chat-ও একই, প্রমাণিত-নিরাপদ
-    // সেটে align করা হলো। Functionality সামান্য কমে (পুরো পাতা পড়া যাবে না,
-    // শুধু search-snippet), কিন্তু search কাজ করাটাই এখন অগ্রাধিকার।
+    // bug-fix round-৫ (এই থ্রেড, owner-reported "visit_website বাদ দেওয়ার পরও
+    // 413 same") — root cause এখন নিশ্চিত হলো: এটা `visit_website` না,
+    // বরং `groq/compound` (full) নিজেই সর্বোচ্চ ১০টা পর্যন্ত server-side
+    // tool-call (একাধিক web_search সহ) chain করতে পারে — broad/open-ended
+    // query-তে ("আলোচিত খবর"-এর মতো, কোনো নির্দিষ্ট domain-restriction ছাড়া,
+    // health-chat-এর `search_settings.include_domains`-এর বিপরীতে General
+    // Chat-এ পুরো ওয়েব খোলা) মডেল একাধিকবার search চালিয়ে বিপুল accumulated
+    // snippet-content জমা করে ফেলে, যা request-size ছাড়িয়ে 413 দেয়।
+    // সমাধান: `groq/compound-mini` — এটা সর্বোচ্চ ১টা tool-call করতে পারে
+    // (Groq docs: "great for use cases that require a single web search...
+    // 3x lower latency")। এতে accumulated content hard-capped থাকে, তাই
+    // broad query-তেও request-size বিস্ফোরিত হতে পারে না। General Chat-এর
+    // ব্যবহার-প্যাটার্ন (এক-দুই লাইনের প্রশ্ন, সাধারণ ফ্যাক্ট-চেক) এই single-
+    // search সীমাবদ্ধতার সাথে ভালোভাবেই মানানসই।
+    model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound-mini";
     body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
     // bug-fix round-৩ (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"):
     // `tool_choice: "required"` compound_custom-based built-in-tools request-এ
@@ -760,7 +761,7 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   }
   // model যদি compound (web-search-enabled) হয় এবং এই কলটাই প্রথম চেষ্টায় সফল হয়
   // (recursive fallback না), তাহলেই প্রকৃতপক্ষে search সক্রিয় ছিল ধরা হবে।
-  const searchUsed = model === (env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound");
+  const searchUsed = model === (env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound-mini");
   return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed, searchError: _searchErrorCarry || null };
 }
 
