@@ -421,11 +421,16 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     body.model = "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
     body.search_settings = { include_domains: WEB_SEARCH_WHITELIST_DOMAINS };
-    // bug-fix (এই থ্রেড, "ওয়েব সার্চ পূর্ণভাবে ফিক্স"): compound নিজে থেকে
-    // সিদ্ধান্ত নিতে পারত সার্চ করবে কি না (Groq docs: "selectively" ব্যবহার
-    // করে) — "required" দিয়ে বাধ্যতামূলক করা হলো, যখনই web-search মোড চাওয়া
-    // হয়েছে (useWebSearch), enabled tool-এর একটা অবশ্যই call হবে।
-    body.tool_choice = "required";
+    // bug-fix (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"): আগে এখানে
+    // `tool_choice: "required"` পাঠানো হতো, কিন্তু compound_custom-based
+    // built-in tools (groq/compound) কোনো `tools` array পাঠায় না — আর Groq-এর
+    // OpenAI-compatible API `tools` array ছাড়া `tool_choice` পেলে সরাসরি 400
+    // ("tool_choice is only allowed when tools are specified") রিটার্ন করে।
+    // ফলে compound call প্রতিবারই fail করে সঙ্গে সঙ্গে নিচের catch-block দিয়ে
+    // plain (non-search) মডেলে silent fallback হয়ে যাচ্ছিল — অর্থাৎ ওয়েব-সার্চ
+    // কখনো বাস্তবে চালুই হচ্ছিল না। `tool_choice` বাদ দেওয়া হলো —
+    // `compound_custom.tools.enabled_tools` নিজেই search-tool সীমাবদ্ধ/সক্ষম
+    // রাখার জন্য যথেষ্ট (Groq built-in-tools docs)।
     headers["Groq-Model-Version"] = "latest";
   } else {
     body.model = "qwen/qwen3.6-27b";
@@ -677,15 +682,15 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   } else if (useWebSearch !== false) {
     model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
-    // bug-fix round-২ (owner-reported, "আজকের প্রধান সংবাদ"-এ compound নিজে থেকে
-    // search না করে canned "আমি real-time internet ব্যবহার করি না" উত্তর
-    // দিচ্ছিল — অর্থাৎ tool_choice ছাড়া compound নিজে থেকে search-call করার
-    // সিদ্ধান্ত নিচ্ছিল না)। আগের থ্রেডে max_tokens-ই আসল 429-এর কারণ ছিল
-    // (উপরে ফিক্সড, ২০০০→১৫০০) — tool_choice:"required" নিজে সমস্যা ছিল না,
-    // তাই এখন max_tokens-safe অবস্থায় আবার required ফিরিয়ে আনা হলো যাতে
-    // web-search checkbox অন থাকলে compound বাধ্যতামূলকভাবে অন্তত একটা tool
-    // call করে (search বাস্তবে সম্পন্ন হওয়া নিশ্চিত করতে)।
-    body.tool_choice = "required";
+    // bug-fix round-৩ (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"):
+    // `tool_choice: "required"` compound_custom-based built-in-tools request-এ
+    // বৈধ প্যারামিটার না (Groq/OpenAI-compatible API-তে `tool_choice` শুধু
+    // `tools` array-এর সাথেই বৈধ, compound এখানে `tools` পাঠায় না) — ফলে এটা
+    // পাঠানো হলে Groq সরাসরি 400 error দিচ্ছিল, compound call প্রতিবারই
+    // catch-block-এ পড়ে নিচের non-search fallback-এ চলে যাচ্ছিল, তাই checkbox
+    // অন থাকা সত্ত্বেও search বাস্তবে কখনো ঘটতোই না। বাদ দেওয়া হলো —
+    // `compound_custom.tools.enabled_tools` (উপরে) নিজেই search-tool সক্ষম
+    // রাখার জন্য যথেষ্ট।
     headers["Groq-Model-Version"] = "latest";
   } else {
     model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
