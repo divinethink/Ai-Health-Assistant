@@ -1,22 +1,28 @@
-// General Chat — data layer (নতুন, এই থ্রেড)।
-//
-// দুই আলাদা concern:
-// ১) Ephemeral image upload — documentsData.js-এর Cloudinary-signing pattern
-//    reuse (Worker `/general-chat-upload-auth`), কিন্তু কোনো Firestore metadata
-//    doc তৈরি হয় না (history-না-সেভ নীতি) — সরাসরি Cloudinary URL client-state-এ
-//    থাকে। ব্যবহারকারী সেই message "সেভ" না করলে `deleteGeneralChatImage()` দিয়ে
-//    Cloudinary থেকেও মুছে ফেলা হয় (storage-এ eternal orphan asset এড়াতে)।
-// ২) সেভ করা নোট — `families/{familyId}/generalChatNotes/{id}`, Admin-only
-//    (firestore.rules-এ isAdminOfFamily()-gated)।
+// General Chat — data layer। আপডেট (এই থ্রেড): আগের ephemeral/per-message-save
+// মডেল বাতিল — এখন পুরো session Firestore-এ auto-save হয় (HealthEpisode/
+// EpisodeMessage-এর হুবহু structural pattern reuse, Architecture Plan Part C §9)।
+// Delete শুধু পুরো session-scope-এ (owner-approved)। এছাড়া lightweight Project
+// (Knowledge+Instructions) CRUD।
 
 import { db, auth } from "../../legacy/firebaseConfig.js";
 
 const WORKER_URL = import.meta.env.VITE_MEDIA_WORKER_URL;
 
+// owner-approved ("সর্বোচ্চ সীমা দিন") — Process Rule ৮ (unbounded reads এড়ানো)
+// মেনে একটা generous কিন্তু bounded cap। দরকার হলে শুধু এই সংখ্যা বদলালেই চলবে।
+export const SESSION_LIST_LIMIT = 300;
+export const KNOWLEDGE_MAX_CHARS = 8000;
+
 async function getIdToken() {
   if (!auth.currentUser) throw new Error("লগইন সেশন পাওয়া যায়নি — পেজ রিফ্রেশ করে আবার চেষ্টা করুন।");
   return auth.currentUser.getIdToken();
 }
+
+function famRef(familyId) {
+  return db.collection("families").doc(familyId);
+}
+
+// ---------------- ছবি (ephemeral upload, session-এর সাথে persist হয়) ----------------
 
 export function validateGeneralChatImage(file) {
   if (!file) return "একটা ছবি বেছে নিন।";
@@ -25,8 +31,6 @@ export function validateGeneralChatImage(file) {
   return null;
 }
 
-// আপলোড করে { secureUrl, publicId, resourceType } ফেরত দেয় — এগুলো শুধু
-// client-side React state-এ রাখা হবে, কোনো Firestore write নেই এখানে।
 export async function uploadGeneralChatImage(familyId, file) {
   const err = validateGeneralChatImage(file);
   if (err) throw new Error(err);
@@ -59,7 +63,8 @@ export async function uploadGeneralChatImage(familyId, file) {
   return { secureUrl: result.secure_url, publicId: result.public_id, resourceType: result.resource_type || "image" };
 }
 
-// "সেভ করুন" না চাপলে ছবি মুছে ফেলার জন্য — best-effort (ব্যর্থ হলেও চ্যাট আটকাবে না)।
+// composer-এ pending অবস্থায় user ছবি বাতিল করলে (এখনো কোনো message-এ persist হয়নি) —
+// best-effort cleanup, ব্যর্থ হলেও চ্যাট আটকাবে না।
 export async function deleteGeneralChatImage(familyId, publicId, resourceType) {
   if (!WORKER_URL || !publicId) return;
   try {
@@ -70,45 +75,106 @@ export async function deleteGeneralChatImage(familyId, publicId, resourceType) {
       body: JSON.stringify({ idToken, familyId, publicId, resourceType }),
     });
   } catch (e) {
-    // best-effort cleanup — silent fail, ব্যবহারকারীকে বিরক্ত করার দরকার নেই
+    // best-effort — silent fail
   }
 }
 
-// একটা নির্দিষ্ট exchange (user প্রশ্ন + AI উত্তর, অথবা শুধু AI উত্তর) সেভ করা —
-// প্রতিটা message-এর পাশের "সেভ করুন" বাটন থেকে কল হয়।
-export async function saveGeneralChatNote(familyId, { role, content, tag, sessionTitle, sourceLink, attachmentUrl }) {
-  if (!auth.currentUser) throw new Error("লগইন সেশন পাওয়া যায়নি।");
+// ---------------- Session / Message (auto-save) ----------------
+
+export async function createGeneralChatSession(familyId, { title, projectId }) {
   const now = firebase.firestore.FieldValue.serverTimestamp();
-  await db.collection("families").doc(familyId).collection("generalChatNotes").add({
-    savedByUid: auth.currentUser.uid,
-    role: role || "ai",
-    content: content || "",
-    tag: tag || "misc",
-    sessionTitle: sessionTitle || null,
-    sourceLink: sourceLink || null,
-    attachmentUrl: attachmentUrl || null,
-    pinned: false,
-    visibility: "admin-only", // ভবিষ্যতে "family"-তে সম্প্রসারণযোগ্য রাখা হলো (এখনই ব্যবহার হচ্ছে না)
-    savedAt: now,
+  const ref = await famRef(familyId).collection("generalChatSessions").add({
+    title: title || "নতুন চ্যাট",
+    projectId: projectId || null,
+    createdByUid: auth.currentUser.uid,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function listGeneralChatSessions(familyId) {
+  const snap = await famRef(familyId).collection("generalChatSessions")
+    .orderBy("updatedAt", "desc").limit(SESSION_LIST_LIMIT).get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function loadGeneralChatMessages(familyId, sessionId) {
+  const snap = await famRef(familyId).collection("generalChatSessions").doc(sessionId)
+    .collection("messages").orderBy("createdAt", "asc").get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addGeneralChatMessage(familyId, sessionId, msg) {
+  const sessionRef = famRef(familyId).collection("generalChatSessions").doc(sessionId);
+  await sessionRef.collection("messages").add({
+    role: msg.role,
+    text: msg.text || "",
+    imageUrl: msg.imageUrl || null,
+    imagePublicId: msg.imagePublicId || null,
+    imageResourceType: msg.imageResourceType || null,
+    tag: msg.tag || "misc",
+    sources: msg.sources || [],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await sessionRef.update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+// পুরো session delete — owner-approved scope (individual-message-delete নেই)।
+// সংযুক্ত ছবি থাকলে Cloudinary থেকেও best-effort মুছে ফেলা হয়। ৫০০-message batch-
+// limit-এর বেশি বড় কোনো single session এই family-scale app-এ প্রত্যাশিত না।
+export async function deleteGeneralChatSession(familyId, sessionId) {
+  const sessionRef = famRef(familyId).collection("generalChatSessions").doc(sessionId);
+  const msgsSnap = await sessionRef.collection("messages").get();
+
+  const batch = db.batch();
+  const imagesToClean = [];
+  msgsSnap.docs.forEach((d) => {
+    const data = d.data();
+    if (data.imagePublicId) imagesToClean.push({ publicId: data.imagePublicId, resourceType: data.imageResourceType });
+    batch.delete(d.ref);
+  });
+  batch.delete(sessionRef);
+  await batch.commit();
+
+  imagesToClean.forEach((img) => deleteGeneralChatImage(familyId, img.publicId, img.resourceType));
+}
+
+// ---------------- Project (Knowledge + Instructions, lightweight) ----------------
+
+export async function createGeneralChatProject(familyId, { name, instructions, knowledge }) {
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const ref = await famRef(familyId).collection("generalChatProjects").add({
+    name: name || "নতুন Project",
+    instructions: (instructions || "").slice(0, KNOWLEDGE_MAX_CHARS),
+    knowledge: (knowledge || "").slice(0, KNOWLEDGE_MAX_CHARS),
+    createdByUid: auth.currentUser.uid,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function updateGeneralChatProject(familyId, projectId, { name, instructions, knowledge }) {
+  await famRef(familyId).collection("generalChatProjects").doc(projectId).update({
+    name: name || "নতুন Project",
+    instructions: (instructions || "").slice(0, KNOWLEDGE_MAX_CHARS),
+    knowledge: (knowledge || "").slice(0, KNOWLEDGE_MAX_CHARS),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 }
 
-export async function listGeneralChatNotes(familyId) {
-  const snap = await db.collection("families").doc(familyId).collection("generalChatNotes").get();
-  const notes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  notes.sort((a, b) => {
-    const at = a.savedAt && a.savedAt.toMillis ? a.savedAt.toMillis() : 0;
-    const bt = b.savedAt && b.savedAt.toMillis ? b.savedAt.toMillis() : 0;
-    return bt - at;
-  });
-  return notes;
+export async function listGeneralChatProjects(familyId) {
+  const snap = await famRef(familyId).collection("generalChatProjects").orderBy("updatedAt", "desc").get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function deleteGeneralChatNote(familyId, noteId) {
-  await db.collection("families").doc(familyId).collection("generalChatNotes").doc(noteId).delete();
+export async function deleteGeneralChatProject(familyId, projectId) {
+  await famRef(familyId).collection("generalChatProjects").doc(projectId).delete();
 }
 
-// Quick-Links directory (global, script-populated — scripts/populateGeneralChatQuickLinks.js)।
+// ---------------- Quick-Links directory (global, script-populated) ----------------
+
 export async function listGeneralChatQuickLinks() {
   const snap = await db.collection("generalChatQuickLinks").where("active", "==", true).get();
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));

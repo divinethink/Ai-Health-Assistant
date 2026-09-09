@@ -10,11 +10,11 @@ const WORKER_BASE_URL = import.meta.env.VITE_MEDIA_WORKER_URL || "";
  * @param {string} familyId
  * @param {Array<{role:string, content:(string|Array)}>} messages - OpenAI-style; ছবি থাকলে
  *   content একটা array হবে: [{type:"text",text},{type:"image_url",image_url:{url}}]
- * @param {{ useWebSearch?: boolean, hasImages?: boolean, onRetry?: Function, maxRetries?: number, baseDelayMs?: number }} options
- * @returns {Promise<{ content: string, usage?: object, modelUsed?: string }>}
+ * @param {{ useWebSearch?: boolean, hasImages?: boolean, projectContext?: {instructions?:string, knowledge?:string}|null, onRetry?: Function, maxRetries?: number, baseDelayMs?: number }} options
+ * @returns {Promise<{ content: string, usage?: object, modelUsed?: string, sources?: Array, searchUsed?: boolean }>}
  */
 export async function askGeneralChat(familyId, messages, options = {}) {
-  const { useWebSearch = true, hasImages = false, onRetry, maxRetries = 2, baseDelayMs = 1500 } = options;
+  const { useWebSearch = true, hasImages = false, projectContext = null, onRetry, maxRetries = 2, baseDelayMs = 1500 } = options;
 
   if (!WORKER_BASE_URL) throw new Error("VITE_MEDIA_WORKER_URL env-var missing — worker URL not configured.");
   const user = auth.currentUser;
@@ -27,7 +27,7 @@ export async function askGeneralChat(familyId, messages, options = {}) {
     const res = await fetch(`${WORKER_BASE_URL}/general-chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, familyId, messages, useWebSearch, hasImages }),
+      body: JSON.stringify({ idToken, familyId, messages, useWebSearch, hasImages, projectContext }),
     });
 
     let data;

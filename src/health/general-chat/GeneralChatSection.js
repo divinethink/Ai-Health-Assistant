@@ -1,99 +1,155 @@
-// General Chat — Admin-only special mode (নতুন, এই থ্রেড)।
+// General Chat — Admin-only special mode। বাকি অ্যাপ থেকে ইচ্ছাকৃতভাবে ভিন্ন
+// visual-identity (dark drawer + full-screen takeover)।
 //
-// বাকি অ্যাপ থেকে ইচ্ছাকৃতভাবে ভিন্ন visual-identity (dark sidebar + full-screen
-// takeover) — যাতে ভুলবশত এটাকে health-guidance মনে না হয়। app.js থেকে
-// Dashboard-এর বদলে পুরো এই component render হয় (isAdmin + toggle-state)।
-//
-// মূল নীতি এই ফাইলে বাস্তবায়িত:
-//  - কোনো health-triage/dose-restriction নেই (Worker `/general-chat`, আলাদা
-//    system-prompt) — যেকোনো বিষয়ে (মেডিকেল সাধারণ-জ্ঞানসহ) খোলা আলোচনা।
-//  - ডিফল্টে history সেভ হয় না — শুধু per-message "💾 সেভ করুন" বাটনে
-//    `generalChatNotes`-এ (Admin-only) সংরক্ষণ হয়।
-//  - একাধিক parallel চ্যাট-ট্যাব (client-side, ephemeral)।
-//  - ছবি — সরাসরি Cloudinary-তে ephemeral upload (কোনো Firestore metadata
-//    doc ছাড়াই), সেভ না করলে ট্যাব/সেশন ছাড়ার সময় best-effort cleanup।
-//  - Web-browse — Groq `groq/compound` (built-in web_search+visit_website)।
+// আপডেট (এই থ্রেড, owner-approved সিদ্ধান্ত-পরিবর্তন): আগের ephemeral/
+// per-message-save মডেল বাদ — এখন প্রতিটা session Firestore-এ auto-save হয়
+// (HealthEpisode/EpisodeMessage pattern reuse), delete শুধু পুরো session-scope-এ।
+// নতুন সংযোজন: collapsible drawer-এ ৩ ট্যাব (Chats/Quick Links/Projects),
+// lightweight Project (Knowledge+Instructions), sources/citation প্রদর্শন।
 
 import { ErrorBox } from "../../shared/ui.js";
 import { GeneralChatQuickLinks } from "./GeneralChatQuickLinks.js";
 import { askGeneralChat } from "./generalChatClient.js";
 import {
   uploadGeneralChatImage, deleteGeneralChatImage, validateGeneralChatImage,
-  saveGeneralChatNote, listGeneralChatNotes, deleteGeneralChatNote,
-  CATEGORY_LABELS, CATEGORY_ORDER,
+  createGeneralChatSession, listGeneralChatSessions, loadGeneralChatMessages,
+  addGeneralChatMessage, deleteGeneralChatSession,
+  createGeneralChatProject, updateGeneralChatProject, listGeneralChatProjects, deleteGeneralChatProject,
+  KNOWLEDGE_MAX_CHARS,
 } from "./generalChatData.js";
 
 const { useState, useEffect, useRef, useCallback } = React;
 
-let sessionSeq = 1;
-function newSession() {
-  return { id: "s" + sessionSeq++, title: "নতুন চ্যাট", messages: [] };
+// Length-management (owner-approved, এই থ্রেড) — একটা single conversation-এর
+// API-তে পাঠানো payload-এর সর্বোচ্চ সীমা। পূর্ণ history সবসময় Firestore/UI-তে
+// অক্ষত থাকে (unbounded, user দেখতে পারবেন) — শুধু AI-কে পাঠানো window সীমিত,
+// যাতে দীর্ঘ গবেষণা-চ্যাট কখনো model-এর context-limit-এ আটকে না যায় বা
+// ব্যর্থ না হয়। ~২৪,০০০ character ≈ ৬,০০০ token estimate — সবচেয়ে সীমিত
+// fallback provider (OpenRouter free-tier, প্রায়ই ৮k context)-এর জন্যও নিরাপদ
+// margin রাখা হয়েছে।
+const MAX_API_HISTORY_CHARS = 24000;
+
+function trimHistoryForApi(msgs) {
+  let total = 0;
+  const kept = [];
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    const len = (m.text || "").length + (m.imageUrl ? 200 : 0);
+    if (kept.length > 0 && total + len > MAX_API_HISTORY_CHARS) break;
+    total += len;
+    kept.unshift(m);
+  }
+  return kept;
 }
-let msgSeq = 1;
-function nextMsgId() { return "m" + msgSeq++; }
+
+// Lightweight markdown render (owner-approved UI-suggestion) — **bold**, বুলেট
+// লাইন (- বা •), ও লাইন-ব্রেক — কোনো নতুন npm dependency ছাড়াই (Process Rule ৮)।
+function renderInlineBold(line) {
+  const parts = String(line).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => (p.startsWith("**") && p.endsWith("**") ? React.createElement("strong", { key: i }, p.slice(2, -2)) : p));
+}
+
+function renderLiteMarkdown(text) {
+  if (!text) return null;
+  const lines = String(text).split("\n");
+  const nodes = [];
+  let listBuffer = [];
+  function flushList(key) {
+    if (listBuffer.length) {
+      nodes.push(React.createElement("ul", { key: "ul-" + key, style: { margin: "4px 0", paddingLeft: "18px" } }, listBuffer));
+      listBuffer = [];
+    }
+  }
+  lines.forEach((line, idx) => {
+    const bulletMatch = /^[-•]\s+(.*)/.exec(line.trim());
+    if (bulletMatch) {
+      listBuffer.push(React.createElement("li", { key: idx }, renderInlineBold(bulletMatch[1])));
+      return;
+    }
+    flushList(idx);
+    if (line.trim() === "") nodes.push(React.createElement("div", { key: idx, style: { height: "8px" } }));
+    else nodes.push(React.createElement("div", { key: idx }, renderInlineBold(line)));
+  });
+  flushList("end");
+  return nodes;
+}
 
 export function GeneralChatSection({ familyId, onExit }) {
-  const [sessions, setSessions] = useState([newSession()]);
-  const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
-  const [activeCategory, setActiveCategory] = useState("misc");
-  // UI-fix: sidebar এখন collapsible overlay-drawer — ডিফল্ট বন্ধ, যাতে ফোনে চ্যাট
-  // এরিয়ার width কখনো সংকুচিত না হয় (আগে sidebar সবসময় খোলা থাকায় ছোট স্ক্রিনে
-  // চ্যাট এরিয়া প্রায় অর্ধেকের কমে নেমে যাচ্ছিল)।
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState("chats"); // "chats" | "quicklinks" | "projects"
+
+  const [sessions, setSessions] = useState(null);
+  const [sessionsErr, setSessionsErr] = useState(null);
+  const [activeSessionId, setActiveSessionId] = useState(null); // null = নতুন/অসৃষ্ট চ্যাট
+  const [activeMessages, setActiveMessages] = useState([]);
+  const [activeTitle, setActiveTitle] = useState("নতুন চ্যাট");
+
+  const [projects, setProjects] = useState(null);
+  const [projectsErr, setProjectsErr] = useState(null);
+  const [activeProjectId, setActiveProjectId] = useState(null); // নতুন চ্যাট শুরু করার সময় বাছাইযোগ্য
+  const [editingProject, setEditingProject] = useState(null); // null | "new" | project-object
+
+  const [activeCategory, setActiveCategory] = useState("misc");
   const [text, setText] = useState("");
   const [pendingImage, setPendingImage] = useState(null); // {secureUrl, publicId, resourceType, uploading}
+  const [contextTrimmed, setContextTrimmed] = useState(false); // length-management indicator
+  const messagesEndRef = useRef(null);
   const [useWebSearch, setUseWebSearch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [retryNote, setRetryNote] = useState(null);
   const [err, setErr] = useState(null);
-  const [showNotes, setShowNotes] = useState(false);
-  const [notes, setNotes] = useState(null);
-  const [notesErr, setNotesErr] = useState(null);
   const fileInputRef = useRef(null);
-  const cleanupMapRef = useRef(new Map()); // messageId -> {publicId, resourceType} — সেভ না হলে unmount-এ মুছবে
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0];
+  function refreshSessions() {
+    listGeneralChatSessions(familyId).then(setSessions).catch((e) => setSessionsErr(e.message || String(e)));
+  }
+  function refreshProjects() {
+    listGeneralChatProjects(familyId).then(setProjects).catch((e) => setProjectsErr(e.message || String(e)));
+  }
+  useEffect(() => { refreshSessions(); refreshProjects(); }, [familyId]);
 
-  // পেজ বন্ধ/রিফ্রেশ করার আগে সতর্কতা — কোনো session-এ অন্তত ১টা message থাকলে
+  // Desktop-এ ডিফল্টে drawer খোলা, mobile-এ বন্ধ (owner-confirmed, item #৪) —
+  // শুধু mount-এ একবার viewport-width চেক, পরে user টগল করলে সেটাই মান্য হবে।
   useEffect(() => {
-    const hasAnyMessage = sessions.some((s) => s.messages.length > 0);
-    function handler(e) {
-      if (hasAnyMessage) { e.preventDefault(); e.returnValue = ""; }
+    if (window.innerWidth >= 900) setSidebarOpen(true);
+  }, []);
+
+  // Auto-scroll (owner-approved UI-suggestion) — নতুন message এলে নিচে scroll।
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [activeMessages.length]);
+
+  const activeProject = (projects || []).find((p) => p.id === activeProjectId) || null;
+
+  function startNewChat() {
+    setActiveSessionId(null);
+    setActiveMessages([]);
+    setActiveTitle("নতুন চ্যাট");
+    setContextTrimmed(false);
+    setSidebarOpen(false);
+  }
+
+  function openSession(session) {
+    setActiveSessionId(session.id);
+    setActiveTitle(session.title);
+    setActiveProjectId(session.projectId || null);
+    setActiveMessages([]);
+    setContextTrimmed(false);
+    loadGeneralChatMessages(familyId, session.id).then(setActiveMessages).catch((e) => setErr(e.message || String(e)));
+    setSidebarOpen(false);
+  }
+
+  async function handleDeleteSession(e, sessionId) {
+    e.stopPropagation();
+    if (!window.confirm("এই পুরো চ্যাট স্থায়ীভাবে মুছে ফেলবেন?")) return;
+    try {
+      await deleteGeneralChatSession(familyId, sessionId);
+      if (activeSessionId === sessionId) startNewChat();
+      refreshSessions();
+    } catch (e2) {
+      setErr(e2.message || String(e2));
     }
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [sessions]);
-
-  // component unmount ("ফিরে যান") হলে সেভ-না-করা ছবি Cloudinary থেকে best-effort মুছে ফেলা
-  useEffect(() => {
-    return () => {
-      for (const { publicId, resourceType } of cleanupMapRef.current.values()) {
-        deleteGeneralChatImage(familyId, publicId, resourceType);
-      }
-      cleanupMapRef.current.clear();
-    };
-  }, [familyId]);
-
-  function updateSession(id, updater) {
-    setSessions((prev) => prev.map((s) => (s.id === id ? updater(s) : s)));
   }
-
-  function addNewTab() {
-    const s = newSession();
-    setSessions((prev) => [...prev, s]);
-    setActiveSessionId(s.id);
-  }
-
-  function closeTab(id) {
-    setSessions((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      return next.length ? next : [newSession()];
-    });
-    setActiveSessionId((prev) => (prev === id ? null : prev));
-  }
-  useEffect(() => {
-    if (!sessions.find((s) => s.id === activeSessionId)) setActiveSessionId(sessions[0].id);
-  }, [sessions, activeSessionId]);
 
   const onFileChange = useCallback(async (e) => {
     const f = e.target.files && e.target.files[0];
@@ -113,13 +169,13 @@ export function GeneralChatSection({ familyId, onExit }) {
   }, [familyId]);
 
   function removePendingImage() {
+    // এখনো কোনো message-এ persist হয়নি — composer থেকে বাদ দিলে সরাসরি cleanup।
     if (pendingImage && pendingImage.publicId) {
       deleteGeneralChatImage(familyId, pendingImage.publicId, pendingImage.resourceType);
     }
     setPendingImage(null);
   }
 
-  // sessions[].messages কে Worker-এর জন্য OpenAI-style {role, content} array-এ রূপান্তর
   function buildPayloadMessages(msgs) {
     return msgs.map((m) => {
       if (m.role === "user" && m.imageUrl) {
@@ -138,18 +194,12 @@ export function GeneralChatSection({ familyId, onExit }) {
     if (pendingImage && pendingImage.uploading) return;
 
     const userMsg = {
-      id: nextMsgId(), role: "user", text: trimmed,
+      role: "user", text: trimmed,
       imageUrl: pendingImage ? pendingImage.secureUrl : null,
       imagePublicId: pendingImage ? pendingImage.publicId : null,
       imageResourceType: pendingImage ? pendingImage.resourceType : null,
       tag: activeCategory,
     };
-    if (userMsg.imagePublicId) cleanupMapRef.current.set(userMsg.id, { publicId: userMsg.imagePublicId, resourceType: userMsg.imageResourceType });
-
-    const sessionForSend = activeSession;
-    const newHistory = [...sessionForSend.messages, userMsg];
-    const autoTitle = sessionForSend.title === "নতুন চ্যাট" && trimmed ? trimmed.slice(0, 24) : sessionForSend.title;
-    updateSession(sessionForSend.id, (s) => ({ ...s, title: autoTitle, messages: newHistory }));
 
     setText("");
     setPendingImage(null);
@@ -158,14 +208,38 @@ export function GeneralChatSection({ familyId, onExit }) {
     setRetryNote(null);
 
     try {
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const title = trimmed ? trimmed.slice(0, 30) : "ছবি-সহ চ্যাট";
+        sessionId = await createGeneralChatSession(familyId, { title, projectId: activeProjectId });
+        setActiveSessionId(sessionId);
+        setActiveTitle(title);
+      }
+
+      const fullHistory = [...activeMessages, userMsg];
+      setActiveMessages(fullHistory); // optimistic UI — পূর্ণ history সবসময় UI/Firestore-এ অক্ষত
+      await addGeneralChatMessage(familyId, sessionId, userMsg);
+
+      // Length-management (owner-approved) — AI-কে শুধু সাম্প্রতিক window পাঠানো
+      // হয়, পুরো history না। এতে দীর্ঘ চ্যাটেও model context-limit-এ আটকে না।
+      const apiHistory = trimHistoryForApi(fullHistory);
+      setContextTrimmed(apiHistory.length < fullHistory.length);
+
       const hasImages = !!userMsg.imageUrl;
-      const data = await askGeneralChat(familyId, buildPayloadMessages(newHistory), {
+      const data = await askGeneralChat(familyId, buildPayloadMessages(apiHistory), {
         useWebSearch: hasImages ? false : useWebSearch,
         hasImages,
+        projectContext: activeProject ? { instructions: activeProject.instructions, knowledge: activeProject.knowledge } : null,
         onRetry: (a, m) => setRetryNote(`একটু অপেক্ষা করুন... (retry ${a}/${m})`),
       });
-      const aiMsg = { id: nextMsgId(), role: "assistant", text: data && data.content, tag: activeCategory };
-      updateSession(sessionForSend.id, (s) => ({ ...s, messages: [...s.messages, aiMsg] }));
+
+      const aiMsg = {
+        role: "assistant", text: data && data.content, tag: activeCategory,
+        sources: (data && data.sources) || [], searchUsed: !!(data && data.searchUsed),
+      };
+      setActiveMessages((prev) => [...prev, aiMsg]);
+      await addGeneralChatMessage(familyId, sessionId, aiMsg);
+      refreshSessions(); // updatedAt বদলেছে, list-order refresh
     } catch (e) {
       const msg = e.message || String(e);
       setErr(msg.includes("admin-only") ? "শুধু Admin General Chat ব্যবহার করতে পারবেন।" : msg);
@@ -175,105 +249,182 @@ export function GeneralChatSection({ familyId, onExit }) {
     }
   }
 
-  async function handleSaveMessage(msg) {
+  function handleCopy(t) {
+    if (navigator.clipboard) navigator.clipboard.writeText(t || "");
+  }
+
+  // ---------------- Project editor (inline, ছোট modal) ----------------
+
+  function openNewProject() { setEditingProject({ mode: "new", name: "", instructions: "", knowledge: "" }); }
+  function openEditProject(p) { setEditingProject({ mode: "edit", id: p.id, name: p.name, instructions: p.instructions, knowledge: p.knowledge }); }
+
+  async function saveProject() {
     try {
-      await saveGeneralChatNote(familyId, {
-        role: msg.role, content: msg.text, tag: msg.tag || activeCategory,
-        sessionTitle: activeSession.title,
-        attachmentUrl: msg.imageUrl || null,
-      });
-      if (msg.imagePublicId) cleanupMapRef.current.delete(msg.id); // সেভ হলে আর cleanup-এ মুছবে না
-      updateSession(activeSession.id, (s) => ({
-        ...s, messages: s.messages.map((m) => (m.id === msg.id ? { ...m, saved: true } : m)),
-      }));
+      if (editingProject.mode === "new") {
+        await createGeneralChatProject(familyId, editingProject);
+      } else {
+        await updateGeneralChatProject(familyId, editingProject.id, editingProject);
+      }
+      setEditingProject(null);
+      refreshProjects();
     } catch (e) {
-      setErr("সেভ করা যায়নি: " + (e.message || String(e)));
+      setErr(e.message || String(e));
     }
   }
 
-  function handleCopy(text2) {
-    if (navigator.clipboard) navigator.clipboard.writeText(text2 || "");
-  }
-
-  function openNotes() {
-    setShowNotes(true);
-    setNotesErr(null);
-    listGeneralChatNotes(familyId).then(setNotes).catch((e) => setNotesErr(e.message || String(e)));
-  }
-
-  async function handleDeleteNote(id) {
+  async function handleDeleteProject(e, projectId) {
+    e.stopPropagation();
+    if (!window.confirm("এই Project মুছে ফেলবেন? (এর সাথে যুক্ত চ্যাটগুলো মুছবে না)")) return;
     try {
-      await deleteGeneralChatNote(familyId, id);
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-    } catch (e) {
-      setNotesErr(e.message || String(e));
+      await deleteGeneralChatProject(familyId, projectId);
+      if (activeProjectId === projectId) setActiveProjectId(null);
+      refreshProjects();
+    } catch (e2) {
+      setErr(e2.message || String(e2));
     }
   }
+
+  // ---------------- Render ----------------
 
   const headerBar = React.createElement(
     "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "#12181F", color: "#fff" } },
     React.createElement(
-      "div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
-      // UI-fix: hamburger toggle — sidebar-drawer খোলা/বন্ধ করার একমাত্র entry-point
+      "div", { style: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 } },
+      React.createElement("button", { onClick: onExit, style: { background: "none", border: "none", color: "#A9C4DE", fontSize: "14px", cursor: "pointer", flexShrink: 0 } }, "← ফিরে যান"),
       React.createElement(
         "button", {
-          onClick: () => setSidebarOpen((v) => !v), title: "Quick Links",
-          style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "16px", padding: "4px 10px", borderRadius: "6px", cursor: "pointer" },
+          onClick: () => setSidebarOpen((v) => !v), title: "মেনু",
+          style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "16px", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
         }, "☰"
       ),
-      React.createElement("button", { onClick: onExit, style: { background: "none", border: "none", color: "#A9C4DE", fontSize: "14px", cursor: "pointer" } }, "← ফিরে যান"),
-      React.createElement("span", { style: { fontSize: "15px", fontWeight: 700 } }, "🌐 General Chat"),
-      React.createElement("span", { style: { fontSize: "11px", color: "#8FA0B3", border: "1px solid #3A4756", borderRadius: "4px", padding: "1px 6px" } }, "Admin")
+      React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "🌐 " + activeTitle)
     ),
-    React.createElement(
-      "button", { onClick: openNotes, style: { background: "#22303F", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "12px", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" } },
-      "📁 সেভ করা নোট"
+    React.createElement("span", { style: { fontSize: "11px", color: "#8FA0B3", border: "1px solid #3A4756", borderRadius: "4px", padding: "1px 6px", flexShrink: 0 } }, "Admin")
+  );
+
+  const drawerTabsBar = React.createElement(
+    "div", { style: { display: "flex", borderBottom: "1px solid #2A3542" } },
+    [["chats", "💬 Chats"], ["quicklinks", "🔗 Quick Links"], ["projects", "📁 Projects"]].map(([key, label]) =>
+      React.createElement(
+        "div", {
+          key, onClick: () => setDrawerTab(key),
+          style: { flex: 1, textAlign: "center", padding: "8px 4px", fontSize: "11px", cursor: "pointer", color: drawerTab === key ? "#fff" : "#8FA0B3", borderBottom: drawerTab === key ? "2px solid #4FC3A1" : "2px solid transparent" },
+        }, label
+      )
     )
   );
 
-  const tabsBar = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "6px", padding: "6px 16px", background: "#1B2430", overflowX: "auto" } },
-    sessions.map((s) =>
-      React.createElement(
-        "div", {
-          key: s.id, onClick: () => setActiveSessionId(s.id),
-          style: { display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", whiteSpace: "nowrap", background: s.id === activeSessionId ? "#2A3F52" : "transparent", color: s.id === activeSessionId ? "#fff" : "#8FA0B3" } },
-        s.title,
-        sessions.length > 1 && React.createElement("span", { onClick: (e) => { e.stopPropagation(); closeTab(s.id); }, style: { color: "#6B7A8C" } }, "✕")
-      )
+  const chatsPanel = React.createElement(
+    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D6DEE6", display: "flex", flexDirection: "column" } },
+    drawerTabsBar,
+    React.createElement(
+      "button", { onClick: startNewChat, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D6DEE6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" } },
+      "+ নতুন চ্যাট"
     ),
-    React.createElement("button", { onClick: addNewTab, style: { background: "none", border: "1px dashed #3A4756", color: "#8FA0B3", fontSize: "12px", padding: "5px 10px", borderRadius: "6px", cursor: "pointer" } }, "+ নতুন চ্যাট")
+    React.createElement(
+      "div", { style: { flex: 1, overflowY: "auto" } },
+      sessionsErr && React.createElement("div", { style: { padding: "8px 12px", fontSize: "11px", color: "#E88" } }, sessionsErr),
+      !sessions && React.createElement("div", { style: { padding: "8px 12px", fontSize: "12px", color: "#8FA0B3" } }, "লোড হচ্ছে..."),
+      sessions && sessions.length === 0 && React.createElement("div", { style: { padding: "8px 12px", fontSize: "12px", color: "#8FA0B3" } }, "কোনো পুরনো চ্যাট নেই।"),
+      (sessions || []).map((s) =>
+        React.createElement(
+          "div", {
+            key: s.id, onClick: () => openSession(s),
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", cursor: "pointer", fontSize: "12px", background: s.id === activeSessionId ? "#2A3F52" : "transparent" },
+          },
+          React.createElement("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title),
+          React.createElement("span", { onClick: (e) => handleDeleteSession(e, s.id), style: { color: "#8A97A5", padding: "0 4px" } }, "🗑️")
+        )
+      )
+    )
+  );
+
+  const projectsPanel = React.createElement(
+    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D6DEE6", display: "flex", flexDirection: "column" } },
+    drawerTabsBar,
+    React.createElement(
+      "button", { onClick: openNewProject, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D6DEE6", borderRadius: "6px", cursor: "pointer", fontSize: "12px" } },
+      "+ নতুন Project"
+    ),
+    React.createElement(
+      "div", { style: { flex: 1, overflowY: "auto" } },
+      projectsErr && React.createElement("div", { style: { padding: "8px 12px", fontSize: "11px", color: "#E88" } }, projectsErr),
+      !projects && React.createElement("div", { style: { padding: "8px 12px", fontSize: "12px", color: "#8FA0B3" } }, "লোড হচ্ছে..."),
+      projects && projects.length === 0 && React.createElement("div", { style: { padding: "8px 12px", fontSize: "12px", color: "#8FA0B3" } }, "কোনো Project নেই।"),
+      (projects || []).map((p) =>
+        React.createElement(
+          "div", {
+            key: p.id, onClick: () => openEditProject(p),
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", cursor: "pointer", fontSize: "12px", background: p.id === activeProjectId ? "#2A3F52" : "transparent" },
+          },
+          React.createElement("span", { style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.name),
+          React.createElement("span", { onClick: (e) => handleDeleteProject(e, p.id), style: { color: "#8A97A5", padding: "0 4px" } }, "🗑️")
+        )
+      )
+    )
+  );
+
+  let sidebarPanel = null;
+  if (drawerTab === "chats") sidebarPanel = chatsPanel;
+  else if (drawerTab === "projects") sidebarPanel = projectsPanel;
+  else sidebarPanel = React.createElement(
+    "div", { style: { width: "100%", height: "100%", display: "flex", flexDirection: "column" } },
+    drawerTabsBar,
+    React.createElement("div", { style: { flex: 1, overflow: "hidden" } },
+      React.createElement(GeneralChatQuickLinks, { activeCategory, onSelectCategory: setActiveCategory })
+    )
   );
 
   const messagesArea = React.createElement(
     "div", { style: { flex: 1, overflowY: "auto", padding: "16px", background: "#F5F7F9" } },
-    activeSession.messages.length === 0 && React.createElement(
+    activeMessages.length === 0 && React.createElement(
       "div", { style: { color: "#8A97A5", fontSize: "13px", textAlign: "center", marginTop: "40px" } },
       "যেকোনো বিষয়ে প্রশ্ন করুন — কৃষি/নার্সারি, ধর্মীয়, রাজনীতি, অর্থনীতি, ইতিহাস, ভূতত্ত্ব, গবেষণা, সাধারণ চিকিৎসা-জ্ঞান — সব খোলা। এটি স্বাস্থ্য-পরামর্শের জন্য নয়; ব্যক্তিগত উপসর্গের ক্ষেত্রে মূল Symptom Check ব্যবহার করুন।"
     ),
-    activeSession.messages.map((m) =>
+    activeMessages.map((m, i) =>
       React.createElement(
-        "div", { key: m.id, style: { display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: "10px" } },
+        "div", { key: m.id || i, style: { display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: "10px" } },
         React.createElement(
-          "div", { style: { maxWidth: "72%", background: m.role === "user" ? "#0E4B43" : "#fff", color: m.role === "user" ? "#fff" : "#222", border: m.role === "user" ? "none" : "1px solid #E0E4E2", borderRadius: "10px", padding: "10px 12px" } },
+          "div", { style: { maxWidth: "78%", background: m.role === "user" ? "#0E4B43" : "#fff", color: m.role === "user" ? "#fff" : "#222", border: m.role === "user" ? "none" : "1px solid #E0E4E2", borderRadius: "10px", padding: "10px 12px" } },
           m.imageUrl && React.createElement("img", { src: m.imageUrl, style: { maxWidth: "220px", borderRadius: "6px", display: "block", marginBottom: m.text ? "6px" : 0 } }),
-          m.text && React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", lineHeight: "1.5" } }, m.text),
+          m.text && React.createElement("div", { style: { fontSize: "13px", lineHeight: "1.7" } }, renderLiteMarkdown(m.text)),
+          m.sources && m.sources.length > 0 && React.createElement(
+            "div", { style: { marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #EEE", fontSize: "10px" } },
+            React.createElement("div", { style: { color: "#888", marginBottom: "2px" } }, "🔗 সূত্র:"),
+            m.sources.slice(0, 5).map((s, si) =>
+              React.createElement("a", { key: si, href: s.url, target: "_blank", rel: "noopener noreferrer", style: { display: "block", color: "#3B7DBF", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title || s.url)
+            )
+          ),
           React.createElement(
             "div", { style: { marginTop: "6px", display: "flex", gap: "10px" } },
-            React.createElement("span", { onClick: () => handleCopy(m.text), style: { fontSize: "11px", cursor: "pointer", color: m.role === "user" ? "#CFE7E1" : "#888" } }, "📋 কপি"),
-            !m.saved
-              ? React.createElement("span", { onClick: () => handleSaveMessage(m), style: { fontSize: "11px", cursor: "pointer", color: m.role === "user" ? "#CFE7E1" : "#888" } }, "💾 সেভ করুন")
-              : React.createElement("span", { style: { fontSize: "11px", color: m.role === "user" ? "#CFE7E1" : "#2E8B57" } }, "✅ সেভ হয়েছে")
+            React.createElement("span", { onClick: () => handleCopy(m.text), style: { fontSize: "11px", cursor: "pointer", color: m.role === "user" ? "#CFE7E1" : "#888" } }, "📋 কপি")
           )
         )
       )
     ),
+    React.createElement("div", { ref: messagesEndRef }),
     err && ErrorBox(err),
-    retryNote && React.createElement("div", { style: { fontSize: "11px", color: "#7A5B00" } }, retryNote)
+    retryNote && React.createElement("div", { style: { fontSize: "11px", color: "#7A5B00" } }, retryNote),
+    contextTrimmed && React.createElement(
+      "div", { style: { fontSize: "11px", color: "#7A5B00", background: "#FFF6DD", border: "1px solid #F0DFA0", borderRadius: "6px", padding: "6px 10px", marginTop: "6px" } },
+      "⚠️ আলোচনা অনেক বড় হয়ে গেছে — AI এখন শুধু সাম্প্রতিক অংশ মনে রাখছে (পুরনো অংশ এখানে দেখা যাচ্ছে, শুধু AI-কে পাঠানো হচ্ছে না)। নতুন প্রসঙ্গের জন্য চাইলে নতুন চ্যাট শুরু করুন।"
+    )
   );
 
   const composer = React.createElement(
     "div", { style: { padding: "10px 16px", background: "#fff", borderTop: "1px solid #E0E4E2" } },
+    !activeSessionId && projects && projects.length > 0 && React.createElement(
+      "div", { style: { marginBottom: "6px", fontSize: "11px", color: "#666", display: "flex", alignItems: "center", gap: "6px" } },
+      "Project:",
+      React.createElement(
+        "select", {
+          value: activeProjectId || "", onChange: (e) => setActiveProjectId(e.target.value || null),
+          style: { fontSize: "11px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #CBD5E1" },
+        },
+        React.createElement("option", { value: "" }, "কোনোটি না"),
+        projects.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.name))
+      )
+    ),
     pendingImage && React.createElement(
       "div", { style: { marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" } },
       pendingImage.uploading
@@ -305,29 +456,32 @@ export function GeneralChatSection({ familyId, onExit }) {
     )
   );
 
-  const notesModal = showNotes && React.createElement(
-    "div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 50 } },
+  const projectEditorModal = editingProject && React.createElement(
+    "div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 60 } },
     React.createElement(
-      "div", { style: { background: "#fff", borderRadius: "10px", width: "90%", maxWidth: "480px", maxHeight: "80vh", overflowY: "auto", padding: "16px" } },
+      "div", { style: { background: "#fff", borderRadius: "10px", width: "90%", maxWidth: "420px", maxHeight: "85vh", overflowY: "auto", padding: "16px" } },
+      React.createElement("h3", { style: { margin: "0 0 10px", fontSize: "15px", color: "#0E4B43" } }, editingProject.mode === "new" ? "নতুন Project" : "Project সম্পাদনা"),
+      React.createElement("input", {
+        placeholder: "Project-এর নাম", value: editingProject.name,
+        onChange: (e) => setEditingProject({ ...editingProject, name: e.target.value }),
+        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px" },
+      }),
+      React.createElement("textarea", {
+        placeholder: "Instructions (AI কীভাবে আচরণ করবে)", value: editingProject.instructions, rows: 3,
+        onChange: (e) => setEditingProject({ ...editingProject, instructions: e.target.value }),
+        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", fontFamily: "inherit" },
+      }),
+      React.createElement("textarea", {
+        placeholder: "Knowledge (প্রাসঙ্গিক তথ্য পেস্ট করুন)", value: editingProject.knowledge, rows: 6,
+        maxLength: KNOWLEDGE_MAX_CHARS,
+        onChange: (e) => setEditingProject({ ...editingProject, knowledge: e.target.value }),
+        style: { width: "100%", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", fontFamily: "inherit" },
+      }),
+      React.createElement("div", { style: { fontSize: "10px", color: "#999", textAlign: "right", marginBottom: "10px" } }, `${(editingProject.knowledge || "").length}/${KNOWLEDGE_MAX_CHARS}`),
       React.createElement(
-        "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" } },
-        React.createElement("h3", { style: { margin: 0, fontSize: "15px", color: "#0E4B43" } }, "📁 সেভ করা নোট"),
-        React.createElement("span", { onClick: () => setShowNotes(false), style: { cursor: "pointer", fontSize: "14px", color: "#888" } }, "✕")
-      ),
-      notesErr && ErrorBox(notesErr),
-      !notes && React.createElement("div", { style: { fontSize: "13px", color: "#888" } }, "লোড হচ্ছে..."),
-      notes && notes.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: "#888" } }, "কোনো নোট সেভ করা নেই।"),
-      notes && notes.map((n) =>
-        React.createElement(
-          "div", { key: n.id, style: { border: "1px solid #E0E4E2", borderRadius: "8px", padding: "10px", marginBottom: "8px" } },
-          React.createElement("div", { style: { fontSize: "10px", color: "#888", marginBottom: "4px" } }, (CATEGORY_LABELS[n.tag] || n.tag) + (n.sessionTitle ? " · " + n.sessionTitle : "")),
-          n.attachmentUrl && React.createElement("img", { src: n.attachmentUrl, style: { maxWidth: "160px", borderRadius: "6px", marginBottom: "6px", display: "block" } }),
-          React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, n.content),
-          React.createElement("div", { style: { marginTop: "6px", display: "flex", gap: "10px" } },
-            React.createElement("span", { onClick: () => handleCopy(n.content), style: { fontSize: "11px", cursor: "pointer", color: "#888" } }, "📋 কপি"),
-            React.createElement("span", { onClick: () => handleDeleteNote(n.id), style: { fontSize: "11px", cursor: "pointer", color: "#C0392B" } }, "🗑️ মুছুন")
-          )
-        )
+        "div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
+        React.createElement("button", { onClick: () => setEditingProject(null), style: { padding: "8px 14px", border: "1px solid #CBD5E1", background: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "12px" } }, "বাতিল"),
+        React.createElement("button", { onClick: saveProject, style: { padding: "8px 14px", border: "none", background: "#0E4B43", color: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "12px" } }, "সেভ করুন")
       )
     )
   );
@@ -335,33 +489,22 @@ export function GeneralChatSection({ familyId, onExit }) {
   return React.createElement(
     "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", fontFamily: "'Hind Siliguri', sans-serif" } },
     headerBar,
-    tabsBar,
     React.createElement(
-      // UI-fix: position:relative container — drawer এখন এর ভেতরে absolute
-      // overlay হিসেবে বসে, চ্যাট এরিয়া (নিচের flex:1 div) সবসময় পূর্ণ width পায়।
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },
       sidebarOpen && React.createElement(
         React.Fragment, null,
-        // backdrop — বাইরে ট্যাপ করলে drawer বন্ধ হবে
-        React.createElement("div", {
-          onClick: () => setSidebarOpen(false),
-          style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 20 },
-        }),
+        React.createElement("div", { onClick: () => setSidebarOpen(false), style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 20 } }),
         React.createElement(
-          "div", { style: { position: "absolute", top: 0, left: 0, bottom: 0, width: "78%", maxWidth: "260px", zIndex: 21, boxShadow: "3px 0 10px rgba(0,0,0,0.4)" } },
-          React.createElement(GeneralChatQuickLinks, {
-            activeCategory,
-            onSelectCategory: (cat) => { setActiveCategory(cat); setSidebarOpen(false); },
-            onClose: () => setSidebarOpen(false),
-          })
+          "div", { style: { position: "absolute", top: 0, left: 0, bottom: 0, width: "82%", maxWidth: "280px", zIndex: 21, boxShadow: "3px 0 10px rgba(0,0,0,0.4)" } },
+          sidebarPanel
         )
       ),
       React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, messagesArea, composer)
     ),
     React.createElement(
       "div", { style: { padding: "4px 16px", background: "#12181F", color: "#5A6B7D", fontSize: "10px" } },
-      "🔒 ক্লাউড-ভিত্তিক AI (Groq) ব্যবহার হচ্ছে। এই মোডে app-এর নিজস্ব health-restriction প্রযোজ্য নয়; ব্যক্তিগত স্বাস্থ্য-পরামর্শের জন্য মূল Symptom Check ব্যবহার করুন।"
+      "🔒 ক্লাউড-ভিত্তিক AI ব্যবহার হচ্ছে। এই মোডে app-এর নিজস্ব health-restriction প্রযোজ্য নয়; ব্যক্তিগত স্বাস্থ্য-পরামর্শের জন্য মূল Symptom Check ব্যবহার করুন।"
     ),
-    notesModal
+    projectEditorModal
   );
 }
