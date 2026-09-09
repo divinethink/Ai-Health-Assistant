@@ -677,13 +677,15 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   } else if (useWebSearch !== false) {
     model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound";
     body.compound_custom = { tools: { enabled_tools: ["web_search", "visit_website"] } };
-    // bug-fix (owner-reported): আগে tool_choice:"required" জোর করে প্রতিটা
-    // সাধারণ প্রশ্নেও search-call বাধ্যতামূলক করছিল (এমনকি "অযু করার নিয়ম"-এর
-    // মতো general-knowledge প্রশ্নেও) — এতে token-খরচ/latency বাড়ছিল এবং
-    // compound model-এর নিজস্ব orchestration-এর সাথে conflict করে মাঝে মাঝে
-    // request-ই ব্যর্থ হচ্ছিল। এখন compound নিজে থেকেই প্রয়োজন বুঝে search
-    // করবে (Groq-প্রস্তাবিত default আচরণ) — checkbox অন থাকলে tool উপলব্ধ
-    // থাকবে, কিন্তু জোর করা হবে না।
+    // bug-fix round-২ (owner-reported, "আজকের প্রধান সংবাদ"-এ compound নিজে থেকে
+    // search না করে canned "আমি real-time internet ব্যবহার করি না" উত্তর
+    // দিচ্ছিল — অর্থাৎ tool_choice ছাড়া compound নিজে থেকে search-call করার
+    // সিদ্ধান্ত নিচ্ছিল না)। আগের থ্রেডে max_tokens-ই আসল 429-এর কারণ ছিল
+    // (উপরে ফিক্সড, ২০০০→১৫০০) — tool_choice:"required" নিজে সমস্যা ছিল না,
+    // তাই এখন max_tokens-safe অবস্থায় আবার required ফিরিয়ে আনা হলো যাতে
+    // web-search checkbox অন থাকলে compound বাধ্যতামূলকভাবে অন্তত একটা tool
+    // call করে (search বাস্তবে সম্পন্ন হওয়া নিশ্চিত করতে)।
+    body.tool_choice = "required";
     headers["Groq-Model-Version"] = "latest";
   } else {
     model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
