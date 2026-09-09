@@ -665,7 +665,7 @@ function buildGeneralChatSystemMessages(projectContext, forceEnglish) {
   return msgs;
 }
 
-async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext }) {
+async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext }, _searchErrorCarry) {
   const fullMessages = [...buildGeneralChatSystemMessages(projectContext), ...(Array.isArray(messages) ? messages : [])];
 
   let model;
@@ -714,7 +714,15 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
     // recursive কলে useWebSearch:false পাঠানো হচ্ছে, যেটা normal successful
     // response-এর searchUsed নির্ধারণ করবে।
     if (!hasImages && useWebSearch !== false) {
-      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false, projectContext });
+      // bug-fix (owner-reported, "groq/compound account-এ enable আছে কিনা যাচাই
+      // দরকার"): আগে এই errText শুধু silently গিলে ফেলা হতো — fallback হতো ঠিকই,
+      // কিন্তু আসল কারণ (400/401/403/404/429 ইত্যাদি) কোথাও দেখা যেত না, ফলে
+      // owner/dev debug করতে পারছিলেন না। এখন: (ক) Worker log-এ console.error
+      // (Cloudflare dashboard/`wrangler tail`-এ দেখা যাবে), (খ) এই কারণ
+      // client পর্যন্ত `searchError` field-এ carry হয়ে যাবে (নিচে return-এ)।
+      console.error(`[general-chat] groq/compound web-search failed (HTTP ${res.status}): ${errText.slice(0, 500)}`);
+      const carry = `HTTP ${res.status}: ${errText.slice(0, 300)}`;
+      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false, projectContext }, carry);
     }
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
@@ -740,7 +748,7 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
   // model যদি compound (web-search-enabled) হয় এবং এই কলটাই প্রথম চেষ্টায় সফল হয়
   // (recursive fallback না), তাহলেই প্রকৃতপক্ষে search সক্রিয় ছিল ধরা হবে।
   const searchUsed = model === (env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound");
-  return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed };
+  return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed, searchError: _searchErrorCarry || null };
 }
 
 // General Chat — Mistral secondary/failover (নতুন, এই থ্রেড, owner-approved)।
@@ -1074,8 +1082,8 @@ export default {
           }
         }
 
-        const { content, usage, modelUsed, sources, searchUsed } = result;
-        return json(env, { content, usage, modelUsed, sources: sources || [], searchUsed: !!searchUsed });
+        const { content, usage, modelUsed, sources, searchUsed, searchError } = result;
+        return json(env, { content, usage, modelUsed, sources: sources || [], searchUsed: !!searchUsed, searchError: searchError || null });
       }
 
       return json(env, { error: "not-found" }, 404);
