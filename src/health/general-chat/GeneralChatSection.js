@@ -426,7 +426,7 @@ export function GeneralChatSection({ familyId, onExit }) {
     ),
     activeMessages.map((m, i) =>
       React.createElement(
-        "div", { key: m.id || i, style: { display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: "10px" } },
+        "div", { key: m.id || i, style: { display: "flex", alignItems: "center", gap: "6px", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: "10px" } },
         React.createElement(
           "div", { style: { maxWidth: "78%", background: m.role === "user" ? "#0E4B43" : "#fff", color: m.role === "user" ? "#fff" : "#222", border: m.role === "user" ? "none" : "1px solid #E0E4E2", borderRadius: "10px", padding: "10px 12px" } },
           m.imageUrl && React.createElement("img", { src: m.imageUrl, style: { maxWidth: "220px", borderRadius: "6px", display: "block", marginBottom: m.text ? "6px" : 0 } }),
@@ -443,16 +443,15 @@ export function GeneralChatSection({ familyId, onExit }) {
           m.searchNotUsed && React.createElement(
             "div", { style: { marginTop: "6px", fontSize: "10px", color: "#A66A00" } },
             "⚠️ এই উত্তরে ওয়েব-সার্চ সক্রিয় হয়নি (সাধারণ জ্ঞান থেকে উত্তর দেওয়া হয়েছে)।"
-          ),
-          m.role === "user" && React.createElement(
-            "div", { style: { marginTop: "4px", textAlign: "right" } },
-            React.createElement(
-              "span", {
-                onClick: () => startEditMessage(i), title: "সম্পাদনা করে আবার পাঠান",
-                style: { fontSize: "11px", cursor: "pointer", color: "#CFE7E1", opacity: 0.85 },
-              }, "✏️ সম্পাদনা"
-            )
           )
+        ),
+        // fix (owner-reported): টেক্সট-লেবেল বাদ, শুধু আইকন — মেসেজ-বাবলের ঠিক
+        // ডানপাশে, একই লাইনে (flex row sibling, আলাদা নিচের লাইন না)।
+        m.role === "user" && React.createElement(
+          "span", {
+            onClick: () => startEditMessage(i), title: "সম্পাদনা করে আবার পাঠান",
+            style: { fontSize: "14px", cursor: "pointer", color: "#8A97A5", flexShrink: 0 },
+          }, "✏️"
         )
       )
     ),
