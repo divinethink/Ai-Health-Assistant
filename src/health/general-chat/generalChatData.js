@@ -107,7 +107,7 @@ export async function loadGeneralChatMessages(familyId, sessionId) {
 
 export async function addGeneralChatMessage(familyId, sessionId, msg) {
   const sessionRef = famRef(familyId).collection("generalChatSessions").doc(sessionId);
-  await sessionRef.collection("messages").add({
+  const ref = await sessionRef.collection("messages").add({
     role: msg.role,
     text: msg.text || "",
     imageUrl: msg.imageUrl || null,
@@ -118,6 +118,21 @@ export async function addGeneralChatMessage(familyId, sessionId, msg) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
   await sessionRef.update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  return ref.id;
+}
+
+// Edit+Resend (নতুন, owner-request) — user নিজের আগের প্রশ্ন edit করে আবার
+// পাঠালে, সেই message ও তারপরের সব message (Firestore-এ persist হওয়া অংশ)
+// মুছে ফেলা হয়, যাতে edit করা message-ই সেই position-এর নতুন latest turn হয়ে
+// যায় (standard AI-chatbox আচরণ)। সংযুক্ত ছবি (যদি থাকে) ইচ্ছাকৃতভাবে
+// Cloudinary থেকে মোছা হয় না — edit করা message নিজেই সেই ছবি পুনরায় ব্যবহার
+// করতে পারে বলে delete করলে data-loss হতে পারত (Process Rule ৩)।
+export async function deleteGeneralChatMessagesByIds(familyId, sessionId, ids) {
+  if (!ids || ids.length === 0) return;
+  const sessionRef = famRef(familyId).collection("generalChatSessions").doc(sessionId);
+  const batch = db.batch();
+  ids.forEach((id) => batch.delete(sessionRef.collection("messages").doc(id)));
+  await batch.commit();
 }
 
 // পুরো session delete — owner-approved scope (individual-message-delete নেই)।

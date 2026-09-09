@@ -13,7 +13,7 @@ import { askGeneralChat } from "./generalChatClient.js";
 import {
   uploadGeneralChatImage, deleteGeneralChatImage, validateGeneralChatImage,
   createGeneralChatSession, listGeneralChatSessions, loadGeneralChatMessages,
-  addGeneralChatMessage, deleteGeneralChatSession,
+  addGeneralChatMessage, deleteGeneralChatSession, deleteGeneralChatMessagesByIds,
   createGeneralChatProject, updateGeneralChatProject, listGeneralChatProjects, deleteGeneralChatProject,
   KNOWLEDGE_MAX_CHARS,
 } from "./generalChatData.js";
@@ -98,6 +98,7 @@ export function GeneralChatSection({ familyId, onExit }) {
   const [loading, setLoading] = useState(false);
   const [retryNote, setRetryNote] = useState(null);
   const [err, setErr] = useState(null);
+  const [editingIndex, setEditingIndex] = useState(null); // edit-and-resend (নতুন)
   const fileInputRef = useRef(null);
 
   function refreshSessions() {
@@ -126,6 +127,7 @@ export function GeneralChatSection({ familyId, onExit }) {
     setActiveMessages([]);
     setActiveTitle("নতুন চ্যাট");
     setContextTrimmed(false);
+    setEditingIndex(null);
     setSidebarOpen(false);
   }
 
@@ -135,6 +137,7 @@ export function GeneralChatSection({ familyId, onExit }) {
     setActiveProjectId(session.projectId || null);
     setActiveMessages([]);
     setContextTrimmed(false);
+    setEditingIndex(null);
     loadGeneralChatMessages(familyId, session.id).then(setActiveMessages).catch((e) => setErr(e.message || String(e)));
     setSidebarOpen(false);
   }
@@ -201,8 +204,17 @@ export function GeneralChatSection({ familyId, onExit }) {
       tag: activeCategory,
     };
 
+    // Edit+Resend (নতুন) — edit-mode-এ থাকলে, edited message ও তার পরের সব
+    // message বাদ দিয়ে (base truncate) নতুন turn হিসেবে পাঠানো হবে।
+    const isEditResend = editingIndex !== null;
+    const baseMessages = isEditResend ? activeMessages.slice(0, editingIndex) : activeMessages;
+    const toDeleteIds = isEditResend
+      ? activeMessages.slice(editingIndex).map((m) => m.id).filter(Boolean)
+      : [];
+
     setText("");
     setPendingImage(null);
+    setEditingIndex(null);
     setLoading(true);
     setErr(null);
     setRetryNote(null);
@@ -214,11 +226,13 @@ export function GeneralChatSection({ familyId, onExit }) {
         sessionId = await createGeneralChatSession(familyId, { title, projectId: activeProjectId });
         setActiveSessionId(sessionId);
         setActiveTitle(title);
+      } else if (isEditResend && toDeleteIds.length > 0) {
+        await deleteGeneralChatMessagesByIds(familyId, sessionId, toDeleteIds);
       }
 
-      const fullHistory = [...activeMessages, userMsg];
+      const userMsgId = await addGeneralChatMessage(familyId, sessionId, userMsg);
+      const fullHistory = [...baseMessages, { ...userMsg, id: userMsgId }];
       setActiveMessages(fullHistory); // optimistic UI — পূর্ণ history সবসময় UI/Firestore-এ অক্ষত
-      await addGeneralChatMessage(familyId, sessionId, userMsg);
 
       // Length-management (owner-approved) — AI-কে শুধু সাম্প্রতিক window পাঠানো
       // হয়, পুরো history না। এতে দীর্ঘ চ্যাটেও model context-limit-এ আটকে না।
@@ -233,12 +247,20 @@ export function GeneralChatSection({ familyId, onExit }) {
         onRetry: (a, m) => setRetryNote(`একটু অপেক্ষা করুন... (retry ${a}/${m})`),
       });
 
-      const aiMsg = {
+      // transparency (owner-reported "ওয়েব সার্চ করছে না") — checkbox অন করে
+      // চাওয়া সত্ত্বেও provider আসলে search-tool call না করলে, silently সাধারণ
+      // উত্তর না দেখিয়ে সেটা স্পষ্টভাবে জানানো হবে (§10.1 নীতির সাথে সংগতিপূর্ণ)।
+      const searchNotUsed = !hasImages && useWebSearch && !(data && data.searchUsed);
+
+      const aiMsgId = await addGeneralChatMessage(familyId, sessionId, {
         role: "assistant", text: data && data.content, tag: activeCategory,
-        sources: (data && data.sources) || [], searchUsed: !!(data && data.searchUsed),
+        sources: (data && data.sources) || [],
+      });
+      const aiMsg = {
+        id: aiMsgId, role: "assistant", text: data && data.content, tag: activeCategory,
+        sources: (data && data.sources) || [], searchUsed: !!(data && data.searchUsed), searchNotUsed,
       };
       setActiveMessages((prev) => [...prev, aiMsg]);
-      await addGeneralChatMessage(familyId, sessionId, aiMsg);
       refreshSessions(); // updatedAt বদলেছে, list-order refresh
     } catch (e) {
       const msg = e.message || String(e);
@@ -253,6 +275,23 @@ export function GeneralChatSection({ familyId, onExit }) {
       setLoading(false);
       setRetryNote(null);
     }
+  }
+
+  // Edit+Resend — user নিজের message-এ ✏️ চাপলে composer-এ text/image পুনরায়
+  // বসে, পাঠানোর আগ পর্যন্ত কোনো destructive action হয় না (Process Rule ৩)।
+  function startEditMessage(i) {
+    const m = activeMessages[i];
+    if (!m || m.role !== "user") return;
+    setText(m.text || "");
+    if (m.imageUrl) setPendingImage({ secureUrl: m.imageUrl, publicId: m.imagePublicId, resourceType: m.imageResourceType, uploading: false });
+    else setPendingImage(null);
+    setEditingIndex(i);
+    setSidebarOpen(false);
+  }
+  function cancelEditMessage() {
+    setEditingIndex(null);
+    setText("");
+    setPendingImage(null);
   }
 
   // handleCopy সরানো হয়েছে (owner-request) — এখন standard long-press/select
@@ -301,7 +340,7 @@ export function GeneralChatSection({ familyId, onExit }) {
           style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "16px", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
         }, "☰"
       ),
-      React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "🌐 " + activeTitle)
+      React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "🌐 " + (activeSessionId ? activeTitle : "General Chat"))
     ),
     React.createElement("span", { style: { fontSize: "11px", color: "#8FA0B3", border: "1px solid #3A4756", borderRadius: "4px", padding: "1px 6px", flexShrink: 0 } }, "Admin")
   );
@@ -398,6 +437,21 @@ export function GeneralChatSection({ familyId, onExit }) {
             m.sources.slice(0, 5).map((s, si) =>
               React.createElement("a", { key: si, href: s.url, target: "_blank", rel: "noopener noreferrer", style: { display: "block", color: "#3B7DBF", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title || s.url)
             )
+          ),
+          // transparency (owner-reported "ওয়েব সার্চ করছে না") — checkbox অন
+          // থাকলেও provider আসলে search করেনি বোঝালে স্পষ্ট জানানো হবে।
+          m.searchNotUsed && React.createElement(
+            "div", { style: { marginTop: "6px", fontSize: "10px", color: "#A66A00" } },
+            "⚠️ এই উত্তরে ওয়েব-সার্চ সক্রিয় হয়নি (সাধারণ জ্ঞান থেকে উত্তর দেওয়া হয়েছে)।"
+          ),
+          m.role === "user" && React.createElement(
+            "div", { style: { marginTop: "4px", textAlign: "right" } },
+            React.createElement(
+              "span", {
+                onClick: () => startEditMessage(i), title: "সম্পাদনা করে আবার পাঠান",
+                style: { fontSize: "11px", cursor: "pointer", color: "#CFE7E1", opacity: 0.85 },
+              }, "✏️ সম্পাদনা"
+            )
           )
         )
       )
@@ -413,6 +467,11 @@ export function GeneralChatSection({ familyId, onExit }) {
 
   const composer = React.createElement(
     "div", { style: { padding: "10px 16px", background: "#fff", borderTop: "1px solid #E0E4E2" } },
+    editingIndex !== null && React.createElement(
+      "div", { style: { marginBottom: "6px", fontSize: "11px", color: "#0E4B43", background: "#EAF5F2", border: "1px solid #BEE0D6", borderRadius: "6px", padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+      "✏️ প্রশ্ন সম্পাদনা করছেন — পাঠালে এর পরের উত্তর নতুন করে তৈরি হবে",
+      React.createElement("span", { onClick: cancelEditMessage, style: { cursor: "pointer", color: "#C0392B" } }, "✕ বাতিল")
+    ),
     !activeSessionId && projects && projects.length > 0 && React.createElement(
       "div", { style: { marginBottom: "6px", fontSize: "11px", color: "#666", display: "flex", alignItems: "center", gap: "6px" } },
       "Project:",
