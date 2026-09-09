@@ -466,10 +466,11 @@ export function GeneralChatSection({ familyId, onExit }) {
 
   const composer = React.createElement(
     "div", { style: { padding: "10px 16px", background: "#fff", borderTop: "1px solid #E0E4E2" } },
+    // owner-request (এই থ্রেড): edit-mode-এর ব্যাখ্যা-বার্তা বাদ দেওয়া হয়েছে,
+    // শুধু একটা ছোট বাতিল-আইকন রাখা হলো (কার্যকারিতা অক্ষত, শুধু টেক্সট নেই)।
     editingIndex !== null && React.createElement(
-      "div", { style: { marginBottom: "6px", fontSize: "11px", color: "#0E4B43", background: "#EAF5F2", border: "1px solid #BEE0D6", borderRadius: "6px", padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-      "✏️ প্রশ্ন সম্পাদনা করছেন — পাঠালে এর পরের উত্তর নতুন করে তৈরি হবে",
-      React.createElement("span", { onClick: cancelEditMessage, style: { cursor: "pointer", color: "#C0392B" } }, "✕ বাতিল")
+      "div", { style: { marginBottom: "6px", textAlign: "right" } },
+      React.createElement("span", { onClick: cancelEditMessage, title: "সম্পাদনা বাতিল", style: { cursor: "pointer", fontSize: "12px", color: "#C0392B" } }, "✕")
     ),
     !activeSessionId && projects && projects.length > 0 && React.createElement(
       "div", { style: { marginBottom: "6px", fontSize: "11px", color: "#666", display: "flex", alignItems: "center", gap: "6px" } },
