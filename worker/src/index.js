@@ -464,9 +464,20 @@ function buildSearchContextMessage(results) {
   );
 }
 
+// bug-fix (owner-reported, ২০২৬-০৯-১২ — ভুল তারিখ, "১৯ আগস্ট ২০২৬" বলছিল যদিও
+// প্রকৃত তারিখ ভিন্ন): Worker কখনো প্রকৃত বর্তমান তারিখ LLM-কে জানাত না, তাই মডেল
+// training-data/search-result থেকে ভুল তারিখ অনুমান করত। এখন সার্ভার-সাইড
+// `new Date()` দিয়ে প্রকৃত তারিখ প্রতিটা call-এ system-note হিসেবে পাঠানো হয়।
+function currentDateNote() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("bn-BD", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Dhaka" });
+  return `আজকের প্রকৃত তারিখ: ${dateStr} (Asia/Dhaka)। এটাই একমাত্র সঠিক তারিখ — এর বিপরীত কোনো তারিখ (search-result/নিজের ধারণা থেকে) বললে ভুল হবে, সবসময় এই তারিখ ব্যবহার করুন।`;
+}
+
 function buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote) {
   return [
     { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: currentDateNote() },
     { role: "user", content: "স্বাস্থ্য-প্রসঙ্গ (JSON): " + JSON.stringify(payload) },
     ...(specialtyNote ? [{ role: "system", content: specialtyNote }] : []),
     ...(doseFactNote ? [{ role: "system", content: doseFactNote }] : []),
@@ -700,7 +711,7 @@ async function verifyIsAdminOfFamily(env, idToken, familyId, uid) {
 // Project (Knowledge+Instructions, নতুন এই থ্রেড) — শুধু আরেকটা system-message
 // হিসেবে জোড়া লাগে, আলাদা কোনো RAG/vector-lookup না (§ lightweight নীতি)।
 function buildGeneralChatSystemMessages(projectContext, forceEnglish) {
-  const msgs = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }];
+  const msgs = [{ role: "system", content: GENERAL_CHAT_SYSTEM_PROMPT }, { role: "system", content: currentDateNote() }];
   // owner-approved (এই থ্রেড): Groq+Mistral দুটোই ব্যর্থ হলে Cerebras/OpenRouter
   // ব্যবহার হয় — এই দুই মডেল বাংলা officially সাপোর্ট করে না বলে বাংলায় লিখতে
   // গেলে ভুল-ভাষা (অসমীয়া)-বাগ হতে পারে। তাই এই fallback-এ পড়লে ইংরেজিতে
