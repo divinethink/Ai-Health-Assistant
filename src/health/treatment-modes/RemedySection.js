@@ -20,6 +20,7 @@
 import { ErrorBox } from "../../shared/ui.js";
 import { listVerifiedRemedies } from "./remedyData.js";
 import { EvidenceBadge } from "./EvidenceBadge.js";
+import { HerbalHomeopathyChat } from "./HerbalHomeopathyChat.js";
 
 const { useState, useEffect } = React;
 
@@ -123,7 +124,7 @@ function RemedyGroup({ title, list }) {
   );
 }
 
-export function RemedySection() {
+export function RemedySection({ familyId }) {
   const [herbal, setHerbal] = useState(null);
   const [homeo, setHomeo] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
@@ -163,6 +164,7 @@ export function RemedySection() {
           React.Fragment, null,
           React.createElement(RemedyGroup, { title: "Herbal / ভেষজ", list: herbal }),
           React.createElement(RemedyGroup, { title: "Homeopathy", list: homeo })
-        )
+        ),
+    React.createElement(HerbalHomeopathyChat, { familyId })
   );
 }
