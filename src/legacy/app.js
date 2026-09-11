@@ -34,6 +34,7 @@ import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirec
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { DoctorExportSection } from "../health/doctor-export/DoctorExportSection.js";
 import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
+import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -75,6 +76,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(RemedySection, { key: "remedy" + refreshTick }),
       React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
+      React.createElement(WellnessGuideSection, { key: "wellness-guide" + refreshTick }),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
       React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
       React.createElement(DoctorExportSection, { key: "doctor-export" + refreshTick, familyId, callerMemberId: memberId }),
