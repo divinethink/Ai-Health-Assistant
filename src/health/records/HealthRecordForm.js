@@ -17,6 +17,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [name, setName] = useState("");
   const [category, setCategory] = useState("A");
   const [status, setStatus] = useState("active");
+  const [chronicManagement, setChronicManagement] = useState(false);
   const [obsType, setObsType] = useState("");
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("");
@@ -43,6 +44,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setName(r.name || r.genericName || r.substance || "");
     setCategory(r.category || "A");
     setStatus(r.status || "active");
+    setChronicManagement(r.chronicManagement === true);
     setObsType(r.type || "");
     setValue(r.value || "");
     setUnit(r.unit || "");
@@ -59,7 +61,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
-    setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital("");
+    setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital(""); setChronicManagement(false);
   }, []);
 
   const changeResourceType = useCallback((v) => {
@@ -74,7 +76,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
     setBusy(true);
     try {
-      const fields = { name, category, status, type: obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital };
+      const fields = { name, category, status, chronicManagement, type: obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital };
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -91,7 +93,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
   const typeFields = [];
   if (resourceType === "condition") {
@@ -99,6 +101,17 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     typeFields.push(SelectField("Category", category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]]));
     typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["resolved", "resolved"], ["chronic", "chronic"]]));
     typeFields.push(DateField("Onset তারিখ (ঐচ্ছিক)", date, setDate));
+    // roadmap §12.4 Category B bright-line rule (dose-suggestion না) actual data-এর
+    // উপর নির্ভর করার জন্য এই checkbox দরকার — আগে RiskBasedTreatmentModes.js-এ
+    // hardcode false ছিল (checklist §৭ known-gap), এখন এই field সেই gap পূরণ করে।
+    typeFields.push(React.createElement(
+      "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", margin: "6px 0", cursor: "pointer" } },
+      React.createElement("input", {
+        type: "checkbox", checked: chronicManagement,
+        onChange: (e) => setChronicManagement(e.target.checked),
+      }),
+      "এটা কি দীর্ঘমেয়াদি (chronic) সমস্যা? (যেমন: ডায়াবেটিস, উচ্চ রক্তচাপ, থাইরয়েড, কিডনি রোগ)"
+    ));
     typeFields.push(React.createElement("div", { style: { fontSize: "12px", color: "#888", margin: "8px 0 2px" } }, "Treating Physician Contact (ঐচ্ছিক)"));
     typeFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
     typeFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));

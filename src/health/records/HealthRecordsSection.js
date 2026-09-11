@@ -9,6 +9,7 @@
 import { ErrorBox, SelectField } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { HealthRecordForm } from "./HealthRecordForm.js";
+import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 
@@ -39,6 +40,11 @@ export function HealthRecordsSection({ familyId, callerMemberId }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
     SelectField("সদস্য বাছাই করুন", targetMemberId, (v) => { setTargetMemberId(v); setEditingRecord(null); }, members.map((m) => [m.id, m.name])),
+    React.createElement(HealthVitalsWidget, {
+      key: "vitals-" + targetMemberId,
+      familyId, targetMemberId, callerMemberId, refreshTick,
+      onSaved: () => setRefreshTick((t) => t + 1),
+    }),
     React.createElement(HealthRecordForm, {
       key: "form-" + targetMemberId,
       familyId, targetMemberId, callerMemberId,
