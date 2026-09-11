@@ -139,9 +139,23 @@ service cloud.firestore {
     // (scripts/populateWellnessGuides.js) দিয়ে populate/edit — নতুন পোস্ট
     // যোগ/সম্পাদনা করতে script রি-রান করলেই চলবে, কোনো client-write/rules-change
     // লাগবে না।
+    // Wellness Guide — ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা (owner-request,
+    // ২০২৬-০৯-১২; ইন-অ্যাপ Admin CRUD-এ upgrade ২০২৬-০৯-১২)। Global collection,
+    // কিন্তু প্রতিটা doc-এ creator-এর `familyId` থাকে (isAdminOfFamily(familyId)
+    // পদ্ধতি line 90-এর `request.resource.data.familyId` pattern reuse) — শুধু
+    // সেই family-র Admin create/edit/delete করতে পারবেন। Read সবার জন্য open
+    // (শেয়ার্ড রেফারেন্স কন্টেন্ট, sensitive না)।
     match /wellnessGuides/{guideId} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow create: if request.auth != null
+        && isAdminOfFamily(request.resource.data.familyId)
+        && request.resource.data.keys().hasAll(['familyId', 'category', 'title', 'body'])
+        && request.resource.data.category in
+             ['general', 'chronic-disease-prevention', 'child-care', 'pregnancy', 'adult-age-range'];
+      allow update: if request.auth != null
+        && isAdminOfFamily(resource.data.familyId)
+        && request.resource.data.familyId == resource.data.familyId;
+      allow delete: if request.auth != null && isAdminOfFamily(resource.data.familyId);
     }
 
     match /knowledgeItems/{itemId} {
