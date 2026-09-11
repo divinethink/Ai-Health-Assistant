@@ -7,10 +7,15 @@ import { db } from "../../legacy/firebaseConfig.js";
 
 export const WELLNESS_CATEGORIES = [
   ["general", "সাধারণ স্বাস্থ্য"],
+  ["diet-fitness", "ডায়েট ও ফিটনেস"],
+  ["child-care", "শিশু লালন-পালন"],
+  ["women-health", "নারী স্বাস্থ্য"],
+  ["elderly-care", "বয়স্কদের যত্ন"],
   ["chronic-disease-prevention", "জটিল রোগ প্রতিরোধ"],
-  ["child-care", "শিশুর যত্ন (১-১০ বছর)"],
-  ["pregnancy", "গর্ভাবস্থা (মাসভিত্তিক)"],
-  ["adult-age-range", "বয়সভিত্তিক (৩০+ )"],
+  ["mental-health", "মানসিক স্বাস্থ্য"],
+  ["skin-beauty", "ত্বক ও সৌন্দর্য"],
+  ["sleep-lifestyle", "ঘুম ও জীবনযাত্রা"],
+  ["first-aid-emergency", "প্রাথমিক চিকিৎসা ও জরুরি সচেতনতা"],
 ];
 
 export async function listWellnessGuides(category) {

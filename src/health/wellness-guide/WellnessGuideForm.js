@@ -46,8 +46,9 @@ export function WellnessGuideForm({ familyId, editingPost, onSaved, onCancel }) 
     setSourceNote(editingPost.sourceNote || "");
   }, [editingPost]);
 
-  const needsAgeRange = category === "child-care" || category === "adult-age-range";
-  const needsMonthRange = category === "pregnancy";
+  const needsAgeRange = category === "child-care" || category === "elderly-care";
+  // "women-health" গর্ভাবস্থা-সহ বিস্তৃত ক্যাটাগরি — month-range ঐচ্ছিক (গর্ভাবস্থা-সংক্রান্ত পোস্টেই শুধু পূরণ হবে)
+  const needsMonthRange = category === "women-health";
 
   const submit = useCallback(async () => {
     setErr(null);
