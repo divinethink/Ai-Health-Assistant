@@ -1,0 +1,40 @@
+// Wellness Guide (ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা) data-layer।
+// Global, family-independent collection (careEscalationDirectory-এর হুবহু একই
+// pattern) — শুধু owner-run script (populateWellnessGuides.js) দিয়ে
+// populate/edit হয়, client-write নেই (firestore.rules-এ allow write: if false)।
+
+import { db } from "../../legacy/firebaseConfig.js";
+
+export const WELLNESS_CATEGORIES = [
+  ["general", "সাধারণ স্বাস্থ্য"],
+  ["chronic-disease-prevention", "জটিল রোগ প্রতিরোধ"],
+  ["child-care", "শিশুর যত্ন (১-১০ বছর)"],
+  ["pregnancy", "গর্ভাবস্থা (মাসভিত্তিক)"],
+  ["adult-age-range", "বয়সভিত্তিক (৩০+ )"],
+];
+
+export async function listWellnessGuides(category) {
+  let q = db.collection("wellnessGuides");
+  if (category && category !== "all") q = q.where("category", "==", category);
+  const snap = await q.get();
+  const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // client-side sort (createdAt DESC) — composite index এড়াতে (existing
+  // pattern, healthRecordsData.js-এর মতোই)।
+  posts.sort((a, b) => {
+    const at = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+    const bt = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+    return bt - at;
+  });
+  return posts;
+}
+
+export function formatAgeOrMonthRange(post) {
+  if (post.ageRangeYears && post.ageRangeYears.length === 2) {
+    return post.ageRangeYears[0] + "-" + post.ageRangeYears[1] + " বছর";
+  }
+  if (post.pregnancyMonthRange && post.pregnancyMonthRange.length === 2) {
+    const [a, b] = post.pregnancyMonthRange;
+    return a === b ? a + "ম মাস" : a + "-" + b + "ম মাস";
+  }
+  return null;
+}
