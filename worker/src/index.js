@@ -362,12 +362,15 @@ const SPECIALTY_NOTES = {
   // সরাসরি সেট করে পাঠায় (keyword-detection না, definitional override)।
   "nutrition-fitness":
     "প্রাসঙ্গিক specialty context: প্রশ্নটি সাধারণ nutrition/diet/fitness-সংক্রান্ত (treatment mode/medical diagnosis না) — সরকারি/professional সোর্স-ভিত্তিক সাধারণ lifestyle guidance দিন, কোনো medicine/dose/supplement-ডোজ উল্লেখ করবেন না, existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং জটিল/মেডিকেল প্রশ্নে ডাক্তার/nutritionist-consult এর পরামর্শ দিন।",
+  // নতুন (owner-request, ২০২৬-০৯-১২) — client-side HerbalHomeopathyChat.js এই key
+  // সরাসরি সেট করে পাঠায় (nutrition-fitness-এর মতোই definitional override)।
+  "herbal-homeopathy":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি Herbal/ভেষজ বা Homeopathy remedy-সংক্রান্ত। roadmap §12.2.1 Evidence-Level নীতি কঠোরভাবে মানুন: কোনো নির্দিষ্ট dose/quantity/duration বলবেন না (শুধু 'ঐতিহ্যগতভাবে ব্যবহৃত হয়' ধরনের ভাষা, কখনো 'কার্যকর'/'নিরাময় করে'/'প্রমাণিত'/'সমাধান দেয়' শব্দ ব্যবহার করবেন না)। Homeopathy সবসময় evidence-tier 3 (শুধু ঐতিহ্যগত ব্যবহার) হিসেবে উল্লেখ করুন এবং বাধ্যতামূলক disclaimer যোগ করুন যে নিয়ন্ত্রিত বৈজ্ঞানিক পর্যালোচনায় placebo-র তুলনায় অতিরিক্ত কার্যকারিতার প্রমাণ নেই। Herbal remedy-তেও উৎস/evidence-level স্পষ্ট রাখুন। উপসর্গ severe/red-flag বা shortness-of-breath/chest-pain-জাতীয় হলে Medical Science-এ escalate করতে বলুন, herbal/homeopathy কখনো emergency-এর বিকল্প না।",
 };
 
 // Controlled Web Search (Architecture Plan Part B §6.3.1, roadmap §10.1) —
-// শুধু এই whitelisted domain-list-এর মধ্যেই Groq compound-model search করবে
-// (`search_settings.include_domains`, Groq API-level enforcement — LLM নিজে
-// এড়িয়ে যেতে পারে না)। **bright-line অপরিবর্তিত:** dosing/safety-critical তথ্য
+// শুধু এই whitelisted domain-list-এর মধ্যে Brave Search ফলাফল filter হয়
+// (webSearch() নিচে দ্রষ্টব্য)। **bright-line অপরিবর্তিত:** dosing/safety-critical তথ্য
 // কখনো web-search থেকে আসে না — সবসময় verified `medicineDatabase` lookup-tool
 // থেকে (§12.1, উপরের dose-enforcement)। এই list শুধু general knowledge-refresh
 // (guideline/recall/nutrition-fitness-beauty reference)-এর জন্য, roadmap §10.1।
@@ -380,6 +383,72 @@ const WEB_SEARCH_WHITELIST_DOMAINS = [
   "aad.org", "bad.org.uk", "iadvl.org", "dgdagov.info",
   "ema.europa.eu", "ccras.nic.in", "hamdard.com.bd", "nccih.nih.gov", "nch.org.in",
 ];
+
+// bug-fix (owner-approved Option A, ২০২৬-০৯-১২; provider Brave→Tavily একই দিনে
+// বদলানো হলো কারণ Brave সাইনআপে card লাগে, Tavily-তে লাগে না, মাসে ১,০০০ free
+// credit): Groq `compound`/`compound-mini` নিজেই মাঝে মাঝে internal multi-step
+// search করে বিশাল payload তৈরি করে HTTP 413 ("Request Entity Too Large") দেয়
+// — এটা Groq-এর নিজস্ব known platform-bug (community-confirmed), আমাদের কনফিগ
+// দিয়ে ঠিক করার উপায় নেই। সমাধান: compound সম্পূর্ণ বাদ, বরং আমরা নিজেরা Tavily
+// Search API দিয়ে সীমিত-সংখ্যক (max ৫টা) result আনি, প্রতিটা snippet ছোট করে
+// (~220 char) truncate করে plain qwen model-কে system-message হিসেবে context
+// দিই — payload-size সবসময় আমাদের নিয়ন্ত্রণে, তাই 413 structurally আর সম্ভব না।
+// নতুন env-secret প্রয়োজন: EXA_API_KEY (`wrangler secret put`, কার্ড লাগে না)।
+function lastUserText(msgs) {
+  const m = Array.isArray(msgs) ? [...msgs].reverse().find((x) => x && x.role === "user" && typeof x.content === "string") : null;
+  return m ? m.content.slice(0, 300) : "";
+}
+
+function filterByDomainWhitelist(results, domainWhitelist) {
+  if (!Array.isArray(domainWhitelist) || !domainWhitelist.length) return results;
+  const filtered = results.filter((r) => {
+    try {
+      const host = new URL(r.url).hostname.replace(/^www\./, "");
+      return domainWhitelist.some((d) => (d.startsWith("*.") ? host.endsWith(d.slice(1)) : host === d || host.endsWith("." + d)));
+    } catch (e) {
+      return false;
+    }
+  });
+  // whitelist-এর মধ্যে কিছু না পাওয়া গেলে unfiltered top-result ব্যবহার হয়
+  // (safety বাধা না — dosing কখনোই search থেকে আসে না, সেটা আলাদা deterministic layer)।
+  return filtered.length ? filtered : results;
+}
+
+async function exaSearch(env, query) {
+  if (!env.EXA_API_KEY || !query) return [];
+  try {
+    const res = await fetch("https://api.exa.ai/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.EXA_API_KEY}` },
+      body: JSON.stringify({ query, numResults: 8, contents: { highlights: true } }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || [])
+      .map((r) => ({
+        title: (r.title || r.url || "").slice(0, 150),
+        url: r.url,
+        snippet: (Array.isArray(r.highlights) ? r.highlights.join(" ") : "").slice(0, 220),
+      }))
+      .filter((r) => r.url);
+  } catch (e) {
+    return [];
+  }
+}
+
+async function webSearch(env, query, domainWhitelist) {
+  const results = await exaSearch(env, query);
+  return filterByDomainWhitelist(results, domainWhitelist).slice(0, 5);
+}
+
+function buildSearchContextMessage(results) {
+  const lines = results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   সূত্র: ${r.url}`);
+  return (
+    "নিচে সাম্প্রতিক ওয়েব-সার্চ ফলাফল দেওয়া হলো — এগুলো প্রসঙ্গ হিসেবে ব্যবহার করে নিজের ভাষায় সংক্ষেপে উত্তর দিন, " +
+    "সরাসরি কপি করবেন না। কোনো ফলাফল প্রাসঙ্গিক না মনে হলে সাধারণ জ্ঞান থেকে উত্তর দিন:\n\n" +
+    lines.join("\n\n")
+  );
+}
 
 function buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote) {
   return [
@@ -409,42 +478,38 @@ function cleanLLMContent(rawContent) {
 async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
   const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
 
-  const body = { messages, max_tokens: 1500 };
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
-
+  // Controlled Web Search (§6.3.1/§10.1) — compound বাদ, Brave Search + bounded
+  // context-injection (উপরে বিস্তারিত কমেন্ট দ্রষ্টব্য)। whitelist-এর বাইরে কিছু
+  // পাওয়া না গেলে unfiltered top-result ব্যবহার হয় (safety বাধা না — dosing
+  // কখনোই search থেকে আসে না, সেটা আলাদা deterministic layer)।
+  let sources = [];
   if (useWebSearch) {
-    // Controlled Web Search (§6.3.1/§10.1) — Groq-এর নিজস্ব `groq/compound`
-    // built-in web-search tool, কিন্তু `search_settings.include_domains` দিয়ে
-    // শুধু whitelisted domain-এই সীমাবদ্ধ (Groq API-level enforcement)। এই মোডে
-    // reasoning_effort/format param প্রযোজ্য না (compound model-এর নিজস্ব
-    // orchestration, qwen3.6-এর thinking-mode-config-এর সাথে সম্পর্কহীন)।
-    body.model = "groq/compound";
-    body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
-    body.search_settings = { include_domains: WEB_SEARCH_WHITELIST_DOMAINS };
-    // bug-fix (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"): আগে এখানে
-    // `tool_choice: "required"` পাঠানো হতো, কিন্তু compound_custom-based
-    // built-in tools (groq/compound) কোনো `tools` array পাঠায় না — আর Groq-এর
-    // OpenAI-compatible API `tools` array ছাড়া `tool_choice` পেলে সরাসরি 400
-    // ("tool_choice is only allowed when tools are specified") রিটার্ন করে।
-    // ফলে compound call প্রতিবারই fail করে সঙ্গে সঙ্গে নিচের catch-block দিয়ে
-    // plain (non-search) মডেলে silent fallback হয়ে যাচ্ছিল — অর্থাৎ ওয়েব-সার্চ
-    // কখনো বাস্তবে চালুই হচ্ছিল না। `tool_choice` বাদ দেওয়া হলো —
-    // `compound_custom.tools.enabled_tools` নিজেই search-tool সীমাবদ্ধ/সক্ষম
-    // রাখার জন্য যথেষ্ট (Groq built-in-tools docs)।
-    headers["Groq-Model-Version"] = "latest";
-  } else {
-    body.model = "qwen/qwen3.6-27b";
+    try {
+      const query = lastUserText(conversationHistory);
+      const results = await webSearch(env, query, WEB_SEARCH_WHITELIST_DOMAINS);
+      if (results.length) {
+        sources = results.map((r) => ({ title: r.title, url: r.url }));
+        messages.push({ role: "system", content: buildSearchContextMessage(results) });
+      }
+    } catch (e) {
+      // ব্যর্থ হলে search ছাড়াই এগিয়ে যাওয়া — "কম সাহায্য" দিকে ঝোঁকা, error না।
+    }
+  }
+
+  const body = {
+    messages,
+    max_tokens: 1500,
+    model: "qwen/qwen3.8-27b",
     // reasoning_effort:"none" — dual-mode (thinking/non-thinking) model-এ
     // thinking mode বন্ধ করে দেয়। আমাদের বাংলা health-guidance conversational
     // use-case-এ জটিল multi-step reasoning দরকার নেই, আর thinking mode-ই
-    // দেখা গেছে মাঝে মাঝে টোকেন-বাজেট শেষ করে ফেলে/loop-এ আটকে যায় (owner
-    // screenshot, ২০২৬-০৯-০৫)।
-    body.reasoning_effort = "none";
-    // reasoning_format:"hidden" — defense-in-depth: reasoning_effort ভবিষ্যতে
-    // কোনো কারণে override/ignore হলেও, এটা raw <think> content API-স্তরেই
-    // suppress করে (Groq docs: শুধু final answer content ফেরত আসে)।
-    body.reasoning_format = "hidden";
-  }
+    // দেখা গেছে মাঝে মাঝে টোকেন-বাজেট শেষ করে ফেলে/loop-এ আটকে যায়।
+    reasoning_effort: "none",
+    // reasoning_format:"hidden" — defense-in-depth: raw <think> content
+    // API-স্তরেই suppress করে।
+    reasoning_format: "hidden",
+  };
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -454,32 +519,10 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
 
   if (!res.ok) {
     const errText = await res.text();
-    // Controlled web-search ব্যর্থ হলে (model unavailable/tool-error ইত্যাদি)
-    // একবার plain non-search মোডে fallback — general-chat-এর একই pattern
-    // (§10.1 নীতি অক্ষুণ্ণ: search ব্যর্থ হলে "কম সাহায্য" দিকেই ঝোঁকা, error না)।
-    if (useWebSearch) {
-      return callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, false);
-    }
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-  // executed_tools[].search_results — citation/source তালিকা, "silently মিশিয়ে
-  // দেওয়া হবে না; reference হিসেবে দেখানো হবে" নীতির (§10.1) বাস্তবায়ন — client
-  // এই sources আলাদাভাবে "সূত্র" হিসেবে দেখাবে, answer-টেক্সটের ভেতরে মেশানো হয় না।
-  let sources = [];
-  try {
-    const executed = data.choices?.[0]?.message?.executed_tools;
-    if (Array.isArray(executed)) {
-      executed.forEach((t) => {
-        (t.search_results?.results || []).forEach((r) => {
-          if (r?.url) sources.push({ title: r.title || r.url, url: r.url });
-        });
-      });
-    }
-  } catch (e) {
-    sources = [];
-  }
   return { content, usage: data.usage || null, sources };
 }
 
@@ -636,11 +679,10 @@ async function verifyIsAdminOfFamily(env, idToken, familyId, uid) {
 
 // hasImages হলে vision-capable model (এখনো Groq-এ multimodal support সহ,
 // একই model যা health-chat-এও ব্যবহৃত হচ্ছে — নতুন model যাচাই লাগেনি)।
-// নাহলে (ও useWebSearch !== false হলে) Groq-এর built-in `groq/compound`
-// system — এটাই ওয়েব-ব্রাউজ দেয়, কোনো নতুন/paid third-party search-API-key
-// লাগে না (Process Rule ৮, free-tier-first)। compound ব্যর্থ হলে (যেমন
-// account-এ অনুপলব্ধ) plain text-model দিয়ে স্বয়ংক্রিয় fallback — conversation
-// আটকে থাকবে না, শুধু সেই turn-এ web-search ছাড়াই উত্তর আসবে।
+// নাহলে (ও useWebSearch !== false হলে) নিচের webSearch() দিয়ে বাউন্ডেড
+// context এনে plain text-model-কেই জিজ্ঞাসা করা হয় (Option A, ২০২৬-০৯-১২
+// — Groq compound বাদ, উপরে বিস্তারিত কারণ)। Brave search ব্যর্থ/খালি হলে
+// conversation আটকে থাকবে না, শুধু সেই turn-এ web-search-context ছাড়াই উত্তর আসবে।
 // Project (Knowledge+Instructions, নতুন এই থ্রেড) — শুধু আরেকটা system-message
 // হিসেবে জোড়া লাগে, আলাদা কোনো RAG/vector-lookup না (§ lightweight নীতি)।
 function buildGeneralChatSystemMessages(projectContext, forceEnglish) {
@@ -665,52 +707,35 @@ function buildGeneralChatSystemMessages(projectContext, forceEnglish) {
   return msgs;
 }
 
-async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext }, _searchErrorCarry) {
+async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, projectContext }) {
   const fullMessages = [...buildGeneralChatSystemMessages(projectContext), ...(Array.isArray(messages) ? messages : [])];
 
-  let model;
-  // bug-fix (owner-reported, "ওয়েব সার্চ করছে না"): max_tokens আগে ২০০০ ছিল,
-  // যা Groq account-এর OTPM (output-tokens-per-minute) বাজেট ছাড়িয়ে বারবার
-  // 429 দিচ্ছিল — compound (web-search) কল ব্যর্থ হয়ে সবসময় silent fallback-এ
-  // চলে যাচ্ছিল, ফলে search বাস্তবে কখনো সম্পন্নই হতো না। health-chat-এর
-  // প্রমাণিত-safe মান (১৫০০)-এর সাথে সামঞ্জস্যপূর্ণ করা হলো।
-  const body = { max_tokens: 1500 };
-  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
-
-  if (hasImages) {
-    model = env.GENERAL_CHAT_VISION_MODEL || "qwen/qwen3.6-27b";
-  } else if (useWebSearch !== false) {
-    // bug-fix round-৫ (এই থ্রেড, owner-reported "visit_website বাদ দেওয়ার পরও
-    // 413 same") — root cause এখন নিশ্চিত হলো: এটা `visit_website` না,
-    // বরং `groq/compound` (full) নিজেই সর্বোচ্চ ১০টা পর্যন্ত server-side
-    // tool-call (একাধিক web_search সহ) chain করতে পারে — broad/open-ended
-    // query-তে ("আলোচিত খবর"-এর মতো, কোনো নির্দিষ্ট domain-restriction ছাড়া,
-    // health-chat-এর `search_settings.include_domains`-এর বিপরীতে General
-    // Chat-এ পুরো ওয়েব খোলা) মডেল একাধিকবার search চালিয়ে বিপুল accumulated
-    // snippet-content জমা করে ফেলে, যা request-size ছাড়িয়ে 413 দেয়।
-    // সমাধান: `groq/compound-mini` — এটা সর্বোচ্চ ১টা tool-call করতে পারে
-    // (Groq docs: "great for use cases that require a single web search...
-    // 3x lower latency")। এতে accumulated content hard-capped থাকে, তাই
-    // broad query-তেও request-size বিস্ফোরিত হতে পারে না। General Chat-এর
-    // ব্যবহার-প্যাটার্ন (এক-দুই লাইনের প্রশ্ন, সাধারণ ফ্যাক্ট-চেক) এই single-
-    // search সীমাবদ্ধতার সাথে ভালোভাবেই মানানসই।
-    model = env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound-mini";
-    body.compound_custom = { tools: { enabled_tools: ["web_search"] } };
-    // bug-fix round-৩ (এই থ্রেড, owner-reported "ওয়েব সার্চ সক্রিয় হচ্ছে না"):
-    // `tool_choice: "required"` compound_custom-based built-in-tools request-এ
-    // বৈধ প্যারামিটার না (Groq/OpenAI-compatible API-তে `tool_choice` শুধু
-    // `tools` array-এর সাথেই বৈধ, compound এখানে `tools` পাঠায় না) — ফলে এটা
-    // পাঠানো হলে Groq সরাসরি 400 error দিচ্ছিল, compound call প্রতিবারই
-    // catch-block-এ পড়ে নিচের non-search fallback-এ চলে যাচ্ছিল, তাই checkbox
-    // অন থাকা সত্ত্বেও search বাস্তবে কখনো ঘটতোই না। বাদ দেওয়া হলো —
-    // `compound_custom.tools.enabled_tools` (উপরে) নিজেই search-tool সক্ষম
-    // রাখার জন্য যথেষ্ট।
-    headers["Groq-Model-Version"] = "latest";
-  } else {
-    model = env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.6-27b";
+  // bug-fix (owner-approved Option A, ২০২৬-০৯-১২): Groq `compound`/`compound-mini`
+  // বাদ — উপরের webSearch()/buildSearchContextMessage() দিয়ে bounded
+  // context-injection (health-chat callGroq()-এর একই pattern)। General
+  // Chat-এ domain-restriction নেই (roadmap §22, "বিবিধ" ক্যাটাগরি open-web)।
+  let sources = [];
+  let searchUsed = false;
+  let searchError = null;
+  if (!hasImages && useWebSearch !== false) {
+    try {
+      const query = lastUserText(messages);
+      const results = await webSearch(env, query, null);
+      if (results.length) {
+        sources = results.map((r) => ({ title: r.title, url: r.url }));
+        fullMessages.push({ role: "system", content: buildSearchContextMessage(results) });
+        searchUsed = true;
+      } else {
+        searchError = env.EXA_API_KEY ? "কোনো প্রাসঙ্গিক সার্চ-ফলাফল পাওয়া যায়নি।" : "EXA_API_KEY সেট করা নেই।";
+      }
+    } catch (e) {
+      searchError = (e && e.message) || String(e);
+    }
   }
-  body.model = model;
-  body.messages = fullMessages;
+
+  const model = hasImages ? env.GENERAL_CHAT_VISION_MODEL || "qwen/qwen3.8-27b" : env.GENERAL_CHAT_TEXT_MODEL || "qwen/qwen3.8-27b";
+  const body = { model, messages: fullMessages, max_tokens: 1500 };
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -720,49 +745,11 @@ async function callGroqGeneralChat(env, messages, { useWebSearch, hasImages, pro
 
   if (!res.ok) {
     const errText = await res.text();
-    // compound (web-search) মোড ব্যর্থ হলে এক ধাপ fallback — text-only, plain
-    // model দিয়ে retry (recursion একবারই ঘটে, কারণ পরের কলে useWebSearch:false)।
-    // bug-fix: caller (route handler)-কে জানানো দরকার search আসলে হয়নি, তাই
-    // recursive call-এর ফেরত-value-এই searchUsed:false থাকবে (নিচে normal-path-এ
-    // দেখুন) — এখানে আলাদা কিছু করতে হচ্ছে না, শুধু model-branch বদলে যাওয়ায়
-    // recursive কলে useWebSearch:false পাঠানো হচ্ছে, যেটা normal successful
-    // response-এর searchUsed নির্ধারণ করবে।
-    if (!hasImages && useWebSearch !== false) {
-      // bug-fix (owner-reported, "groq/compound account-এ enable আছে কিনা যাচাই
-      // দরকার"): আগে এই errText শুধু silently গিলে ফেলা হতো — fallback হতো ঠিকই,
-      // কিন্তু আসল কারণ (400/401/403/404/429 ইত্যাদি) কোথাও দেখা যেত না, ফলে
-      // owner/dev debug করতে পারছিলেন না। এখন: (ক) Worker log-এ console.error
-      // (Cloudflare dashboard/`wrangler tail`-এ দেখা যাবে), (খ) এই কারণ
-      // client পর্যন্ত `searchError` field-এ carry হয়ে যাবে (নিচে return-এ)।
-      console.error(`[general-chat] groq/compound web-search failed (HTTP ${res.status}): ${errText.slice(0, 500)}`);
-      const carry = `HTTP ${res.status}: ${errText.slice(0, 300)}`;
-      return callGroqGeneralChat(env, messages, { useWebSearch: false, hasImages: false, projectContext }, carry);
-    }
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
   const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
-
-  // bug-fix (transparency): health-chat-এর callGroq()-এর মতোই executed_tools থেকে
-  // citation/source বের করা হচ্ছে — client এখন থেকে দেখাতে পারবে সত্যিই web-search
-  // হয়েছে কিনা (আগে এই ফাংশনে সম্পূর্ণ বাদ ছিল, ফলে silent-fallback অদৃশ্য থাকত)।
-  let sources = [];
-  try {
-    const executed = data.choices?.[0]?.message?.executed_tools;
-    if (Array.isArray(executed)) {
-      executed.forEach((t) => {
-        (t.search_results?.results || []).forEach((r) => {
-          if (r?.url) sources.push({ title: r.title || r.url, url: r.url });
-        });
-      });
-    }
-  } catch (e) {
-    sources = [];
-  }
-  // model যদি compound (web-search-enabled) হয় এবং এই কলটাই প্রথম চেষ্টায় সফল হয়
-  // (recursive fallback না), তাহলেই প্রকৃতপক্ষে search সক্রিয় ছিল ধরা হবে।
-  const searchUsed = model === (env.GENERAL_CHAT_COMPOUND_MODEL || "groq/compound-mini");
-  return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed, searchError: _searchErrorCarry || null };
+  return { content, usage: data.usage || null, modelUsed: model, sources, searchUsed, searchError };
 }
 
 // General Chat — Mistral secondary/failover (নতুন, এই থ্রেড, owner-approved)।
