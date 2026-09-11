@@ -133,6 +133,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Wellness Guide — ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা (owner-request,
+    // ২০২৬-০৯-১২)। careEscalationDirectory/remedyDatabase-এর হুবহু একই pattern:
+    // global, family-independent, শুধু trusted local Admin-SDK script
+    // (scripts/populateWellnessGuides.js) দিয়ে populate/edit — নতুন পোস্ট
+    // যোগ/সম্পাদনা করতে script রি-রান করলেই চলবে, কোনো client-write/rules-change
+    // লাগবে না।
+    match /wellnessGuides/{guideId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     match /knowledgeItems/{itemId} {
       allow read: if request.auth != null;
       allow write: if false;
