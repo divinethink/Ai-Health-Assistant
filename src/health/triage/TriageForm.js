@@ -73,6 +73,7 @@ export function TriageForm({ familyId, callerMemberId }) {
   const [result, setResult] = useState(null);
   const [cardiacAnswers, setCardiacAnswers] = useState({ cardiacPersistent: false, cardiacAssociated: false });
   const [aspirinCheck, setAspirinCheck] = useState(null);
+  const [hasChronicCondition, setHasChronicCondition] = useState(false);
   const [healthContext, setHealthContext] = useState(null);
   const [memberAgeYears, setMemberAgeYears] = useState(null); // Groq-payload-এ যায় না, শুধু Worker dose-lookup-এর জন্য (§6.6 প্রাইভেসি)
   const [contextErr, setContextErr] = useState(null);
@@ -137,6 +138,7 @@ export function TriageForm({ familyId, callerMemberId }) {
     setResult(null);
     setCardiacAnswers({ cardiacPersistent: false, cardiacAssociated: false });
     setAspirinCheck(null);
+    setHasChronicCondition(false);
     setHealthContext(null); setMemberAgeYears(null);
     setAiResponse(null);
     setAiErr(null);
@@ -172,18 +174,26 @@ export function TriageForm({ familyId, callerMemberId }) {
     // না। শুধু CARDIAC-BYSTANDER-001 rule trigger হলেই চলে (non-blocking —
     // ব্যর্থ হলেও triage/emergency-contact bright-line অপ্রভাবিত)।
     const cardiacTriggered = triageResult.triggeredRules.some((r) => r.ruleId === "CARDIAC-BYSTANDER-001");
-    if (cardiacTriggered) {
-      const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
-      listHealthRecords(familyId, targetMemberId)
-        .then((records) => {
+    if (!cardiacTriggered) setAspirinCheck(null);
+    // roadmap §12.4 Category B bright-line rule (chronicManagement থাকলে
+    // dose-suggestion না) actual Condition data থেকে যাচাই করার জন্য এই
+    // unconditional fetch — আগে শুধু cardiac-branch-এই records আনা হতো, এখন
+    // সবসময় আনা হয় যাতে chronicManagement flag সঠিকভাবে RiskBasedTreatmentModes-এ
+    // পৌঁছায় (আগে hardcode `false` ছিল, checklist §৭ known-gap)।
+    listHealthRecords(familyId, targetMemberId)
+      .then((records) => {
+        const conditionRecords = records.filter((r) => r.resourceType === "condition");
+        setHasChronicCondition(conditionRecords.some((c) => c.chronicManagement === true && c.status !== "resolved"));
+        if (cardiacTriggered) {
+          const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
           const allergyRecords = records.filter((r) => r.resourceType === "allergy");
-          const conditionRecords = records.filter((r) => r.resourceType === "condition");
           setAspirinCheck(checkAspirinContraindication({ ageYears, allergyRecords, conditionRecords }));
-        })
-        .catch(() => setAspirinCheck({ blocked: true, reason: "প্রোফাইল যাচাই করা যায়নি (safe-default: block)" }));
-    } else {
-      setAspirinCheck(null);
-    }
+        }
+      })
+      .catch(() => {
+        setHasChronicCondition(false);
+        if (cardiacTriggered) setAspirinCheck({ blocked: true, reason: "প্রোফাইল যাচাই করা যায়নি (safe-default: block)" });
+      });
 
     // Health Context Engine — dev-preview assemble, কোনো Firestore write না।
     assembleHealthContext(familyId, targetMemberId, triageResult, { symptoms: chiefComplaint })
@@ -417,11 +427,10 @@ export function TriageForm({ familyId, callerMemberId }) {
     aiResponse && React.createElement(RiskBasedTreatmentModes, {
       riskLevel: result && result.riskLevel,
       ageGroupContext: result && result.ageGroupContext,
-      // TODO (ভবিষ্যতে সংযোজনযোগ্য): সংশ্লিষ্ট Condition.chronicManagement flag
-      // এখানে যুক্ত করা যায় — আপাতত conservative false রাখা হলো, তাই
-      // pediatric/pregnant/emergency-urgent-needs-attention trigger অপরিবর্তিতভাবে
-      // কাজ করছে, শুধু chronic-condition-based trigger এই মুহূর্তে সক্রিয় না।
-      chronicManagement: false,
+      // এই সদস্যের active/chronic-status Condition-এ chronicManagement:true থাকলে
+      // (HealthRecordForm.js checkbox থেকে সেট করা) এখন actual value ব্যবহার হয় —
+      // আগে hardcode false ছিল (checklist §৭ known-gap, এখন resolved)।
+      chronicManagement: hasChronicCondition,
       medicalScienceNode: React.createElement(
         "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
         React.createElement("div", { style: { fontSize: "10px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
