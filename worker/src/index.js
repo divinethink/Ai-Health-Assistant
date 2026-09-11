@@ -420,7 +420,11 @@ async function exaSearch(env, query) {
     const res = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.EXA_API_KEY}` },
-      body: JSON.stringify({ query, numResults: 8, contents: { highlights: true } }),
+      // bug-fix (owner-reported, ২০২৬-০৯-১২ — ভাঙা/অসংলগ্ন AI response): আগে শুধু
+      // `highlights` (কয়েকটা বিচ্ছিন্ন ২২০-char টুকরা) পাঠানো হতো, ফলে AI একগাদা
+      // disjointed fragment জোড়া দিয়ে উত্তর বানাত। এখন `text` (পুরো পাতার
+      // summarized main content) ব্যবহার হচ্ছে — বেশি সংলগ্ন/coherent snippet।
+      body: JSON.stringify({ query, numResults: 8, contents: { text: { maxCharacters: 600 } } }),
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -428,7 +432,7 @@ async function exaSearch(env, query) {
       .map((r) => ({
         title: (r.title || r.url || "").slice(0, 150),
         url: r.url,
-        snippet: (Array.isArray(r.highlights) ? r.highlights.join(" ") : "").slice(0, 220),
+        snippet: (r.text || "").slice(0, 600),
       }))
       .filter((r) => r.url);
   } catch (e) {
@@ -445,7 +449,9 @@ function buildSearchContextMessage(results) {
   const lines = results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   সূত্র: ${r.url}`);
   return (
     "নিচে সাম্প্রতিক ওয়েব-সার্চ ফলাফল দেওয়া হলো — এগুলো প্রসঙ্গ হিসেবে ব্যবহার করে নিজের ভাষায় সংক্ষেপে উত্তর দিন, " +
-    "সরাসরি কপি করবেন না। কোনো ফলাফল প্রাসঙ্গিক না মনে হলে সাধারণ জ্ঞান থেকে উত্তর দিন:\n\n" +
+    "সরাসরি কপি করবেন না। উত্তর অবশ্যই সুসংলগ্ন, সম্পূর্ণ বাক্যে, স্বাভাবিক প্রবাহে লিখুন — বিচ্ছিন্ন " +
+    "টুকরা-টুকরা তথ্য জোড়া লাগিয়ে ভাঙা-ভাঙা উত্তর দেবেন না। কোনো ফলাফল প্রাসঙ্গিক না মনে হলে সাধারণ " +
+    "জ্ঞান থেকে উত্তর দিন:\n\n" +
     lines.join("\n\n")
   );
 }
