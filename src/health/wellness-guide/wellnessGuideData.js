@@ -28,6 +28,46 @@ export async function listWellnessGuides(category) {
   return posts;
 }
 
+// ইন-অ্যাপ Admin CRUD (২০২৬-০৯-১২ upgrade) — আগে শুধু owner-run script দিয়েই
+// লেখা যেত, এখন firestore.rules-এ familyId-ভিত্তিক isAdminOfFamily() guard
+// থাকায় Admin সরাসরি অ্যাপ থেকে পোস্ট যোগ/এডিট/ডিলিট করতে পারবেন।
+export async function createWellnessGuide(familyId, fields) {
+  const ref = db.collection("wellnessGuides").doc();
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  await ref.set({
+    familyId,
+    category: fields.category,
+    title: fields.title.trim(),
+    summary: fields.summary ? fields.summary.trim() : "",
+    body: fields.body.trim(),
+    tags: fields.tags || [],
+    ageRangeYears: fields.ageRangeYears || null,
+    pregnancyMonthRange: fields.pregnancyMonthRange || null,
+    sourceNote: fields.sourceNote ? fields.sourceNote.trim() : null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
+}
+
+export async function updateWellnessGuide(guideId, fields) {
+  await db.collection("wellnessGuides").doc(guideId).update({
+    category: fields.category,
+    title: fields.title.trim(),
+    summary: fields.summary ? fields.summary.trim() : "",
+    body: fields.body.trim(),
+    tags: fields.tags || [],
+    ageRangeYears: fields.ageRangeYears || null,
+    pregnancyMonthRange: fields.pregnancyMonthRange || null,
+    sourceNote: fields.sourceNote ? fields.sourceNote.trim() : null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+export async function deleteWellnessGuide(guideId) {
+  await db.collection("wellnessGuides").doc(guideId).delete();
+}
+
 export function formatAgeOrMonthRange(post) {
   if (post.ageRangeYears && post.ageRangeYears.length === 2) {
     return post.ageRangeYears[0] + "-" + post.ageRangeYears[1] + " বছর";
