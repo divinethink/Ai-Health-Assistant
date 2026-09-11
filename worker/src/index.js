@@ -417,13 +417,16 @@ function filterByDomainWhitelist(results, domainWhitelist) {
 async function exaSearch(env, query) {
   if (!env.EXA_API_KEY || !query) return [];
   try {
+    // bug-fix (owner-reported, ২০২৬-০৯-১২ — ভাঙা/অসংলগ্ন AI response): আগে শুধু
+    // `highlights` (কয়েকটা বিচ্ছিন্ন ২২০-char টুকরা) পাঠানো হতো, ফলে AI একগাদা
+    // disjointed fragment জোড়া দিয়ে উত্তর বানাত। এখন `text` (পুরো পাতার
+    // summarized main content) ব্যবহার হচ্ছে — বেশি সংলগ্ন/coherent snippet।
+    // **নোট (owner-clarified):** `category: "news"` জোর করা হয়নি — এটা health/
+    // herbal/general সব ধরনের query-তে ব্যবহৃত হয় (শুধু news না), news-category
+    // চাপালে non-news whitelisted-domain (WHO/NHS/medical) result বাদ পড়ে যেত।
     const res = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.EXA_API_KEY}` },
-      // bug-fix (owner-reported, ২০২৬-০৯-১২ — ভাঙা/অসংলগ্ন AI response): আগে শুধু
-      // `highlights` (কয়েকটা বিচ্ছিন্ন ২২০-char টুকরা) পাঠানো হতো, ফলে AI একগাদা
-      // disjointed fragment জোড়া দিয়ে উত্তর বানাত। এখন `text` (পুরো পাতার
-      // summarized main content) ব্যবহার হচ্ছে — বেশি সংলগ্ন/coherent snippet।
       body: JSON.stringify({ query, numResults: 8, contents: { text: { maxCharacters: 600 } } }),
     });
     if (!res.ok) return [];
@@ -449,9 +452,14 @@ function buildSearchContextMessage(results) {
   const lines = results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet}\n   সূত্র: ${r.url}`);
   return (
     "নিচে সাম্প্রতিক ওয়েব-সার্চ ফলাফল দেওয়া হলো — এগুলো প্রসঙ্গ হিসেবে ব্যবহার করে নিজের ভাষায় সংক্ষেপে উত্তর দিন, " +
-    "সরাসরি কপি করবেন না। উত্তর অবশ্যই সুসংলগ্ন, সম্পূর্ণ বাক্যে, স্বাভাবিক প্রবাহে লিখুন — বিচ্ছিন্ন " +
-    "টুকরা-টুকরা তথ্য জোড়া লাগিয়ে ভাঙা-ভাঙা উত্তর দেবেন না। কোনো ফলাফল প্রাসঙ্গিক না মনে হলে সাধারণ " +
-    "জ্ঞান থেকে উত্তর দিন:\n\n" +
+    "সরাসরি কপি করবেন না। উত্তর অবশ্যই প্রমিত/শুদ্ধ বাংলায়, সুসংলগ্ন, সম্পূর্ণ বাক্যে, স্বাভাবিক প্রবাহে লিখুন — " +
+    "বিচ্ছিন্ন টুকরা-টুকরা তথ্য জোড়া লাগিয়ে ভাঙা-ভাঙা বা আঞ্চলিক/মিশ্র-ভাষার বাক্য দেবেন না। " +
+    "**কঠোর নিয়ম — কখনো বানিয়ে বলবেন না:** নিচের result-গুলোতে যা সুনির্দিষ্টভাবে লেখা আছে শুধু সেটাই ব্যবহার করুন — " +
+    "কোনো নাম, তারিখ, সংখ্যা, ঘটনা বা সম্পর্ক নিজে থেকে অনুমান/সংযোগ/আবিষ্কার করবেন না, এমনকি সেটা সম্ভাব্য/প্রাসঙ্গিক " +
+    "মনে হলেও। result-গুলো অস্পষ্ট, অসম্পূর্ণ, বা প্রশ্নের সাথে সরাসরি সম্পর্কহীন হলে সেটা স্পষ্টভাবে বলুন " +
+    "(যেমন: 'সুনির্দিষ্ট তথ্য পাওয়া যায়নি, নিচের সূত্রগুলো দেখতে পারেন') — অস্পষ্টতা ঢাকতে কোনো সারমর্ম বানাবেন না। " +
+    "কোনো result-ই প্রাসঙ্গিক না মনে হলে সাধারণ জ্ঞান থেকে উত্তর দিন, কিন্তু সেটাও স্পষ্ট করে বলুন যে এটা সাধারণ জ্ঞান, " +
+    "সার্চ-ফলাফল থেকে না:\n\n" +
     lines.join("\n\n")
   );
 }
