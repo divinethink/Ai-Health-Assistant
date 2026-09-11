@@ -14,9 +14,9 @@
 // ক্যাটেগরি (owner-Confirmed, ২০২৬-০৯-১২):
 //   "general"                    — সাধারণ স্বাস্থ্য-টিপস
 //   "chronic-disease-prevention" — ডায়াবেটিস/উচ্চ রক্তচাপ/হৃদরোগ ইত্যাদি থেকে বাঁচার উপায়
-//   "child-care"                 — ১-১০ বছর বয়সী শিশুর যত্ন, ageRangeYears: [min,max]
-//   "pregnancy"                  — মাসভিত্তিক গর্ভাবস্থা পরামর্শ, pregnancyMonthRange: [min,max] (1-9)
-//   "adult-age-range"            — মধ্যবয়স্ক/বৃদ্ধ বয়সের রেঞ্জ-ভিত্তিক, ageRangeYears: [min,max]
+//   "child-care"                 — শিশু লালন-পালন সংক্রান্ত, ageRangeYears: [min,max] (ঐচ্ছিক)
+//   "women-health"                — নারী স্বাস্থ্য/গর্ভাবস্থা, pregnancyMonthRange: [min,max] (1-9, ঐচ্ছিক)
+//   "elderly-care"                — বয়স্কদের যত্ন, ageRangeYears: [min,max] (ঐচ্ছিক)
 //
 // ব্যবহার:
 //   ড্রাই-রান:  node scripts/populateWellnessGuides.js
@@ -89,7 +89,7 @@ const ENTRIES = [
     ageRangeYears: [1, 3], pregnancyMonthRange: null,
   },
   {
-    category: "pregnancy",
+    category: "women-health",
     title: "উদাহরণ: গর্ভাবস্থার ১ম মাস",
     summary: "গর্ভাবস্থার প্রথম মাসে খাদ্য, পুষ্টি, সতর্কতা।",
     body: "এখানে আপনার সংগ্রহ করা reliable তথ্য বসবে — এটা শুধু ফরম্যাট-উদাহরণ, replace করুন।",
@@ -98,7 +98,7 @@ const ENTRIES = [
     ageRangeYears: null, pregnancyMonthRange: [1, 1],
   },
   {
-    category: "adult-age-range",
+    category: "elderly-care",
     title: "উদাহরণ: ৩০-৪০ বছর বয়সীদের স্বাস্থ্য-সতর্কতা",
     summary: "এই বয়স-রেঞ্জে খাদ্য, ব্যায়াম, ও prevention-focused স্ক্রিনিং পরামর্শ।",
     body: "এখানে আপনার সংগ্রহ করা reliable তথ্য বসবে — এটা শুধু ফরম্যাট-উদাহরণ, replace করুন।",
