@@ -111,6 +111,21 @@ export async function listHealthRecords(familyId, targetMemberId) {
   return records;
 }
 
+// নতুন (owner-request, ২০২৬-০৯-১২ — Medication reminder/adherence tracker, item ২):
+// MedicationStatement schema-তে (Architecture Plan Part A §2) reminder-time কোনো
+// field ছিল না — নতুন `reminderTimes: [string ("HH:MM")]` optional field যোগ করা
+// হলো, schema-breaking না (নতুন optional field, না থাকলে undefined/[] ধরা হবে) এবং
+// rules-change লাগেনি (এই collection-এ field-allowlist নেই)। buildHealthRecordFields()
+// bypass করে সরাসরি এই একটা field আপডেট করা হচ্ছে, অন্য medication-edit ফর্ম অপ্রভাবিত থাকে।
+export async function setMedicationReminderTimes(familyId, recordId, callerMemberId, reminderTimes) {
+  const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
+  await ref.update({
+    reminderTimes,
+    lastEditedByMemberId: callerMemberId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
 export function describeHealthRecord(r) {
   if (r.resourceType === "condition") {
     const tp = r.treatingPhysician;
