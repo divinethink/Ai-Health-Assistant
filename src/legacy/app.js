@@ -25,9 +25,11 @@ import { AccessRequestsPanel } from "../components/AccessRequestsPanel.js";
 import { AccessGrantRequestsPanel } from "../components/AccessGrantRequestsPanel.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
+import { MedicationReminders } from "../health/records/MedicationReminders.js";
 import { DocumentsSection } from "../health/documents/DocumentsSection.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 import { TriageForm } from "../health/triage/TriageForm.js";
+import { MedicalScienceChat } from "../health/treatment-modes/MedicalScienceChat.js";
 import { RemedySection } from "../health/treatment-modes/RemedySection.js";
 import { NutritionGuidance } from "../health/nutrition-fitness/NutritionGuidance.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
@@ -71,9 +73,11 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(AccessGrantRequestsPanel, { key: "ag" + refreshTick, familyId, myMemberId: memberId, myName: memberDoc.name }),
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(MedicationReminders, { key: "med-reminders" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(MedicalScienceChat, { key: "medical-science" + refreshTick, familyId }),
       React.createElement(RemedySection, { key: "remedy" + refreshTick, familyId }),
       React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
       React.createElement(WellnessGuideSection, { key: "wellness-guide" + refreshTick, familyId, isAdmin }),
