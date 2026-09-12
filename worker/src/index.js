@@ -358,7 +358,7 @@ const SPECIALTY_NOTES = {
   "endocrinology-medicine":
     "প্রাসঙ্গিক specialty context: প্রশ্নটি হরমোন/দীর্ঘমেয়াদি রোগ (থাইরয়েড/ডায়াবেটিস/উচ্চ-রক্তচাপ) সম্পর্কিত হতে পারে — chronic-disease bright-line rule (কোনো নতুন dose/পরিবর্তন-পরামর্শ না) বিশেষভাবে মনে রাখুন।",
   "physical-medicine":
-    "প্রাসঙ্গিক specialty context: প্রশ্নটি জয়েন্ট/হাড়/মাংসপেশি-সম্পর্কিত (Physical Medicine) — movement/lifestyle-সচেতন সাধারণ পরামর্শ দিন, নির্দিষ্ট diagnosis দাবি করবেন না।",
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি জয়েন্ট/হাড়/মাংসপেশি-সম্পর্কিত (Physical Medicine) — movement/lifestyle-সচেতন সাধারণ পরামর্শ দিন। বোঝার জন্য সম্ভাব্য কারণ/condition নিয়ে খোলামেলা আলোচনা করতে পারেন (owner-request, ২০২৬-০৯-১২ — diagnosis-avoidance ভাষা সরানো হয়েছে); শুধু ব্যক্তি-নির্দিষ্ট dose/frequency/duration কখনো বলবেন না, ও severe/red-flag উপসর্গে Symptom Check/ডাক্তার-consult ব্যবহার করতে বলুন।",
   // নতুন (P7, roadmap §11/§11.2) — client-side NutritionGuidance.js এই key
   // সরাসরি সেট করে পাঠায় (keyword-detection না, definitional override)।
   "nutrition-fitness":
@@ -367,6 +367,14 @@ const SPECIALTY_NOTES = {
   // সরাসরি সেট করে পাঠায় (nutrition-fitness-এর মতোই definitional override)।
   "herbal-homeopathy":
     "প্রাসঙ্গিক specialty context: প্রশ্নটি Herbal/ভেষজ বা Homeopathy remedy-সংক্রান্ত। roadmap §12.2.1 Evidence-Level নীতি কঠোরভাবে মানুন: কোনো নির্দিষ্ট dose/quantity/duration বলবেন না (শুধু 'ঐতিহ্যগতভাবে ব্যবহৃত হয়' ধরনের ভাষা, কখনো 'কার্যকর'/'নিরাময় করে'/'প্রমাণিত'/'সমাধান দেয়' শব্দ ব্যবহার করবেন না)। Homeopathy সবসময় evidence-tier 3 (শুধু ঐতিহ্যগত ব্যবহার) হিসেবে উল্লেখ করুন এবং বাধ্যতামূলক disclaimer যোগ করুন যে নিয়ন্ত্রিত বৈজ্ঞানিক পর্যালোচনায় placebo-র তুলনায় অতিরিক্ত কার্যকারিতার প্রমাণ নেই। Herbal remedy-তেও উৎস/evidence-level স্পষ্ট রাখুন। উপসর্গ severe/red-flag বা shortness-of-breath/chest-pain-জাতীয় হলে Medical Science-এ escalate করতে বলুন, herbal/homeopathy কখনো emergency-এর বিকল্প না।",
+  // নতুন (owner-request, ২০২৬-০৯-১২) — client-side MedicalScienceChat.js এই key
+  // সরাসরি সেট করে পাঠায় (herbal-homeopathy/nutrition-fitness-এর মতোই definitional override)।
+  // এটা structured Symptom Check/dose-enforcement flow না — শুধু সাধারণ শিক্ষামূলক আলোচনা,
+  // তাই dose এখানে কঠোরভাবে নিষিদ্ধ রাখা জরুরি (roadmap §12.0/§12.1 bright-line), তবে
+  // owner-request (২০২৬-০৯-১২) অনুযায়ী সম্ভাব্য কারণ/condition নিয়ে সাধারণ আলোচনা/
+  // ব্যাখ্যা করা যাবে (diagnosis-avoidance ভাষা সরানো হয়েছে, শুধু dose-নিষেধাজ্ঞা কঠোর)।
+  "medical-science":
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি Medical Science/এলোপ্যাথি-সংক্রান্ত সাধারণ আলোচনা — এটা structured Symptom-Check/triage flow না। ব্যবহারকারী বুঝতে চাইলে রোগ/condition/উপসর্গের সম্ভাব্য কারণ, ওষুধের কার্যপ্রণালী, ও সাধারণ চিকিৎসা-বিজ্ঞান বিষয়ে খোলামেলা, বিস্তারিত সাধারণ আলোচনা করতে পারেন — শুধু বোঝার জন্য প্রাসঙ্গিক আলোচনা এড়িয়ে যাবেন না। **একমাত্র কঠোর নিষেধাজ্ঞা:** কখনো ব্যক্তি-নির্দিষ্ট dose/frequency/duration/quantity বলবেন না (dose সবসময় শুধু deterministic lookup-database থেকে আসে, এখানে কখনো না)। উপসর্গ severe/red-flag-এর ইঙ্গিত পেলে আলোচনার পাশাপাশি \"Symptom Check\"/ডাক্তার-consult ব্যবহার করতে বলুন।",
 };
 
 // Controlled Web Search (Architecture Plan Part B §6.3.1, roadmap §10.1) —
