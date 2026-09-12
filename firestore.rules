@@ -541,6 +541,28 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         allow delete: if request.auth != null && request.auth.uid == resource.data.targetUid;
       }
+
+      // নতুন (owner-request, ২০২৬-০৯-১২ — item ৪ Vaccination Scheduler + item ৫ Family
+      // Health Calendar, দুটোই একই collection শেয়ার করে, eventType discriminator দিয়ে,
+      // duplicate-schema/rules এড়াতে): Member Roster-এর মতোই family-wide open-read
+      // (isFamilyMember, hasAccess()/memberId-gate না — কারণ event পরিবারের যে কেউ
+      // দেখতে/জানতে পারা উচিত, যেমন কার vaccination কবে বা পারিবারিক ডাক্তার-visit)।
+      // Write শুধু creator নিজে বা Admin করতে পারবে (notifications-এর uid-gate
+      // pattern-এর অনুরূপ, কিন্তু callerMemberIdOf দিয়ে, কারণ delete/edit নিজের
+      // family-member-পরিচয়ে হওয়া উচিত uid-এ না)।
+      match /healthCalendarEvents/{eventId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+        allow create: if request.auth != null
+          && isFamilyMember(familyId)
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow update: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId))
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow delete: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
+      }
     }
   }
 }
