@@ -87,7 +87,7 @@ export function WellnessGuideSection({ familyId, isAdmin }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" } },
-      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "🌿 সুস্থ জীবনযাপন নির্দেশিকা"),
+      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "🌿 স্বাস্থ্য ব্লগ"),
       isAdmin && !showForm && React.createElement(
         "button", {
           onClick: () => { setEditingPost(null); setShowForm(true); },
