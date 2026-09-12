@@ -326,7 +326,7 @@ function buildDoseFactMessage(resolution) {
 }
 
 const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI Health Assistant। কঠোরভাবে মেনে চলুন:
-- কখনো কোনো medicine-এর dose/frequency/duration/সংখ্যা নিজে থেকে বলবেন না — শুধু generic-level পরামর্শ দেবেন, dose সবসময় app-এর নিজস্ব verified database থেকে আসে, আপনার থেকে নয়।
+- কখনো কোনো medicine-এর dose/frequency/duration/সংখ্যা কোনো নির্দিষ্ট পরিবার-সদস্যের জন্য ব্যক্তিগতভাবে/প্রেসক্রাইব-এর ঢঙে নিজে থেকে বলবেন না — dose সবসময় app-এর নিজস্ব verified database থেকে আসে, আপনার থেকে নয়। **ব্যতিক্রম (owner-approved, ২০২৬-০৯-১২):** তিনটা সাধারণ-আলোচনা চ্যাটে — Medical Science ("medical-science"), Herbal/Homeopathy ("herbal-homeopathy"), Nutrition/Fitness ("nutrition-fitness") — নিচে specialty-note-এ বর্ণিত মাত্রায় dose/practice-related তথ্য খোলামেলা আলোচনা অনুমোদিত। এটাও কখনো কোনো বাস্তব সদস্যের জন্য ব্যক্তিগত নির্দেশনা হিসেবে নয়, শুধু সাধারণ/শিক্ষামূলক আলোচনা হিসেবে।
 - chronic disease (ডায়াবেটিস/উচ্চ রক্তচাপ/থাইরয়েড/কিডনি)-এর existing medicine-এর dose পরিবর্তন/বন্ধ করার পরামর্শ কখনো দেবেন না।
 - কোনো ঔষধ prescribe/suggest করার সময় সংখ্যাসূচক dose উল্লেখ করবেন না।
 - আনুষ্ঠানিক "Prescription" জারি করবেন না — এটা "AI Health Guidance", প্রতিস্থাপন নয়, ডাক্তারের বিকল্প নয়।
@@ -361,20 +361,37 @@ const SPECIALTY_NOTES = {
     "প্রাসঙ্গিক specialty context: প্রশ্নটি জয়েন্ট/হাড়/মাংসপেশি-সম্পর্কিত (Physical Medicine) — movement/lifestyle-সচেতন সাধারণ পরামর্শ দিন। বোঝার জন্য সম্ভাব্য কারণ/condition নিয়ে খোলামেলা আলোচনা করতে পারেন (owner-request, ২০২৬-০৯-১২ — diagnosis-avoidance ভাষা সরানো হয়েছে); শুধু ব্যক্তি-নির্দিষ্ট dose/frequency/duration কখনো বলবেন না, ও severe/red-flag উপসর্গে Symptom Check/ডাক্তার-consult ব্যবহার করতে বলুন।",
   // নতুন (P7, roadmap §11/§11.2) — client-side NutritionGuidance.js এই key
   // সরাসরি সেট করে পাঠায় (keyword-detection না, definitional override)।
+  // নতুন (owner-request, ২০২৬-০৯-১২, পরে সংশোধিত — সম্পূর্ণ উন্মুক্ত করা হলো) —
+  // client-side NutritionGuidance.js এই key সরাসরি সেট করে পাঠায়। owner-এর যুক্তি:
+  // এটা medical-science না, practice/lifestyle-based বিষয় — verified-database-নির্ভরতার
+  // দরকার নেই, তাই কোনো dose/quantity restriction রাখা হয়নি (২০২৬-০৯-১২, সংশোধিত)।
   "nutrition-fitness":
-    "প্রাসঙ্গিক specialty context: প্রশ্নটি সাধারণ nutrition/diet/fitness-সংক্রান্ত (treatment mode/medical diagnosis না) — সরকারি/professional সোর্স-ভিত্তিক সাধারণ lifestyle guidance দিন, কোনো medicine/dose/supplement-ডোজ উল্লেখ করবেন না, existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং জটিল/মেডিকেল প্রশ্নে ডাক্তার/nutritionist-consult এর পরামর্শ দিন।",
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি nutrition/diet/fitness-সংক্রান্ত সাধারণ-আলোচনা চ্যাট — এটা medical-science treatment-mode না, practice/lifestyle-based বিষয়। **সম্পূর্ণ উন্মুক্ত আলোচনা অনুমোদিত (owner-approved, ২০২৬-০৯-১২):** diet plan, exercise routine, supplement/vitamin-এর সাধারণ dose/quantity/timing, meal-plan, ইত্যাদি সব বিষয়ে বিস্তারিত, কোনো সংখ্যাসূচক-restriction ছাড়াই আলোচনা করতে পারেন। শুধু existing chronic condition/allergy থাকলে সেটা বিবেচনায় রেখে সতর্ক থাকুন এবং সত্যিকার জটিল/চিকিৎসা-প্রয়োজনীয় (medicine-জাতীয়, prescription-drug) প্রশ্ন এলে সেটা Medical Science/ডাক্তার-পরামর্শে পাঠান।",
   // নতুন (owner-request, ২০২৬-০৯-১২) — client-side HerbalHomeopathyChat.js এই key
   // সরাসরি সেট করে পাঠায় (nutrition-fitness-এর মতোই definitional override)।
+  // নতুন (owner-request, ২০২৬-০৯-১২, পরে সংশোধিত — সম্পূর্ণ উন্মুক্ত করা হলো) —
+  // client-side HerbalHomeopathyChat.js এই key সরাসরি সেট করে পাঠায়। owner-এর যুক্তি:
+  // herbal/homeopathy medical-science না, traditional-practice-based বিষয় — verified
+  // dosing-database-নির্ভরতার দরকার নেই, তাই dose/quantity ও efficacy-wording restriction
+  // সরানো হয়েছে (২০২৬-০৯-১২, সংশোধিত)। Evidence-tier badge (RemedyEntry UI, §5.2.1)
+  // এই চ্যাট-এর অংশ না — সেই structured-data display অপরিবর্তিত থাকছে, শুধু এই
+  // conversational-chat-এর ভাষা-নিষেধাজ্ঞা সরানো হলো।
   "herbal-homeopathy":
-    "প্রাসঙ্গিক specialty context: প্রশ্নটি Herbal/ভেষজ বা Homeopathy remedy-সংক্রান্ত। roadmap §12.2.1 Evidence-Level নীতি কঠোরভাবে মানুন: কোনো নির্দিষ্ট dose/quantity/duration বলবেন না (শুধু 'ঐতিহ্যগতভাবে ব্যবহৃত হয়' ধরনের ভাষা, কখনো 'কার্যকর'/'নিরাময় করে'/'প্রমাণিত'/'সমাধান দেয়' শব্দ ব্যবহার করবেন না)। Homeopathy সবসময় evidence-tier 3 (শুধু ঐতিহ্যগত ব্যবহার) হিসেবে উল্লেখ করুন এবং বাধ্যতামূলক disclaimer যোগ করুন যে নিয়ন্ত্রিত বৈজ্ঞানিক পর্যালোচনায় placebo-র তুলনায় অতিরিক্ত কার্যকারিতার প্রমাণ নেই। Herbal remedy-তেও উৎস/evidence-level স্পষ্ট রাখুন। উপসর্গ severe/red-flag বা shortness-of-breath/chest-pain-জাতীয় হলে Medical Science-এ escalate করতে বলুন, herbal/homeopathy কখনো emergency-এর বিকল্প না।",
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি Herbal/ভেষজ বা Homeopathy remedy-সংক্রান্ত সাধারণ-আলোচনা চ্যাট — এটা medical-science treatment-mode না, traditional/practice-based বিষয়। **সম্পূর্ণ উন্মুক্ত আলোচনা অনুমোদিত (owner-approved, ২০২৬-০৯-১২):** remedy/herb-এর dose/quantity/duration, প্রস্তুত-প্রণালী, ব্যবহার-পদ্ধতি, কার্যকারিতা সম্পর্কে traditional/practice-বিশ্বাস — সব বিষয়ে বিস্তারিত, কোনো wording/dose-restriction ছাড়াই আলোচনা করতে পারেন। শুধু উপসর্গ severe/red-flag বা shortness-of-breath/chest-pain-জাতীয় হলে Medical Science-এ escalate করতে বলুন — herbal/homeopathy কখনো emergency-এর বিকল্প না।",
   // নতুন (owner-request, ২০২৬-০৯-১২) — client-side MedicalScienceChat.js এই key
   // সরাসরি সেট করে পাঠায় (herbal-homeopathy/nutrition-fitness-এর মতোই definitional override)।
-  // এটা structured Symptom Check/dose-enforcement flow না — শুধু সাধারণ শিক্ষামূলক আলোচনা,
-  // তাই dose এখানে কঠোরভাবে নিষিদ্ধ রাখা জরুরি (roadmap §12.0/§12.1 bright-line), তবে
-  // owner-request (২০২৬-০৯-১২) অনুযায়ী সম্ভাব্য কারণ/condition নিয়ে সাধারণ আলোচনা/
-  // ব্যাখ্যা করা যাবে (diagnosis-avoidance ভাষা সরানো হয়েছে, শুধু dose-নিষেধাজ্ঞা কঠোর)।
+  // এটা structured Symptom Check/dose-enforcement flow না — শুধু সাধারণ শিক্ষামূলক আলোচনা।
+  // **dose-education relaxation (owner-approved, ২০২৬-০৯-১২, শুধু এই specialty-তেই):**
+  // এই context-এ সাধারণ/typical/টেক্সটবুক-স্তরের dose-range (কোন রোগে কোন জেনেরিক সাধারণত
+  // কী মাত্রায় দেওয়া হয়) শিক্ষামূলক-জ্ঞান হিসেবে বলা অনুমোদিত, disclaimer বাধ্যতামূলক না
+  // (owner-confirmed) — কারণ এটা Symptom-Check-এর মতো কোনো বাস্তব সদস্যের চলমান treatment-এ
+  // ব্যবহৃত হচ্ছে না। এই সংখ্যা detection-layer scanner-এ (নিচে handler-এ) স্পেশাল-কেস করে
+  // block করা হয় না — শুধু এই একটা specialty-তেই, বাকি সব flow-এ scanner অপরিবর্তিত সক্রিয়।
+  // **এখনো সম্পূর্ণ নিষিদ্ধ (এখানেও, কোনো exception নেই):** highRiskFlag medicine-এর dose/
+  // dose-gap আলোচনা (detection-layer scanForHighRiskLeak সবসময় সক্রিয় থাকে) ও chronic-disease
+  // existing-medicine dose-change/বন্ধ করার পরামর্শ।
   "medical-science":
-    "প্রাসঙ্গিক specialty context: প্রশ্নটি Medical Science/এলোপ্যাথি-সংক্রান্ত সাধারণ আলোচনা — এটা structured Symptom-Check/triage flow না। ব্যবহারকারী বুঝতে চাইলে রোগ/condition/উপসর্গের সম্ভাব্য কারণ, ওষুধের কার্যপ্রণালী, ও সাধারণ চিকিৎসা-বিজ্ঞান বিষয়ে খোলামেলা, বিস্তারিত সাধারণ আলোচনা করতে পারেন — শুধু বোঝার জন্য প্রাসঙ্গিক আলোচনা এড়িয়ে যাবেন না। **একমাত্র কঠোর নিষেধাজ্ঞা:** কখনো ব্যক্তি-নির্দিষ্ট dose/frequency/duration/quantity বলবেন না (dose সবসময় শুধু deterministic lookup-database থেকে আসে, এখানে কখনো না)। উপসর্গ severe/red-flag-এর ইঙ্গিত পেলে আলোচনার পাশাপাশি \"Symptom Check\"/ডাক্তার-consult ব্যবহার করতে বলুন।",
+    "প্রাসঙ্গিক specialty context: প্রশ্নটি Medical Science/এলোপ্যাথি-সংক্রান্ত সাধারণ আলোচনা — এটা structured Symptom-Check/triage flow না। ব্যবহারকারী বুঝতে চাইলে রোগ/condition/উপসর্গের সম্ভাব্য কারণ, ওষুধের কার্যপ্রণালী, ও সাধারণ চিকিৎসা-বিজ্ঞান বিষয়ে খোলামেলা, বিস্তারিত সাধারণ আলোচনা করতে পারেন — শুধু বোঝার জন্য প্রাসঙ্গিক আলোচনা এড়িয়ে যাবেন না। **dose-শিক্ষা অনুমোদিত (owner-approved, ২০২৬-০৯-১২):** কোন অসুখে কোন জেনেরিকের সাধারণত/typically কী dose/frequency/duration দেওয়া হয় তা সাধারণ মেডিকেল-জ্ঞান হিসেবে বলতে পারেন — এটা কোনো নির্দিষ্ট বাস্তব পরিবার-সদস্যের জন্য ব্যক্তিগত নির্দেশনা না, শুধু সাধারণ তথ্য। **এখনো কঠোরভাবে নিষিদ্ধ (exception নেই):** কোনো highRiskFlag/controlled-জাতীয় ওষুধের (যেমন Clonazepam) dose/dose-gap/adjustment আলোচনা, এবং chronic-disease (ডায়াবেটিস/থাইরয়েড/উচ্চ-রক্তচাপ ইত্যাদি)-এর existing medicine dose পরিবর্তন/বন্ধ করার পরামর্শ। উপসর্গ severe/red-flag-এর ইঙ্গিত পেলে আলোচনার পাশাপাশি \"Symptom Check\"/ডাক্তার-consult ব্যবহার করতে বলুন।",
 };
 
 // Controlled Web Search (Architecture Plan Part B §6.3.1, roadmap §10.1) —
@@ -1015,7 +1032,16 @@ export default {
         }
 
         const { content, usage, sources } = await callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
-        const doseLeak = scanForDoseLeak(content);
+        // Detection-layer dose-numeric-scanner — শুধু তিনটা সাধারণ-আলোচনা চ্যাটে
+        // (medical-science, herbal-homeopathy, nutrition-fitness) স্কিপ করা হয়
+        // (owner-approved, ২০২৬-০৯-১২ — herbal/nutrition practice-based বিষয় বলে
+        // verified-dosing-database-নির্ভরতা প্রযোজ্য না, তাই সম্পূর্ণ উন্মুক্ত)।
+        // Symptom-Check/Triage flow (এই তিনটা specialty-key কখনো পাঠায় না) সম্পূর্ণ
+        // অপরিবর্তিত/সক্রিয় থাকে — dose সেখানে এখনো শুধু verified DB থেকেই আসে।
+        // highRiskFlag-suppression scanner সব specialty-তেই unconditionally সক্রিয়।
+        const OPEN_DISCUSSION_SPECIALTIES = ["medical-science", "herbal-homeopathy", "nutrition-fitness"];
+        const allowEducationalDose = OPEN_DISCUSSION_SPECIALTIES.includes(payload?.specialty);
+        const doseLeak = allowEducationalDose ? false : scanForDoseLeak(content);
         const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
         const blocked = doseLeak || highRiskLeak;
         const fallbackMessage = highRiskLeak
