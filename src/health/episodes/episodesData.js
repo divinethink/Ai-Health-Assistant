@@ -87,6 +87,20 @@ export async function listMessages(familyId, episodeId) {
   return msgs;
 }
 
+// নতুন (owner-request, ২০২৬-০৯-১২ — Symptom timeline/pattern view, item ১): existing
+// hasAccess()-গেটেড rules-ই যথেষ্ট, নতুন কোনো collection/rules লাগেনি — শুধু client-side
+// read+merge (HealthTimeline-এর buildTimeline()-এর একই pattern, Process Rule ২)।
+export async function listEpisodesForMember(familyId, memberId) {
+  const snap = await episodesCol(familyId).where("memberId", "==", memberId).get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function getTriageResult(familyId, episodeId, triageResultId) {
+  if (!triageResultId) return null;
+  const doc = await episodesCol(familyId).doc(episodeId).collection("triageResults").doc(triageResultId).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
+}
+
 // Archive — data অক্ষত থাকে, পরে reopen সম্ভব (§9 Archive/Delete State Machine)।
 // Delete (২-ধাপ confirm) এই ধাপে scope-এ নেই — শুধু Archive বাস্তবায়িত হলো।
 export async function archiveEpisode(familyId, episodeId, callerMemberId) {
