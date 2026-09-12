@@ -26,6 +26,8 @@ import { AccessGrantRequestsPanel } from "../components/AccessGrantRequestsPanel
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
 import { MedicationReminders } from "../health/records/MedicationReminders.js";
+import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
+import { FamilyHealthCalendar } from "../health/calendar/FamilyHealthCalendar.js";
 import { DocumentsSection } from "../health/documents/DocumentsSection.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 import { TriageForm } from "../health/triage/TriageForm.js";
@@ -74,6 +76,8 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(MedicationReminders, { key: "med-reminders" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(VaccinationScheduler, { key: "vaccination" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(FamilyHealthCalendar, { key: "family-calendar" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
