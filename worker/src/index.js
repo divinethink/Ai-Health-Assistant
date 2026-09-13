@@ -16,6 +16,8 @@
 // Endpoints:
 //   POST /upload-auth  { idToken, familyId, docId } -> { cloudName, apiKey, timestamp, signature, publicId, folder }
 //   POST /delete        { idToken, familyId, docId } -> { ok: true }
+//   POST /doctor-upload-auth { idToken, familyId, doctorId } -> same shape (Doctor Details visiting-card)
+//   POST /doctor-delete       { idToken, familyId, doctorId } -> { ok: true }
 //   POST /ai-chat        { idToken, familyId, payload, conversationHistory, ageYears? } -> { content, blocked, usage }
 
 import { jwtVerify, createRemoteJWKSet } from "jose";
@@ -968,6 +970,57 @@ export default {
         const doc = await getRes.json();
         const fields = fsFieldsToPlain(doc.fields);
         const publicId = fields.cloudinaryPublicId || docId;
+        const resourceType = fields.cloudinaryResourceType || "image";
+
+        const delRes = await fetch(docUrl, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
+        if (!delRes.ok) return json(env, { error: "forbidden" }, 403);
+
+        const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
+        const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${resourceType}/upload?public_ids[]=${encodeURIComponent(publicId)}`;
+        await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+
+        return json(env, { ok: true });
+      }
+
+      // Doctor Details & Visiting Card (নতুন, owner-request ২০২৬-০৯-১৩) —
+      // documents-এর /upload-auth ও /delete-এর হুবহু একই permission-verification
+      // pattern (caller-এর idToken দিয়ে Firestore REST GET/DELETE, rules-ই
+      // সিদ্ধান্ত নেয়) — শুধু collection path ও Cloudinary folder আলাদা।
+      if (request.method === "POST" && url.pathname === "/doctor-upload-auth") {
+        const { idToken, familyId, doctorId } = await request.json();
+        if (!idToken || !familyId || !doctorId) return json(env, { error: "missing-params" }, 400);
+
+        const docPath = `families/${familyId}/doctors/${doctorId}`;
+        const getRes = await fetch(firestoreDocUrl(env, docPath), {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (!getRes.ok) return json(env, { error: "forbidden" }, 403);
+
+        const timestamp = Math.floor(Date.now() / 1000);
+        const folder = `health-doctors/${familyId}`;
+        const publicId = doctorId;
+        const toSign = `folder=${folder}&public_id=${publicId}&timestamp=${timestamp}${env.CLOUDINARY_API_SECRET}`;
+        const signature = await sha1Hex(toSign);
+
+        return json(env, {
+          cloudName: env.CLOUDINARY_CLOUD_NAME,
+          apiKey: env.CLOUDINARY_API_KEY,
+          timestamp, signature, publicId, folder,
+        });
+      }
+
+      if (request.method === "POST" && url.pathname === "/doctor-delete") {
+        const { idToken, familyId, doctorId } = await request.json();
+        if (!idToken || !familyId || !doctorId) return json(env, { error: "missing-params" }, 400);
+
+        const docPath = `families/${familyId}/doctors/${doctorId}`;
+        const docUrl = firestoreDocUrl(env, docPath);
+
+        const getRes = await fetch(docUrl, { headers: { Authorization: `Bearer ${idToken}` } });
+        if (!getRes.ok) return json(env, { error: "not-found-or-forbidden" }, 404);
+        const doc = await getRes.json();
+        const fields = fsFieldsToPlain(doc.fields);
+        const publicId = fields.cloudinaryPublicId || doctorId;
         const resourceType = fields.cloudinaryResourceType || "image";
 
         const delRes = await fetch(docUrl, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
