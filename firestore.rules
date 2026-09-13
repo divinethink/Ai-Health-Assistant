@@ -563,6 +563,28 @@ service cloud.firestore {
           && isFamilyMember(familyId)
           && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
       }
+
+      // নতুন — Doctor Details & Visiting Card (owner-request, ২০২৬-০৯-১৩)। পুরো
+      // পরিবারের জন্য common reference directory, কোনো নির্দিষ্ট member/condition-এর
+      // সাথে bound না — তাই healthCalendarEvents-এর হুবহু একই family-wide
+      // open-read, creator/Admin-write pattern reuse (Condition.treatingPhysician
+      // থেকে ইচ্ছাকৃতভাবে independent collection, কারণ এটা কোনো নির্দিষ্ট
+      // Condition-bound না)। Visiting-card ছবি Cloudinary-তে; upload/delete
+      // signature Worker দিয়ে verify হয় (documents-এর হুবহু pattern —
+      // /doctor-upload-auth ও /doctor-delete endpoint, worker/src/index.js দ্রষ্টব্য)।
+      match /doctors/{doctorId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+        allow create: if request.auth != null
+          && isFamilyMember(familyId)
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow update: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId))
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow delete: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
+      }
     }
   }
 }
