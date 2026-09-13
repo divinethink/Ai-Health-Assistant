@@ -39,6 +39,7 @@ import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { DoctorExportSection } from "../health/doctor-export/DoctorExportSection.js";
 import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
+import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -48,9 +49,17 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   // full-screen special UI (নতুন, এই থ্রেড)। toggle true হলে পুরো Dashboard-এর
   // বদলে GeneralChatSection render হয় (onExit দিয়ে ফিরে আসা যায়)।
   const [showGeneralChat, setShowGeneralChat] = useState(false);
+  // Health ব্লগ — General Chat-এর মতোই একটা normal বাটনে ক্লিক করলে খোলা
+  // full-screen special mode (owner-request, ২০২৬-০৯-১৩)। Admin-only না —
+  // ব্লগ পড়া সব family member-এর জন্য open (শুধু "+ নতুন লেখা" ভেতরে admin-gated)।
+  const [showHealthBlog, setShowHealthBlog] = useState(false);
 
   if (isAdmin && showGeneralChat) {
     return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
+  }
+
+  if (showHealthBlog) {
+    return React.createElement(WellnessGuideSection, { familyId, isAdmin, onExit: () => setShowHealthBlog(false) });
   }
 
   return Card(
@@ -69,6 +78,13 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         },
         "🌐 General Chat"
       ),
+      React.createElement(
+        "button", {
+          onClick: () => setShowHealthBlog(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "🌿 স্বাস্থ্য ব্লগ"
+      ),
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
       React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
@@ -79,12 +95,12 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(VaccinationScheduler, { key: "vaccination" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(FamilyHealthCalendar, { key: "family-calendar" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
+      React.createElement(DoctorDetailsSection, { key: "doctor-details" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(MedicalScienceChat, { key: "medical-science" + refreshTick, familyId }),
       React.createElement(RemedySection, { key: "remedy" + refreshTick, familyId }),
       React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
-      React.createElement(WellnessGuideSection, { key: "wellness-guide" + refreshTick, familyId, isAdmin }),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
       React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
       React.createElement(DoctorExportSection, { key: "doctor-export" + refreshTick, familyId, callerMemberId: memberId }),
