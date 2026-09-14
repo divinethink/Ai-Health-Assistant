@@ -13,8 +13,32 @@ import { WellnessGuideForm } from "./WellnessGuideForm.js";
 
 const { useState, useEffect } = React;
 
+// Read-More marker (owner-request, ২০২৬-০৯-১৩) — WordPress-এর "Insert More
+// Tag"-এর মতো: লেখক body-টেক্সটের যেখানে `[MORE]` বসাবেন, প্রিভিউ ঠিক সেই
+// বিন্দু পর্যন্ত দেখাবে, বাকিটা "আরো পড়ুন"-এ ক্লিকে খুলবে। আগের আলাদা
+// "সংক্ষিপ্ত সারাংশ" ফিল্ড আর ব্যবহার হচ্ছে না (নতুন পোস্টে ফর্ম থেকেই বাদ) —
+// কিন্তু পুরনো পোস্টে থাকা `summary` ডেটা fallback হিসেবে অক্ষত থাকল (data-loss
+// নেই, Process Rule ৩)।
+const MORE_MARKER = "[MORE]";
+
+function splitBodyAtMarker(body) {
+  const idx = (body || "").indexOf(MORE_MARKER);
+  if (idx === -1) return null;
+  return {
+    preview: body.slice(0, idx).trim(),
+    rest: body.slice(idx + MORE_MARKER.length).trim(),
+  };
+}
+
 function PostCard({ post, expanded, onToggle, isAdmin, onEdit, onDelete }) {
   const rangeLabel = formatAgeOrMonthRange(post);
+  const split = splitBodyAtMarker(post.body);
+  // marker থাকলে preview = marker-এর আগের অংশ; না থাকলে পুরনো summary
+  // fallback (থাকলে); কোনোটাই না থাকলে preview নেই — শুধু ক্লিক করলে খুলবে।
+  const previewText = split ? split.preview : post.summary || null;
+  const remainingText = split ? split.rest : post.body;
+  const hasMore = !!split || !!post.summary;
+
   return React.createElement(
     "div", { key: post.id, style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px", marginBottom: "8px" } },
     React.createElement(
@@ -24,11 +48,15 @@ function PostCard({ post, expanded, onToggle, isAdmin, onEdit, onDelete }) {
         "div", { style: { fontSize: "11px", color: "#888", marginTop: "2px" } },
         (rangeLabel ? rangeLabel + " · " : "") + (post.tags || []).join(", ")
       ),
-      post.summary && React.createElement("div", { style: { fontSize: "12px", color: "#555", marginTop: "6px" } }, post.summary)
+      previewText && React.createElement("div", { style: { fontSize: "12px", color: "#555", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
+      !expanded && hasMore && React.createElement(
+        "span", { style: { fontSize: "12px", color: "#0E4B43", fontWeight: 600, marginTop: "4px", display: "inline-block" } },
+        "আরো পড়ুন »"
+      )
     ),
     expanded && React.createElement(
       "div", { style: { fontSize: "13px", color: "#333", marginTop: "10px", whiteSpace: "pre-wrap", borderTop: "1px solid #EEE", paddingTop: "8px" } },
-      post.body,
+      remainingText,
       post.sourceNote && React.createElement("div", { style: { fontSize: "11px", color: "#999", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
     ),
     isAdmin && React.createElement(
