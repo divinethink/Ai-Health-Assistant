@@ -9,9 +9,11 @@
 // এখন শুধু top-level App() state/wiring ও Dashboard composition থাকে (Process
 // ফাইল Rule ১১: state/business-logic core-layer-এ, UI presentational)।
 //
-// এই থ্রেডে নতুন — Take-Access/AccessGrant UI (Architecture Plan §11.1/§11.2):
-// MemberList এখন সবার জন্য visible (Member Roster open, §3.4.3), এবং
-// NotificationsPanel + AccessGrantRequestsPanel Dashboard-এ যোগ হলো।
+// MemberList সবার জন্য visible (Member Roster open, §3.4.3), NotificationsPanel
+// Dashboard-এ আছে। Owner-Controlled Profile Permission (amendment item ২) —
+// আগের Take-Access request→approve UI (AccessGrantRequestsPanel) সরানো হয়েছে;
+// এখন MemberList.js-এর ভেতরেই সরাসরি per-member Read/Write checkbox দিয়ে
+// owner নিজে সরাসরি sharing নিয়ন্ত্রণ করেন।
 
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox } from "../shared/ui.js";
@@ -22,7 +24,6 @@ import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { JoinRequestGate } from "../components/JoinRequestGate.js";
 import { AccessRequestsPanel } from "../components/AccessRequestsPanel.js";
-import { AccessGrantRequestsPanel } from "../components/AccessGrantRequestsPanel.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
 import { MedicationReminders } from "../health/records/MedicationReminders.js";
@@ -122,7 +123,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
       React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
-      React.createElement(AccessGrantRequestsPanel, { key: "ag" + refreshTick, familyId, myMemberId: memberId, myName: memberDoc.name }),
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
       React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(MedicationReminders, { key: "med-reminders" + refreshTick, familyId, callerMemberId: memberId }),
