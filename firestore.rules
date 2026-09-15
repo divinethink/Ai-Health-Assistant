@@ -64,6 +64,38 @@ service cloud.firestore {
             && existsApprovedGrant(familyId, targetMemberId, callerMemberId));
     }
 
+    // Owner-Controlled Profile Permission (amendment item ২,
+    // 1_1_1_1_Health_Assistant_Amendment_Plan_DRAFT.md) — নতুন `profileShares`
+    // collection দিয়ে প্রতিটা সদস্য নিজের প্রোফাইলে read/write আলাদাভাবে ঠিক
+    // করতে পারবেন, কোনো request/approve workflow ছাড়াই। **পুরনো accessGrants
+    // (Take-Access, Thread 13-14 pattern) সম্পূর্ণ অক্ষত/অপরিবর্তিত রইলো** —
+    // existsApprovedGrant() আগের মতোই কাজ করে, তাই আগের সব approved grant
+    // (structural Parent-Child<18 সহ, ও পুরনো peer-to-peer approved grant)
+    // backward-compatible থাকে, কোনো migration/data-touch লাগেনি। নিচের
+    // create/update rule branch-গুলোতে শুধু নতুন **pending self-request**
+    // তৈরির পথ বন্ধ করা হয়েছে (§accessGrants match-block-এ, নিচে) — যাতে
+    // owner-এর অনুমতি ছাড়া কেউ নিজে থেকে access "claim/request" করতে না পারে।
+    function hasProfileShareFlag(familyId, targetMemberId, callerMemberId, flag) {
+      let sharePath = /databases/$(database)/documents/families/$(familyId)/profileShares/$(targetMemberId + '_' + callerMemberId);
+      return exists(sharePath) && (flag in get(sharePath).data) && get(sharePath).data[flag] == true;
+    }
+
+    function hasReadAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && (existsApprovedGrant(familyId, targetMemberId, callerMemberId)
+                || hasProfileShareFlag(familyId, targetMemberId, callerMemberId, 'read')));
+    }
+
+    function hasWriteAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && (existsApprovedGrant(familyId, targetMemberId, callerMemberId)
+                || hasProfileShareFlag(familyId, targetMemberId, callerMemberId, 'write')));
+    }
+
     function hasDeleteAccess(familyId, targetMemberId) {
       return isAdminOfFamily(familyId) || isOwnerOfMember(familyId, targetMemberId);
     }
@@ -413,17 +445,16 @@ service cloud.firestore {
       }
 
       match /accessGrants/{grantId} {
+        // Owner-Controlled Permission amendment (item ২) — নতুন peer-to-peer
+        // "pending self-request" create/approve/deny/re-request branch-গুলো
+        // ইচ্ছাকৃতভাবে সরানো হলো (নিচে দ্রষ্টব্য) — এখন থেকে non-structural
+        // access শুধু owner নিজে `profileShares`-এ সেট করবেন, কেউ নিজে থেকে
+        // request পাঠাতে পারবেন না। **পুরনো approved peer-grant (যদি থাকে)
+        // অক্ষত থাকে ও কাজ করে চলে** (existsApprovedGrant() অপরিবর্তিত) —
+        // শুধু কোনো নতুন pending-request তৈরি সম্ভব না। Structural
+        // Parent-Child(<18) grant create/cancel/re-approve/revocable-flip
+        // (Admin-driven) সম্পূর্ণ অপরিবর্তিত।
         allow read: if request.auth != null && isFamilyMember(familyId);
-
-        allow create: if request.auth != null
-          && isFamilyMember(familyId)
-          && isOwnerOfMember(familyId, request.resource.data.granteeId)
-          && request.resource.data.keys().hasOnly(
-               ['granterId', 'granteeId', 'scope', 'relationshipType', 'status', 'revocable', 'grantedAt', 'createdAt'])
-          && request.resource.data.scope == 'read+write'
-          && request.resource.data.status == 'pending'
-          && 'createdAt' in request.resource.data
-          && request.resource.data.createdAt is timestamp;
 
         allow create: if request.auth != null
           && isAdminOfFamily(familyId)
@@ -434,13 +465,9 @@ service cloud.firestore {
           && request.resource.data.relationshipType == 'parent-child'
           && request.resource.data.revocable == false;
 
-        allow update: if request.auth != null
-          && isFamilyMember(familyId)
-          && isOwnerOfMember(familyId, resource.data.granterId)
-          && resource.data.status == 'pending'
-          && request.resource.data.status in ['approved', 'denied']
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'grantedAt']);
-
+        // পুরনো approved peer-grant (revocable:true) — owner বা grantee
+        // যেকোনো পক্ষ থেকে cancel করা যাবে, যাতে পুরনো data-owner চাইলে
+        // legacy access সরিয়ে নতুন profileShares-এ migrate করতে পারেন।
         allow update: if request.auth != null
           && isFamilyMember(familyId)
           && (isOwnerOfMember(familyId, resource.data.granterId) || isOwnerOfMember(familyId, resource.data.granteeId))
@@ -448,18 +475,6 @@ service cloud.firestore {
           && resource.data.revocable == true
           && request.resource.data.status == 'cancelled'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy']);
-
-        allow update: if request.auth != null
-          && resource.data.status == 'pending'
-          && resource.data.granteeId == callerMemberIdOf(familyId)
-          && request.resource.data.status == 'cancelled'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy']);
-
-        allow update: if request.auth != null
-          && resource.data.status in ['denied', 'cancelled']
-          && resource.data.granteeId == callerMemberIdOf(familyId)
-          && request.resource.data.status == 'pending'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'grantedAt', 'cancelledAt', 'cancelledBy']);
 
         allow update: if request.auth != null
           && isAdminOfFamily(familyId)
@@ -487,17 +502,48 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Owner-Controlled Profile Permission — নতুন collection (amendment item ২)।
+      // doc-ID deterministic `{ownerId}_{granteeId}` — accessGrants-এর একই
+      // O(1)-lookup pattern। শুধু ownerId নিজেই create/update/delete করতে
+      // পারবেন (granteeId কখনো নিজে কিছু লিখতে পারবেন না — one-directional
+      // owner-control, কোনো approval/pending-state নেই)।
+      match /profileShares/{shareId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+
+        allow create: if request.auth != null
+          && request.resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, request.resource.data.ownerId)
+          && request.resource.data.ownerId != request.resource.data.granteeId
+          && shareId == request.resource.data.ownerId + '_' + request.resource.data.granteeId
+          && request.resource.data.keys().hasOnly(['ownerId', 'granteeId', 'read', 'write', 'updatedAt'])
+          && request.resource.data.read is bool
+          && request.resource.data.write is bool;
+
+        allow update: if request.auth != null
+          && resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, resource.data.ownerId)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.granteeId == resource.data.granteeId
+          && request.resource.data.keys().hasOnly(['ownerId', 'granteeId', 'read', 'write', 'updatedAt'])
+          && request.resource.data.read is bool
+          && request.resource.data.write is bool;
+
+        allow delete: if request.auth != null
+          && resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, resource.data.ownerId);
+      }
+
       match /healthRecords/{id} {
         allow read: if request.auth != null
-          && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
         allow create: if request.auth != null
           && request.resource.data.resourceType in
              ['condition', 'observation', 'medicationStatement', 'allergy']
-          && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId
           && request.resource.data.resourceType == resource.data.resourceType
-          && hasAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
@@ -512,40 +558,40 @@ service cloud.firestore {
       // অর্থাৎ Worker কোনো permission-logic ডুপ্লিকেট করে না।
       match /documents/{id} {
         allow read: if request.auth != null
-          && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
         allow create: if request.auth != null
-          && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId
-          && hasAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
       match /healthEpisodes/{episodeId} {
         allow read: if request.auth != null
-          && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
         allow create: if request.auth != null
-          && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId
-          && hasAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if false;
 
         match /triageResults/{triageId} {
           allow read: if request.auth != null
-            && hasAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+            && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
           allow create: if request.auth != null
-            && hasAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+            && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
           allow update, delete: if false;
         }
 
         match /messages/{messageId} {
           allow read: if request.auth != null
-            && hasAccess(familyId,
+            && hasReadAccess(familyId,
                  get(/databases/$(database)/documents/families/$(familyId)/healthEpisodes/$(episodeId)).data.memberId,
                  callerMemberIdOf(familyId));
           allow create: if request.auth != null
-            && hasAccess(familyId,
+            && hasWriteAccess(familyId,
                  get(/databases/$(database)/documents/families/$(familyId)/healthEpisodes/$(episodeId)).data.memberId,
                  callerMemberIdOf(familyId));
           allow update, delete: if false;
