@@ -28,18 +28,14 @@ import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js"
 import { MedicationReminders } from "../health/records/MedicationReminders.js";
 import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
 import { FamilyHealthCalendar } from "../health/calendar/FamilyHealthCalendar.js";
-import { DocumentsSection } from "../health/documents/DocumentsSection.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
-import { TriageForm } from "../health/triage/TriageForm.js";
-import { MedicalScienceChat } from "../health/treatment-modes/MedicalScienceChat.js";
-import { RemedySection } from "../health/treatment-modes/RemedySection.js";
-import { NutritionGuidance } from "../health/nutrition-fitness/NutritionGuidance.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
-import { DoctorExportSection } from "../health/doctor-export/DoctorExportSection.js";
 import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
+import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
+import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -53,13 +49,30 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   // full-screen special mode (owner-request, ২০২৬-০৯-১৩)। Admin-only না —
   // ব্লগ পড়া সব family member-এর জন্য open (শুধু "+ নতুন লেখা" ভেতরে admin-gated)।
   const [showHealthBlog, setShowHealthBlog] = useState(false);
+  // AI চ্যাট + Documents — Full-page System (amendment item ৪, P11
+  // precondition)। GeneralChat/HealthBlog-এর একই toggle-pattern।
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
+  const [showDoctorDetails, setShowDoctorDetails] = useState(false);
 
   if (isAdmin && showGeneralChat) {
     return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
   }
 
   if (showHealthBlog) {
-    return React.createElement(WellnessGuideSection, { familyId, isAdmin, onExit: () => setShowHealthBlog(false) });
+    return React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: () => setShowHealthBlog(false) });
+  }
+
+  if (showAIChat) {
+    return React.createElement(AIChatSection, { familyId, callerMemberId: memberId, onExit: () => setShowAIChat(false) });
+  }
+
+  if (showDocuments) {
+    return React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, onExit: () => setShowDocuments(false) });
+  }
+
+  if (showDoctorDetails) {
+    return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
 
   return Card(
@@ -85,6 +98,27 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         },
         "🌿 স্বাস্থ্য ব্লগ"
       ),
+      React.createElement(
+        "button", {
+          onClick: () => setShowAIChat(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "🩺 AI চ্যাট"
+      ),
+      React.createElement(
+        "button", {
+          onClick: () => setShowDocuments(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "📁 Documents"
+      ),
+      React.createElement(
+        "button", {
+          onClick: () => setShowDoctorDetails(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"
+      ),
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
       React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
@@ -94,16 +128,9 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       React.createElement(MedicationReminders, { key: "med-reminders" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(VaccinationScheduler, { key: "vaccination" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(FamilyHealthCalendar, { key: "family-calendar" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(DocumentsSection, { key: "doc" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(DoctorDetailsSection, { key: "doctor-details" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(TriageForm, { key: "triage" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(MedicalScienceChat, { key: "medical-science" + refreshTick, familyId }),
-      React.createElement(RemedySection, { key: "remedy" + refreshTick, familyId }),
-      React.createElement(NutritionGuidance, { key: "nutrition" + refreshTick, familyId }),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
       React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
-      React.createElement(DoctorExportSection, { key: "doctor-export" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
         "P3 চলছে — Symptom Check/Triage, AI Guidance, Health Episode session-save (§9), ও Rate-Limit retry (§10.2.2) যোগ হয়েছে।"
