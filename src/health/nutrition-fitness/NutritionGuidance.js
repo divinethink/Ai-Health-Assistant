@@ -18,6 +18,7 @@ import { SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
+import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
 
 const { useState, useEffect } = React;
 
@@ -30,6 +31,7 @@ export function NutritionGuidance({ familyId }) {
   const [response, setResponse] = useState(null);
   const [err, setErr] = useState(null);
   const [retryNote, setRetryNote] = useState(null);
+  const [dietGuidance, setDietGuidance] = useState(null); // { avoidFoods, includeFoods } — গ্রাউন্ডিং, শুধু display+AI-context-এর জন্য
 
   useEffect(() => {
     listMembers(familyId)
@@ -44,6 +46,7 @@ export function NutritionGuidance({ familyId }) {
     setTargetMemberId(id);
     setResponse(null);
     setErr(null);
+    setDietGuidance(null);
   }
 
   async function handleAsk() {
@@ -56,6 +59,29 @@ export function NutritionGuidance({ familyId }) {
     try {
       const { context, ageYears } = await assembleHealthContext(familyId, targetMemberId, null, { symptoms: text });
       context.specialty = "nutrition-fitness"; // দেখুন উপরের নোট — keyword-detection বাইপাস, definitional override
+
+      // Diet/Food Guidance grounding (amendment item ১) — member-এর
+      // relevantConditions/relevantAllergies (ইতিমধ্যে context-এ derive হওয়া,
+      // নতুন PII না) দিয়ে avoid/include food-list lookup। lookup ব্যর্থ হলে
+      // soft-fail — AI-flow অপ্রভাবিত থাকে (medicineDatabase lookup-এর মতোই
+      // safe-default: কিছুই পাওয়া না গেলে dietGuidanceContext পাঠানো হয় না)।
+      let guidance = null;
+      try {
+        const allRules = await listVerifiedDietGuidanceRules();
+        const tags = [
+          ...(context.relevantClinicalContext.relevantConditions || []),
+          ...(context.relevantClinicalContext.relevantAllergies || []),
+        ];
+        const matched = matchDietGuidanceForTags(allRules, tags);
+        if (matched.avoidFoods.length || matched.includeFoods.length) {
+          guidance = matched;
+          context.dietGuidanceContext = { avoidFoods: matched.avoidFoods, includeFoods: matched.includeFoods };
+        }
+      } catch (ge) {
+        guidance = null; // soft-fail, AI-flow চলতেই থাকবে
+      }
+      setDietGuidance(guidance);
+
       const data = await askAI(familyId, context, [], {
         onRetry: (attempt, max) => setRetryNote("একটু অপেক্ষা করুন... (retry " + attempt + "/" + max + ")"),
         ageYears,
@@ -94,6 +120,21 @@ export function NutritionGuidance({ familyId }) {
     PrimaryButton("পরামর্শ নিন", handleAsk, loading),
     retryNote && React.createElement("div", { style: { fontSize: "11px", color: "#7A5B00", marginTop: "4px" } }, retryNote),
     err && React.createElement("div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "8px" } }, "AI response পাওয়া যায়নি: " + err),
+
+    // Diet Guidance grounding card (amendment item ১) — deterministic reference-
+    // list, AI-generated না; transparency-এর জন্য AI response-এর আগে দেখানো হয়।
+    dietGuidance && (dietGuidance.avoidFoods.length > 0 || dietGuidance.includeFoods.length > 0) && React.createElement(
+      "div", { style: { marginTop: "12px", background: "#FBF7EC", padding: "12px", borderRadius: "8px", border: "1px solid #E8DDBB" } },
+      React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: "#7A5B00", marginBottom: "6px" } }, "আপনার স্বাস্থ্য-তথ্য অনুযায়ী খাদ্য নির্দেশিকা (রেফারেন্স)"),
+      dietGuidance.avoidFoods.length > 0 && React.createElement(
+        "div", { style: { fontSize: "12px", color: "#333", marginBottom: "4px" } },
+        React.createElement("b", null, "এড়িয়ে চলুন: "), dietGuidance.avoidFoods.join(", ")
+      ),
+      dietGuidance.includeFoods.length > 0 && React.createElement(
+        "div", { style: { fontSize: "12px", color: "#333" } },
+        React.createElement("b", null, "বেশি রাখুন: "), dietGuidance.includeFoods.join(", ")
+      )
+    ),
 
     response && React.createElement(
       "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
