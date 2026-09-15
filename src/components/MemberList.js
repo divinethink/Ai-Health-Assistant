@@ -1,14 +1,21 @@
 // পরিবারের সদস্য-তালিকা — Member Roster সবার জন্য open (Architecture Plan
 // §3.4.3, grant ছাড়াই basic identity visible), শুধু Key-reveal Admin-only।
-// প্রতি non-self/non-structural row-এ AccessGrantButton (Take-Access, §11.1)।
 // এই থ্রেডে যোগ হলো: Admin-only ✎ আইকন (RelationshipModal, §11.5),
-// relationshipLabel display, guardian-caller-এর জন্য grant-button suppress,
-// এবং ১৮+ revocable-flip check (একবার, member-list load হওয়ার পর)।
+// relationshipLabel display, এবং ১৮+ revocable-flip check (একবার,
+// member-list load হওয়ার পর)।
+//
+// Owner-Controlled Profile Permission (amendment item ২) — আগের
+// request→approve Take-Access বাটন (AccessGrantButton) সরিয়ে প্রতিটা
+// non-self/non-admin row-এ সরাসরি Read/Write checkbox যোগ হলো: এই checkbox
+// দুটো নিয়ন্ত্রণ করে "এই row-এর সদস্য (m) আমার (myMemberId) প্রোফাইলে কী
+// access পাবেন" — direct owner-write, কোনো approval-wait নেই। Structural
+// access (Admin, Parent-Child<18) অপরিবর্তিত/স্বয়ংক্রিয় থাকায় এখানে দেখানো
+// হয় না।
 
 import { ErrorBox } from "../shared/ui.js";
 import { listMembers, fetchMemberKey } from "../legacy/familyIdentity.js";
-import { listOutgoingGrants, requestAccess, cancelPendingRequest, cancelApprovedGrant, checkAndFlip18Transition } from "../legacy/accessGrants.js";
-import { AccessGrantButton } from "./AccessGrantButton.js";
+import { checkAndFlip18Transition } from "../legacy/accessGrants.js";
+import { listMySharesGiven, setProfileShare } from "../legacy/profileShares.js";
 import { RelationshipModal, RELATIONSHIP_OPTIONS } from "./RelationshipModal.js";
 import { HealthProfileModal } from "./HealthProfileModal.js";
 
@@ -20,7 +27,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
   const [members, setMembers] = useState(null);
   const [err, setErr] = useState(null);
   const [revealKey, setRevealKey] = useState({}); // memberId -> key|"loading"
-  const [grants, setGrants] = useState({}); // granterId(targetMemberId) -> outgoing grant doc
+  const [myShares, setMyShares] = useState({}); // granteeId -> { read, write } — আমি কাকে কী দিয়েছি
   const [busyId, setBusyId] = useState(null);
   const [relModalTarget, setRelModalTarget] = useState(null); // Member | null
   const [profileModalTarget, setProfileModalTarget] = useState(null); // Member | null
@@ -29,7 +36,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
   const reload = useCallback(() => {
     listMembers(familyId).then(setMembers).catch((e) => setErr(e.message || String(e)));
     if (myMemberId) {
-      listOutgoingGrants(familyId, myMemberId).then(setGrants).catch(() => {});
+      listMySharesGiven(familyId, myMemberId).then(setMyShares).catch(() => {});
     }
   }, [familyId, myMemberId]);
 
@@ -56,32 +63,45 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
     }
   }, [familyId]);
 
-  const doGrantAction = useCallback(async (fn, targetId) => {
-    setBusyId(targetId);
-    try { await fn(); reload(); }
-    catch (e) { setErr(e.message || String(e)); }
-    finally { setBusyId(null); }
-  }, [reload]);
+  const onToggleShare = useCallback(async (granteeId, field, checked) => {
+    if (!myMemberId) return;
+    setBusyId(granteeId);
+    const current = myShares[granteeId] || { read: false, write: false };
+    const next = { ...current, [field]: checked };
+    // Write ON করলে Read স্বয়ংক্রিয়ভাবে ON (Write without Read অর্থহীন)।
+    // Read OFF করলে Write-ও OFF (Write, Read ছাড়া অর্থহীন)।
+    if (field === "write" && checked) next.read = true;
+    if (field === "read" && !checked) next.write = false;
+    try {
+      await setProfileShare(familyId, myMemberId, granteeId, next);
+      setMyShares((prev) => ({ ...prev, [granteeId]: next }));
+    } catch (e) {
+      setErr(e.message || String(e));
+    } finally {
+      setBusyId(null);
+    }
+  }, [familyId, myMemberId, myShares]);
 
   if (err) return ErrorBox(err);
   if (!members) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
 
-  const myName = (members.find((m) => m.id === myMemberId) || {}).name;
-
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "পরিবারের সদস্য"),
+    myMemberId && React.createElement(
+      "p", { style: { fontSize: "11px", color: "#888", marginTop: "-6px", marginBottom: "8px" } },
+      "প্রতিটা সদস্যের পাশে Read/Write টিক দিয়ে আপনার নিজের প্রোফাইলে তার access সরাসরি ঠিক করুন।"
+    ),
     members.map((m) => {
       const isSelf = m.id === myMemberId;
-      const isGuardianOfThis = Array.isArray(m.guardianMemberIds) && m.guardianMemberIds.includes(myMemberId);
-      // structural access (Admin, বা এই সদস্যের guardian) থাকলে Take-Access বাটন
-      // দেখানো হয় না — দেখালে ভুলবশত ক্লিকে existing approved structural grant
-      // pending-এ re-request হয়ে যেতে পারত (rules-এর re-request branch শুধু
-      // status-field-ই বদলায়, তাই এই suppress না করলে ঝুঁকি ছিল)।
-      const showGrantButton = !isAdmin && !isSelf && !isGuardianOfThis;
-      const grant = grants[m.id];
-      const status = !grant ? "none" : (grant.status === "approved" ? "approved" : (grant.status === "pending" ? "pending-outgoing" : "none"));
+      // structural access (Admin — সবার প্রোফাইলে স্বয়ংক্রিয় access, বা এই
+      // সদস্য আমার guardian — অর্থাৎ আমি m.guardianMemberIds-এ আছি) থাকলে
+      // sharing-checkbox দেখানো হয় না, কারণ সেই access আগে থেকেই স্বয়ংক্রিয়/
+      // non-revocable (Admin/Parent-Child<18, roadmap §3.1.1)।
+      const isMyGuardian = Array.isArray(m.guardianMemberIds) && m.guardianMemberIds.includes(myMemberId);
+      const showShareControls = !isSelf && myMemberId && m.role !== "admin" && !isMyGuardian;
       const relLabel = m.relationshipLabel ? RELATIONSHIP_LABEL_MAP[m.relationshipLabel] : null;
+      const share = myShares[m.id] || { read: false, write: false };
 
       return React.createElement(
         "div", { key: m.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px" } },
@@ -121,12 +141,25 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
                 "Key দেখান"
               )
         ),
-        showGrantButton && React.createElement(AccessGrantButton, {
-          status, busy: busyId === m.id,
-          onRequest: () => doGrantAction(() => requestAccess(familyId, m.id, myMemberId, myName), m.id),
-          onCancelPending: () => doGrantAction(() => cancelPendingRequest(familyId, m.id, myMemberId), m.id),
-          onCancelApproved: () => doGrantAction(() => cancelApprovedGrant(familyId, m.id, myMemberId, myMemberId, myName), m.id),
-        })
+        showShareControls && React.createElement(
+          "div", { style: { marginTop: "6px", display: "flex", alignItems: "center", gap: "14px", opacity: busyId === m.id ? 0.5 : 1 } },
+          React.createElement(
+            "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
+            React.createElement("input", {
+              type: "checkbox", checked: !!share.read, disabled: busyId === m.id,
+              onChange: (e) => onToggleShare(m.id, "read", e.target.checked),
+            }),
+            "আমার প্রোফাইল Read করতে পারবেন"
+          ),
+          React.createElement(
+            "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
+            React.createElement("input", {
+              type: "checkbox", checked: !!share.write, disabled: busyId === m.id,
+              onChange: (e) => onToggleShare(m.id, "write", e.target.checked),
+            }),
+            "Write/Edit করতে পারবেন"
+          )
+        )
       );
     }),
     relModalTarget && React.createElement(RelationshipModal, {
