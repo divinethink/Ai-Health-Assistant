@@ -1053,6 +1053,22 @@ export default {
         // কিছুই inject হবে না, SYSTEM_PROMPT-ই backstop থাকে।
         const specialtyNote = payload?.specialty && SPECIALTY_NOTES[payload.specialty] ? SPECIALTY_NOTES[payload.specialty] : null;
 
+        // Diet/Food Guidance grounding (amendment item ১, non-PII food-name
+        // list — client-side dietGuidanceData.js lookup, Worker কোনো
+        // Firestore call করে না, §6.7 stateless-proxy নীতি অক্ষত) — শুধু
+        // nutrition-fitness specialty-তে, existing specialtyNote-এর সাথে
+        // concat করা হয় (নতুন injection-mechanism না, existing pattern reuse)।
+        let combinedSpecialtyNote = specialtyNote;
+        if (payload?.specialty === "nutrition-fitness" && payload?.dietGuidanceContext) {
+          const { avoidFoods, includeFoods } = payload.dietGuidanceContext;
+          const parts = [];
+          if (Array.isArray(avoidFoods) && avoidFoods.length) parts.push(`এড়িয়ে চলা উচিত: ${avoidFoods.join(", ")}`);
+          if (Array.isArray(includeFoods) && includeFoods.length) parts.push(`বেশি রাখা ভালো: ${includeFoods.join(", ")}`);
+          if (parts.length) {
+            combinedSpecialtyNote = `${specialtyNote || ""}\nএই সদস্যের প্রোফাইল-ভিত্তিক deterministic খাদ্য-রেফারেন্স (app-এর নিজস্ব ডাটাবেস থেকে, আপনার generate করা না) — উত্তরে এটা বিবেচনায় রাখুন, বিরোধিতা করবেন না: ${parts.join("; ")}।`.trim();
+          }
+        }
+
         // Dose Enforcement — Prevention Layer, Option A (উপরে বিস্তারিত কমেন্ট)।
         // ageYears এখানেই শুধু ব্যবহৃত হয় — `payload`-এ কখনো merge করা হয় না,
         // তাই callGroq()-এ পাঠানো JSON.stringify(payload)-এ এটা কখনো যাবে না
@@ -1084,7 +1100,7 @@ export default {
           highRiskContext = false;
         }
 
-        const { content, usage, sources } = await callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
+        const { content, usage, sources } = await callLLM(env, payload, conversationHistory, doseFactNote, combinedSpecialtyNote, useWebSearch);
         // Detection-layer dose-numeric-scanner — শুধু তিনটা সাধারণ-আলোচনা চ্যাটে
         // (medical-science, herbal-homeopathy, nutrition-fitness) স্কিপ করা হয়
         // (owner-approved, ২০২৬-০৯-১২ — herbal/nutrition practice-based বিষয় বলে
