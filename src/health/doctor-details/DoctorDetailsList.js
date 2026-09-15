@@ -7,7 +7,7 @@ const { useState, useEffect, useCallback } = React;
 
 const CATEGORY_LABELS = Object.fromEntries(DOCTOR_CATEGORIES);
 
-export function DoctorDetailsList({ familyId, refreshTick, onEdit, onDeleted }) {
+export function DoctorDetailsList({ familyId, refreshTick, callerMemberId, isAdmin, onEdit, onDeleted }) {
   const [doctors, setDoctors] = useState(null);
   const [err, setErr] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
@@ -38,8 +38,10 @@ export function DoctorDetailsList({ familyId, refreshTick, onEdit, onDeleted }) 
 
   return React.createElement(
     "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" } },
-    doctors.map((d) =>
-      React.createElement(
+    doctors.map((d) => {
+      const canEdit = !!callerMemberId && d.lastEditedByMemberId === callerMemberId;
+      const canDelete = isAdmin || canEdit;
+      return React.createElement(
         "div", { key: d.id, style: { display: "flex", gap: "10px", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px" } },
         d.visitingCardImageUrl && React.createElement("img", {
           src: d.visitingCardImageUrl,
@@ -56,13 +58,13 @@ export function DoctorDetailsList({ familyId, refreshTick, onEdit, onDeleted }) 
             "div", { style: { fontSize: "11px", color: "#B8860B" } },
             "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে ডিলিট করে আবার যোগ করুন।"
           ),
-          React.createElement(
+          (canEdit || canDelete) && React.createElement(
             "div", { style: { display: "flex", gap: "10px", marginTop: "6px" } },
-            React.createElement("button", {
+            canEdit && React.createElement("button", {
               onClick: () => onEdit(d),
               style: { fontSize: "12px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0, fontWeight: 600 },
             }, "✎ এডিট"),
-            confirmId === d.id
+            canDelete && (confirmId === d.id
               ? React.createElement(
                   React.Fragment, null,
                   React.createElement("span", { style: { fontSize: "12px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
@@ -78,10 +80,10 @@ export function DoctorDetailsList({ familyId, refreshTick, onEdit, onDeleted }) 
               : React.createElement("button", {
                   onClick: () => setConfirmId(d.id),
                   style: { fontSize: "12px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
-                }, "🗑 Delete")
+                }, "🗑 Delete"))
           )
         )
-      )
-    )
+      );
+    })
   );
 }
