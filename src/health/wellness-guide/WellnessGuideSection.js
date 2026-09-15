@@ -30,7 +30,7 @@ function splitBodyAtMarker(body) {
   };
 }
 
-function PostCard({ post, expanded, onToggle, isAdmin, onEdit, onDelete }) {
+function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDelete }) {
   const rangeLabel = formatAgeOrMonthRange(post);
   const split = splitBodyAtMarker(post.body);
   // marker থাকলে preview = marker-এর আগের অংশ; না থাকলে পুরনো summary
@@ -59,16 +59,16 @@ function PostCard({ post, expanded, onToggle, isAdmin, onEdit, onDelete }) {
       remainingText,
       post.sourceNote && React.createElement("div", { style: { fontSize: "11px", color: "#999", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
     ),
-    isAdmin && React.createElement(
+    (canEdit || canDelete) && React.createElement(
       "div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
-      React.createElement(
+      canEdit && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onEdit(post); },
           style: { fontSize: "11px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #CBD5E1", background: "#fff", cursor: "pointer" },
         },
         "এডিট"
       ),
-      React.createElement(
+      canDelete && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onDelete(post); },
           style: { fontSize: "11px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
@@ -100,7 +100,7 @@ function CategorySidebar({ category, onSelect }) {
   );
 }
 
-export function WellnessGuideSection({ familyId, isAdmin, onExit }) {
+export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) {
   const [category, setCategory] = useState("all");
   const [posts, setPosts] = useState(null);
   const [err, setErr] = useState(null);
@@ -155,7 +155,7 @@ export function WellnessGuideSection({ familyId, isAdmin, onExit }) {
       style: { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "14px", padding: "4px 8px", borderRadius: "6px", cursor: "pointer" },
     }, "☰"),
     React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px" } }, "🌿 স্বাস্থ্য ব্লগ"),
-    isAdmin && !showForm && !editingPost && React.createElement(
+    !showForm && !editingPost && React.createElement(
       "button", {
         onClick: () => { setEditingPost(null); setShowForm(true); },
         style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600 },
@@ -176,7 +176,7 @@ export function WellnessGuideSection({ familyId, isAdmin, onExit }) {
   const mainContent = React.createElement(
     "div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px" } },
     (showForm || editingPost) && React.createElement(WellnessGuideForm, {
-      familyId, editingPost,
+      familyId, myMemberId, editingPost,
       onSaved: handleSaved,
       onCancel: () => { setShowForm(false); setEditingPost(null); },
     }),
@@ -187,7 +187,8 @@ export function WellnessGuideSection({ familyId, isAdmin, onExit }) {
       React.createElement(PostCard, {
         key: p.id, post: p, expanded: expandedId === p.id,
         onToggle: () => setExpandedId((id) => (id === p.id ? null : p.id)),
-        isAdmin,
+        canEdit: !!myMemberId && p.authorId === myMemberId,
+        canDelete: isAdmin || (!!myMemberId && p.authorId === myMemberId),
         onEdit: (post) => { setShowForm(false); setEditingPost(post); },
         onDelete: (post) => setPendingDelete(post),
       })

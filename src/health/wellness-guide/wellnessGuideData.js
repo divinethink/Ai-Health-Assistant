@@ -1,7 +1,10 @@
 // Wellness Guide (ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা) data-layer।
-// Global, family-independent collection (careEscalationDirectory-এর হুবহু একই
-// pattern) — শুধু owner-run script (populateWellnessGuides.js) দিয়ে
-// populate/edit হয়, client-write নেই (firestore.rules-এ allow write: if false)।
+// User-Owned Content model (amendment item ৩): যেকোনো family member লিখতে
+// পারবেন (authorId = লেখকের memberId), শুধু নিজের লেখা edit করতে পারবেন,
+// delete author বা Admin উভয়েই পারবেন (firestore.rules দ্রষ্টব্য)। পুরনো
+// seed-content (scripts/populateWellnessGuides.js দিয়ে সরাসরি Admin-SDK-তে
+// লেখা, familyId/authorId নেই) অপরিবর্তিত থাকে — সেগুলো শুধু script re-run
+// দিয়েই edit হয়, আগের মতোই।
 
 import { db } from "../../legacy/firebaseConfig.js";
 
@@ -33,14 +36,14 @@ export async function listWellnessGuides(category) {
   return posts;
 }
 
-// ইন-অ্যাপ Admin CRUD (২০২৬-০৯-১২ upgrade) — আগে শুধু owner-run script দিয়েই
-// লেখা যেত, এখন firestore.rules-এ familyId-ভিত্তিক isAdminOfFamily() guard
-// থাকায় Admin সরাসরি অ্যাপ থেকে পোস্ট যোগ/এডিট/ডিলিট করতে পারবেন।
-export async function createWellnessGuide(familyId, fields) {
+// ইন-অ্যাপ CRUD — যেকোনো family member পোস্ট যোগ করতে পারবেন, authorId নিজের
+// memberId হিসেবে বসে (firestore.rules-এ enforce হয়)।
+export async function createWellnessGuide(familyId, authorId, fields) {
   const ref = db.collection("wellnessGuides").doc();
   const now = firebase.firestore.FieldValue.serverTimestamp();
   await ref.set({
     familyId,
+    authorId,
     category: fields.category,
     title: fields.title.trim(),
     summary: fields.summary ? fields.summary.trim() : "",

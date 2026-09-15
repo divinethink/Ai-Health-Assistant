@@ -22,7 +22,7 @@ function TextAreaField(label, value, onChange, placeholder) {
   );
 }
 
-export function WellnessGuideForm({ familyId, editingPost, onSaved, onCancel }) {
+export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, onCancel }) {
   const isEdit = !!editingPost;
   const [category, setCategory] = useState(editingPost ? editingPost.category : WELLNESS_CATEGORIES[0][0]);
   const [title, setTitle] = useState("");
@@ -68,17 +68,17 @@ export function WellnessGuideForm({ familyId, editingPost, onSaved, onCancel }) 
       if (isEdit) {
         await updateWellnessGuide(editingPost.id, fields);
       } else {
-        await createWellnessGuide(familyId, fields);
+        await createWellnessGuide(familyId, myMemberId, fields);
         setTitle(""); setBody(""); setTagsText("");
         setAgeMin(""); setAgeMax(""); setMonthMin(""); setMonthMax(""); setSourceNote("");
       }
       onSaved();
     } catch (e) {
-      setErr(e.code === "permission-denied" ? "শুধু Admin নতুন পোস্ট যোগ/এডিট করতে পারবেন।" : (e.message || String(e)));
+      setErr(e.code === "permission-denied" ? "শুধু নিজের লেখা এডিট করা যাবে।" : (e.message || String(e)));
     } finally {
       setBusy(false);
     }
-  }, [familyId, category, title, body, tagsText, ageMin, ageMax, monthMin, monthMax, sourceNote, needsAgeRange, needsMonthRange, isEdit, editingPost, onSaved]);
+  }, [familyId, myMemberId, category, title, body, tagsText, ageMin, ageMax, monthMin, monthMax, sourceNote, needsAgeRange, needsMonthRange, isEdit, editingPost, onSaved]);
 
   return React.createElement(
     "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
