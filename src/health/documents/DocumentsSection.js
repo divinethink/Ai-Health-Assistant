@@ -2,7 +2,7 @@
 // pattern reuse। Permission enforcement সবসময় server-side rules (firestore.rules +
 // storage.rules) করে — এই picker শুধু UI-convenience (Process Rule ৪)।
 
-import { ErrorBox, SelectField } from "../../shared/ui.js";
+import { ErrorBox, SelectField, CollapsibleSection } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
@@ -34,14 +34,20 @@ export function DocumentsSection({ familyId, callerMemberId }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Documents / Reports"),
     SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
-    React.createElement(DocumentUploadForm, {
-      key: "upload-" + targetMemberId,
-      familyId, targetMemberId, callerMemberId,
-      onUploaded: () => setRefreshTick((t) => t + 1),
+    React.createElement(CollapsibleSection, {
+      title: "📎 নতুন Document/Report যোগ করুন", defaultOpen: false,
+      children: React.createElement(DocumentUploadForm, {
+        key: "upload-" + targetMemberId,
+        familyId, targetMemberId, callerMemberId,
+        onUploaded: () => setRefreshTick((t) => t + 1),
+      }),
     }),
-    React.createElement(ReportAnalysisPanel, {
-      key: "analyze-" + targetMemberId,
-      familyId, targetMemberId, callerMemberId,
+    React.createElement(CollapsibleSection, {
+      title: "🔬 রিপোর্ট বিশ্লেষণ করুন (AI/OCR)", defaultOpen: false,
+      children: React.createElement(ReportAnalysisPanel, {
+        key: "analyze-" + targetMemberId,
+        familyId, targetMemberId, callerMemberId,
+      }),
     }),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,

@@ -1,15 +1,27 @@
 // Documents — Full-page wrapper (amendment item ৪, Full-Page System — P11
-// precondition)। Upload/Reports + Doctor-Facing Export — দুই existing
-// component অপরিবর্তিত রেখে একটা full-screen container-এ composed করা হলো,
-// AIChatSection.js/WellnessGuideSection.js-এর একই pattern। Doctor Details
-// আপাতত আলাদা নিজস্ব full-page হিসেবেই থাকছে (owner-নির্দেশ অনুযায়ী) — P11-এর
-// আসল nav-redesign-এ পরে প্রয়োজনে এখানে merge করা যাবে (schema/logic
-// পরিবর্তন ছাড়াই, শুধু presentation-layer regrouping)।
+// precondition)।
+//
+// আপডেট (owner-request, ২০২৬-০৯-১৬): আগে Upload/Reports + Doctor-Facing
+// Export দুটো component একসাথে স্ট্যাক করে দেখানো হতো। এখন roadmap §1_5 §৫-এর
+// মকআপ অনুযায়ী ("[আপলোড] [ডাক্তার-ডকুমেন্ট (Export)] [ডাক্তার বিবরণ]")
+// sub-tab pill দিয়ে ভাগ করা হলো — "ডাক্তার বিবরণ" আপাতত আলাদা নিজস্ব
+// full-page হিসেবেই থাকছে (owner-নির্দেশ অনুযায়ী, DoctorDetailsSection.js)।
+// দুই component-ই অপরিবর্তিত — শুধু presentation-layer regrouping।
 
+import { TabPills } from "../../shared/ui.js";
 import { DocumentsSection } from "./DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 
+const { useState } = React;
+
+const TABS = [
+  ["upload", "📤 আপলোড ও রিপোর্ট"],
+  ["doctor-export", "🩺 ডাক্তার-দেখানোর এক্সপোর্ট"],
+];
+
 export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
+  const [tab, setTab] = useState(TABS[0][0]);
+
   return React.createElement(
     "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
@@ -22,8 +34,9 @@ export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
     ),
     React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
-      React.createElement(DocumentsSection, { familyId, callerMemberId }),
-      React.createElement(DoctorExportSection, { familyId, callerMemberId })
+      TabPills(TABS, tab, setTab),
+      tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId }),
+      tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId })
     )
   );
 }
