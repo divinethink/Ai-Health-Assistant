@@ -38,8 +38,46 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
-  :root { --theme-primary: #0E4B43; }
-  html, body { background: #F4F7F1; margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
+  /* P11 Design Tokens (mockup §৬) — Light/Sepia/Dark, data-theme attribute-driven on
+     <html>। Default (no attribute / data-theme="light") = আগের অপরিবর্তিত রং, তাই এই
+     token-সেট যোগ হওয়া কোনো existing visual regression তৈরি করে না। আপাতত শুধু P11
+     app-shell (TopBar/BottomNav/MenuPage) এই var()-গুলো ব্যবহার করে — বাকি existing
+     page-content (HealthRecords/AIChat/Documents/Wellness-Blog ইত্যাদি) নিজস্ব hardcoded
+     রং-এই থাকে (আলাদা, বড় retrofit — এখানে scope করা হয়নি)। */
+  :root, html[data-theme="light"] {
+    --theme-primary: #0E4B43;
+    --hs-bg: #F4F7F1;
+    --hs-surface: #FFFFFF;
+    --hs-text: #1B2430;
+    --hs-muted: #8A9A96;
+    --hs-primary: #0E4B43;
+    --hs-primary-contrast: #FFFFFF;
+    --hs-border: #E2E8F0;
+    --hs-chip-bg: #F5F5F0;
+  }
+  html[data-theme="sepia"] {
+    --theme-primary: #6B4A2B;
+    --hs-bg: #F2E8D5;
+    --hs-surface: #FBF3E3;
+    --hs-text: #4A3B2A;
+    --hs-muted: #8C7A63;
+    --hs-primary: #6B4A2B;
+    --hs-primary-contrast: #FFF8EC;
+    --hs-border: #D8C7A8;
+    --hs-chip-bg: #EFE1C8;
+  }
+  html[data-theme="dark"] {
+    --theme-primary: #2E7D6F;
+    --hs-bg: #10151A;
+    --hs-surface: #1B232B;
+    --hs-text: #E8EEF0;
+    --hs-muted: #7C8B93;
+    --hs-primary: #2E7D6F;
+    --hs-primary-contrast: #FFFFFF;
+    --hs-border: #2C363F;
+    --hs-chip-bg: #22303A;
+  }
+  html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
   .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
 </style>
