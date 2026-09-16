@@ -88,16 +88,16 @@ export function TabPills(tabs, activeId, onChange) {
 export function CollapsibleSection({ title, defaultOpen, children }) {
   const [open, setOpen] = React.useState(!!defaultOpen);
   return React.createElement(
-    "div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", marginBottom: "12px", overflow: "hidden" } },
+    "div", { style: { border: "1px solid var(--hs-border, #E2E8F0)", borderRadius: "8px", marginBottom: "12px", overflow: "hidden" } },
     React.createElement(
       "div", {
         onClick: () => setOpen((o) => !o),
-        style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F5F5F0", cursor: "pointer" },
+        style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "var(--hs-chip-bg, #F5F5F0)", cursor: "pointer" },
       },
-      React.createElement("span", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43" } }, title),
-      React.createElement("span", { style: { fontSize: "13px", color: "#0E4B43" } }, open ? "▲" : "▼")
+      React.createElement("span", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } }, title),
+      React.createElement("span", { style: { fontSize: "13px", color: "var(--hs-primary, #0E4B43)" } }, open ? "▲" : "▼")
     ),
-    open && React.createElement("div", { style: { padding: "12px" } }, children)
+    open && React.createElement("div", { style: { padding: "12px", color: "var(--hs-text, #1B2430)" } }, children)
   );
 }
 
