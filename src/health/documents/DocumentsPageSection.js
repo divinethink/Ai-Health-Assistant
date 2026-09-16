@@ -23,7 +23,7 @@ export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
   const [tab, setTab] = useState(TABS[0][0]);
 
   return React.createElement(
-    "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: "44px", left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#0E4B43", color: "#fff", flexShrink: 0 } },
       React.createElement("span", { style: { fontWeight: 700, fontSize: "15px" } }, "📁 Documents"),
