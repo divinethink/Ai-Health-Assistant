@@ -10,6 +10,7 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
   const isEdit = !!editingDoctor;
   const [name, setName] = useState(editingDoctor ? editingDoctor.name : "");
   const [specialtyCategory, setSpecialtyCategory] = useState(editingDoctor ? editingDoctor.specialtyCategory : DOCTOR_CATEGORIES[0][0]);
+  const [area, setArea] = useState(editingDoctor ? editingDoctor.area || "" : "");
   const [hospital, setHospital] = useState(editingDoctor ? editingDoctor.hospital || "" : "");
   const [chamberAddress, setChamberAddress] = useState(editingDoctor ? editingDoctor.chamberAddress || "" : "");
   const [phone, setPhone] = useState(editingDoctor ? editingDoctor.phone || "" : "");
@@ -33,7 +34,7 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
     if (!name.trim()) { setErr("ডাক্তারের নাম লিখুন।"); return; }
     setBusy(true);
     try {
-      const fields = { name, specialtyCategory, hospital, chamberAddress, phone };
+      const fields = { name, specialtyCategory, area, hospital, chamberAddress, phone };
       if (isEdit) {
         await updateDoctorFields(familyId, editingDoctor.id, callerMemberId, fields);
       } else {
@@ -45,13 +46,14 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
     } finally {
       setBusy(false);
     }
-  }, [familyId, callerMemberId, name, specialtyCategory, hospital, chamberAddress, phone, file, isEdit, editingDoctor, onSaved]);
+  }, [familyId, callerMemberId, name, specialtyCategory, area, hospital, chamberAddress, phone, file, isEdit, editingDoctor, onSaved]);
 
   return React.createElement(
     "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 6px" } }, isEdit ? "ডাক্তারের তথ্য এডিট করুন" : "নতুন ডাক্তার যোগ করুন"),
     TextField("ডাক্তারের নাম", name, setName, "যেমন: ডা. রহিম উদ্দিন"),
     SelectField("বিশেষত্ব / ক্যাটেগরি", specialtyCategory, setSpecialtyCategory, DOCTOR_CATEGORIES),
+    TextField("এলাকা (ঐচ্ছিক)", area, setArea, "যেমন: ধানমন্ডি, ঢাকা"),
     TextField("প্রতিষ্ঠান/হাসপাতাল (ঐচ্ছিক)", hospital, setHospital, "যেমন: ঢাকা মেডিকেল কলেজ হাসপাতাল"),
     TextField("চেম্বার-ঠিকানা (ঐচ্ছিক)", chamberAddress, setChamberAddress, "চেম্বারের ঠিকানা/সময়সূচি"),
     TextField("ফোন/যোগাযোগ (ঐচ্ছিক)", phone, setPhone, "যেমন: 01XXXXXXXXX"),

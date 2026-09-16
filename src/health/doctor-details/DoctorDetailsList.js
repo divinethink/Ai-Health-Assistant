@@ -7,7 +7,7 @@ const { useState, useEffect, useCallback } = React;
 
 const CATEGORY_LABELS = Object.fromEntries(DOCTOR_CATEGORIES);
 
-export function DoctorDetailsList({ familyId, refreshTick, callerMemberId, isAdmin, onEdit, onDeleted }) {
+export function DoctorDetailsList({ familyId, category, refreshTick, callerMemberId, isAdmin, onEdit, onDeleted }) {
   const [doctors, setDoctors] = useState(null);
   const [err, setErr] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
@@ -34,11 +34,14 @@ export function DoctorDetailsList({ familyId, refreshTick, callerMemberId, isAdm
 
   if (err) return ErrorBox(err);
   if (!doctors) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে...");
+
+  const filtered = !category || category === "all" ? doctors : doctors.filter((d) => d.specialtyCategory === category);
   if (doctors.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি।");
+  if (filtered.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "এই ক্যাটেগরিতে এখনো কোনো ডাক্তার যোগ হয়নি।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" } },
-    doctors.map((d) => {
+    filtered.map((d) => {
       const canEdit = !!callerMemberId && d.lastEditedByMemberId === callerMemberId;
       const canDelete = isAdmin || canEdit;
       return React.createElement(
@@ -51,6 +54,7 @@ export function DoctorDetailsList({ familyId, refreshTick, callerMemberId, isAdm
           "div", { style: { flex: 1, minWidth: 0 } },
           React.createElement("div", { style: { fontWeight: 600, color: "#0E4B43", fontSize: "14px" } }, "🩺 " + d.name),
           React.createElement("div", { style: { fontSize: "12px", color: "#555" } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory),
+          d.area && React.createElement("div", { style: { fontSize: "12px", color: "#0E4B43", fontWeight: 600 } }, "📍 " + d.area),
           d.hospital && React.createElement("div", { style: { fontSize: "12px", color: "#555" } }, d.hospital),
           d.chamberAddress && React.createElement("div", { style: { fontSize: "12px", color: "#888" } }, d.chamberAddress),
           d.phone && React.createElement("div", { style: { fontSize: "12px", color: "#555" } }, "📞 " + d.phone),

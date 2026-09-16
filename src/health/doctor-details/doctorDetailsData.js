@@ -12,11 +12,25 @@
 // ছবি ঐচ্ছিক — না দিলে status: "no-image"।
 
 import { db, auth } from "../../legacy/firebaseConfig.js";
-import { SPECIALTY_LABELS } from "../treatment-modes/specialtyRouter.js";
 
+// Doctor Details-এর নিজস্ব, fixed category-list (owner-request, ২০২৬-০৯-১৬) —
+// আগে AI specialtyRouter.js (SPECIALTY_LABELS)-এর সাথে shared ছিল, এখন সম্পূর্ণ
+// independent, কারণ ডাক্তার-ডিরেক্টরির categorization owner-এর নিজস্ব বাস্তব
+// পরিচিত-ডাক্তার-তালিকা অনুযায়ী, AI symptom-routing category থেকে ভিন্ন
+// প্রয়োজন। কোনো অন্য ফাইল এই তালিকা ব্যবহার করে না (verified) — independent
+// পরিবর্তন নিরাপদ, breaking change নেই।
 export const DOCTOR_CATEGORIES = [
-  ...Object.entries(SPECIALTY_LABELS),
-  ["other", "অন্যান্য"],
+  ["medicine", "Medicine"],
+  ["physical-medicine-rheumatology", "Physical Medicine & Rheumatology"],
+  ["endocrinology-diabetology", "Endocrinology & Diabetology"],
+  ["obgyn", "Obstetrics & Gynecology"],
+  ["pediatrics-neonatology", "Pediatrics & Neonatology"],
+  ["cardiology-neurology", "Cardiology & Neurology"],
+  ["gastro-hepatology-general-surgery", "Gastroenterology, Hepatology & General Surgery"],
+  ["nephrology-urology-pulmonology", "Nephrology, Urology & Pulmonology"],
+  ["dermatology-ophthalmology-ent-dentistry", "Dermatology, Ophthalmology, ENT & Dentistry"],
+  ["ortho-trauma", "Orthopedics & Trauma"],
+  ["others", "Others"],
 ];
 
 const MAX_CARD_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -89,6 +103,7 @@ export async function createDoctor(familyId, callerMemberId, fields, file) {
   await ref.set({
     name: fields.name.trim(),
     specialtyCategory: fields.specialtyCategory,
+    area: fields.area ? fields.area.trim() : "",
     hospital: fields.hospital ? fields.hospital.trim() : "",
     chamberAddress: fields.chamberAddress ? fields.chamberAddress.trim() : "",
     phone: fields.phone ? fields.phone.trim() : "",
@@ -118,6 +133,7 @@ export async function updateDoctorFields(familyId, doctorId, callerMemberId, fie
   await db.collection("families").doc(familyId).collection("doctors").doc(doctorId).update({
     name: fields.name.trim(),
     specialtyCategory: fields.specialtyCategory,
+    area: fields.area ? fields.area.trim() : "",
     hospital: fields.hospital ? fields.hospital.trim() : "",
     chamberAddress: fields.chamberAddress ? fields.chamberAddress.trim() : "",
     phone: fields.phone ? fields.phone.trim() : "",
