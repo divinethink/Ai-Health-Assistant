@@ -16,7 +16,7 @@
 // owner নিজে সরাসরি sharing নিয়ন্ত্রণ করেন।
 
 import { db, auth, initError } from "./firebaseConfig.js";
-import { Card, ErrorBox } from "../shared/ui.js";
+import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
 import { FAMILY_ID_STORAGE_KEY } from "./familyIdentity.js";
 import { EntryScreen } from "../components/EntryScreen.js";
 import { CreateOwnProfile } from "../components/CreateOwnProfile.js";
@@ -87,53 +87,69 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         React.createElement("div", null, "আপনার ভূমিকা: ", React.createElement("b", null, memberDoc.role === "admin" ? "Admin" : memberDoc.role))
       ),
       React.createElement(
-        "button", {
-          onClick: () => setShowHealthRecords(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "🏠 হেলথ রেকর্ড"
-      ),
-      isAdmin && React.createElement(
-        "button", {
-          onClick: () => setShowGeneralChat(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #1B2430", borderRadius: "8px", background: "#1B2430", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "🌐 General Chat"
-      ),
-      React.createElement(
-        "button", {
-          onClick: () => setShowHealthBlog(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "🌿 স্বাস্থ্য ব্লগ"
-      ),
-      React.createElement(
-        "button", {
-          onClick: () => setShowAIChat(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "🩺 AI চ্যাট"
-      ),
-      React.createElement(
-        "button", {
-          onClick: () => setShowDocuments(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "📁 Documents"
-      ),
-      React.createElement(
-        "button", {
-          onClick: () => setShowDoctorDetails(true),
-          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-        },
-        "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"
+        "div", { style: { marginTop: "16px", padding: "10px 12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
+        React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "8px" } }, "নেভিগেশন"),
+        React.createElement(
+          "button", {
+            onClick: () => setShowHealthRecords(true),
+            style: { width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "🏠 হেলথ রেকর্ড"
+        ),
+        isAdmin && React.createElement(
+          "button", {
+            onClick: () => setShowGeneralChat(true),
+            style: { marginTop: "8px", width: "100%", padding: "10px", border: "1px solid #1B2430", borderRadius: "8px", background: "#1B2430", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "🌐 General Chat"
+        ),
+        React.createElement(
+          "button", {
+            onClick: () => setShowHealthBlog(true),
+            style: { marginTop: "8px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "🌿 স্বাস্থ্য ব্লগ"
+        ),
+        React.createElement(
+          "button", {
+            onClick: () => setShowAIChat(true),
+            style: { marginTop: "8px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "🩺 AI চ্যাট"
+        ),
+        React.createElement(
+          "button", {
+            onClick: () => setShowDocuments(true),
+            style: { marginTop: "8px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "📁 Documents"
+        ),
+        React.createElement(
+          "button", {
+            onClick: () => setShowDoctorDetails(true),
+            style: { marginTop: "8px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          },
+          "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"
+        )
       ),
       React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
-      isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
-      React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
-      isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
-      React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
-      React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
+      React.createElement(CollapsibleSection, {
+        title: "👨‍👩‍👧‍👦 পরিবার", defaultOpen: true,
+        children: React.createElement(
+          React.Fragment, null,
+          isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
+          React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
+          isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId })
+        ),
+      }),
+      React.createElement(CollapsibleSection, {
+        title: "📞 রেফারেন্স — Verified Care-Escalation Directory", defaultOpen: false,
+        children: React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
+      }),
+      React.createElement(CollapsibleSection, {
+        title: "💾 ডেটা-ম্যানেজমেন্ট — ব্যাকআপ/রিস্টোর", defaultOpen: false,
+        children: React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
+      }),
       React.createElement(
         "p", { style: { color: "#888", fontSize: "12px", marginTop: "16px" } },
         "P3 চলছে — Symptom Check/Triage, AI Guidance, Health Episode session-save (§9), ও Rate-Limit retry (§10.2.2) যোগ হয়েছে।"
