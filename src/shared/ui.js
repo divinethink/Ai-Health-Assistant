@@ -55,6 +55,52 @@ export function SelectField(label, value, onChange, options) {
   );
 }
 
+// Sub-tab pill row — full-page section-এর ভেতরের একাধিক component-কে
+// পাশাপাশি স্তূপ না করে ট্যাব হিসেবে ভাগ করার জন্য (roadmap §1_5-এর "sub-tab
+// pill" pattern, প্রথম ব্যবহার: AI চ্যাট ও Documents full-page reorg, ২০২৬-০৯-১৬)।
+// শুধু presentation primitive — কোনো state/business-logic এখানে নেই।
+export function TabPills(tabs, activeId, onChange) {
+  return React.createElement(
+    "div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px", marginBottom: "12px" } },
+    tabs.map(([id, label]) => {
+      const active = id === activeId;
+      return React.createElement(
+        "button", {
+          key: id, onClick: () => onChange(id),
+          style: {
+            flexShrink: 0, fontSize: "12px", fontWeight: 600, padding: "7px 12px", borderRadius: "999px", cursor: "pointer",
+            border: active ? "1px solid #0E4B43" : "1px solid #CBD5E1",
+            background: active ? "#0E4B43" : "#fff", color: active ? "#fff" : "#333",
+          },
+        },
+        label
+      );
+    })
+  );
+}
+
+// Collapsible/accordion section — একবারে-ব্যবহৃত ফর্ম-জাতীয় component
+// (upload-form, report-analysis, care-escalation category-group ইত্যাদি)
+// ডিফল্ট-বন্ধ রেখে scroll কমানোর জন্য। প্রকৃত React component (props:
+// {title, defaultOpen, children}) — অবশ্যই React.createElement(CollapsibleSection,
+// {...}) দিয়ে call করতে হবে, plain function-call না (ভেতরে useState থাকায়
+// .map()-লুপে plain-call করলে Hooks Rule ভাঙে/hook-isolation নষ্ট হয়)।
+export function CollapsibleSection({ title, defaultOpen, children }) {
+  const [open, setOpen] = React.useState(!!defaultOpen);
+  return React.createElement(
+    "div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", marginBottom: "12px", overflow: "hidden" } },
+    React.createElement(
+      "div", {
+        onClick: () => setOpen((o) => !o),
+        style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F5F5F0", cursor: "pointer" },
+      },
+      React.createElement("span", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43" } }, title),
+      React.createElement("span", { style: { fontSize: "13px", color: "#0E4B43" } }, open ? "▲" : "▼")
+    ),
+    open && React.createElement("div", { style: { padding: "12px" } }, children)
+  );
+}
+
 export function DateField(label, value, onChange) {
   const todayISO = new Date().toISOString().slice(0, 10);
   return React.createElement(
