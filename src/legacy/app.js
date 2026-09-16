@@ -48,6 +48,18 @@ const { useState, useEffect, useCallback } = React;
 // নেই)। Doctor Details ও General Chat আগের মতোই স্বতন্ত্র full-screen overlay
 // (General Chat: Profile-pill dropdown থেকে trigger; Doctor Details: Menu-এর
 // "নেভিগেশন" গ্রুপ থেকে) — bottom-nav-এর ট্যাব না, mockup §১-এর সাথে সংগতিপূর্ণ।
+//
+// P11 সংযোজন (Design Tokens + Tablet/Desktop pass, mockup §৬/§৯): TopBar/
+// BottomNav-এর আগের কৃত্রিম maxWidth:480px cap সরানো হয়েছে (tab-content আগে
+// থেকেই full-viewport-width fixed-overlay ছিল — cap থাকলে wide screen-এ
+// nav-bar ও content-এর width মিলত না; মোবাইলে viewport এমনিতেই <480px বলে
+// কোনো visual regression নেই)। Light/Sepia/Dark theme — index.html-এ CSS
+// var()-token + ThemeSwitcher (Menu → "⚙️ প্রেফারেন্স") + shared
+// CollapsibleSection (shared/ui.js)-এ token প্রয়োগ; Light-mode-এর ডিফল্ট
+// value আগের hex-এর সাথে হুবহু মিলিয়ে রাখা হয়েছে (zero regression),
+// Sepia/Dark শুধু explicit selection-এই সক্রিয় হয়। বাকি existing
+// page-content (HealthRecords/AIChat/Documents/Wellness-Blog ইত্যাদি)
+// নিজস্ব hardcoded রং-এই থাকে — বড় retrofit এখানে scope করা হয়নি।
 
 const BOTTOM_NAV_HEIGHT = 56;
 
@@ -64,9 +76,8 @@ function BottomNav({ active, onChange }) {
     "div", {
       style: {
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45,
-        display: "flex", background: "#fff", borderTop: "1px solid #E2E8F0",
-        maxWidth: "480px", margin: "0 auto", height: BOTTOM_NAV_HEIGHT + "px",
-        boxShadow: "0 -2px 8px rgba(0,0,0,0.08)",
+        display: "flex", background: "var(--hs-surface)", borderTop: "1px solid var(--hs-border)",
+        height: BOTTOM_NAV_HEIGHT + "px", boxShadow: "0 -2px 8px rgba(0,0,0,0.08)",
       },
     },
     NAV_TABS.map(([id, icon, label]) => {
@@ -75,9 +86,9 @@ function BottomNav({ active, onChange }) {
         "button", {
           key: id, onClick: () => onChange(id),
           style: {
-            flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+            flex: 1, maxWidth: "160px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", gap: "2px", border: "none", background: "none",
-            cursor: "pointer", color: isActive ? "#0E4B43" : "#8A9A96",
+            cursor: "pointer", color: isActive ? "var(--hs-primary)" : "var(--hs-muted)",
             fontWeight: isActive ? 700 : 500, padding: 0,
           },
         },
@@ -94,21 +105,21 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
     "div", {
       style: {
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 46, height: "44px",
-        maxWidth: "480px", margin: "0 auto", display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "0 14px", background: "#fff",
-        borderBottom: "1px solid #E2E8F0",
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between", padding: "0 14px", background: "var(--hs-surface)",
+        borderBottom: "1px solid var(--hs-border)",
       },
     },
-    React.createElement("span", { style: { fontWeight: 700, color: "#0E4B43", fontSize: "15px" } }, "Health Assistant"),
+    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "Health Assistant"),
     React.createElement(
       "div", { style: { position: "relative" } },
       React.createElement(
         "button", {
           onClick: () => setOpen((o) => !o),
           style: {
-            display: "flex", alignItems: "center", gap: "4px", border: "1px solid #E2E8F0",
-            borderRadius: "999px", padding: "5px 10px", background: "#F5F5F0", cursor: "pointer",
-            fontSize: "12px", color: "#0E4B43", fontWeight: 600,
+            display: "flex", alignItems: "center", gap: "4px", border: "1px solid var(--hs-border)",
+            borderRadius: "999px", padding: "5px 10px", background: "var(--hs-chip-bg)", cursor: "pointer",
+            fontSize: "12px", color: "var(--hs-primary)", fontWeight: 600,
           },
         },
         "👤 " + memberDoc.name + (open ? " ▲" : " ▼")
@@ -116,13 +127,13 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
       open && React.createElement(
         "div", {
           style: {
-            position: "absolute", right: 0, top: "36px", zIndex: 50, background: "#fff",
-            border: "1px solid #E2E8F0", borderRadius: "8px", minWidth: "210px",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.12)", padding: "10px", fontSize: "13px",
+            position: "absolute", right: 0, top: "36px", zIndex: 50, background: "var(--hs-surface)",
+            border: "1px solid var(--hs-border)", borderRadius: "8px", minWidth: "210px",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.12)", padding: "10px", fontSize: "13px", color: "var(--hs-text)",
           },
         },
-        React.createElement("div", { style: { color: "#666" } }, "ভূমিকা: ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
-        React.createElement("div", { style: { color: "#666", marginTop: "2px", fontSize: "11px" } }, "পরিবারের কোড: " + familyDoc.familyCodeDisplay),
+        React.createElement("div", { style: { color: "var(--hs-muted)" } }, "ভূমিকা: ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
+        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "2px", fontSize: "11px" } }, "পরিবারের কোড: " + familyDoc.familyCodeDisplay),
         isAdmin && React.createElement(
           "button", {
             onClick: () => { setOpen(false); onOpenGeneralChat(); },
@@ -141,22 +152,65 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
 
 function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
   return React.createElement(
-    "div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginBottom: "12px", background: "#fff" } },
-    React.createElement("div", { style: { fontWeight: 700, color: "#0E4B43", fontSize: "15px" } }, "👤 " + memberDoc.name),
+    "div", { style: { border: "1px solid var(--hs-border)", borderRadius: "8px", padding: "12px", marginBottom: "12px", background: "var(--hs-surface)" } },
+    React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "👤 " + memberDoc.name),
     React.createElement(
-      "div", { style: { fontSize: "12px", color: "#666", marginTop: "4px" } },
+      "div", { style: { fontSize: "12px", color: "var(--hs-muted)", marginTop: "4px" } },
       "ভূমিকা: ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role),
       " · পরিবারের কোড: ", React.createElement("b", null, familyDoc.familyCodeDisplay)
     )
   );
 }
 
+// Design Tokens — Light/Sepia/Dark theme-switcher (mockup §৬, P11)। শুধু
+// document.documentElement-এ data-theme attribute সেট করে (index.html-এর CSS
+// var()-গুলো সেই অনুযায়ী resolve হয়) + localStorage-এ persist — কোনো
+// Firestore/schema টাচ হয় না, pure client-side preference।
+const HS_THEME_STORAGE_KEY = "hs-theme";
+const THEME_OPTIONS = [
+  ["light", "☀️ Light"],
+  ["sepia", "📜 Sepia"],
+  ["dark", "🌙 Dark"],
+];
+
+function ThemeSwitcher() {
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem(HS_THEME_STORAGE_KEY) || "light"
+  );
+  const applyTheme = (t) => {
+    document.documentElement.setAttribute("data-theme", t);
+    localStorage.setItem(HS_THEME_STORAGE_KEY, t);
+    setTheme(t);
+  };
+  return React.createElement(
+    "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+    THEME_OPTIONS.map(([id, label]) =>
+      React.createElement(
+        "button", {
+          key: id, onClick: () => applyTheme(id),
+          style: {
+            padding: "8px 14px", borderRadius: "999px", cursor: "pointer", fontSize: "13px",
+            border: theme === id ? "2px solid var(--hs-primary)" : "1px solid var(--hs-border)",
+            background: theme === id ? "var(--hs-chip-bg)" : "var(--hs-surface)",
+            color: "var(--hs-text)", fontWeight: theme === id ? 700 : 500,
+          },
+        },
+        label
+      )
+    )
+  );
+}
+
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
   return React.createElement(
-    "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px" } },
-    React.createElement("h2", { style: { color: "#0E4B43", fontSize: "17px", margin: "4px 0 12px" } }, "☰ মেনু"),
+    "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" } },
+    React.createElement("h2", { style: { color: "var(--hs-primary)", fontSize: "17px", margin: "4px 0 12px" } }, "☰ মেনু"),
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
+    React.createElement(CollapsibleSection, {
+      title: "⚙️ প্রেফারেন্স — থিম", defaultOpen: false,
+      children: React.createElement(ThemeSwitcher),
+    }),
     React.createElement(CollapsibleSection, {
       title: "👨‍👩‍👧‍👦 পরিবার", defaultOpen: true,
       children: React.createElement(
@@ -171,7 +225,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       children: React.createElement(
         "button", {
           onClick: onOpenDoctorDetails,
-          style: { width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "8px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
         },
         "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"
       ),
@@ -237,6 +291,14 @@ function App() {
   const [memberId, setMemberId] = useState(undefined);
   const [memberDoc, setMemberDoc] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
+
+  useEffect(() => {
+    // Design Tokens (P11, mockup §৬) — আগের সেশনে বাছাই করা theme (Sepia/Dark)
+    // localStorage থেকে পড়ে <html data-theme> সেট করা, যাতে Menu-তে না গিয়েও
+    // reload-এর পর আগের theme বহাল থাকে। ThemeSwitcher (app.js) একই key ব্যবহার করে।
+    const saved = localStorage.getItem(HS_THEME_STORAGE_KEY);
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+  }, []);
 
   useEffect(() => {
     if (!auth) { setAuthState("unavailable"); return; }
