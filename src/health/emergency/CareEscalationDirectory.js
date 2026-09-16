@@ -3,7 +3,7 @@
 // familyId/memberId prop লাগে না — RemedySection.js-এর একই standalone-
 // reference প্যাটার্ন।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, CollapsibleSection } from "../../shared/ui.js";
 import { listCareEscalationDirectory, CARE_ESCALATION_TYPE_LABELS } from "./careEscalationData.js";
 
 const { useState, useEffect } = React;
@@ -56,14 +56,15 @@ export function CareEscalationDirectory() {
       "জরুরি/স্বাস্থ্য/সুরক্ষা-সংক্রান্ত verified হেল্পলাইন ও যোগাযোগ — সব পরিবার একই তালিকা শেয়ার করে।"
     ),
     ...typeOrder.map((type) =>
-      React.createElement(
-        "div", { key: type, style: { marginTop: "12px" } },
-        React.createElement("h4", { style: { fontSize: "13px", color: "#0E4B43", marginBottom: "6px" } }, CARE_ESCALATION_TYPE_LABELS[type]),
-        React.createElement(
+      React.createElement(CollapsibleSection, {
+        key: type,
+        title: CARE_ESCALATION_TYPE_LABELS[type],
+        defaultOpen: type === "emergency-police-fire",
+        children: React.createElement(
           "div", { style: { display: "flex", flexDirection: "column", gap: "8px" } },
           ...groups[type].map(EntryRow)
-        )
-      )
+        ),
+      })
     )
   );
 }
