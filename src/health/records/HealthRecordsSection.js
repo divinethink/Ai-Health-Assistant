@@ -15,7 +15,10 @@ import { TrendChartSection } from "../reports/TrendChartSection.js";
 
 const { useState, useEffect } = React;
 
-export function HealthRecordsSection({ familyId, callerMemberId }) {
+// section: "all" (ডিফল্ট, পুরনো callers-এর জন্য অপরিবর্তিত) | "profile"
+// (শুধু member-picker+vitals) | "records" (form+list+trend) — P11 mockup §৩-এর
+// হোম-পেজ sub-tab split-এর জন্য (HealthRecordsPageSection.js)।
+export function HealthRecordsSection({ familyId, callerMemberId, section = "all" }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -40,23 +43,23 @@ export function HealthRecordsSection({ familyId, callerMemberId }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
     SelectField("সদস্য বাছাই করুন", targetMemberId, (v) => { setTargetMemberId(v); setEditingRecord(null); }, members.map((m) => [m.id, m.name])),
-    React.createElement(HealthVitalsWidget, {
+    (section === "all" || section === "profile") && React.createElement(HealthVitalsWidget, {
       key: "vitals-" + targetMemberId,
       familyId, targetMemberId, callerMemberId, refreshTick,
       onSaved: () => setRefreshTick((t) => t + 1),
     }),
-    React.createElement(HealthRecordForm, {
+    (section === "all" || section === "records") && React.createElement(HealthRecordForm, {
       key: "form-" + targetMemberId,
       familyId, targetMemberId, callerMemberId,
       editingRecord, onCancelEdit: () => setEditingRecord(null),
       onAdded: () => setRefreshTick((t) => t + 1),
     }),
-    React.createElement(HealthRecordList, {
+    (section === "all" || section === "records") && React.createElement(HealthRecordList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
       onEdit: setEditingRecord,
       onDeleted: () => setRefreshTick((t) => t + 1),
     }),
-    React.createElement(TrendChartSection, {
+    (section === "all" || section === "records") && React.createElement(TrendChartSection, {
       key: "trend-" + targetMemberId, familyId, targetMemberId, refreshTick,
     })
   );

@@ -1,25 +1,31 @@
-// হেলথ রেকর্ড (হোম) — Full-page wrapper (P11 mockup §১-এর "হোম" ট্যাব প্রস্তুতি,
-// Full-Page System — amendment item ৪-এর একই pattern, DocumentsPageSection.js/
-// AIChatSection.js verbatim অনুসরণ করে)।
+// হেলথ রেকর্ড (হোম) — Full-page wrapper, P11 mockup §৩ অনুযায়ী ৫টা sub-tab
+// pill দিয়ে reorganized (ধাপ ২)। প্রতিটা sub-tab-এর ভেতরের existing
+// component অপরিবর্তিত (HealthRecordsSection-এ শুধু নতুন `section` prop
+// যোগ হয়েছে profile/records ভাগ করতে) — কোনো নতুন schema/data-logic নেই।
 //
-// ধাপ ১ (এই ফাইল): শুধু বাটন-কে full-page-এ রূপান্তর — existing পাঁচটা component
-// (HealthRecordsSection/MedicationReminders/VaccinationScheduler/
-// FamilyHealthCalendar/HealthTimeline) অপরিবর্তিত রেখে একটা কন্টেইনারে composed।
-// কোনো নতুন schema/logic পরিবর্তন নেই, শুধু presentation-layer regrouping।
-//
-// ধাপ ২ (পরবর্তী থ্রেড): এই ফাইলের ভেতরে sub-tab pill (প্রোফাইল/স্বাস্থ্য তথ্য/
-// খাদ্য নির্দেশিকা/ঔষধ+রিমাইন্ডার/টাইমলাইন+ক্যালেন্ডার) ও accordion/drawer
-// layout বসানো হবে (মকআপ §৩)। Care-Escalation Directory ও Backup/Restore
-// পরিকল্পনা অনুযায়ী Menu full-page তৈরি হলে সেখানে সরানো হবে — আপাতত এই
-// ফাইলে টাচ করা হয়নি (main Dashboard-এই থেকে গেছে, minimal-change নীতি)।
+// Care-Escalation Directory ও Backup/Restore এখনো main Dashboard-এই আছে
+// (Menu full-page তৈরি না হওয়া পর্যন্ত, আলাদা থ্রেড)।
 
 import { HealthRecordsSection } from "./HealthRecordsSection.js";
 import { MedicationReminders } from "./MedicationReminders.js";
 import { VaccinationScheduler } from "../calendar/VaccinationScheduler.js";
 import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
+import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
+
+const { useState } = React;
+
+const TABS = [
+  { id: "profile", label: "প্রোফাইল" },
+  { id: "records", label: "স্বাস্থ্য তথ্য" },
+  { id: "diet", label: "খাদ্য নির্দেশিকা" },
+  { id: "medication", label: "ঔষধ ও রিমাইন্ডার" },
+  { id: "timeline", label: "টাইমলাইন ও ক্যালেন্ডার" },
+];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
+  const [activeTab, setActiveTab] = useState("profile");
+
   return React.createElement(
     "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
@@ -31,12 +37,31 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
       }, "← ফিরে যান")
     ),
     React.createElement(
+      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "8px 10px", background: "#fff", borderBottom: "1px solid #ddd", flexShrink: 0 } },
+      TABS.map((t) => React.createElement(
+        "button", {
+          key: t.id,
+          onClick: () => setActiveTab(t.id),
+          style: {
+            flexShrink: 0, padding: "7px 12px", borderRadius: "16px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+            border: activeTab === t.id ? "1px solid #0E4B43" : "1px solid #ccc",
+            background: activeTab === t.id ? "#0E4B43" : "#fff",
+            color: activeTab === t.id ? "#fff" : "#333",
+          },
+        }, t.label)
+      )),
+    React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
-      React.createElement(HealthRecordsSection, { familyId, callerMemberId }),
-      React.createElement(MedicationReminders, { familyId, callerMemberId }),
-      React.createElement(VaccinationScheduler, { familyId, callerMemberId }),
-      React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
-      React.createElement(HealthTimeline, { familyId, callerMemberId })
+      activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, section: "profile" }),
+      activeTab === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, section: "records" }),
+      activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId }),
+      activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId }),
+      activeTab === "timeline" && React.createElement(
+        React.Fragment, null,
+        React.createElement(VaccinationScheduler, { familyId, callerMemberId }),
+        React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
+        React.createElement(HealthTimeline, { familyId, callerMemberId })
+      )
     )
   );
 }
