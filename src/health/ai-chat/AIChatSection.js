@@ -1,17 +1,32 @@
 // AI চ্যাট — Full-page wrapper (amendment item ৪, Full-Page System — P11
-// precondition, 1_1_1_1_Health_Assistant_Amendment_Plan_DRAFT.md)। Symptom
-// Check/Medical Science/Herbal-Homeopathy/Nutrition-Fitness — চারটা existing
-// component অপরিবর্তিত রেখে শুধু একটা full-screen container-এ composed করা
-// হলো (WellnessGuideSection.js/GeneralChatSection.js-এর প্রমাণিত fixed-overlay
-// + header/back-button pattern reuse)। কোনো নতুন schema/logic লাগেনি —
-// presentation-layer-only regrouping।
+// precondition, 1_1_1_1_Health_Assistant_Amendment_Plan_DRAFT.md)।
+//
+// আপডেট (owner-request, ২০২৬-০৯-১৬): আগে ৪টা component (Symptom Check,
+// Medical Science, Herbal/Homeopathy, Nutrition/Fitness) একসাথে স্ট্যাক করে
+// দেখানো হতো (লম্বা scroll)। এখন roadmap §1_5-এর "sub-tab pill" নীতি অনুযায়ী
+// (§১ টেবিল: "AI চ্যাট ট্যাব — sub-tab split") এই ৪টাকে ট্যাব হিসেবে ভাগ করা
+// হলো — একবারে শুধু নির্বাচিত ট্যাবের component render/mount হয়। প্রতিটা
+// component নিজে অপরিবর্তিত (কোনো prop/logic পরিবর্তন নেই) — শুধু
+// presentation-layer regrouping, নতুন schema/logic লাগেনি।
 
+import { TabPills } from "../../shared/ui.js";
 import { TriageForm } from "../triage/TriageForm.js";
 import { MedicalScienceChat } from "../treatment-modes/MedicalScienceChat.js";
 import { RemedySection } from "../treatment-modes/RemedySection.js";
 import { NutritionGuidance } from "../nutrition-fitness/NutritionGuidance.js";
 
+const { useState } = React;
+
+const TABS = [
+  ["symptom-check", "🩺 Symptom Check"],
+  ["medical-science", "⚕️ Medical Science"],
+  ["herbal-homeopathy", "🌿 Herbal/Homeopathy"],
+  ["nutrition-fitness", "🥗 Nutrition/Fitness"],
+];
+
 export function AIChatSection({ familyId, callerMemberId, onExit }) {
+  const [tab, setTab] = useState(TABS[0][0]);
+
   return React.createElement(
     "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
@@ -24,10 +39,11 @@ export function AIChatSection({ familyId, callerMemberId, onExit }) {
     ),
     React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
-      React.createElement(TriageForm, { familyId, callerMemberId }),
-      React.createElement(MedicalScienceChat, { familyId }),
-      React.createElement(RemedySection, { familyId }),
-      React.createElement(NutritionGuidance, { familyId })
+      TabPills(TABS, tab, setTab),
+      tab === "symptom-check" && React.createElement(TriageForm, { familyId, callerMemberId }),
+      tab === "medical-science" && React.createElement(MedicalScienceChat, { familyId }),
+      tab === "herbal-homeopathy" && React.createElement(RemedySection, { familyId }),
+      tab === "nutrition-fitness" && React.createElement(NutritionGuidance, { familyId })
     )
   );
 }
