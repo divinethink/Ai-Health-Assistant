@@ -141,25 +141,34 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
                 "Key দেখান"
               )
         ),
-        showShareControls && React.createElement(
-          "div", { style: { marginTop: "6px", display: "flex", alignItems: "center", gap: "14px", opacity: busyId === m.id ? 0.5 : 1 } },
-          React.createElement(
-            "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
-            React.createElement("input", {
-              type: "checkbox", checked: !!share.read, disabled: busyId === m.id,
-              onChange: (e) => onToggleShare(m.id, "read", e.target.checked),
-            }),
-            "আমার প্রোফাইল Read করতে পারবেন"
-          ),
-          React.createElement(
-            "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
-            React.createElement("input", {
-              type: "checkbox", checked: !!share.write, disabled: busyId === m.id,
-              onChange: (e) => onToggleShare(m.id, "write", e.target.checked),
-            }),
-            "Write/Edit করতে পারবেন"
-          )
-        )
+        showShareControls
+          ? React.createElement(
+              "div", { style: { marginTop: "6px", display: "flex", alignItems: "center", gap: "14px", opacity: busyId === m.id ? 0.5 : 1 } },
+              React.createElement(
+                "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
+                React.createElement("input", {
+                  type: "checkbox", checked: !!share.read, disabled: busyId === m.id,
+                  onChange: (e) => onToggleShare(m.id, "read", e.target.checked),
+                }),
+                "আমার প্রোফাইল Read করতে পারবেন"
+              ),
+              React.createElement(
+                "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", cursor: "pointer" } },
+                React.createElement("input", {
+                  type: "checkbox", checked: !!share.write, disabled: busyId === m.id,
+                  onChange: (e) => onToggleShare(m.id, "write", e.target.checked),
+                }),
+                "Write/Edit করতে পারবেন"
+              )
+            )
+          // Architecture Part A §3.1 / Part C §11.1 অনুযায়ী: structural-access
+          // (Admin, বা Parent-Child<18 — এখানে "m আমার guardian" দিক থেকে)
+          // সদস্যের row-এ toggle না দেখিয়ে শুধু informational label দেখানো
+          // উচিত ছিল, আগে এই স্থানে কিছুই render হতো না (gap-fix, pure UI)।
+          : !isSelf && (m.role === "admin" || isMyGuardian) && React.createElement(
+              "div", { style: { marginTop: "4px", fontSize: "11px", color: "#8A9A96" } },
+              "🔒 সবসময় access আছে (" + (m.role === "admin" ? "Admin" : "অভিভাবক-সম্পর্ক") + ")"
+            )
       );
     }),
     relModalTarget && React.createElement(RelationshipModal, {
