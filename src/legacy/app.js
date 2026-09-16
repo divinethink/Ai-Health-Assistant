@@ -25,11 +25,7 @@ import { MemberList } from "../components/MemberList.js";
 import { JoinRequestGate } from "../components/JoinRequestGate.js";
 import { AccessRequestsPanel } from "../components/AccessRequestsPanel.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
-import { HealthRecordsSection } from "../health/records/HealthRecordsSection.js";
-import { MedicationReminders } from "../health/records/MedicationReminders.js";
-import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
-import { FamilyHealthCalendar } from "../health/calendar/FamilyHealthCalendar.js";
-import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
+import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
@@ -55,6 +51,11 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const [showAIChat, setShowAIChat] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [showDoctorDetails, setShowDoctorDetails] = useState(false);
+  const [showHealthRecords, setShowHealthRecords] = useState(false);
+
+  if (showHealthRecords) {
+    return React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, onExit: () => setShowHealthRecords(false) });
+  }
 
   if (isAdmin && showGeneralChat) {
     return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
@@ -84,6 +85,13 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
         "div", { style: { background: "#F5F5F0", padding: "12px", borderRadius: "8px", marginTop: "12px", fontSize: "14px" } },
         React.createElement("div", null, "পরিবারের কোড: ", React.createElement("b", null, familyDoc.familyCodeDisplay)),
         React.createElement("div", null, "আপনার ভূমিকা: ", React.createElement("b", null, memberDoc.role === "admin" ? "Admin" : memberDoc.role))
+      ),
+      React.createElement(
+        "button", {
+          onClick: () => setShowHealthRecords(true),
+          style: { marginTop: "10px", width: "100%", padding: "10px", border: "1px solid #0E4B43", borderRadius: "8px", background: "#0E4B43", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+        },
+        "🏠 হেলথ রেকর্ড"
       ),
       isAdmin && React.createElement(
         "button", {
@@ -124,11 +132,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
       React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
       isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId }),
-      React.createElement(HealthRecordsSection, { key: "hr" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(MedicationReminders, { key: "med-reminders" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(VaccinationScheduler, { key: "vaccination" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(FamilyHealthCalendar, { key: "family-calendar" + refreshTick, familyId, callerMemberId: memberId }),
-      React.createElement(HealthTimeline, { key: "timeline" + refreshTick, familyId, callerMemberId: memberId }),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
       React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
       React.createElement(
