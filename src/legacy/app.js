@@ -141,6 +141,17 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
             },
           },
           "🌐 General Chat"
+        ),
+        React.createElement(
+          "button", {
+            onClick: () => { setOpen(false); auth.signOut(); },
+            style: {
+              marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B",
+              borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "12px",
+              fontWeight: 600, cursor: "pointer",
+            },
+          },
+          "🚪 লগ-আউট"
         )
       )
     )
@@ -386,7 +397,14 @@ function App() {
     if (!auth) { setAuthState("unavailable"); return; }
     const unsub = auth.onAuthStateChanged((user) => {
       if (user) { setUid(user.uid); setAuthState("connected"); }
-      else { setUid(null); setAuthState("signed-out"); }
+      else {
+        setUid(null); setAuthState("signed-out");
+        // FIXED — sign-out-এ familyId/familyDoc/memberId/memberDoc reset না
+        // করলে render-logic (!familyId) মিথ্যা থেকে যেত ও পুরনো stale
+        // Dashboard-ই দেখাতে থাকত (GoogleSignInGate-এ ফেরত না গিয়ে)।
+        setFamilyId(null); setFamilyDoc(null);
+        setMemberId(undefined); setMemberDoc(null);
+      }
     }, (err) => setAuthState("error: " + err.message));
     return () => unsub();
   }, []);
