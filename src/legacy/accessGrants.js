@@ -14,15 +14,20 @@ function grantRef(familyId, granterId, granteeId) {
   return db.collection("families").doc(familyId).collection("accessGrants").doc(granterId + "_" + granteeId);
 }
 
+// FIXED (Google Sign-in Amendment, Architecture Part A §3.0) — আগে
+// member.ownerUids array (multi-device claim) থেকে পড়ত। নতুন মডেলে Google
+// account-ই native multi-device সমর্থন করে বলে member-এ একটাই
+// member.googleUid field থাকে — সেটাই notification-target uid।
 async function memberOwnerUids(familyId, memberId) {
   const snap = await db.collection("families").doc(familyId).collection("members").doc(memberId).get();
   if (!snap.exists) return [];
   const data = snap.data();
-  return Array.isArray(data.ownerUids) ? data.ownerUids : [];
+  return data.googleUid ? [data.googleUid] : [];
 }
 
-// একজন সদস্যের সব claimed device (ownerUids, max ৩টা)-এই notification পাঠানো হয়,
-// কারণ member-এর notification target uid-ভিত্তিক (§3.5.2 schema অনুযায়ী)।
+// সদস্যের claimed Google account uid-এ notification পাঠানো হয় (unclaimed/
+// guardian-managed সদস্যের কোনো uid না থাকায় নীরবে skip হয়ে যায়,
+// harmless — Admin/guardian তাদের হয়ে operate করেন)।
 // exported — health-record delete-notification (roadmap §3.4 Admin delete-override
 // safeguard)-এও reuse হয় (Process ফাইল Rule ১১: duplicate notify-logic এড়ানো)
 export async function notifyMember(familyId, memberId, type, message) {

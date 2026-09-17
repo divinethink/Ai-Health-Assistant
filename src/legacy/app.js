@@ -17,13 +17,10 @@
 
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
-import { FAMILY_ID_STORAGE_KEY } from "./familyIdentity.js";
-import { EntryScreen } from "../components/EntryScreen.js";
-import { CreateOwnProfile } from "../components/CreateOwnProfile.js";
+import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
+import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
-import { JoinRequestGate } from "../components/JoinRequestGate.js";
-import { AccessRequestsPanel } from "../components/AccessRequestsPanel.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
@@ -201,6 +198,65 @@ function ThemeSwitcher() {
   );
 }
 
+// Invite-Link — Admin-only, বিদ্যমান family-তে join করার একমাত্র পথ
+// (Architecture Part A §3.0)। familyDoc.activeInviteToken already MenuPage-
+// এর প্রপ হিসেবে পাওয়া যায় বলে আলাদা Firestore read লাগছে না।
+function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // component-local override — rotate/revoke-এর পর familyDoc প্রপ App()-এর
+  // পরবর্তী family-reload না হওয়া পর্যন্ত stale থাকতে পারে, তাই সাথে সাথে
+  // UI আপডেট দেখাতে local state ব্যবহার (Firestore-এই আসল সত্য লেখা হয়ে
+  // গেছে — এটা শুধু optimistic display)।
+  const [localToken, setLocalToken] = useState(null);
+  if (!isAdmin) return null;
+
+  const active = localToken || familyDoc.activeInviteToken;
+  const isLive = active && !active.revoked;
+  const link = isLive ? `${window.location.origin}${window.location.pathname}?fam=${familyId}&tok=${active.token}` : null;
+
+  const handleGenerate = () => {
+    setBusy(true); setCopied(false);
+    rotateInviteLink(familyId)
+      .then((token) => setLocalToken({ token, revoked: false }))
+      .finally(() => setBusy(false));
+  };
+  const handleRevoke = () => {
+    setBusy(true);
+    revokeInviteLink(familyId, active)
+      .then(() => setLocalToken({ ...active, revoked: true }))
+      .finally(() => setBusy(false));
+  };
+  const handleCopy = () => {
+    navigator.clipboard.writeText(link).then(() => setCopied(true));
+  };
+
+  return React.createElement(
+    "div", { style: { marginTop: "14px", padding: "10px", border: "1px dashed var(--hs-border)", borderRadius: "8px" } },
+    React.createElement("h4", { style: { fontSize: "13px", color: "var(--hs-primary)", margin: "0 0 6px" } }, "🔗 আমন্ত্রণ লিংক"),
+    isLive
+      ? React.createElement(
+          React.Fragment, null,
+          React.createElement("div", { style: { fontSize: "11px", wordBreak: "break-all", background: "var(--hs-chip-bg)", padding: "6px", borderRadius: "6px" } }, link),
+          React.createElement(
+            "div", { style: { display: "flex", gap: "8px", marginTop: "6px" } },
+            React.createElement("button", {
+              onClick: handleCopy, disabled: busy,
+              style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "#fff", color: "var(--hs-primary)", cursor: "pointer" },
+            }, copied ? "কপি হয়েছে ✓" : "লিংক কপি করুন"),
+            React.createElement("button", {
+              onClick: handleRevoke, disabled: busy,
+              style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+            }, "বাতিল করুন")
+          )
+        )
+      : React.createElement("button", {
+          onClick: handleGenerate, disabled: busy,
+          style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "var(--hs-primary)", color: "#fff", cursor: "pointer" },
+        }, busy ? "তৈরি হচ্ছে..." : "লিংক তৈরি করুন")
+  );
+}
+
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
   return React.createElement(
     "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" } },
@@ -215,9 +271,9 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       title: "👨‍👩‍👧‍👦 পরিবার", defaultOpen: true,
       children: React.createElement(
         React.Fragment, null,
+        isAdmin && React.createElement(InviteLinkPanel, { familyId, familyDoc, isAdmin }),
         isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
-        React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
-        isAdmin && React.createElement(AccessRequestsPanel, { key: "ar" + refreshTick, familyId })
+        React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId })
       ),
     }),
     React.createElement(CollapsibleSection, {
@@ -283,9 +339,32 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   );
 }
 
+// Invite-Link join (Architecture Part A §3.0) — URL query-param থেকে
+// ?fam={familyId}&tok={token} পার্স করা হয়, একবার/lazy-init (mount-এর পর
+// URL বদলে গেলেও নতুন করে পড়া হবে না, expected — join সম্পন্ন হলে নিচে
+// clearInviteParamsFromURL() দিয়ে পরিষ্কার হয়)।
+function parseInviteParamsFromURL() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fam = params.get("fam");
+    const tok = params.get("tok");
+    if (fam && tok) return { inviteFamilyId: fam, inviteToken: tok };
+  } catch (e) { /* noop */ }
+  return { inviteFamilyId: null, inviteToken: null };
+}
+function clearInviteParamsFromURL() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("fam");
+    url.searchParams.delete("tok");
+    window.history.replaceState({}, "", url.toString());
+  } catch (e) { /* noop */ }
+}
+
 function App() {
   const [uid, setUid] = useState(null);
   const [authState, setAuthState] = useState("checking");
+  const [{ inviteFamilyId, inviteToken }] = useState(parseInviteParamsFromURL);
   const [familyId, setFamilyId] = useState(null);
   const [familyDoc, setFamilyDoc] = useState(null);
   const [memberId, setMemberId] = useState(undefined);
@@ -300,30 +379,27 @@ function App() {
     if (saved) document.documentElement.setAttribute("data-theme", saved);
   }, []);
 
+  // Google Sign-in Only (Architecture Part A §3.0) — কোনো Anonymous Auth
+  // fallback নেই। uid==null মানে সাইন-ইন করা হয়নি, GoogleSignInGate বাটন
+  // দেখাবে।
   useEffect(() => {
     if (!auth) { setAuthState("unavailable"); return; }
     const unsub = auth.onAuthStateChanged((user) => {
       if (user) { setUid(user.uid); setAuthState("connected"); }
-      else {
-        setAuthState("signing in...");
-        auth.signInAnonymously().catch((err) => setAuthState("sign-in error: " + err.message));
-      }
+      else { setUid(null); setAuthState("signed-out"); }
     }, (err) => setAuthState("error: " + err.message));
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    if (!uid) return;
-    const stored = localStorage.getItem(FAMILY_ID_STORAGE_KEY);
-    if (stored) setFamilyId(stored);
-  }, [uid]);
+  // পুরনো localStorage-ভিত্তিক family-id resume সম্পূর্ণ বাদ — এখন familyId
+  // GoogleSignInGate-এর onSuccess() থেকে সরাসরি আসে (users/{uid} global
+  // fast-path lookup GoogleSignInGate নিজেই করে, নিচে দ্রষ্টব্য)।
 
   const loadFamilyAndMember = useCallback(async (fid, u) => {
     setLoadErr(null);
     try {
       const famSnap = await db.collection("families").doc(fid).get();
       if (!famSnap.exists) {
-        localStorage.removeItem(FAMILY_ID_STORAGE_KEY);
         setFamilyId(null);
         return;
       }
@@ -346,36 +422,40 @@ function App() {
     if (familyId && uid) loadFamilyAndMember(familyId, uid);
   }, [familyId, uid, loadFamilyAndMember]);
 
-  if (!uid) {
-    return Card(
-      React.createElement(
-        React.Fragment, null,
-        React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "Health Assistant"),
-        React.createElement("div", { style: { background: "#F5F5F0", padding: "12px", borderRadius: "8px", marginTop: "12px" } },
-          React.createElement("div", null, "Auth status: ", React.createElement("b", null, authState))
-        ),
-        initError && ErrorBox("Firebase init error: " + initError)
-      )
-    );
+  if (initError && !uid) {
+    return Card(ErrorBox("Firebase init error: " + initError));
   }
 
+  // Google Sign-in Only (Architecture Part A §3.0) — !uid(sign-in করা হয়নি)
+  // ও uid-আছে-কিন্তু-familyId-এখনো-resolve-হয়নি(mapping-check/নতুন-ইউজার)
+  // — দুটো ক্ষেত্রেই GoogleSignInGate। uid prop পাঠানো থাকলে component নিজেই
+  // (কোনো দ্বিতীয় popup ছাড়া) fast-path/email-match check চালায়।
   if (!familyId) {
-    return React.createElement(EntryScreen, { uid, onFamilyReady: setFamilyId });
+    return React.createElement(GoogleSignInGate, {
+      uid, inviteFamilyId, inviteToken,
+      onSuccess: (fid, mId) => {
+        clearInviteParamsFromURL();
+        setFamilyId(fid);
+        if (mId) setMemberId(mId);
+      },
+    });
   }
 
   if (loadErr) return Card(ErrorBox(loadErr));
-  if (!familyDoc || memberId === undefined) return Card("লোড হচ্ছে...");
-
-  const isAdmin = (familyDoc.adminUids || []).includes(uid);
-
+  // memberId===null — familyId resolve হয়েছে কিন্তু uidMemberIndex-এ এই uid
+  // পাওয়া যায়নি। নতুন Google Sign-in flow-এ প্রতিটা valid claim/creation
+  // path একই transaction-এ uidMemberIndex লেখে (googleAuth.js), তাই এই
+  // অবস্থা স্বাভাবিক flow-এ ঘটার কথা না — শুধু data-inconsistency-এর
+  // defensive fallback হিসেবে স্পষ্ট বার্তা দেখানো হচ্ছে (অনির্দিষ্টকালের
+  // silent loading এড়াতে)।
   if (memberId === null) {
-    if (isAdmin) {
-      return React.createElement(CreateOwnProfile, { familyId, uid, onProfileReady: () => loadFamilyAndMember(familyId, uid) });
-    }
-    return React.createElement(JoinRequestGate, { familyId, uid });
+    return Card(ErrorBox("এই account-এর সাথে কোনো প্রোফাইল মেলেনি। আবার সাইন-ইন করে দেখুন।"));
+  }
+  if (!familyDoc || memberId === undefined || !memberDoc) {
+    return Card("লোড হচ্ছে...");
   }
 
-  if (!memberDoc) return Card("লোড হচ্ছে...");
+  const isAdmin = (familyDoc.adminUids || []).includes(uid);
 
   return React.createElement(Dashboard, { uid, familyId, familyDoc, memberId, memberDoc, isAdmin });
 }
