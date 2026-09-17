@@ -1,8 +1,10 @@
-// Admin — সদস্য যোগ ফর্ম (key generate করে)। app.js থেকে split
-// (Component-Split — অংশ A), কোনো functional পরিবর্তন নেই।
+// Admin — guardian-managed (no-account) সদস্য যোগ ফর্ম। Google Sign-in
+// Amendment (Architecture Part A §3.0) — আগের Member-Key generation বাদ;
+// এখন googleUid:null দিয়ে তৈরি হয়, email ঐচ্ছিক (দিলে সদস্য ভবিষ্যতে নিজে
+// Google দিয়ে সাইন-ইন করে auto-claim করতে পারবেন)।
 
 import { TextField, PrimaryButton, SecondaryButton, ErrorBox, SuccessBox } from "../shared/ui.js";
-import { addMemberByAdmin } from "../legacy/familyIdentity.js";
+import { addGuardianManagedMember } from "../legacy/googleAuth.js";
 
 const { useState, useCallback } = React;
 
@@ -11,9 +13,10 @@ export function AddMemberForm({ familyId, onAdded }) {
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [sex, setSex] = useState("male");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  const [result, setResult] = useState(null); // { name, key }
+  const [result, setResult] = useState(null); // { name, email }
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const submit = useCallback(async () => {
@@ -22,16 +25,16 @@ export function AddMemberForm({ familyId, onAdded }) {
     if (!dob) { setErr("জন্ম-তারিখ দিন।"); return; }
     setBusy(true);
     try {
-      const { key } = await addMemberByAdmin(familyId, { name: name.trim(), dob, sex });
-      setResult({ name: name.trim(), key });
-      setName(""); setDob(""); setSex("male");
+      await addGuardianManagedMember(familyId, { name: name.trim(), dob, sex, email: email.trim() || null });
+      setResult({ name: name.trim(), email: email.trim() || null });
+      setName(""); setDob(""); setSex("male"); setEmail("");
       onAdded();
     } catch (e) {
       setErr(e.message || String(e));
     } finally {
       setBusy(false);
     }
-  }, [familyId, name, dob, sex, onAdded]);
+  }, [familyId, name, dob, sex, email, onAdded]);
 
   if (!open) {
     return React.createElement(
@@ -63,13 +66,19 @@ export function AddMemberForm({ familyId, onAdded }) {
         React.createElement("option", { value: "female" }, "মহিলা")
       )
     ),
+    TextField("ইমেইল (ঐচ্ছিক)", email, setEmail, "সদস্য নিজে পরে claim করতে চাইলে"),
+    React.createElement(
+      "div", { style: { fontSize: "11px", color: "#777", marginTop: "4px" } },
+      "এই সদস্যের নিজস্ব, স্বতন্ত্র email হতে হবে (আপনার email দেওয়া যাবে না)। খালি রাখলে এই সদস্য শুধু Admin/অভিভাবক দিয়েই পরিচালিত হবেন।"
+    ),
     err && ErrorBox(err),
     result && SuccessBox(
       React.createElement(
         React.Fragment, null,
-        React.createElement("div", null, React.createElement("b", null, result.name), "-এর Key তৈরি হয়েছে:"),
-        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, marginTop: "4px", letterSpacing: "1px" } }, result.key),
-        React.createElement("div", { style: { fontSize: "12px", marginTop: "4px" } }, "এই Key সদস্যকে দিন — তিনি নিজের ডিভাইসে \"Key দিয়ে লগইন\" থেকে claim করবেন। এই Key আর দেখানো হবে না (Admin পরে আবার দেখতে পারবেন)।")
+        React.createElement("div", null, React.createElement("b", null, result.name), " যোগ হয়েছে।"),
+        result.email
+          ? React.createElement("div", { style: { fontSize: "12px", marginTop: "4px" } }, `এই সদস্য "${result.email}" দিয়ে Google Sign-in করলে স্বয়ংক্রিয়ভাবে এই প্রোফাইল claim হয়ে যাবে।`)
+          : React.createElement("div", { style: { fontSize: "12px", marginTop: "4px" } }, "এই সদস্যের কোনো account নেই — Admin/অভিভাবক এই প্রোফাইল পরিচালনা করবেন।")
       )
     ),
     PrimaryButton("সদস্য তৈরি করুন", submit, busy),

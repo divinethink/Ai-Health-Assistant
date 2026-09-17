@@ -13,7 +13,7 @@
 // হয় না।
 
 import { ErrorBox } from "../shared/ui.js";
-import { listMembers, fetchMemberKey } from "../legacy/familyIdentity.js";
+import { listMembers } from "../legacy/familyIdentity.js";
 import { checkAndFlip18Transition } from "../legacy/accessGrants.js";
 import { listMySharesGiven, setProfileShare } from "../legacy/profileShares.js";
 import { RelationshipModal, RELATIONSHIP_OPTIONS } from "./RelationshipModal.js";
@@ -26,7 +26,6 @@ const RELATIONSHIP_LABEL_MAP = Object.fromEntries(RELATIONSHIP_OPTIONS);
 export function MemberList({ familyId, isAdmin, myMemberId }) {
   const [members, setMembers] = useState(null);
   const [err, setErr] = useState(null);
-  const [revealKey, setRevealKey] = useState({}); // memberId -> key|"loading"
   const [myShares, setMyShares] = useState({}); // granteeId -> { read, write } — আমি কাকে কী দিয়েছি
   const [busyId, setBusyId] = useState(null);
   const [relModalTarget, setRelModalTarget] = useState(null); // Member | null
@@ -52,16 +51,6 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
       checkAndFlip18Transition(familyId, members).catch(() => {});
     }
   }, [members, familyId, isAdmin]);
-
-  const onReveal = useCallback(async (memberId) => {
-    setRevealKey((prev) => ({ ...prev, [memberId]: "loading" }));
-    try {
-      const key = await fetchMemberKey(familyId, memberId);
-      setRevealKey((prev) => ({ ...prev, [memberId]: key || "(পাওয়া যায়নি)" }));
-    } catch (e) {
-      setRevealKey((prev) => ({ ...prev, [memberId]: "ত্রুটি: " + (e.message || e) }));
-    }
-  }, [familyId]);
 
   const onToggleShare = useCallback(async (granteeId, field, checked) => {
     if (!myMemberId) return;
@@ -108,8 +97,8 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
           React.createElement("span", null,
             React.createElement("b", null, m.name),
-            " — ", m.role === "admin" ? "Admin" : (m.role || "self-managing"),
-            " — ", (m.ownerUids && m.ownerUids.length > 0) ? "claim হয়েছে" : "claim বাকি",
+            " — ", m.role === "admin" ? "Admin" : (m.role === "guardian-managed" ? "অভিভাবক-পরিচালিত" : "সাধারণ সদস্য"),
+            " — ", m.googleUid ? "claim হয়েছে" : (m.email ? "claim বাকি (ইমেইল দেওয়া আছে)" : "no-account (অভিভাবক-পরিচালিত)"),
             relLabel ? " — " + relLabel : ""
           ),
           (isSelf || isAdmin) && React.createElement("button", {
@@ -128,18 +117,6 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
               fontSize: "14px", color: "#0E4B43", padding: "2px 6px",
             },
           }, "✎")
-        ),
-        isAdmin && m.role !== "admin" && React.createElement(
-          "div", { style: { marginTop: "4px" } },
-          revealKey[m.id]
-            ? React.createElement("span", { style: { fontFamily: "monospace" } }, revealKey[m.id])
-            : React.createElement(
-                "button", {
-                  onClick: () => onReveal(m.id),
-                  style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", cursor: "pointer" },
-                },
-                "Key দেখান"
-              )
         ),
         showShareControls
           ? React.createElement(
