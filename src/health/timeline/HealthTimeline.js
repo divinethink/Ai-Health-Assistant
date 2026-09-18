@@ -1,27 +1,17 @@
-// Health Timeline UI — HealthRecordsSection.js/DocumentsSection.js-এর হুবহু
-// member-picker pattern reuse। Checklist P2-এর শেষ আইটেম।
+// Health Timeline UI। Checklist P2-এর শেষ আইটেম।
+//
+// member-selector unification (owner-request): নিজস্ব member-fetch/dropdown
+// সরিয়ে parent (HealthRecordsPageSection)-এর `selectedMemberId` প্রপ ব্যবহার।
 
-import { ErrorBox, SelectField } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
+import { ErrorBox } from "../../shared/ui.js";
 import { buildTimeline } from "./timelineData.js";
 
 const { useState, useEffect } = React;
 
-export function HealthTimeline({ familyId, callerMemberId }) {
-  const [members, setMembers] = useState(null);
-  const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
+export function HealthTimeline({ familyId, selectedMemberId }) {
   const [entries, setEntries] = useState(null);
   const [entriesErr, setEntriesErr] = useState(null);
-
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId, callerMemberId]);
+  const targetMemberId = selectedMemberId;
 
   useEffect(() => {
     if (!targetMemberId) return;
@@ -34,15 +24,13 @@ export function HealthTimeline({ familyId, callerMemberId }) {
         : (e.message || String(e))));
   }, [familyId, targetMemberId]);
 
-  if (loadErr) return ErrorBox(loadErr);
-  if (!members || !targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+  if (!targetMemberId) {
+    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Timeline"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
 
     entriesErr && ErrorBox(entriesErr),
     !entriesErr && !entries && React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে..."),
