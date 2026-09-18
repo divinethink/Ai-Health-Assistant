@@ -51,7 +51,12 @@ const AGE_GROUP_LABELS = {
   elderly: "বয়স্ক (৬৫+)",
 };
 
-export function TriageForm({ familyId, callerMemberId }) {
+// member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
+// (AIChatSection)-এর `selectedMemberId` প্রপ ব্যবহার — কিন্তু safety-critical
+// `handleMemberChange()` reset-logic (নিচে) অপরিবর্তিত রাখা হয়েছে (Process
+// Rule ৫), শুধু এখন সেটা dropdown-onChange-এর বদলে prop-change useEffect
+// থেকে trigger হয়।
+export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -109,12 +114,17 @@ export function TriageForm({ familyId, callerMemberId }) {
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || (list[0] && list[0].id) || null);
-      })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId]);
+
+  // পেজ-লেভেল shared picker (AIChatSection)-এ সদস্য বদলালে এখানেও sync হবে —
+  // handleMemberChange() নিজেই সব triage/episode state safely reset করে
+  // (নিচে সংজ্ঞায়িত, নিরাপত্তা-সংক্রান্ত reset-logic অপরিবর্তিত)।
+  useEffect(() => {
+    if (selectedMemberId && selectedMemberId !== targetMemberId) handleMemberChange(selectedMemberId);
+    // eslint-disable-next-line
+  }, [selectedMemberId]);
 
   const targetMember = members && members.find((m) => m.id === targetMemberId);
   const ageGroup = targetMember ? deriveAgeGroup(targetMember.dob) : null;
@@ -296,7 +306,7 @@ export function TriageForm({ familyId, callerMemberId }) {
   }
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!members) {
+  if (!members || !targetMemberId) {
     return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
   }
 
@@ -309,7 +319,6 @@ export function TriageForm({ familyId, callerMemberId }) {
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Symptom Check / Triage"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, handleMemberChange, members.map((m) => [m.id, m.name])),
 
     !ageGroup && targetMember && React.createElement(
       "div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "6px" } },
