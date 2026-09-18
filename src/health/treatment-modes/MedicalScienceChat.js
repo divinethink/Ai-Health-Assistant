@@ -12,14 +12,16 @@
 // ভাষা owner-request অনুযায়ী সরানো হয়েছে, ২০২৬-০৯-১২, যাতে বোঝার জন্য সম্ভাব্য কারণ/
 // condition নিয়ে খোলাখুলি আলোচনা করা যায়)।
 
-import { SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
+import { TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 
 const { useState, useEffect } = React;
 
-export function MedicalScienceChat({ familyId }) {
+// member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
+// (AIChatSection)-এর `selectedMemberId` প্রপ ব্যবহার।
+export function MedicalScienceChat({ familyId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -31,10 +33,7 @@ export function MedicalScienceChat({ familyId }) {
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || (list[0] && list[0].id) || null);
-      })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId]);
 
@@ -43,6 +42,11 @@ export function MedicalScienceChat({ familyId }) {
     setResponse(null);
     setErr(null);
   }
+
+  useEffect(() => {
+    if (selectedMemberId && selectedMemberId !== targetMemberId) handleMemberChange(selectedMemberId);
+    // eslint-disable-next-line
+  }, [selectedMemberId]);
 
   async function handleAsk() {
     const text = question.trim();
@@ -68,7 +72,7 @@ export function MedicalScienceChat({ familyId }) {
   }
 
   if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, React.createElement("div", { style: { color: "#C0392B", fontSize: "13px" } }, "সদস্য তালিকা লোড ব্যর্থ: " + loadErr));
-  if (!members) return null;
+  if (!members || !targetMemberId) return null;
 
   return React.createElement(
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
@@ -76,7 +80,6 @@ export function MedicalScienceChat({ familyId }) {
     React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "6px" } },
       "সাধারণ মেডিকেল সায়েন্স/এলোপ্যাথি আলোচনা — এটা symptom-triage/emergency-checklist না, এবং কোনো ওষুধের dose/মাত্রা এখানে বলা হবে না (dose-প্রয়োজনে উপরের \"Symptom Check\" ব্যবহার করুন)। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে \"Symptom Check\" ব্যবহার করুন।"
     ),
-    SelectField("সদস্য নির্বাচন করুন", targetMemberId || "", handleMemberChange, members.map((m) => [m.id, m.name])),
     TextField("আপনার প্রশ্ন (যেমন: উচ্চ রক্তচাপ কীভাবে নিয়ন্ত্রণ করা যায়?)", question, setQuestion, "এখানে লিখুন..."),
 
     React.createElement(

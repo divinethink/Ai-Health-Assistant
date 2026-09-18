@@ -9,14 +9,16 @@
 // থাকতে পারে, কিন্তু এই চ্যাট AI-এর general knowledge + evidence-tier wording-rule
 // (worker SPECIALTY_NOTES["herbal-homeopathy"]) দিয়ে তাৎক্ষণিক সাধারণ তথ্য দিতে পারে।
 
-import { SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
+import { TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 
 const { useState, useEffect } = React;
 
-export function HerbalHomeopathyChat({ familyId }) {
+// member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
+// (AIChatSection → RemedySection)-এর `selectedMemberId` প্রপ ব্যবহার।
+export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -28,10 +30,7 @@ export function HerbalHomeopathyChat({ familyId }) {
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || (list[0] && list[0].id) || null);
-      })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId]);
 
@@ -64,8 +63,13 @@ export function HerbalHomeopathyChat({ familyId }) {
     }
   }
 
+  useEffect(() => {
+    if (selectedMemberId && selectedMemberId !== targetMemberId) handleMemberChange(selectedMemberId);
+    // eslint-disable-next-line
+  }, [selectedMemberId]);
+
   if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, React.createElement("div", { style: { color: "#C0392B", fontSize: "13px" } }, "সদস্য তালিকা লোড ব্যর্থ: " + loadErr));
-  if (!members) return null;
+  if (!members || !targetMemberId) return null;
 
   return React.createElement(
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
@@ -73,7 +77,6 @@ export function HerbalHomeopathyChat({ familyId }) {
     React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "6px" } },
       "সাধারণ ভেষজ/হোমিওপ্যাথি তথ্য — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন। কোনো dose/মাত্রা এখানে বলা হবে না, শুধু evidence-level-সচেতন সাধারণ তথ্য।"
     ),
-    SelectField("সদস্য নির্বাচন করুন", targetMemberId || "", handleMemberChange, members.map((m) => [m.id, m.name])),
     TextField("আপনার প্রশ্ন (যেমন: সর্দি-কাশিতে কী ভেষজ সাহায্য করতে পারে?)", question, setQuestion, "এখানে লিখুন..."),
 
     React.createElement(

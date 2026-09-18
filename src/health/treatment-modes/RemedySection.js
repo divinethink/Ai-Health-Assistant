@@ -124,7 +124,7 @@ function RemedyGroup({ title, list }) {
   );
 }
 
-export function RemedySection({ familyId }) {
+export function RemedySection({ familyId, selectedMemberId }) {
   const [herbal, setHerbal] = useState(null);
   const [homeo, setHomeo] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
@@ -165,6 +165,6 @@ export function RemedySection({ familyId }) {
           React.createElement(RemedyGroup, { title: "Herbal / ভেষজ", list: herbal }),
           React.createElement(RemedyGroup, { title: "Homeopathy", list: homeo })
         ),
-    React.createElement(HerbalHomeopathyChat, { familyId })
+    React.createElement(HerbalHomeopathyChat, { familyId, selectedMemberId })
   );
 }
