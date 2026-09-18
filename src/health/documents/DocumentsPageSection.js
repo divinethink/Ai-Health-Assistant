@@ -6,13 +6,20 @@
 // মকআপ অনুযায়ী ("[আপলোড] [ডাক্তার-ডকুমেন্ট (Export)] [ডাক্তার বিবরণ]")
 // sub-tab pill দিয়ে ভাগ করা হলো — "ডাক্তার বিবরণ" আপাতত আলাদা নিজস্ব
 // full-page হিসেবেই থাকছে (owner-নির্দেশ অনুযায়ী, DoctorDetailsSection.js)।
-// দুই component-ই অপরিবর্তিত — শুধু presentation-layer regrouping।
+//
+// আপডেট (owner-request, member-selector unification): আগে দুই sub-tab-এই
+// (আপলোড, ডাক্তার-এক্সপোর্ট) আলাদা "সদস্য বাছাই করুন" dropdown ছিল। এখন
+// `selectedMemberId` এই পেজ-wrapper-level-এ lift করা হয়েছে — একবার বাছলে
+// দুই sub-tab-এই persist থাকে। DocumentsSection/DoctorExportSection-এর
+// ভেতরের নিজস্ব member-fetch/dropdown সরিয়ে প্রপ নেওয়া হচ্ছে — কোনো
+// schema/permission পরিবর্তন নেই।
 
-import { TabPills } from "../../shared/ui.js";
+import { SelectField, ErrorBox, TabPills } from "../../shared/ui.js";
+import { listMembers } from "../../legacy/familyIdentity.js";
 import { DocumentsSection } from "./DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 
-const { useState } = React;
+const { useState, useEffect } = React;
 
 const TABS = [
   ["upload", "📤 আপলোড ও রিপোর্ট"],
@@ -21,6 +28,18 @@ const TABS = [
 
 export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
   const [tab, setTab] = useState(TABS[0][0]);
+  const [members, setMembers] = useState(null);
+  const [loadErr, setLoadErr] = useState(null);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
+
+  useEffect(() => {
+    listMembers(familyId)
+      .then((list) => {
+        setMembers(list);
+        setSelectedMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
+      })
+      .catch((e) => setLoadErr(e.message || String(e)));
+  }, [familyId, callerMemberId]);
 
   return React.createElement(
     "div", { style: { position: "fixed", top: "44px", left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
@@ -33,10 +52,18 @@ export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
       }, "← ফিরে যান")
     ),
     React.createElement(
+      "div", { style: { padding: "8px 14px 0", background: "#fff", flexShrink: 0 } },
+      loadErr
+        ? ErrorBox(loadErr)
+        : !members
+        ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+        : SelectField("সদস্য", selectedMemberId, setSelectedMemberId, members.map((m) => [m.id, m.name]))
+    ),
+    React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       TabPills(TABS, tab, setTab),
-      tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId }),
-      tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId })
+      selectedMemberId && tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
+      selectedMemberId && tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId })
     )
   );
 }

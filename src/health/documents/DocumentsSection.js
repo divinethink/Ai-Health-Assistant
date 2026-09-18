@@ -1,39 +1,27 @@
-// Document/Report vault section — HealthRecordsSection.js-এর হুবহু member-picker
-// pattern reuse। Permission enforcement সবসময় server-side rules (firestore.rules +
-// storage.rules) করে — এই picker শুধু UI-convenience (Process Rule ৪)।
+// Document/Report vault section। Permission enforcement সবসময় server-side
+// rules (firestore.rules + storage.rules) করে (Process Rule ৪)।
+//
+// member-selector unification (owner-request): নিজস্ব member-fetch/dropdown
+// সরিয়ে parent (DocumentsPageSection)-এর `selectedMemberId` প্রপ ব্যবহার।
 
-import { ErrorBox, SelectField, CollapsibleSection } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
+import { CollapsibleSection } from "../../shared/ui.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 
-const { useState, useEffect } = React;
+const { useState } = React;
 
-export function DocumentsSection({ familyId, callerMemberId }) {
-  const [members, setMembers] = useState(null);
-  const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
+export function DocumentsSection({ familyId, callerMemberId, selectedMemberId }) {
   const [refreshTick, setRefreshTick] = useState(0);
+  const targetMemberId = selectedMemberId;
 
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId, callerMemberId]);
-
-  if (loadErr) return ErrorBox(loadErr);
-  if (!members || !targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+  if (!targetMemberId) {
+    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Documents / Reports"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
     React.createElement(CollapsibleSection, {
       title: "📎 নতুন Document/Report যোগ করুন", defaultOpen: false,
       children: React.createElement(DocumentUploadForm, {
