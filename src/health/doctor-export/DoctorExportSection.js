@@ -3,7 +3,11 @@
 // (AI-এর সাম্প্রতিক triage/guidance, "Not a Medical Prescription" লেবেলসহ)।
 // দুটোই PDF (browser print) ও DOCX (client-side `docx` library) — দুই ফরম্যাটেই
 // (§10.4/§7.1 নীতি)।
-import { ErrorBox, SelectField } from "../../shared/ui.js";
+// member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
+// (DocumentsPageSection)-এর `selectedMemberId` প্রপ ব্যবহার — `listMembers`
+// এখনো fetch হয় শুধু AI Summary export-এ memberName lookup-এর জন্য (নিচে
+// handleAiSummary), dropdown-এর জন্য না।
+import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { buildHealthProfileExport } from "./doctorExportData.js";
 import { buildAiHealthSummary } from "./aiSummaryData.js";
@@ -25,10 +29,10 @@ function actionButton(label, onClick, disabled, primary) {
   }, label);
 }
 
-export function DoctorExportSection({ familyId, callerMemberId }) {
+export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
+  const targetMemberId = selectedMemberId;
 
   const [profileBusy, setProfileBusy] = useState(null); // "pdf" | "docx" | null
   const [profileErr, setProfileErr] = useState(null);
@@ -40,9 +44,8 @@ export function DoctorExportSection({ familyId, callerMemberId }) {
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => { setMembers(list); if (list.length && !targetMemberId) setTargetMemberId(list[0].id); })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
-    // eslint-disable-next-line
   }, [familyId]);
 
   const handleHealthProfile = async (mode) => {
@@ -80,12 +83,11 @@ export function DoctorExportSection({ familyId, callerMemberId }) {
   }
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!members) return null;
+  if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডাক্তার দেখানোর ডকুমেন্ট"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
 
     React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "10px" } },
       React.createElement("div", { style: { fontWeight: 600, fontSize: "13px", marginBottom: "4px" } }, "Health Profile (factual, কোনো AI মতামত নেই)"),
