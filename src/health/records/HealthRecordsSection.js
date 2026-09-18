@@ -6,8 +6,6 @@
 // Skeleton-এর permission smoke-test-এর জন্যই প্রয়োজনীয়। app.js থেকে split
 // (Component-Split — অংশ A), কোনো functional পরিবর্তন নেই।
 
-import { ErrorBox, SelectField } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
 import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { HealthRecordList } from "./HealthRecordList.js";
@@ -16,33 +14,31 @@ import { TrendChartSection } from "../reports/TrendChartSection.js";
 const { useState, useEffect } = React;
 
 // section: "all" (ডিফল্ট, পুরনো callers-এর জন্য অপরিবর্তিত) | "profile"
-// (শুধু member-picker+vitals) | "records" (form+list+trend) — P11 mockup §৩-এর
-// হোম-পেজ sub-tab split-এর জন্য (HealthRecordsPageSection.js)।
-export function HealthRecordsSection({ familyId, callerMemberId, section = "all" }) {
-  const [members, setMembers] = useState(null);
-  const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
+// (শুধু vitals) | "records" (form+list+trend) — P11 mockup §৩-এর হোম-পেজ
+// sub-tab split-এর জন্য (HealthRecordsPageSection.js)।
+//
+// member-selector unification (owner-request): আগে এই component নিজেই
+// member-list fetch করে নিজস্ব "সদস্য বাছাই করুন" dropdown দেখাত। এখন
+// `selectedMemberId` parent (HealthRecordsPageSection)-এর কাছ থেকে prop
+// হিসেবে আসে — পেজের সব sub-tab একই সদস্য শেয়ার করে, ট্যাব পাল্টালে আর
+// নতুন করে বাছতে হয় না। কোনো schema/permission পরিবর্তন নেই।
+export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all" }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
+  const targetMemberId = selectedMemberId;
 
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId, callerMemberId]);
+  // সদস্য বদলালে আগের সদস্যের edit-in-progress record ভুলবশত অন্য সদস্যের
+  // ফর্মে খোলা না থাকে তা নিশ্চিত করতে reset (আগে dropdown-change handler-এ
+  // ইনলাইন ছিল, এখন selectedMemberId parent থেকে আসায় effect দিয়ে)।
+  useEffect(() => { setEditingRecord(null); }, [targetMemberId]);
 
-  if (loadErr) return ErrorBox(loadErr);
-  if (!members || !targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+  if (!targetMemberId) {
+    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
-    SelectField("সদস্য বাছাই করুন", targetMemberId, (v) => { setTargetMemberId(v); setEditingRecord(null); }, members.map((m) => [m.id, m.name])),
     (section === "all" || section === "profile") && React.createElement(HealthVitalsWidget, {
       key: "vitals-" + targetMemberId,
       familyId, targetMemberId, callerMemberId, refreshTick,
