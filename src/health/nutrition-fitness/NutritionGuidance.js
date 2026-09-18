@@ -14,7 +14,7 @@
 // worker/src/index.js-এ SPECIALTY_NOTES["nutrition-fitness"] যোগ হয়েছে (§6.3
 // এভিডেন্স-হায়ারার্কি সংক্ষিপ্ত reminder হিসেবে)।
 
-import { SelectField, TextField, PrimaryButton } from "../../shared/ui.js";
+import { TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
@@ -22,7 +22,9 @@ import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietG
 
 const { useState, useEffect } = React;
 
-export function NutritionGuidance({ familyId }) {
+// member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
+// (AIChatSection)-এর `selectedMemberId` প্রপ ব্যবহার।
+export function NutritionGuidance({ familyId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -35,10 +37,7 @@ export function NutritionGuidance({ familyId }) {
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || (list[0] && list[0].id) || null);
-      })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId]);
 
@@ -48,6 +47,11 @@ export function NutritionGuidance({ familyId }) {
     setErr(null);
     setDietGuidance(null);
   }
+
+  useEffect(() => {
+    if (selectedMemberId && selectedMemberId !== targetMemberId) handleMemberChange(selectedMemberId);
+    // eslint-disable-next-line
+  }, [selectedMemberId]);
 
   async function handleAsk() {
     const text = question.trim();
@@ -96,7 +100,7 @@ export function NutritionGuidance({ familyId }) {
   }
 
   if (loadErr) return React.createElement("div", { style: { marginTop: "20px" } }, React.createElement("div", { style: { color: "#C0392B", fontSize: "13px" } }, "সদস্য তালিকা লোড ব্যর্থ: " + loadErr));
-  if (!members) return null;
+  if (!members || !targetMemberId) return null;
 
   return React.createElement(
     "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
@@ -104,7 +108,6 @@ export function NutritionGuidance({ familyId }) {
     React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "6px" } },
       "সাধারণ খাদ্য/ব্যায়াম-সংক্রান্ত পরামর্শ — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন।"
     ),
-    SelectField("সদস্য নির্বাচন করুন", targetMemberId || "", handleMemberChange, members.map((m) => [m.id, m.name])),
     TextField("আপনার প্রশ্ন (যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা)", question, setQuestion, "এখানে লিখুন..."),
 
     // Cloud AI Hosting Disclosure (roadmap §13) — TriageForm.js-এর একই টেক্সট/প্যাটার্ন পুনর্ব্যবহার।
