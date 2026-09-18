@@ -1,30 +1,21 @@
 // খাদ্য নির্দেশিকা — UI (Amendment Plan Item ১, dietGuidanceData.js data-layer
 // ব্যবহার করে)। Read-only display — Condition/Allergy ভিত্তিক matched
 // avoid/include food তালিকা, কোনো chat/input এখানে নেই (owner-confirmed)।
-// HealthRecordsSection.js-এর member-picker pattern reuse।
+// member-selector unification (owner-request): নিজস্ব member-fetch/dropdown
+// সরিয়ে parent (HealthRecordsPageSection)-এর `selectedMemberId` প্রপ ব্যবহার —
+// পুরো হোম-পেজে একবার সদস্য বাছলেই এই sub-tab-এও persist থাকে।
 
-import { ErrorBox, SelectField } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
+import { ErrorBox } from "../../shared/ui.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
 
 const { useState, useEffect } = React;
 
-export function DietGuidanceSection({ familyId, callerMemberId }) {
-  const [members, setMembers] = useState(null);
+export function DietGuidanceSection({ familyId, selectedMemberId }) {
   const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
   const [result, setResult] = useState(null); // { avoidFoods, includeFoods, matchedTags }
   const [openTag, setOpenTag] = useState(null);
-
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        if (list.length > 0) setTargetMemberId(list[0].id);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId]);
+  const targetMemberId = selectedMemberId;
 
   useEffect(() => {
     if (!targetMemberId) return;
@@ -43,11 +34,10 @@ export function DietGuidanceSection({ familyId, callerMemberId }) {
   }, [familyId, targetMemberId]);
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!members) return React.createElement("div", null, "লোড হচ্ছে...");
+  if (!targetMemberId) return React.createElement("div", null, "সদস্য নির্বাচন করুন।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    SelectField("সদস্য বাছাই করুন", targetMemberId, setTargetMemberId, members.map((m) => [m.id, m.name])),
     !result && React.createElement("div", { style: { marginTop: "8px", color: "#888", fontSize: "13px" } }, "লোড হচ্ছে..."),
     result && result.matchedTags.length === 0 && React.createElement(
       "div", { style: { marginTop: "10px", padding: "10px", background: "#F5F5F0", borderRadius: "8px", fontSize: "13px", color: "#555" } },
