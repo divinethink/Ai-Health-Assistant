@@ -22,6 +22,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("");
   const [tier, setTier] = useState("otc-self-care");
+  const [frequency, setFrequency] = useState("");
+  const [durationDays, setDurationDays] = useState("");
   const [reaction, setReaction] = useState("");
   const [severity, setSeverity] = useState("mild");
   const [date, setDate] = useState("");
@@ -49,6 +51,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setValue(r.value || "");
     setUnit(r.unit || "");
     setTier(r.tier || "otc-self-care");
+    setFrequency(r.frequency || "");
+    setDurationDays(r.durationDays != null ? String(r.durationDays) : "");
     setReaction(r.reaction || "");
     setSeverity(r.severity || "mild");
     setDate(r.onsetDate || r.date || r.startDate || "");
@@ -62,6 +66,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
     setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital(""); setChronicManagement(false);
+    setFrequency(""); setDurationDays("");
   }, []);
 
   const changeResourceType = useCallback((v) => {
@@ -76,7 +81,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
     setBusy(true);
     try {
-      const fields = { name, category, status, chronicManagement, type: obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital };
+      const fields = { name, category, status, chronicManagement, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital };
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -93,7 +98,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, obsType, value, unit, tier, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
   const typeFields = [];
   if (resourceType === "condition") {
@@ -123,6 +128,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     typeFields.push(DateField("তারিখ (ঐচ্ছিক)", date, setDate));
   } else if (resourceType === "medicationStatement") {
     typeFields.push(TextField("ওষুধের নাম", name, setName, "যেমন: Paracetamol"));
+    typeFields.push(TextField("কয় বেলা / কীভাবে খাবেন", frequency, setFrequency, "যেমন: দিনে ৩ বার, খাবারের পর"));
+    typeFields.push(TextField("কতদিন খেতে হবে (দিন)", durationDays, setDurationDays, "যেমন: 5"));
     typeFields.push(SelectField("Tier", tier, setTier, [["otc-self-care", "otc-self-care"], ["requires-consult", "requires-consult"]]));
     typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["stopped", "stopped"]]));
     typeFields.push(DateField("শুরুর তারিখ (ঐচ্ছিক)", date, setDate));

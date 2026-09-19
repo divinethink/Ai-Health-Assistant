@@ -11,8 +11,14 @@
 // নিচের component-গুলোর ভেতরের নিজস্ব member-fetch/dropdown সরিয়ে
 // `selectedMemberId` প্রপ নেওয়া হচ্ছে (HealthRecordsSection, DietGuidanceSection,
 // HealthTimeline) — কোনো schema/permission পরিবর্তন নেই, presentation-layer-only।
-// MedicationReminders/VaccinationScheduler/FamilyHealthCalendar পরিবর্তন হয়নি
-// (এগুলো family-wide/সব-সদস্যের-একত্রে view, single-member selector প্রযোজ্য না)।
+// আপডেট (owner-request, ২০২৬-০৯-১৬): VaccinationScheduler-এও এখন
+// `selectedMemberId` thread করা হয়েছে (আগে family-wide ভাবা হয়েছিল, কিন্তু
+// আসলে per-child, নিজস্ব দ্বিতীয় dropdown ছিল — সেটা সরিয়ে এই পেজ-লেভেল
+// selector-ই reuse হচ্ছে) এবং শুধু শিশুদের জন্য (৬ বছরের নিচে) দেখানো হয়,
+// CollapsibleSection-এ। FamilyHealthCalendar সত্যিকারের family-wide (তার
+// নিজস্ব "event কার জন্য" dropdown ভিন্ন purpose — event tagging, member-view-
+// selector না) — Vaccination-এর উপরে আনা হলো (owner-request, দ্রুত-ব্যবহৃত
+// জিনিস আগে)। MedicationReminders অপরিবর্তিত (সব সদস্যের aggregate list)।
 //
 // Care-Escalation Directory ও Backup/Restore এখনো main Dashboard-এই আছে
 // (Menu full-page তৈরি না হওয়া পর্যন্ত, আলাদা থ্রেড)।
@@ -91,8 +97,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
       activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId }),
       activeTab === "timeline" && React.createElement(
         React.Fragment, null,
-        React.createElement(VaccinationScheduler, { familyId, callerMemberId }),
         React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
+        React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId }),
         React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })
       )
     )

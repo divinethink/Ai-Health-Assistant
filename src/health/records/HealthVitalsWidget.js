@@ -24,6 +24,8 @@ function isWeightType(t) {
 export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, refreshTick, onSaved }) {
   const [latest, setLatest] = useState(null); // { heightCm, weightKg, bmi }
   const [heightInput, setHeightInput] = useState("");
+  const [feetInput, setFeetInput] = useState("");
+  const [inchInput, setInchInput] = useState("");
   const [weightInput, setWeightInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -46,17 +48,22 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
 
   const submit = useCallback(async () => {
     setErr(null);
-    const h = parseFloat(heightInput);
+    const ft = parseFloat(feetInput);
+    const inch = parseFloat(inchInput);
+    const hasFtIn = feetInput.trim() || inchInput.trim();
+    // ft/in দিলে cm-এ convert করে একই ক্যানোনিকাল "height"/cm হিসেবেই সংরক্ষণ হয়
+    // (owner-request: cm-এর পাশাপাশি বিকল্প ইনপুট-পদ্ধতি, স্টোরেজ-schema/unit অপরিবর্তিত)।
+    const h = heightInput.trim() ? parseFloat(heightInput) : (hasFtIn ? (isNaN(ft) ? 0 : ft) * 30.48 + (isNaN(inch) ? 0 : inch) * 2.54 : NaN);
     const w = parseFloat(weightInput);
-    if (!heightInput.trim() && !weightInput.trim()) { setErr("উচ্চতা বা ওজন অন্তত একটা দিন।"); return; }
-    if (heightInput.trim() && (isNaN(h) || h <= 0)) { setErr("উচ্চতা সঠিক সংখ্যা হতে হবে (cm)।"); return; }
+    if (!heightInput.trim() && !hasFtIn && !weightInput.trim()) { setErr("উচ্চতা বা ওজন অন্তত একটা দিন।"); return; }
+    if ((heightInput.trim() || hasFtIn) && (isNaN(h) || h <= 0)) { setErr("উচ্চতা সঠিক সংখ্যা হতে হবে (cm অথবা ft/in)।"); return; }
     if (weightInput.trim() && (isNaN(w) || w <= 0)) { setErr("ওজন সঠিক সংখ্যা হতে হবে (kg)।"); return; }
     setBusy(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      if (heightInput.trim()) {
+      if (heightInput.trim() || hasFtIn) {
         await createHealthRecord(familyId, targetMemberId, callerMemberId, "observation", {
-          type: "height", value: String(h), unit: "cm", date: today,
+          type: "height", value: String(Math.round(h * 10) / 10), unit: "cm", date: today,
         });
       }
       if (weightInput.trim()) {
@@ -64,7 +71,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
           type: "weight", value: String(w), unit: "kg", date: today,
         });
       }
-      setHeightInput(""); setWeightInput("");
+      setHeightInput(""); setFeetInput(""); setInchInput(""); setWeightInput("");
       load();
       onSaved && onSaved();
     } catch (e) {
@@ -72,7 +79,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, heightInput, weightInput, load, onSaved]);
+  }, [familyId, targetMemberId, callerMemberId, heightInput, feetInput, inchInput, weightInput, load, onSaved]);
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
@@ -91,7 +98,27 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
         React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "উচ্চতা (cm)"),
         React.createElement("input", {
           type: "number", value: heightInput, onChange: (e) => setHeightInput(e.target.value),
+          disabled: !!(feetInput.trim() || inchInput.trim()),
           style: { display: "block", padding: "6px", border: "1px solid #CBD5E1", borderRadius: "6px", width: "100px" },
+        })
+      ),
+      React.createElement("div", { style: { fontSize: "11px", color: "#999", alignSelf: "center" } }, "অথবা"),
+      React.createElement(
+        "div", null,
+        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "ফুট"),
+        React.createElement("input", {
+          type: "number", value: feetInput, onChange: (e) => setFeetInput(e.target.value),
+          disabled: !!heightInput.trim(),
+          style: { display: "block", padding: "6px", border: "1px solid #CBD5E1", borderRadius: "6px", width: "70px" },
+        })
+      ),
+      React.createElement(
+        "div", null,
+        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "ইঞ্চি"),
+        React.createElement("input", {
+          type: "number", value: inchInput, onChange: (e) => setInchInput(e.target.value),
+          disabled: !!heightInput.trim(),
+          style: { display: "block", padding: "6px", border: "1px solid #CBD5E1", borderRadius: "6px", width: "70px" },
         })
       ),
       React.createElement(

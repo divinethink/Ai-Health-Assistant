@@ -52,7 +52,12 @@ export function buildHealthRecordFields(resourceType, fields) {
     };
   }
   if (resourceType === "medicationStatement") {
-    return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null };
+    // frequency("কয় বেলা")/durationDays("কতদিন") — owner-request, প্রেসক্রিপশনের
+    // basic তথ্য ধরে রাখার জন্য নতুন optional field (additive, schema-breaking না,
+    // Architecture Plan §2-এর MedicationStatement-এ dose/frequency-enforcement-এর
+    // সাথে সাংঘর্ষিক না — এটা শুধু user-typed reference-নোট, AI dose-generation
+    // এখানে জড়িত না, §6.4 bright-line অপরিবর্তিত)।
+    return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null, frequency: (fields.frequency || "").trim() || null, durationDays: fields.durationDays ? Number(fields.durationDays) : null };
   }
   if (resourceType === "allergy") {
     return { substance: fields.name.trim(), reaction: fields.reaction.trim(), severity: fields.severity };
@@ -138,7 +143,7 @@ export function describeHealthRecord(r) {
     return r.type + ": " + r.value + (r.unit ? " " + r.unit : "") + (r.date ? " (" + r.date + ")" : "");
   }
   if (r.resourceType === "medicationStatement") {
-    return r.genericName + " — " + (r.tier || "") + ", " + (r.status || "") + (r.startDate ? ", শুরু: " + r.startDate : "");
+    return r.genericName + " — " + (r.tier || "") + ", " + (r.status || "") + (r.frequency ? " | " + r.frequency : "") + (r.durationDays ? ", " + r.durationDays + " দিন" : "") + (r.startDate ? ", শুরু: " + r.startDate : "");
   }
   if (r.resourceType === "allergy") {
     return r.substance + " — " + (r.reaction || "") + " (" + (r.severity || "") + ")";

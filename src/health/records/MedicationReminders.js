@@ -45,7 +45,7 @@ export function MedicationReminders({ familyId, callerMemberId }) {
       perMember.forEach(({ member, records }) => {
         records
           .filter((r) => r.resourceType === "medicationStatement" && r.status === "active")
-          .forEach((r) => flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [] }));
+          .forEach((r) => flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [] }));
       });
       setMeds(flat);
       const ev = {};
@@ -117,6 +117,7 @@ export function MedicationReminders({ familyId, callerMemberId }) {
     meds.map((m) => React.createElement(
       "div", { key: m.recordId, style: { marginTop: "10px", padding: "10px", background: "#F7FAF9", borderRadius: "8px", border: "1px solid #E0E4E2" } },
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#333" } }, m.memberName + " — " + m.genericName),
+      (m.frequency || m.durationDays) && React.createElement("div", { style: { fontSize: "12px", color: "#666" } }, (m.frequency || "") + (m.durationDays ? " · " + m.durationDays + " দিন" : "")),
       React.createElement("input", {
         type: "text", value: editValues[m.recordId] || "", placeholder: "যেমন: 08:00, 20:00",
         onChange: (e) => setEditValues((prev) => ({ ...prev, [m.recordId]: e.target.value })),
