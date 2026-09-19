@@ -1,27 +1,34 @@
 // Vaccination Scheduler (owner-request, ২০২৬-০৯-১২, item ৪) — HealthTimeline/
 // MedicationReminders-এর pattern reuse। static EPI_SCHEDULE (epiSchedule.js) +
 // shared healthCalendarEvents collection (eventType: "vaccination")।
+//
+// আপডেট (owner-request, ২০২৬-০৯-১৬):
+// (ক) member-selector unification — নিজস্ব dropdown সরিয়ে parent
+//     (HealthRecordsPageSection)-এর `selectedMemberId` প্রপ ব্যবহার।
+// (খ) শুধু শিশুদের (৬ বছরের নিচে — EPI schedule সর্বশেষ dose ~১৫ মাসে শেষ হয়,
+//     বাড়তি বাফার সহ) জন্য দেখানো হবে — প্রাপ্তবয়স্ক সদস্যের জন্য প্রাসঙ্গিক না।
+// (গ) CollapsibleSection-এ মোড়ানো (owner-request, ডিফল্ট বন্ধ)।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, CollapsibleSection } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { computeVaccinationDueDates } from "./epiSchedule.js";
 import { listCalendarEvents, createCalendarEvent } from "./calendarData.js";
+import { getAgeInYears } from "../triage/triageEngine.js";
 
 const { useState, useEffect } = React;
 
-export function VaccinationScheduler({ familyId, callerMemberId }) {
+const CHILD_AGE_CUTOFF_YEARS = 6;
+
+export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
-  const [targetMemberId, setTargetMemberId] = useState(null);
   const [doneDoseIds, setDoneDoseIds] = useState([]);
   const [busy, setBusy] = useState(null);
+  const targetMemberId = selectedMemberId;
 
   useEffect(() => {
     listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setTargetMemberId((prev) => prev || (list[0] && list[0].id) || null);
-      })
+      .then(setMembers)
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId]);
 
@@ -48,24 +55,20 @@ export function VaccinationScheduler({ familyId, callerMemberId }) {
   }
 
   if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, ErrorBox(loadErr));
-  if (!members) return null;
+  if (!members || !targetMemberId) return null;
 
   const targetMember = members.find((m) => m.id === targetMemberId);
+  const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
+
+  // প্রাপ্তবয়স্ক সদস্য নির্বাচিত থাকলে এই widget-ই দেখানো হবে না (owner-request)।
+  if (ageYears !== null && ageYears >= CHILD_AGE_CUTOFF_YEARS) return null;
+
   const schedule = targetMember ? computeVaccinationDueDates(targetMember.dob) : [];
   const today = new Date().toISOString().slice(0, 10);
 
-  return React.createElement(
-    "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "💉 Vaccination Scheduler (EPI)"),
+  return React.createElement(CollapsibleSection, { title: "💉 Vaccination Scheduler (EPI)" },
     React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "8px" } },
       "বাংলাদেশ সরকারের EPI স্ট্যান্ডার্ড শিডিউল অনুযায়ী — জন্ম-তারিখ থেকে হিসাব করা প্রত্যাশিত তারিখ, প্রকৃত টিকাদান-তথ্যের জন্য টিকা-কার্ড/স্বাস্থ্যকর্মীর সাথে মিলিয়ে নিন।"
-    ),
-    React.createElement(
-      "select", {
-        value: targetMemberId || "", onChange: (e) => setTargetMemberId(e.target.value),
-        style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", marginBottom: "10px" },
-      },
-      members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
     ),
 
     !targetMember || !targetMember.dob
