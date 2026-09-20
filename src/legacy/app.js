@@ -30,6 +30,7 @@ import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSect
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
+import { listMembers } from "./familyIdentity.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -308,14 +309,54 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   );
 }
 
+// App-wide member-switcher — Home/AI-চ্যাট/Documents ৩ ট্যাবে এই bar একবারই
+// দেখাবে (owner-request, item ১, ২০২৬-০৯-১৬): TopBar (৪৪px)-এর ঠিক নিচে,
+// শুধু family-তে ১-এর বেশি সদস্য থাকলে (একক-সদস্য পরিবারে অপ্রয়োজনীয় জায়গা
+// নেবে না)। state Dashboard-এ owned (§11 presentational-pattern), এই
+// component নিজে কোনো fetch করে না।
+const MEMBER_BAR_HEIGHT = 34;
+
+function MemberSwitcherBar({ members, selectedMemberId, onChange }) {
+  return React.createElement(
+    "div", {
+      style: {
+        position: "fixed", top: "44px", left: 0, right: 0, zIndex: 45, height: MEMBER_BAR_HEIGHT + "px",
+        display: "flex", alignItems: "center", gap: "8px", padding: "0 14px",
+        background: "var(--hs-chip-bg, #F5F5F0)", borderBottom: "1px solid var(--hs-border, #E2E8F0)",
+      },
+    },
+    React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted, #666)" } }, "সদস্য:"),
+    React.createElement(
+      "select", {
+        value: selectedMemberId || "", onChange: (e) => onChange(e.target.value),
+        style: { flex: 1, maxWidth: "220px", padding: "4px 8px", border: "1px solid var(--hs-border, #CBD5E1)", borderRadius: "6px", fontSize: "13px", background: "#fff" },
+      },
+      members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
+    )
+  );
+}
+
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
+  const [members, setMembers] = useState(null);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
   // General Chat / Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
   // full-screen overlay (এখন Menu ট্যাব থেকে trigger হয়, আগে flat-dashboard-
   // এর বাটন থেকে হতো — শুধু entry-point বদলেছে, component/rules অপরিবর্তিত)।
   const [showGeneralChat, setShowGeneralChat] = useState(false);
   const [showDoctorDetails, setShowDoctorDetails] = useState(false);
+
+  // app-wide সদস্য-তালিকা — একবারই fetch, Home/AI-চ্যাট/Documents ৩ ট্যাব-ই
+  // এই একই selectedMemberId শেয়ার করে (ট্যাব পাল্টালেও persist থাকে, item ১)।
+  useEffect(() => {
+    listMembers(familyId)
+      .then((list) => {
+        setMembers(list);
+        setSelectedMemberId((prev) => prev || memberId || (list[0] && list[0].id) || null);
+      })
+      .catch(() => { /* non-critical — সদস্য-স্তরের পেজ নিজেই permission-error দেখাবে */ });
+  }, [familyId, memberId]);
 
   const goHome = () => setActiveTab("home");
 
@@ -326,15 +367,18 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
 
+  const needsMemberBar = members && members.length > 1 && ["home", "aichat", "documents"].includes(activeTab);
+  const topOffsetPx = 44 + (needsMemberBar ? MEMBER_BAR_HEIGHT : 0);
+
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, onExit: goHome });
+    tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
-    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, onExit: goHome });
+    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else if (activeTab === "documents") {
-    tabContent = React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, onExit: goHome });
+    tabContent = React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
@@ -345,6 +389,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   return React.createElement(
     React.Fragment, null,
     React.createElement(TopBar, { memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true) }),
+    needsMemberBar && React.createElement(MemberSwitcherBar, { members, selectedMemberId, onChange: setSelectedMemberId }),
     tabContent,
     React.createElement(BottomNav, { active: activeTab, onChange: setActiveTab })
   );
