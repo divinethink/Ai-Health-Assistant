@@ -11,6 +11,25 @@ import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietG
 
 const { useState, useEffect } = React;
 
+// BMI category derive (owner-request, item ৩, ২০২৬-০৯-১৬) — সর্বশেষ verified
+// height/weight Observation থেকে client-side BMI বের করে dietGuidanceRules-এর
+// tag-match-এ যোগ করা হয় (dietGuidanceData.js-এর matchDietGuidanceForTags()
+// substring-match logic অপরিবর্তিত — শুধু নতুন tag-value পাঠানো হচ্ছে,
+// HealthVitalsWidget.js-এর BMI-হিসাব একই সূত্র reuse)। normal-range-এ কোনো
+// tag পাঠানো হয় না (নির্দিষ্ট restriction দরকার নেই)।
+function deriveBmiTag(records) {
+  const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const weightObs = records.filter((r) => r.resourceType === "observation" && r.type === "weight").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const h = heightObs[0] ? parseFloat(heightObs[0].value) : null;
+  const w = weightObs[0] ? parseFloat(weightObs[0].value) : null;
+  if (!h || !w) return null;
+  const bmi = w / ((h / 100) * (h / 100));
+  if (bmi < 18.5) return "underweight";
+  if (bmi < 25) return null;
+  if (bmi < 30) return "overweight";
+  return "obese";
+}
+
 export function DietGuidanceSection({ familyId, selectedMemberId }) {
   const [loadErr, setLoadErr] = useState(null);
   const [result, setResult] = useState(null); // { avoidFoods, includeFoods, matchedTags }
@@ -28,7 +47,8 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
         const relevantAllergies = records
           .filter((r) => r.resourceType === "allergy")
           .map((r) => r.substance);
-        setResult(matchDietGuidanceForTags(allRules, [...relevantConditions, ...relevantAllergies]));
+        const bmiTag = deriveBmiTag(records);
+        setResult(matchDietGuidanceForTags(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])]));
       })
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId, targetMemberId]);
