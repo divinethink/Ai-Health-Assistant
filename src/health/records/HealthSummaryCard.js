@@ -12,6 +12,8 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "../nutrition-fitness/dietGuidanceData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
+import { listCalendarEvents } from "../calendar/calendarData.js";
+import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "../calendar/epiSchedule.js";
 
 const { useState, useEffect } = React;
 
@@ -31,6 +33,22 @@ function bmiAdviceLine(category) {
   return null;
 }
 
+// টিকা-স্ট্যাটাস এক-লাইন — শুধু শিশু (<৬ বছর, VaccinationScheduler-এর একই cutoff)।
+function vaccinationSummaryOf(member, ageYears, events, today) {
+  if (!member || !member.dob || ageYears === null || ageYears >= CHILD_AGE_CUTOFF_YEARS) return null;
+  const schedule = computeVaccinationDueDates(member.dob);
+  if (schedule.length === 0) return null;
+  const doneIds = events.filter((e) => e.eventType === "vaccination" && e.status === "done" && e.memberId === member.id).map((e) => e.doseId);
+  const done = schedule.filter((d) => doneIds.includes(d.doseId)).length;
+  const overdue = schedule.filter((d) => !doneIds.includes(d.doseId) && d.dueDate < today).length;
+  return { done, total: schedule.length, overdue };
+}
+
+// পরবর্তী অ্যাপয়েন্টমেন্ট/চেকআপ — শুধু এই সদস্যের নামে tag করা, আজ বা ভবিষ্যতের, সবচেয়ে কাছেরটা।
+function nextAppointmentOf(memberId, events, today) {
+  return events.find((e) => e.memberId === memberId && (e.eventType === "appointment" || e.eventType === "checkup") && e.status !== "done" && (e.date || "") >= today) || null;
+}
+
 export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -44,8 +62,10 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
       listMembers(familyId),
       listHealthRecords(familyId, selectedMemberId),
       listVerifiedDietGuidanceRules(),
+      // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
+      listCalendarEvents(familyId).catch(() => null),
     ])
-      .then(([members, records, allRules]) => {
+      .then(([members, records, allRules, calEvents]) => {
         const member = members.find((m) => m.id === selectedMemberId) || null;
 
         const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -62,7 +82,13 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
         const bmiTag = (bmiCategory && bmiCategory !== "normal") ? bmiCategory : null;
         const dietResult = matchDietGuidanceForTags(allRules, [...relevantConditions, ...(bmiTag ? [bmiTag] : [])]);
 
-        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult });
+        const allergies = records.filter((r) => r.resourceType === "allergy");
+        const today = new Date().toISOString().slice(0, 10);
+        const ageForVax = member ? getAgeInYears(member.dob) : null;
+        const vaccination = calEvents ? vaccinationSummaryOf(member, ageForVax, calEvents, today) : null;
+        const nextAppt = calEvents ? nextAppointmentOf(selectedMemberId, calEvents, today) : null;
+
+        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt });
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
@@ -72,7 +98,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
   if (err) return ErrorBox(err);
   if (loading || !data) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে...");
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
@@ -95,7 +121,13 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
     }, adviceLine),
     (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "12px", color: "#999", marginBottom: "10px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (নিচের ফর্ম ব্যবহার করুন)।"),
 
-    React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#0E4B43", marginTop: "6px" } }, "🩺 চলমান অসুস্থতা"),
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#B3261E", marginTop: "6px" } }, "⚠️ এলার্জি"),
+    allergies.length === 0
+      ? React.createElement("div", { style: { fontSize: "13px", color: "#888" } }, "কোনো এলার্জি রেকর্ড করা নেই।")
+      : allergies.map((a) => React.createElement("div", { key: a.id, style: { fontSize: "13px", color: "#333", marginTop: "2px" } },
+          "• " + a.substance + (a.reaction ? " — " + a.reaction : "") + (a.severity ? " (" + a.severity + ")" : ""))),
+
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🩺 চলমান অসুস্থতা"),
     activeConditions.length === 0
       ? React.createElement("div", { style: { fontSize: "13px", color: "#888" } }, "কোনো সক্রিয় অসুস্থতা নেই।")
       : activeConditions.map((c) => React.createElement("div", { key: c.id, style: { fontSize: "13px", color: "#333", marginTop: "2px" } }, "• " + c.name + (c.notes ? " — " + c.notes : ""))),
@@ -106,6 +138,11 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
       : activeMeds.map((m) => React.createElement("div", { key: m.id, style: { fontSize: "13px", color: "#333", marginTop: "2px" } },
           "• " + m.genericName + (m.frequency ? " — " + m.frequency : "") + (m.durationDays ? " (" + m.durationDays + " দিন)" : ""))),
     activeMeds.length > 0 && React.createElement("div", { style: { fontSize: "11px", color: "#999", marginTop: "4px" } }, "রিমাইন্ডার-সময় সেট করতে \"ঔষধ ও রিমাইন্ডার\" ট্যাবে যান।"),
+
+    vaccination && React.createElement("div", { style: { fontSize: "13px", color: "#333", marginTop: "10px" } },
+      "💉 টিকা: " + vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
+    nextAppt && React.createElement("div", { style: { fontSize: "13px", color: "#333", marginTop: "6px" } },
+      "📅 পরবর্তী অ্যাপয়েন্টমেন্ট: " + nextAppt.title + " — " + nextAppt.date + (nextAppt.time ? " " + nextAppt.time : "")),
 
     (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0) && React.createElement(
       React.Fragment, null,
