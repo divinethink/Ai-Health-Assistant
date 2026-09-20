@@ -22,10 +22,19 @@ export async function listVerifiedDietGuidanceRules() {
 // প্রাসঙ্গিক avoid/include food একত্রিত করে — case-insensitive substring-match
 // (তালিকা ছোট বলে fuzzy-matching-এর জটিলতা এখনই দরকার নেই)।
 export function matchDietGuidanceForTags(allRules, tagValues) {
-  const normalizedTags = (tagValues || []).map((t) => String(t).toLowerCase());
+  const normalizedTags = (tagValues || []).map((t) => String(t).toLowerCase().trim()).filter(Boolean);
+  const tokensOf = (t) => t.split(/[^a-z0-9\u0980-\u09FF]+/).filter(Boolean);
   const matched = allRules.filter((rule) => {
-    const tagValue = String(rule?.linkedTag?.value || "").toLowerCase();
-    return normalizedTags.some((t) => t.includes(tagValue) || tagValue.includes(t));
+    const main = String(rule?.linkedTag?.value || "").toLowerCase().trim();
+    // optional `linkedTag.aliases` (সংক্ষিপ্ত/বাংলা/বিকল্প নাম: IBS, ডায়াবেটিস ইত্যাদি) — না থাকলে
+    // আগের আচরণই। ≤৩ অক্ষরের alias (ibs/uti/flu…) শুধু পূর্ণ শব্দ হিসেবে মেলে, যাতে
+    // "beauty"-র ভেতরের "uti"-র মতো accidental substring-match না হয়।
+    const aliases = (Array.isArray(rule?.linkedTag?.aliases) ? rule.linkedTag.aliases : [])
+      .map((v) => String(v || "").toLowerCase().trim()).filter(Boolean);
+    return normalizedTags.some((t) => {
+      if (main && (t.includes(main) || main.includes(t))) return true;
+      return aliases.some((a) => (a.length <= 3 ? tokensOf(t).includes(a) : t.includes(a)));
+    });
   });
 
   const avoidFoods = [...new Set(matched.flatMap((r) => r.avoidFoods || []))];
