@@ -33,7 +33,7 @@ export function buildHealthRecordFields(resourceType, fields) {
     const treatingPhysician = (physName || physContact || physHospital)
       ? { name: physName || null, chamberContact: physContact || null, hospital: physHospital || null }
       : null;
-    return { name: fields.name.trim(), category: fields.category, status: fields.status, chronicManagement: fields.chronicManagement === true, onsetDate: fields.date || null, treatingPhysician };
+    return { name: fields.name.trim(), category: fields.category, status: fields.status, chronicManagement: fields.chronicManagement === true, onsetDate: fields.date || null, treatingPhysician, notes: (fields.conditionNotes || "").trim() || null };
   }
   if (resourceType === "observation") {
     // source/extractionMethod/extractionConfidence/originalOcrValue/userVerified —
@@ -137,7 +137,7 @@ export function describeHealthRecord(r) {
     const tpText = tp && (tp.name || tp.hospital || tp.chamberContact)
       ? " | ডাক্তার: " + (tp.name || "?") + (tp.hospital ? " (" + tp.hospital + ")" : "") + (tp.chamberContact ? ", যোগাযোগ: " + tp.chamberContact : "")
       : "";
-    return r.name + " — " + (r.status || "") + " (Category " + (r.category || "?") + ")" + (r.chronicManagement ? " [Chronic]" : "") + (r.onsetDate ? ", onset: " + r.onsetDate : "") + tpText;
+    return r.name + " — " + (r.status || "") + " (Category " + (r.category || "?") + ")" + (r.chronicManagement ? " [Chronic]" : "") + (r.onsetDate ? ", onset: " + r.onsetDate : "") + (r.notes ? " | নোট: " + r.notes : "") + tpText;
   }
   if (r.resourceType === "observation") {
     return r.type + ": " + r.value + (r.unit ? " " + r.unit : "") + (r.date ? " (" + r.date + ")" : "");

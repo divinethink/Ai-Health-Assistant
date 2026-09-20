@@ -10,6 +10,7 @@ import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
+import { HealthSummaryCard } from "./HealthSummaryCard.js";
 
 const { useState, useEffect } = React;
 
@@ -38,6 +39,10 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
+    (section === "all" || section === "profile") && React.createElement(HealthSummaryCard, {
+      key: "summary-" + targetMemberId,
+      familyId, selectedMemberId: targetMemberId, refreshTick,
+    }),
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
     (section === "all" || section === "profile") && React.createElement(HealthVitalsWidget, {
       key: "vitals-" + targetMemberId,

@@ -24,6 +24,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [tier, setTier] = useState("otc-self-care");
   const [frequency, setFrequency] = useState("");
   const [durationDays, setDurationDays] = useState("");
+  const [conditionNotes, setConditionNotes] = useState("");
   const [reaction, setReaction] = useState("");
   const [severity, setSeverity] = useState("mild");
   const [date, setDate] = useState("");
@@ -47,6 +48,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setCategory(r.category || "A");
     setStatus(r.status || "active");
     setChronicManagement(r.chronicManagement === true);
+    setConditionNotes(r.notes || "");
     setObsType(r.type || "");
     setValue(r.value || "");
     setUnit(r.unit || "");
@@ -66,7 +68,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
     setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital(""); setChronicManagement(false);
-    setFrequency(""); setDurationDays("");
+    setFrequency(""); setDurationDays(""); setConditionNotes("");
   }, []);
 
   const changeResourceType = useCallback((v) => {
@@ -81,7 +83,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (resourceType === "allergy" && !name.trim()) { setErr("Allergy-র substance লিখুন।"); return; }
     setBusy(true);
     try {
-      const fields = { name, category, status, chronicManagement, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital };
+      const fields = { name, category, status, chronicManagement, conditionNotes, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital };
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -98,7 +100,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
   const typeFields = [];
   if (resourceType === "condition") {
@@ -106,6 +108,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     typeFields.push(SelectField("Category", category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]]));
     typeFields.push(SelectField("Status", status, setStatus, [["active", "active"], ["resolved", "resolved"], ["chronic", "chronic"]]));
     typeFields.push(DateField("Onset তারিখ (ঐচ্ছিক)", date, setDate));
+    typeFields.push(TextField("সংক্ষিপ্ত বিবরণ (ঐচ্ছিক, ১-২ লাইন)", conditionNotes, setConditionNotes, "যেমন: নিয়ন্ত্রণে আছে, নিয়মিত মেডিসিন চলছে"));
     // roadmap §12.4 Category B bright-line rule (dose-suggestion না) actual data-এর
     // উপর নির্ভর করার জন্য এই checkbox দরকার — আগে RiskBasedTreatmentModes.js-এ
     // hardcode false ছিল (checklist §৭ known-gap), এখন এই field সেই gap পূরণ করে।
