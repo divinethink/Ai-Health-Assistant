@@ -5,6 +5,7 @@
 import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listCalendarEvents, createCalendarEvent, updateCalendarEventStatus, deleteCalendarEvent } from "./calendarData.js";
+import { createAllDayCalendarEvent } from "../../legacy/googleCalendar.js";
 
 const { useState, useEffect } = React;
 
@@ -48,6 +49,8 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   const [loadErr, setLoadErr] = useState(null);
   const [form, setForm] = useState({ title: "", eventType: "appointment", date: "", memberId: "" });
   const [saving, setSaving] = useState(false);
+  const [calBusy, setCalBusy] = useState(null); // event id
+  const [calMsg, setCalMsg] = useState(null); // { id, ok, text }
   const today0 = new Date();
   const [viewYear, setViewYear] = useState(today0.getFullYear());
   const [viewMonth, setViewMonth] = useState(today0.getMonth()); // 0-indexed
@@ -61,6 +64,29 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   }
 
   useEffect(() => { load(); }, [familyId]);
+
+  // per-device dedupe (এই event এই ডিভাইস থেকে আগে Google Calendar-এ গেছে কিনা) —
+  // event-doc-এ লেখা যায় না (rules: শুধু creator/Admin update পারে), তাই localStorage।
+  function syncedKey(id) { return "gcalSynced:" + id; }
+  function isSynced(id) { try { return localStorage.getItem(syncedKey(id)) === "1"; } catch (e) { return false; } }
+
+  async function handleAutoAdd(e) {
+    setCalMsg(null);
+    setCalBusy(e.id);
+    try {
+      await createAllDayCalendarEvent({
+        title: e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : ""),
+        date: e.date,
+        description: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Health Assistant অ্যাপ থেকে যোগ হয়েছে",
+      });
+      try { localStorage.setItem(syncedKey(e.id), "1"); } catch (err) { /* storage বন্ধ থাকলে শুধু dedupe হবে না */ }
+      setCalMsg({ id: e.id, ok: true, text: "✓ Google Calendar-এ যুক্ত হয়েছে (আগের দিন সকাল ৯টায় রিমাইন্ডার)" });
+    } catch (err) {
+      setCalMsg({ id: e.id, ok: false, text: err.message || String(err) });
+    } finally {
+      setCalBusy(null);
+    }
+  }
 
   async function handleAdd() {
     if (!form.title.trim() || !form.date) return;
@@ -207,12 +233,19 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
               style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#fff", color: "#0E4B43", fontSize: "11px", cursor: "pointer" },
             }, "সম্পন্ন চিহ্নিত করুন"
           ),
+          e.status !== "done" && React.createElement(
+            "button", {
+              onClick: () => handleAutoAdd(e), disabled: calBusy === e.id || isSynced(e.id),
+              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#4285F4", color: "#fff", fontSize: "11px", cursor: "pointer", opacity: isSynced(e.id) ? 0.6 : 1 },
+            }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 Calendar-এ যুক্ত ✓" : "📅 অটো যোগ করুন")
+          ),
           React.createElement(
             "a", {
               href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer",
               style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#fff", color: "#4285F4", fontSize: "11px", cursor: "pointer", textDecoration: "none", display: "inline-block" },
             }, "📅 Google Calendar-এ যোগ করুন"
           ),
+          calMsg && calMsg.id === e.id && React.createElement("div", { style: { fontSize: "11px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text),
           React.createElement(
             "button", {
               onClick: () => handleDelete(e.id),
