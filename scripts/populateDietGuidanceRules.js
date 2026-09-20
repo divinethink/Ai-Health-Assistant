@@ -150,6 +150,28 @@ const ENTRIES = [
     includeFoods: ["চাল-ভিত্তিক খাবার", "ভুট্টা", "gluten-free বিকল্প"],
     source: ["NHS"],
   },
+
+  // --- BMI-category (owner-request, ২০২৬-০৯-১৬) — height/weight Observation
+  // থেকে client-side derive করা BMI, dietGuidanceData.js-এ matchDietGuidanceForTags()
+  // এর substring-match logic অপরিবর্তিত (নতুন logic লাগেনি, শুধু নতুন tag-value) ---
+  {
+    linkedTag: { type: "bmiCategory", value: "underweight" },
+    avoidFoods: ["দীর্ঘ সময় না-খেয়ে থাকা", "কম-ক্যালরি/কম-পুষ্টির স্ন্যাক্স"],
+    includeFoods: ["ঘন ঘন ছোট পরিমাণে উচ্চ-ক্যালরি সুষম খাবার", "প্রোটিন-সমৃদ্ধ খাবার (ডিম, দুধ, ডাল, মাছ-মাংস)", "স্বাস্থ্যকর ফ্যাট (বাদাম, ঘি পরিমিত)"],
+    source: ["WHO Healthy Diet", "NHS Eat Well"],
+  },
+  {
+    linkedTag: { type: "bmiCategory", value: "overweight" },
+    avoidFoods: ["উচ্চ-ক্যালরি প্রসেসড/ভাজাপোড়া খাবার", "চিনি-যুক্ত পানীয়/মিষ্টি"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "নিয়ন্ত্রিত অংশ (portion-control)", "নিয়মিত হালকা-মাঝারি ব্যায়াম (lifestyle সহায়ক)"],
+    source: ["WHO Healthy Diet"],
+  },
+  {
+    linkedTag: { type: "bmiCategory", value: "obese" },
+    avoidFoods: ["উচ্চ-ক্যালরি প্রসেসড/ফাস্ট ফুড", "চিনি-যুক্ত পানীয়", "অতিরিক্ত ভাজাপোড়া"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "পর্যাপ্ত প্রোটিন", "নিয়ন্ত্রিত অংশ (portion-control)", "নিয়মিত ব্যায়াম শুরুর আগে ডাক্তার-পরামর্শ (comorbidity থাকলে)"],
+    source: ["WHO Healthy Diet"],
+  },
 ];
 
 async function run() {
