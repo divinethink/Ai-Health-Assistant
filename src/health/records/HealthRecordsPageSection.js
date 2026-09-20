@@ -23,8 +23,16 @@
 // Care-Escalation Directory ও Backup/Restore এখনো main Dashboard-এই আছে
 // (Menu full-page তৈরি না হওয়া পর্যন্ত, আলাদা থ্রেড)।
 
-import { SelectField, ErrorBox } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
+// আপডেট (owner-request, item ১, ২০২৬-০৯-১৬, app-wide member-switcher):
+// `selectedMemberId` এখন এই wrapper-এও নিজে fetch/state করে না — Dashboard
+// (app.js)-এর একক app-wide switcher থেকে prop হিসেবে আসে (Home/AI-চ্যাট/
+// Documents ৩ ট্যাব-ই এখন এই একই সদস্য শেয়ার করে, ট্যাব পাল্টালেও persist
+// থাকে)। `topOffsetPx`-ও Dashboard থেকে আসে (member-switcher-bar থাকলে ৭৮px,
+// না থাকলে ৪৪px) — hardcoded "44px" সরানো হয়েছে।
+//
+// Care-Escalation Directory ও Backup/Restore এখনো main Dashboard-এই আছে
+// (Menu full-page তৈরি না হওয়া পর্যন্ত, আলাদা থ্রেড)।
+
 import { HealthRecordsSection } from "./HealthRecordsSection.js";
 import { MedicationReminders } from "./MedicationReminders.js";
 import { VaccinationScheduler } from "../calendar/VaccinationScheduler.js";
@@ -32,7 +40,7 @@ import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 
-const { useState, useEffect } = React;
+const { useState } = React;
 
 const TABS = [
   { id: "profile", label: "প্রোফাইল" },
@@ -42,23 +50,12 @@ const TABS = [
   { id: "timeline", label: "টাইমলাইন ও ক্যালেন্ডার" },
 ];
 
-export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
+export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
   const [activeTab, setActiveTab] = useState("profile");
-  const [members, setMembers] = useState(null);
-  const [loadErr, setLoadErr] = useState(null);
-  const [selectedMemberId, setSelectedMemberId] = useState(null);
-
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setSelectedMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId, callerMemberId]);
+  const topPx = (topOffsetPx || 44) + "px";
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: "44px", left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#0E4B43", color: "#fff", flexShrink: 0 } },
       React.createElement("span", { style: { fontWeight: 700, fontSize: "15px" } }, "🏠 হেলথ রেকর্ড"),
@@ -66,14 +63,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
         onClick: onExit,
         style: { background: "none", border: "1px solid #fff", color: "#fff", fontSize: "11px", padding: "3px 10px", borderRadius: "6px", cursor: "pointer" },
       }, "← ফিরে যান")
-    ),
-    React.createElement(
-      "div", { style: { padding: "8px 14px 0", background: "#fff", flexShrink: 0 } },
-      loadErr
-        ? ErrorBox(loadErr)
-        : !members
-        ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
-        : SelectField("সদস্য", selectedMemberId, setSelectedMemberId, members.map((m) => [m.id, m.name]))
     ),
     React.createElement(
       "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "8px 10px", background: "#fff", borderBottom: "1px solid #ddd", flexShrink: 0 } },
@@ -89,7 +78,9 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, onExit }) {
           },
         }, t.label)
       )),
-    selectedMemberId && React.createElement(
+    !selectedMemberId
+      ? React.createElement("p", { style: { color: "#888", fontSize: "13px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+      : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
       activeTab === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
