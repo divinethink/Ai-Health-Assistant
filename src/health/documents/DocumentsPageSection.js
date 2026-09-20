@@ -14,35 +14,28 @@
 // ভেতরের নিজস্ব member-fetch/dropdown সরিয়ে প্রপ নেওয়া হচ্ছে — কোনো
 // schema/permission পরিবর্তন নেই।
 
-import { SelectField, ErrorBox, TabPills } from "../../shared/ui.js";
-import { listMembers } from "../../legacy/familyIdentity.js";
+// আপডেট (owner-request, item ১, ২০২৬-০৯-১৬, app-wide member-switcher):
+// `selectedMemberId`/`topOffsetPx` এখন Dashboard (app.js)-এর একক app-wide
+// switcher থেকে prop হিসেবে আসে — এই wrapper নিজে আর member fetch/dropdown
+// রাখে না, hardcoded "44px"-ও সরানো হয়েছে।
+
+import { TabPills } from "../../shared/ui.js";
 import { DocumentsSection } from "./DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 
-const { useState, useEffect } = React;
+const { useState } = React;
 
 const TABS = [
   ["upload", "📤 আপলোড ও রিপোর্ট"],
   ["doctor-export", "🩺 ডাক্তার-দেখানোর এক্সপোর্ট"],
 ];
 
-export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
+export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
   const [tab, setTab] = useState(TABS[0][0]);
-  const [members, setMembers] = useState(null);
-  const [loadErr, setLoadErr] = useState(null);
-  const [selectedMemberId, setSelectedMemberId] = useState(null);
-
-  useEffect(() => {
-    listMembers(familyId)
-      .then((list) => {
-        setMembers(list);
-        setSelectedMemberId((prev) => prev || callerMemberId || (list[0] && list[0].id) || null);
-      })
-      .catch((e) => setLoadErr(e.message || String(e)));
-  }, [familyId, callerMemberId]);
+  const topPx = (topOffsetPx || 44) + "px";
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: "44px", left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#0E4B43", color: "#fff", flexShrink: 0 } },
       React.createElement("span", { style: { fontWeight: 700, fontSize: "15px" } }, "📁 Documents"),
@@ -52,18 +45,15 @@ export function DocumentsPageSection({ familyId, callerMemberId, onExit }) {
       }, "← ফিরে যান")
     ),
     React.createElement(
-      "div", { style: { padding: "8px 14px 0", background: "#fff", flexShrink: 0 } },
-      loadErr
-        ? ErrorBox(loadErr)
-        : !members
-        ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
-        : SelectField("সদস্য", selectedMemberId, setSelectedMemberId, members.map((m) => [m.id, m.name]))
-    ),
-    React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       TabPills(TABS, tab, setTab),
-      selectedMemberId && tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
-      selectedMemberId && tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId })
+      !selectedMemberId
+        ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+        : React.createElement(
+          React.Fragment, null,
+          tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
+          tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId })
+        )
     )
   );
 }
