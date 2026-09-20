@@ -21,7 +21,7 @@
 
 import { buildBackupPayload, buildBackupFileName } from "./backupData.js";
 
-const GOOGLE_DRIVE_CLIENT_ID = "953109057516-gh99c3cbvipt93vvrae8j9adajn04g8m.apps.googleusercontent.com";
+export const GOOGLE_DRIVE_CLIENT_ID = "953109057516-gh99c3cbvipt93vvrae8j9adajn04g8m.apps.googleusercontent.com";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata";
 const DRIVE_API_BASE = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_BASE = "https://www.googleapis.com/upload/drive/v3";
