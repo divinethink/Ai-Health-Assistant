@@ -4,6 +4,10 @@
 // "draft" dosing-data না — জাতীয় সরকারি স্থির vaccination-schedule, তাই সরাসরি
 // static client-side constant হিসেবে রাখা হলো (owner-request, ২০২৬-০৯-১২, item ৪)।
 
+// EPI schedule শুধু এই বয়সের নিচের শিশুদের জন্য প্রাসঙ্গিক (VaccinationScheduler +
+// HealthSummaryCard-এর shared cutoff)।
+export const CHILD_AGE_CUTOFF_YEARS = 6;
+
 export const EPI_SCHEDULE = [
   { doseId: "bcg", name: "BCG", ageWeeks: 0 },
   { doseId: "opv0", name: "OPV-0", ageWeeks: 0 },

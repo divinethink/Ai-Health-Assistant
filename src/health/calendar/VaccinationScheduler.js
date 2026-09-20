@@ -11,13 +11,11 @@
 
 import { ErrorBox, CollapsibleSection } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { computeVaccinationDueDates } from "./epiSchedule.js";
+import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "./epiSchedule.js";
 import { listCalendarEvents, createCalendarEvent } from "./calendarData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 
 const { useState, useEffect } = React;
-
-const CHILD_AGE_CUTOFF_YEARS = 6;
 
 export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
