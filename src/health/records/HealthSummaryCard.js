@@ -83,7 +83,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
         const dietResult = matchDietGuidanceForTags(allRules, [...relevantConditions, ...(bmiTag ? [bmiTag] : [])]);
 
         const allergies = records.filter((r) => r.resourceType === "allergy");
-        const today = new Date().toISOString().slice(0, 10);
+        const nowD = new Date();
+        const today = nowD.getFullYear() + "-" + String(nowD.getMonth() + 1).padStart(2, "0") + "-" + String(nowD.getDate()).padStart(2, "0"); // লোকাল তারিখ (UTC না)
         const ageForVax = member ? getAgeInYears(member.dob) : null;
         const vaccination = calEvents ? vaccinationSummaryOf(member, ageForVax, calEvents, today) : null;
         const nextAppt = calEvents ? nextAppointmentOf(selectedMemberId, calEvents, today) : null;
@@ -136,7 +137,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
     activeMeds.length === 0
       ? React.createElement("div", { style: { fontSize: "13px", color: "#888" } }, "কোনো সক্রিয় ঔষধ নেই।")
       : activeMeds.map((m) => React.createElement("div", { key: m.id, style: { fontSize: "13px", color: "#333", marginTop: "2px" } },
-          "• " + m.genericName + (m.frequency ? " — " + m.frequency : "") + (m.durationDays ? " (" + m.durationDays + " দিন)" : ""))),
+          "• " + m.genericName + (m.frequency ? " — " + m.frequency : "") + (m.durationDays ? " (" + m.durationDays + " দিন)" : "") + (m.mealTiming === "before" ? " · খাবারের আগে" : m.mealTiming === "after" ? " · খাবারের পরে" : ""))),
     activeMeds.length > 0 && React.createElement("div", { style: { fontSize: "11px", color: "#999", marginTop: "4px" } }, "রিমাইন্ডার-সময় সেট করতে \"ঔষধ ও রিমাইন্ডার\" ট্যাবে যান।"),
 
     vaccination && React.createElement("div", { style: { fontSize: "13px", color: "#333", marginTop: "10px" } },

@@ -122,10 +122,30 @@ export async function listHealthRecords(familyId, targetMemberId) {
 // হলো, schema-breaking না (নতুন optional field, না থাকলে undefined/[] ধরা হবে) এবং
 // rules-change লাগেনি (এই collection-এ field-allowlist নেই)। buildHealthRecordFields()
 // bypass করে সরাসরি এই একটা field আপডেট করা হচ্ছে, অন্য medication-edit ফর্ম অপ্রভাবিত থাকে।
-export async function setMedicationReminderTimes(familyId, recordId, callerMemberId, reminderTimes) {
+// আপডেট (owner-request): `extra`-তে দুটো নতুন optional field — `endDate` ("YYYY-MM-DD",
+// কত তারিখ পর্যন্ত খাবেন) ও `mealTiming` ("before"|"after"|"any", খাবারের আগে/পরে) —
+// additive, schema-breaking না, rules-change লাগে না (allowlist নেই)। শুধু যেগুলো
+// undefined না সেগুলোই লেখা হয়।
+export async function setMedicationReminderTimes(familyId, recordId, callerMemberId, reminderTimes, extra = {}) {
   const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
+  const extraFields = {};
+  if (extra.endDate !== undefined) extraFields.endDate = extra.endDate || null;
+  if (extra.mealTiming !== undefined) extraFields.mealTiming = extra.mealTiming || null;
   await ref.update({
     reminderTimes,
+    ...extraFields,
+    lastEditedByMemberId: callerMemberId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+// Google Calendar sync-এর event-ID — প্রতি সদস্যের (যিনি sync করেছেন) নিজস্ব Google
+// account-এ ID আলাদা, তাই map: `calendarEventIds.{callerMemberId}: [id]`। শুধু ঐ
+// একটা key আপডেট হয় (dotted-path), অন্য সদস্যের entry অক্ষত। rules-change লাগে না।
+export async function setMedicationCalendarEvents(familyId, recordId, callerMemberId, eventIds) {
+  const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
+  await ref.update({
+    ["calendarEventIds." + callerMemberId]: eventIds,
     lastEditedByMemberId: callerMemberId,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
