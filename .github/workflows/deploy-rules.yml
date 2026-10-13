@@ -1,0 +1,23 @@
+name: deploy-rules
+# ম্যানুয়াল: Actions → deploy-rules → Run workflow
+on:
+  workflow_dispatch:
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Service account
+        run: printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy Firestore rules
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npm run deploy:rules
