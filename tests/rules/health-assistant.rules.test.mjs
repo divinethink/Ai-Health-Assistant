@@ -1,121 +1,132 @@
 // Health Assistant — Firestore Rules Unit Tests (Mocha)
-// Architecture Plan §3.4.7 অনুযায়ী: ৬টা মূল কেস + Thread-31 audit-fix সংশ্লিষ্ট ৩টা নতুন কেস = মোট ৯টা।
-// চালানোর নিয়ম: npm run test:rules  (Firebase Emulator নিজে থেকেই চালু/বন্ধ হয়)
+// চালানো: npm run test:rules  (Firebase Emulator সহ)
 //
-// node:test-এর বদলে Mocha ব্যবহার করা হয়েছে — Firebase JS SDK-এর emulator-connection
-// (gRPC/WebChannel) সম্পূর্ণ close না হওয়ায় Node-এর built-in test runner-এ
-// "Promise resolution is still pending" error আসছিল। Firebase নিজেও official
-// rules-unit-testing ডকুমেন্টেশনে Mocha সুপারিশ করে — এই সমস্যা এড়াতে।
+// বর্তমান rules-এর (Google Sign-in মডেল: member.googleUid + uidMemberIndex) বিপরীতে লেখা।
+// প্রতিটি টেস্টের আগে ডাটাবেস খালি করে ছোট বেস-ডেটা বসানো হয়, তাই টেস্টগুলো স্বাধীন।
+// Mocha ব্যবহারের কারণ: Firebase SDK-র সাথে node:test-এ "Promise resolution is still pending" সমস্যা।
 
 import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import {
   initializeTestEnvironment,
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import {
-  doc,
-  setDoc,
-  updateDoc,
-  getDoc,
-  deleteField,
-  collection,
-  getDocs,
-} from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, deleteDoc, deleteField } from 'firebase/firestore';
 
 const FAMILY_ID = 'fam1';
 const ADMIN_UID = 'admin-uid-1';
-
-function sha256Hex(plain) {
-  return createHash('sha256').update(plain).digest('hex');
-}
+const OLD = new Date('2020-01-01T00:00:00Z');
 
 let testEnv;
 
-// সহায়ক: rules বাইপাস করে সরাসরি seed data লেখা
 async function seed(fn) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await fn(ctx.firestore());
   });
 }
 
-function dbAs(uid) {
-  return testEnv.authenticatedContext(uid).firestore();
+function dbAs(uid, token) {
+  return testEnv.authenticatedContext(uid, token).firestore();
 }
 
-async function seedFamily(familyId, adminUids) {
+const famDoc = (db, ...path) => doc(db, 'families', FAMILY_ID, ...path);
+
+async function seedFamily(familyId, adminUids, extra = {}) {
   await seed(async (db) => {
     await setDoc(doc(db, 'families', familyId), {
       familyId,
       familyCodeDisplay: 'TEST',
       createdBy: adminUids[0] || 'nobody',
-      createdAt: new Date(),
+      createdAt: OLD,
       adminUids,
       firstAdminUid: adminUids[0] || null,
+      ...extra,
     });
   });
 }
 
-async function seedMember(familyId, memberId, data) {
+async function seedMember(memberId, data = {}) {
   await seed(async (db) => {
-    await setDoc(doc(db, 'families', familyId, 'members', memberId), {
+    await setDoc(famDoc(db, 'members', memberId), {
       id: memberId,
-      familyId,
+      familyId: FAMILY_ID,
       name: 'Test',
       dob: '1990-01-01',
       sex: 'male',
       role: 'self-managing',
       relationshipLabel: null,
       guardianMemberIds: [],
-      bloodGroup: null,
-      ownerUids: [],
-      ownerActivity: {},
-      updatedAt: new Date(),
+      googleUid: null,
+      updatedAt: OLD,
       ...data,
     });
   });
 }
 
-async function seedPrivateKey(familyId, memberId, plainKey) {
+async function seedUidIndex(uid, memberId) {
   await seed(async (db) => {
-    await setDoc(
-      doc(db, 'families', familyId, 'members', memberId, 'private', 'key'),
-      {
-        key: plainKey,
-        keyHash: sha256Hex(plainKey),
-        createdBy: 'admin',
-        createdAt: new Date(),
-      }
-    );
+    await setDoc(famDoc(db, 'uidMemberIndex', uid), { memberId });
   });
 }
 
-async function seedUidIndex(familyId, uid, memberId) {
+// Google-লগইন করা সদস্য: member.googleUid + uidMemberIndex দুটোই
+async function seedOwned(memberId, uid, data = {}) {
+  await seedMember(memberId, { googleUid: uid, ...data });
+  await seedUidIndex(uid, memberId);
+}
+
+async function seedGrant(targetMemberId, granteeMemberId, opts = {}) {
   await seed(async (db) => {
-    await setDoc(doc(db, 'families', familyId, 'uidMemberIndex', uid), {
-      memberId,
+    await setDoc(famDoc(db, 'accessGrants', `${targetMemberId}_${granteeMemberId}`), {
+      granterId: targetMemberId,
+      granteeId: granteeMemberId,
+      scope: 'read+write',
+      relationshipType: 'other',
+      status: 'approved',
+      revocable: true,
+      grantedAt: OLD,
+      createdAt: OLD,
+      ...opts,
     });
   });
 }
 
-async function seedGrant(familyId, targetMemberId, granteeMemberId, status = 'approved') {
+async function seedShare(ownerId, granteeId, flags) {
   await seed(async (db) => {
-    await setDoc(
-      doc(db, 'families', familyId, 'accessGrants', `${targetMemberId}_${granteeMemberId}`),
-      {
-        granterId: targetMemberId,
-        granteeId: granteeMemberId,
-        scope: 'read+write',
-        relationshipType: 'other',
-        status,
-        revocable: true,
-        grantedAt: new Date(),
-        createdAt: new Date(),
-      }
-    );
+    await setDoc(famDoc(db, 'profileShares', `${ownerId}_${granteeId}`), {
+      ownerId,
+      granteeId,
+      read: false,
+      write: false,
+      updatedAt: OLD,
+      ...flags,
+    });
   });
 }
+
+async function seedRecord(id, memberId) {
+  await seed(async (db) => {
+    await setDoc(famDoc(db, 'healthRecords', id), {
+      id,
+      memberId,
+      resourceType: 'condition',
+      name: 'Test condition',
+      lastEditedByMemberId: memberId,
+      createdAt: OLD,
+      updatedAt: OLD,
+    });
+  });
+}
+
+const newRecord = (memberId, editedBy, extra = {}) => ({
+  memberId,
+  resourceType: 'condition',
+  name: 'New condition',
+  lastEditedByMemberId: editedBy,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ...extra,
+});
 
 describe('Health Assistant — Firestore Rules', function () {
   this.timeout(20000);
@@ -129,8 +140,12 @@ describe('Health Assistant — Firestore Rules', function () {
         port: 8080,
       },
     });
+  });
+
+  beforeEach(async () => {
+    await testEnv.clearFirestore();
     await seedFamily(FAMILY_ID, [ADMIN_UID]);
-    await seedMember(FAMILY_ID, 'memberAdmin', { role: 'admin', ownerUids: [ADMIN_UID] });
+    await seedOwned('memberAdmin', ADMIN_UID, { role: 'admin' });
   });
 
   after(async () => {
@@ -138,393 +153,581 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
-  // 1. Self-profile edit / Admin edit
-  // ============================================================
-  it('1. Self-profile edit — owner নিজের প্রোফাইল edit করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'memberSelf', { ownerUids: ['uidSelf'] });
-    const ref = doc(dbAs('uidSelf'), 'families', FAMILY_ID, 'members', 'memberSelf');
-    await assertSucceeds(updateDoc(ref, { name: 'Updated Name' }));
-  });
+  describe('1. Member profile edit', () => {
+    it('1. owner (googleUid) নিজের প্রোফাইল edit করতে পারেন', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertSucceeds(updateDoc(famDoc(dbAs('uidA'), 'members', 'mA'), { name: 'নতুন নাম' }));
+    });
 
-  it('1b. Self-profile edit — অন্য (non-owner, non-admin) কেউ পারবেন না', async () => {
-    await seedMember(FAMILY_ID, 'memberSelf2', { ownerUids: ['uidSelf2'] });
-    const ref = doc(dbAs('uidRandom'), 'families', FAMILY_ID, 'members', 'memberSelf2');
-    await assertFails(updateDoc(ref, { name: 'Hacked' }));
-  });
+    it('1b. non-owner, non-admin অন্যের প্রোফাইল edit করতে পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+      await assertFails(updateDoc(famDoc(dbAs('uidB'), 'members', 'mA'), { name: 'হ্যাক' }));
+    });
 
-  it('1c. Admin edit — Admin অন্য সদস্যের non-ownerUids field edit করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'memberByAdmin', { ownerUids: ['uidOther'] });
-    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'members', 'memberByAdmin');
-    await assertSucceeds(updateDoc(ref, { relationshipLabel: 'father' }));
-  });
+    it('1c. owner নিজের role বদলাতে পারেন না (Admin-only)', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'members', 'mA'), { role: 'admin' }));
+    });
 
-  // ============================================================
-  // 2. Direct-Identify claim (সঠিক hash দিয়ে)
-  // ============================================================
-  it('2. Direct-Identify claim — সঠিক hash দিয়ে unclaimed profile claim করা যাবে', async () => {
-    await seedMember(FAMILY_ID, 'memberClaim', { ownerUids: [] });
-    await seedPrivateKey(FAMILY_ID, 'memberClaim', 'correctKey123');
-    const ref = doc(dbAs('uidClaimer'), 'families', FAMILY_ID, 'members', 'memberClaim');
-    await assertSucceeds(
-      updateDoc(ref, {
-        ownerUids: ['uidClaimer'],
-        ownerActivity: { uidClaimer: Date.now() },
-        claimKeyHashAttempt: sha256Hex('correctKey123'),
-      })
-    );
-  });
+    it('1d. Admin অন্যের guardianMemberIds/relationshipLabel বদলাতে পারেন', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs(ADMIN_UID), 'members', 'mA'), {
+          guardianMemberIds: ['memberAdmin'],
+          relationshipLabel: 'son',
+        })
+      );
+    });
 
-  it('2b. Direct-Identify claim — ভুল hash দিয়ে reject হবে', async () => {
-    await seedMember(FAMILY_ID, 'memberClaim2', { ownerUids: [] });
-    await seedPrivateKey(FAMILY_ID, 'memberClaim2', 'correctKey456');
-    const ref = doc(dbAs('uidClaimer2'), 'families', FAMILY_ID, 'members', 'memberClaim2');
-    await assertFails(
-      updateDoc(ref, {
-        ownerUids: ['uidClaimer2'],
-        ownerActivity: { uidClaimer2: Date.now() },
-        claimKeyHashAttempt: sha256Hex('wrongKey'),
-      })
-    );
+    it('1e. owner নিজে guardianMemberIds বদলাতে পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidA'), 'members', 'mA'), { guardianMemberIds: ['mA'] })
+      );
+    });
+
+    it('1f. Admin-ও claim-করা সদস্যের googleUid বদলাতে পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertFails(updateDoc(famDoc(dbAs(ADMIN_UID), 'members', 'mA'), { googleUid: 'uidX' }));
+    });
+
+    it('1g. Admin নতুন সদস্য তৈরি করতে পারেন; non-admin পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      const data = { name: 'Child', dob: '2018-01-01', sex: 'male', role: 'guardian-managed' };
+      await assertSucceeds(setDoc(famDoc(dbAs(ADMIN_UID), 'members', 'mNew'), data));
+      await assertFails(setDoc(famDoc(dbAs('uidA'), 'members', 'mNew2'), data));
+    });
   });
 
   // ============================================================
-  // 3. FIFO eviction (৩ device পূর্ণ অবস্থায় ৪র্থ claim)
+  describe('2. Email-match auto-claim', () => {
+    it('2. email মিললে unclaimed সদস্য claim করা যায় (email মুছে যায়)', async () => {
+      await seedMember('mC', { email: 'a@x.com', googleUid: null });
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs('uidC', { email: 'a@x.com' }), 'members', 'mC'), {
+          googleUid: 'uidC',
+          email: deleteField(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    it('2b. ভুল email হলে claim reject', async () => {
+      await seedMember('mC', { email: 'a@x.com', googleUid: null });
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidC', { email: 'other@x.com' }), 'members', 'mC'), {
+          googleUid: 'uidC',
+          email: deleteField(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    it('2c. ইতিমধ্যে claim-করা সদস্য অন্য কেউ আবার claim করতে পারে না', async () => {
+      await seedMember('mC', { email: 'a@x.com', googleUid: 'uidOwner' });
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidEvil', { email: 'a@x.com' }), 'members', 'mC'), {
+          googleUid: 'uidEvil',
+          email: deleteField(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+  });
+
   // ============================================================
-  it('3. FIFO eviction — ৩ device পূর্ণ থাকা অবস্থায় ৪র্থ claim ঠিকভাবে ১টা evict করলে allow', async () => {
-    await seedMember(FAMILY_ID, 'memberFifo', {
+  describe('3. Invite-link self-join', () => {
+    const joinData = (uid, token, extra = {}) => ({
+      name: 'New',
+      dob: '1995-05-05',
+      sex: 'female',
       role: 'self-managing',
-      ownerUids: ['u1', 'u2', 'u3'],
+      googleUid: uid,
+      inviteTokenAttempt: token,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...extra,
     });
-    await seedPrivateKey(FAMILY_ID, 'memberFifo', 'fifoKey123');
-    const ref = doc(dbAs('u4'), 'families', FAMILY_ID, 'members', 'memberFifo');
-    await assertSucceeds(
-      updateDoc(ref, {
-        ownerUids: ['u2', 'u3', 'u4'], // u1 FIFO-evicted, ঠিক ১টাই বদলেছে
-        ownerActivity: { u2: 1, u3: 2, u4: 3 },
-        claimKeyHashAttempt: sha256Hex('fifoKey123'),
-      })
-    );
-  });
 
-  it('3b. FIFO eviction — একসাথে ১-এর বেশি device বদলালে reject', async () => {
-    await seedMember(FAMILY_ID, 'memberFifo2', {
-      role: 'self-managing',
-      ownerUids: ['v1', 'v2', 'v3'],
-    });
-    await seedPrivateKey(FAMILY_ID, 'memberFifo2', 'fifoKey456');
-    const ref = doc(dbAs('v4'), 'families', FAMILY_ID, 'members', 'memberFifo2');
-    await assertFails(
-      updateDoc(ref, {
-        ownerUids: ['v4', 'v5', 'v6'], // ২টা extra evict — invalid
-        ownerActivity: { v4: 1, v5: 2, v6: 3 },
-        claimKeyHashAttempt: sha256Hex('fifoKey456'),
-      })
-    );
-  });
-
-  // ============================================================
-  // 4. Cross-member unauthorized write reject
-  // ============================================================
-  it('4. Cross-member unauthorized write — grant/relation ছাড়া অন্য সদস্যের healthRecord লেখা যাবে না', async () => {
-    await seedMember(FAMILY_ID, 'memberE', { ownerUids: ['uidE'] });
-    await seedMember(FAMILY_ID, 'memberZ', { ownerUids: ['uidZ'] });
-    const db = dbAs('uidZ');
-    await assertFails(
-      setDoc(doc(db, 'families', FAMILY_ID, 'healthRecords', 'rec1'), {
-        memberId: 'memberE',
-        resourceType: 'condition',
-        lastEditedByMemberId: 'memberZ',
-        name: 'Fever',
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      })
-    );
-  });
-
-  // ============================================================
-  // 5. hasAccess() positive/negative case
-  // ============================================================
-  it('5. hasAccess() negative — approved grant না থাকলে read reject', async () => {
-    await seedUidIndex(FAMILY_ID, 'uidZ', 'memberZ');
-    await seed(async (db) => {
-      await setDoc(doc(db, 'families', FAMILY_ID, 'healthRecords', 'recNeg'), {
-        memberId: 'memberE',
-        resourceType: 'condition',
-        lastEditedByMemberId: 'memberE',
-        name: 'Fever',
-        updatedAt: new Date(),
-        createdAt: new Date(),
+    async function setToken(revoked) {
+      await seed(async (db) => {
+        await setDoc(
+          doc(db, 'families', FAMILY_ID),
+          { activeInviteToken: { token: 'tok123', revoked } },
+          { merge: true }
+        );
       });
+    }
+
+    it('3. সঠিক invite token দিয়ে self-join করা যায়', async () => {
+      await setToken(false);
+      await assertSucceeds(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'tok123'))
+      );
     });
-    const ref = doc(dbAs('uidZ'), 'families', FAMILY_ID, 'healthRecords', 'recNeg');
-    await assertFails(getDoc(ref));
-  });
 
-  it('5b. hasAccess() positive — approved AccessGrant থাকলে read+write allow', async () => {
-    await seedGrant(FAMILY_ID, 'memberE', 'memberZ', 'approved');
-    const db = dbAs('uidZ');
-
-    // read
-    const readRef = doc(db, 'families', FAMILY_ID, 'healthRecords', 'recNeg');
-    await assertSucceeds(getDoc(readRef));
-
-    // write (create)
-    await assertSucceeds(
-      setDoc(doc(db, 'families', FAMILY_ID, 'healthRecords', 'recPos'), {
-        memberId: 'memberE',
-        resourceType: 'observation',
-        lastEditedByMemberId: 'memberZ',
-        value: '98.6',
-        updatedAt: new Date(),
-        createdAt: new Date(),
-      })
-    );
-  });
-
-  // ============================================================
-  // 6. (Audit-fix) claim-cleanup — claimKeyHashAttempt মোছা সফল হওয়া
-  // ============================================================
-  it('6. claim-cleanup — claim সফল হওয়ার পর owner claimKeyHashAttempt মুছতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'memberCleanup', {
-      ownerUids: ['uidCleanup'],
-      claimKeyHashAttempt: 'leftover-hash-value',
+    it('3b. ভুল token reject', async () => {
+      await setToken(false);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'wrong'))
+      );
     });
-    const ref = doc(dbAs('uidCleanup'), 'families', FAMILY_ID, 'members', 'memberCleanup');
-    await assertSucceeds(updateDoc(ref, { claimKeyHashAttempt: deleteField() }));
+
+    it('3c. role: admin দিয়ে self-join reject (privilege-escalation)', async () => {
+      await setToken(false);
+      await assertFails(
+        setDoc(
+          famDoc(dbAs('uidNew'), 'members', 'mNew'),
+          joinData('uidNew', 'tok123', { role: 'admin' })
+        )
+      );
+    });
+
+    it('3d. revoked token দিয়ে join reject', async () => {
+      await setToken(true);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'tok123'))
+      );
+    });
+
+    it('3e. অন্যের googleUid বসিয়ে join reject', async () => {
+      await setToken(false);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidOther', 'tok123'))
+      );
+    });
   });
 
   // ============================================================
-  // 7. (Audit-fix) admin ownerUids: add → reject, remove → allow
-  // ============================================================
-  it('7. admin ownerUids ADD — নতুন uid verification ছাড়া admin যোগ করতে পারবেন না', async () => {
-    await seedMember(FAMILY_ID, 'memberAddTest', { ownerUids: ['uidG'] });
-    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'members', 'memberAddTest');
-    await assertFails(updateDoc(ref, { ownerUids: ['uidG', 'uidNewIntruder'] }));
-  });
+  describe('4. uidMemberIndex ও users', () => {
+    it('4. নিজের (googleUid-মেলা) সদস্যের জন্য index বানানো যায়', async () => {
+      await seedMember('mA', { googleUid: 'uidA' });
+      await assertSucceeds(setDoc(famDoc(dbAs('uidA'), 'uidMemberIndex', 'uidA'), { memberId: 'mA' }));
+    });
 
-  it('7b. admin ownerUids REMOVE — admin device-revoke (shrink) করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'memberRemoveTest', { ownerUids: ['uidH1', 'uidH2'] });
-    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'members', 'memberRemoveTest');
-    await assertSucceeds(updateDoc(ref, { ownerUids: ['uidH1'] }));
-  });
+    it('4b. অন্যের সদস্যের দিকে index spoof reject', async () => {
+      await seedMember('mA', { googleUid: 'uidA' });
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'uidMemberIndex', 'uidB'), { memberId: 'mA' }));
+    });
 
-  // ============================================================
-  // 8. (Audit-fix) non-admin familyCode-create reject, new-family-moment allow
-  // ============================================================
-  it('8. familyCode create — established family-তে non-admin reject হবে', async () => {
-    const ref = doc(dbAs('uidNonAdmin'), 'familyCodes', 'BLOCKEDCODE');
-    await assertFails(
-      setDoc(ref, {
-        familyId: FAMILY_ID,
-        createdBy: 'uidNonAdmin',
-        createdAt: new Date(),
-      })
-    );
-  });
+    it('4c. অন্য uid-র নামে index বানানো reject', async () => {
+      await seedMember('mA', { googleUid: 'uidA' });
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'uidMemberIndex', 'uidA'), { memberId: 'mA' }));
+    });
 
-  it('8b. familyCode create — নতুন family তৈরির মুহূর্তে (adminUids empty) allow হবে', async () => {
-    await seedFamily('famNew', []); // adminUids: [] — এখনো কেউ claim করেননি
-    const ref = doc(dbAs('uidNewFamily'), 'familyCodes', 'NEWFAMCODE');
-    await assertSucceeds(
-      setDoc(ref, {
-        familyId: 'famNew',
-        createdBy: 'uidNewFamily',
-        createdAt: new Date(),
-      })
-    );
+    it('4d. users/{uid} শুধু নিজের সদস্যের দিকে বানানো যায়', async () => {
+      await seedMember('mA', { googleUid: 'uidA' });
+      await assertSucceeds(
+        setDoc(doc(dbAs('uidA'), 'users', 'uidA'), { familyId: FAMILY_ID, memberId: 'mA' })
+      );
+      await assertFails(
+        setDoc(doc(dbAs('uidB'), 'users', 'uidB'), { familyId: FAMILY_ID, memberId: 'mA' })
+      );
+    });
   });
 
   // ============================================================
-  // 9. (Thread 32 fix) isFamilyMember() — Direct-Identify-claimed সদস্য
-  //    (accessRequests doc নেই, শুধু uidMemberIndex) সদস্য-তালিকা দেখতে পারবেন
-  // ============================================================
-  it('9. Direct-Identify-claimed সদস্য (uidMemberIndex, কোনো accessRequests নেই) members list করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'memberRaiyanLike', { ownerUids: ['uidRaiyanLike'] });
-    await seedUidIndex(FAMILY_ID, 'uidRaiyanLike', 'memberRaiyanLike');
-    const snap = await getDocs(collection(dbAs('uidRaiyanLike'), 'families', FAMILY_ID, 'members'));
-    await assertSucceeds(Promise.resolve(snap));
-  });
+  describe('5. familyCodes', () => {
+    const codeData = (uid, familyId) => ({ familyId, createdBy: uid, createdAt: new Date() });
 
-  it('9b. পুরোপুরি অপরিচিত uid (না admin, না accessRequests-approved, না uidMemberIndex) members list করতে পারবেন না', async () => {
-    await assertFails(
-      getDocs(collection(dbAs('uidTotalStranger'), 'families', FAMILY_ID, 'members'))
-    );
-  });
+    it('5. established family-তে non-admin code বানাতে পারেন না', async () => {
+      await assertFails(
+        setDoc(doc(dbAs('stranger'), 'familyCodes', 'ABC123'), codeData('stranger', FAMILY_ID))
+      );
+    });
 
-  // ============================================================
-  // 10. AccessGrant — Take-Access request (grantee self-request, §3.5)
-  // ============================================================
-  it('10. AccessGrant create — grantee নিজে নিজের memberId দিয়ে pending request পাঠাতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'granterA', { ownerUids: ['uidGranterA'] });
-    await seedMember(FAMILY_ID, 'granteeA', { ownerUids: ['uidGranteeA'] });
-    await seedUidIndex(FAMILY_ID, 'uidGranteeA', 'granteeA');
-    const ref = doc(dbAs('uidGranteeA'), 'families', FAMILY_ID, 'accessGrants', 'granterA_granteeA');
-    await assertSucceeds(
-      setDoc(ref, {
-        granterId: 'granterA', granteeId: 'granteeA',
-        scope: 'read+write', relationshipType: 'other',
-        status: 'pending', revocable: true,
-        createdAt: new Date(),
-      })
-    );
-  });
+    it('5b. নতুন family (adminUids খালি) বা অস্তিত্বহীন family-র code বানানো যায়', async () => {
+      await seedFamily('famNew', []);
+      await assertSucceeds(
+        setDoc(doc(dbAs('founder'), 'familyCodes', 'NEWFAM1'), codeData('founder', 'famNew'))
+      );
+      await assertSucceeds(
+        setDoc(doc(dbAs('founder'), 'familyCodes', 'GHOST12'), codeData('founder', 'famGhost'))
+      );
+    });
 
-  it('10b. AccessGrant create — granteeId স্পুফ করে অন্য সদস্যের নামে request পাঠানো যাবে না', async () => {
-    await seedMember(FAMILY_ID, 'granterB', { ownerUids: ['uidGranterB'] });
-    await seedMember(FAMILY_ID, 'granteeB', { ownerUids: ['uidGranteeB'] });
-    await seedMember(FAMILY_ID, 'imposterB', { ownerUids: ['uidImposterB'] });
-    const ref = doc(dbAs('uidImposterB'), 'families', FAMILY_ID, 'accessGrants', 'granterB_granteeB');
-    await assertFails(
-      setDoc(ref, {
-        granterId: 'granterB', granteeId: 'granteeB', // caller-এর নিজের memberId না
-        scope: 'read+write', relationshipType: 'other',
-        status: 'pending', revocable: true,
-        createdAt: new Date(),
-      })
-    );
+    it('5c. নিজের family-র জন্য Admin code বানাতে পারেন', async () => {
+      await assertSucceeds(
+        setDoc(doc(dbAs(ADMIN_UID), 'familyCodes', 'ADMIN12'), codeData(ADMIN_UID, FAMILY_ID))
+      );
+    });
+
+    it('5d. createdBy অন্যের uid হলে reject', async () => {
+      await assertFails(
+        setDoc(doc(dbAs('founder'), 'familyCodes', 'SPOOF12'), codeData('someoneElse', 'famGhost'))
+      );
+    });
   });
 
   // ============================================================
-  // 11. AccessGrant — granter approve/deny
-  // ============================================================
-  it('11. AccessGrant approve — granter pending request approve করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'granterC', { ownerUids: ['uidGranterC'] });
-    await seedMember(FAMILY_ID, 'granteeC', { ownerUids: ['uidGranteeC'] });
-    await seedUidIndex(FAMILY_ID, 'uidGranterC', 'granterC');
-    await seedGrant(FAMILY_ID, 'granterC', 'granteeC', 'pending');
-    const ref = doc(dbAs('uidGranterC'), 'families', FAMILY_ID, 'accessGrants', 'granterC_granteeC');
-    await assertSucceeds(updateDoc(ref, { status: 'approved', grantedAt: new Date() }));
-  });
+  describe('6. Family doc / adminUids', () => {
+    it('6. নতুন family তৈরি + প্রথম admin হওয়া', async () => {
+      const db = dbAs('founder');
+      await assertSucceeds(
+        setDoc(doc(db, 'families', 'famF'), {
+          familyId: 'famF',
+          familyCodeDisplay: 'FF',
+          createdBy: 'founder',
+          createdAt: new Date(),
+          adminUids: [],
+        })
+      );
+      await assertSucceeds(
+        updateDoc(doc(db, 'families', 'famF'), {
+          adminUids: ['founder'],
+          firstAdminUid: 'founder',
+          updatedAt: new Date(),
+        })
+      );
+    });
 
-  it('11b. AccessGrant approve — granter ছাড়া অন্য কেউ decide করতে পারবেন না', async () => {
-    await seedMember(FAMILY_ID, 'granterD', { ownerUids: ['uidGranterD'] });
-    await seedMember(FAMILY_ID, 'granteeD', { ownerUids: ['uidGranteeD'] });
-    await seedMember(FAMILY_ID, 'strangerD', { ownerUids: ['uidStrangerD'] });
-    await seedGrant(FAMILY_ID, 'granterD', 'granteeD', 'pending');
-    const ref = doc(dbAs('uidStrangerD'), 'families', FAMILY_ID, 'accessGrants', 'granterD_granteeD');
-    await assertFails(updateDoc(ref, { status: 'approved', grantedAt: new Date() }));
-  });
+    it('6b. non-admin established family-তে নিজেকে admin বানাতে পারেন না', async () => {
+      await assertFails(
+        updateDoc(doc(dbAs('intruder'), 'families', FAMILY_ID), {
+          adminUids: [ADMIN_UID, 'intruder'],
+          updatedAt: new Date(),
+        })
+      );
+    });
 
-  // ============================================================
-  // 12. AccessGrant — cancel approved (either side, revocable)
-  // ============================================================
-  it('12. AccessGrant cancel — approved grant granter/grantee যেকোনো পক্ষ cancel করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'granterE', { ownerUids: ['uidGranterE'] });
-    await seedMember(FAMILY_ID, 'granteeE', { ownerUids: ['uidGranteeE'] });
-    await seedUidIndex(FAMILY_ID, 'uidGranteeE', 'granteeE');
-    await seedGrant(FAMILY_ID, 'granterE', 'granteeE', 'approved');
-    const ref = doc(dbAs('uidGranteeE'), 'families', FAMILY_ID, 'accessGrants', 'granterE_granteeE');
-    await assertSucceeds(
-      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'granteeE' })
-    );
-  });
+    it('6c. Admin আরেকজন admin যোগ করতে পারেন', async () => {
+      await assertSucceeds(
+        updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), {
+          adminUids: [ADMIN_UID, 'admin2'],
+          updatedAt: new Date(),
+        })
+      );
+    });
 
-  // ============================================================
-  // 13. AccessGrant — re-request after denied/cancelled
-  // ============================================================
-  it('13. AccessGrant re-request — denied/cancelled থেকে grantee আবার pending করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'granterF', { ownerUids: ['uidGranterF'] });
-    await seedMember(FAMILY_ID, 'granteeF', { ownerUids: ['uidGranteeF'] });
-    await seedUidIndex(FAMILY_ID, 'uidGranteeF', 'granteeF');
-    await seedGrant(FAMILY_ID, 'granterF', 'granteeF', 'denied');
-    const ref = doc(dbAs('uidGranteeF'), 'families', FAMILY_ID, 'accessGrants', 'granterF_granteeF');
-    await assertSucceeds(updateDoc(ref, { status: 'pending' }));
-  });
+    it('6d. firstAdmin অন্য admin-কে সরাতে পারেন; অন্য admin firstAdmin-কে সরাতে পারেন না', async () => {
+      await seedFamily('famAdm', ['adminA', 'adminB']);
+      await assertFails(
+        updateDoc(doc(dbAs('adminB'), 'families', 'famAdm'), {
+          adminUids: ['adminB'],
+          updatedAt: new Date(),
+        })
+      );
+      await assertSucceeds(
+        updateDoc(doc(dbAs('adminA'), 'families', 'famAdm'), {
+          adminUids: ['adminA'],
+          updatedAt: new Date(),
+        })
+      );
+    });
 
-  // ============================================================
-  // 14. Structural (Admin) Parent-Child(<18) grant — create
-  // ============================================================
-  it('14. Structural grant create — Admin parent-child(<18) approved+non-revocable grant তৈরি করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'childA', { ownerUids: [] });
-    await seedMember(FAMILY_ID, 'guardianA', { ownerUids: ['uidGuardianA'] });
-    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'accessGrants', 'childA_guardianA');
-    await assertSucceeds(
-      setDoc(ref, {
-        granterId: 'childA', granteeId: 'guardianA',
-        scope: 'read+write', relationshipType: 'parent-child',
-        status: 'approved', revocable: false,
-        grantedAt: new Date(), createdAt: new Date(),
-      })
-    );
-  });
+    it('6e. শেষ admin-কে সরানো যায় না (অন্তত ১জন থাকতে হবে)', async () => {
+      await assertFails(
+        updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), {
+          adminUids: [],
+          updatedAt: new Date(),
+        })
+      );
+    });
 
-  it('14b. Structural grant create — non-admin structural (parent-child) grant তৈরি করতে পারবেন না', async () => {
-    await seedMember(FAMILY_ID, 'childB', { ownerUids: [] });
-    await seedMember(FAMILY_ID, 'guardianB', { ownerUids: ['uidGuardianB'] });
-    const ref = doc(dbAs('uidGuardianB'), 'families', FAMILY_ID, 'accessGrants', 'childB_guardianB');
-    await assertFails(
-      setDoc(ref, {
-        granterId: 'childB', granteeId: 'guardianB',
-        scope: 'read+write', relationshipType: 'parent-child',
-        status: 'approved', revocable: false,
-        grantedAt: new Date(), createdAt: new Date(),
-      })
-    );
+    it('6f. Admin invite token বদলাতে পারেন; non-admin পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      const tok = { activeInviteToken: { token: 't1', revoked: false }, updatedAt: new Date() };
+      await assertSucceeds(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), tok));
+      await assertFails(updateDoc(doc(dbAs('uidA'), 'families', FAMILY_ID), tok));
+    });
   });
 
   // ============================================================
-  // 15. Structural grant — Admin cancel (non-revocable)
+  describe('7. Health records — hasAccess', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+
+    it('7. owner নিজের record তৈরি, পড়া, edit ও delete করতে পারেন', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthRecords', 'r1'), newRecord('mA', 'mA')));
+      await assertSucceeds(getDoc(famDoc(db, 'healthRecords', 'r1')));
+      await assertSucceeds(
+        updateDoc(famDoc(db, 'healthRecords', 'r1'), { name: 'Edited', lastEditedByMemberId: 'mA' })
+      );
+      await assertSucceeds(deleteDoc(famDoc(db, 'healthRecords', 'r1')));
+    });
+
+    it('7b. grant/share ছাড়া অন্য সদস্য পড়তে বা লিখতে পারেন না', async () => {
+      await seedRecord('r1', 'mA');
+      const db = dbAs('uidB');
+      await assertFails(getDoc(famDoc(db, 'healthRecords', 'r1')));
+      await assertFails(setDoc(famDoc(db, 'healthRecords', 'r2'), newRecord('mA', 'mB')));
+    });
+
+    it('7c. approved AccessGrant থাকলে read+write allow', async () => {
+      await seedRecord('r1', 'mA');
+      await seedGrant('mA', 'mB');
+      const db = dbAs('uidB');
+      await assertSucceeds(getDoc(famDoc(db, 'healthRecords', 'r1')));
+      await assertSucceeds(setDoc(famDoc(db, 'healthRecords', 'r2'), newRecord('mA', 'mB')));
+    });
+
+    it('7d. pending/cancelled grant কোনো access দেয় না', async () => {
+      await seedRecord('r1', 'mA');
+      await seedGrant('mA', 'mB', { status: 'pending' });
+      await assertFails(getDoc(famDoc(dbAs('uidB'), 'healthRecords', 'r1')));
+    });
+
+    it('7e. lastEditedByMemberId spoof করে অন্যের নামে লেখা reject', async () => {
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthRecords', 'r1'), newRecord('mA', 'mA')));
+    });
+
+    it('7f. অবৈধ resourceType reject', async () => {
+      await assertFails(
+        setDoc(famDoc(dbAs('uidA'), 'healthRecords', 'r1'), newRecord('mA', 'mA', { resourceType: 'bogus' }))
+      );
+    });
+
+    it('7g. update-এ memberId বদলে অন্যের নামে সরানো reject', async () => {
+      await seedRecord('r1', 'mA');
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidA'), 'healthRecords', 'r1'), { memberId: 'mB', lastEditedByMemberId: 'mA' })
+      );
+    });
+
+    it('7h. Admin যেকোনো সদস্যের record পড়তে, লিখতে ও delete করতে পারেন', async () => {
+      await seedRecord('r1', 'mA');
+      const db = dbAs(ADMIN_UID);
+      await assertSucceeds(getDoc(famDoc(db, 'healthRecords', 'r1')));
+      await assertSucceeds(
+        setDoc(famDoc(db, 'healthRecords', 'r2'), newRecord('mA', 'memberAdmin'))
+      );
+      await assertSucceeds(deleteDoc(famDoc(db, 'healthRecords', 'r1')));
+    });
+
+    it('7i. non-owner অন্যের record delete করতে পারেন না', async () => {
+      await seedRecord('r1', 'mA');
+      await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'healthRecords', 'r1')));
+    });
+
+    it('7j. অপরিচিত (সদস্য নয়) ব্যবহারকারী কিছুই পড়তে পারে না', async () => {
+      await seedRecord('r1', 'mA');
+      await assertFails(getDoc(famDoc(dbAs('stranger'), 'healthRecords', 'r1')));
+    });
+  });
+
   // ============================================================
-  it('15. Structural grant cancel — Admin non-revocable parent-child grant cancel করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'childC', { ownerUids: [] });
-    await seedMember(FAMILY_ID, 'guardianC', { ownerUids: ['uidGuardianC'] });
-    await seed(async (db) => {
-      await setDoc(doc(db, 'families', FAMILY_ID, 'accessGrants', 'childC_guardianC'), {
-        granterId: 'childC', granteeId: 'guardianC',
-        scope: 'read+write', relationshipType: 'parent-child',
-        status: 'approved', revocable: false,
-        grantedAt: new Date(), createdAt: new Date(),
+  describe('8. ProfileShare (owner-controlled)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+      await seedRecord('r1', 'mA');
+    });
+
+    it('8. owner নিজের প্রোফাইলের share বানাতে পারেন', async () => {
+      await assertSucceeds(
+        setDoc(famDoc(dbAs('uidA'), 'profileShares', 'mA_mB'), {
+          ownerId: 'mA',
+          granteeId: 'mB',
+          read: true,
+          write: false,
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    it('8b. অন্যের প্রোফাইলের owner সেজে share বানানো reject', async () => {
+      await assertFails(
+        setDoc(famDoc(dbAs('uidB'), 'profileShares', 'mA_mB'), {
+          ownerId: 'mA',
+          granteeId: 'mB',
+          read: true,
+          write: true,
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    it('8c. read share থাকলে পড়া যায়, কিন্তু লেখা যায় না', async () => {
+      await seedShare('mA', 'mB', { read: true, write: false });
+      const db = dbAs('uidB');
+      await assertSucceeds(getDoc(famDoc(db, 'healthRecords', 'r1')));
+      await assertFails(setDoc(famDoc(db, 'healthRecords', 'r2'), newRecord('mA', 'mB')));
+    });
+
+    it('8d. write share থাকলে লেখা যায়', async () => {
+      await seedShare('mA', 'mB', { read: true, write: true });
+      await assertSucceeds(setDoc(famDoc(dbAs('uidB'), 'healthRecords', 'r2'), newRecord('mA', 'mB')));
+    });
+
+    it('8e. grantee নিজে share বদলাতে পারেন না', async () => {
+      await seedShare('mA', 'mB', { read: true, write: false });
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidB'), 'profileShares', 'mA_mB'), { write: true, updatedAt: new Date() })
+      );
+    });
+
+    it('8f. owner share বাতিল (delete) করতে পারেন', async () => {
+      await seedShare('mA', 'mB', { read: true });
+      await assertSucceeds(deleteDoc(famDoc(dbAs('uidA'), 'profileShares', 'mA_mB')));
+    });
+  });
+
+  // ============================================================
+  describe('9. AccessGrants (structural + legacy)', () => {
+    beforeEach(async () => {
+      await seedOwned('mChild', 'uidChild');
+      await seedOwned('mParent', 'uidParent');
+    });
+
+    const structural = () => ({
+      granterId: 'mChild',
+      granteeId: 'mParent',
+      scope: 'read+write',
+      relationshipType: 'parent-child',
+      status: 'approved',
+      revocable: false,
+      grantedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    it('9. Admin structural parent-child grant বানাতে পারেন', async () => {
+      await assertSucceeds(
+        setDoc(famDoc(dbAs(ADMIN_UID), 'accessGrants', 'mChild_mParent'), structural())
+      );
+    });
+
+    it('9b. non-admin (guardian নিজেও) structural grant বানাতে পারেন না', async () => {
+      await assertFails(
+        setDoc(famDoc(dbAs('uidParent'), 'accessGrants', 'mChild_mParent'), structural())
+      );
+    });
+
+    it('9c. পুরনো pending peer-request এখন আর তৈরি করা যায় না', async () => {
+      await assertFails(
+        setDoc(famDoc(dbAs('uidParent'), 'accessGrants', 'mChild_mParent'), {
+          granterId: 'mChild',
+          granteeId: 'mParent',
+          scope: 'read+write',
+          relationshipType: 'other',
+          status: 'pending',
+          revocable: true,
+          createdAt: new Date(),
+        })
+      );
+    });
+
+    it('9d. Admin non-revocable grant cancel করতে পারেন', async () => {
+      await seedGrant('mChild', 'mParent', { relationshipType: 'parent-child', revocable: false });
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs(ADMIN_UID), 'accessGrants', 'mChild_mParent'), {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledBy: 'memberAdmin',
+        })
+      );
+    });
+
+    it('9e. non-admin non-revocable grant cancel করতে পারেন না', async () => {
+      await seedGrant('mChild', 'mParent', { relationshipType: 'parent-child', revocable: false });
+      await assertFails(
+        updateDoc(famDoc(dbAs('uidParent'), 'accessGrants', 'mChild_mParent'), {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledBy: 'mParent',
+        })
+      );
+    });
+
+    it('9f. Admin cancelled structural grant আবার approve করতে পারেন', async () => {
+      await seedGrant('mChild', 'mParent', {
+        relationshipType: 'parent-child',
+        revocable: false,
+        status: 'cancelled',
       });
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs(ADMIN_UID), 'accessGrants', 'mChild_mParent'), {
+          status: 'approved',
+          grantedAt: new Date(),
+        })
+      );
     });
-    const ref = doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'accessGrants', 'childC_guardianC');
-    await assertSucceeds(
-      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'admin' })
-    );
-  });
 
-  it('15b. Structural grant cancel — non-admin (guardian নিজেও) non-revocable grant cancel করতে পারবেন না', async () => {
-    await seedMember(FAMILY_ID, 'childD', { ownerUids: [] });
-    await seedMember(FAMILY_ID, 'guardianD', { ownerUids: ['uidGuardianD'] });
-    await seed(async (db) => {
-      await setDoc(doc(db, 'families', FAMILY_ID, 'accessGrants', 'childD_guardianD'), {
-        granterId: 'childD', granteeId: 'guardianD',
-        scope: 'read+write', relationshipType: 'parent-child',
-        status: 'approved', revocable: false,
-        grantedAt: new Date(), createdAt: new Date(),
-      });
+    it('9g. ১৮+ transition: Admin revocable false→true করতে পারেন', async () => {
+      await seedGrant('mChild', 'mParent', { relationshipType: 'parent-child', revocable: false });
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs(ADMIN_UID), 'accessGrants', 'mChild_mParent'), { revocable: true })
+      );
     });
-    const ref = doc(dbAs('uidGuardianD'), 'families', FAMILY_ID, 'accessGrants', 'childD_guardianD');
-    await assertFails(
-      updateDoc(ref, { status: 'cancelled', cancelledAt: new Date(), cancelledBy: 'guardianD' })
-    );
+
+    it('9h. approved revocable peer-grant granter নিজে cancel করতে পারেন', async () => {
+      await seedGrant('mChild', 'mParent', { revocable: true });
+      await assertSucceeds(
+        updateDoc(famDoc(dbAs('uidChild'), 'accessGrants', 'mChild_mParent'), {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledBy: 'mChild',
+        })
+      );
+    });
+
+    it('9i. grant কখনো delete করা যায় না', async () => {
+      await seedGrant('mChild', 'mParent', {});
+      await assertFails(deleteDoc(famDoc(dbAs(ADMIN_UID), 'accessGrants', 'mChild_mParent')));
+    });
   });
 
   // ============================================================
-  // 16. Notification — create scope ও targetUid-based read isolation (§3.5.2)
-  // ============================================================
-  it('16. Notification create — family member valid targetUid (uidMemberIndex-এ আছে) এর জন্য notification তৈরি করতে পারবেন', async () => {
-    await seedMember(FAMILY_ID, 'notifTargetMember', { ownerUids: ['uidNotifTarget'] });
-    await seedUidIndex(FAMILY_ID, 'uidNotifTarget', 'notifTargetMember');
-    const ref = doc(collection(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'notifications'));
-    await assertSucceeds(
-      setDoc(ref, {
-        targetUid: 'uidNotifTarget', type: 'access-grant-request',
-        message: 'test', read: false, createdAt: new Date(),
-      })
-    );
+  describe('10. Notifications', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+
+    const notif = (target) => ({
+      targetUid: target,
+      type: 'info',
+      message: 'test',
+      read: false,
+      createdAt: new Date(),
+    });
+
+    it('10. পরিবারের সদস্য বৈধ targetUid-কে notification পাঠাতে পারেন', async () => {
+      await assertSucceeds(setDoc(famDoc(dbAs('uidA'), 'notifications', 'n1'), notif('uidB')));
+    });
+
+    it('10b. uidMemberIndex-এ নেই এমন targetUid-তে পাঠানো reject', async () => {
+      await assertFails(setDoc(famDoc(dbAs('uidA'), 'notifications', 'n1'), notif('ghostUid')));
+    });
+
+    it('10c. পরিবারের বাইরের কেউ notification পাঠাতে পারে না', async () => {
+      await assertFails(setDoc(famDoc(dbAs('stranger'), 'notifications', 'n1'), notif('uidB')));
+    });
+
+    it('10d. শুধু targetUid নিজে পড়তে ও read-mark করতে পারেন', async () => {
+      await seed(async (db) => {
+        await setDoc(famDoc(db, 'notifications', 'n1'), { ...notif('uidB'), createdAt: OLD });
+      });
+      await assertFails(getDoc(famDoc(dbAs('uidA'), 'notifications', 'n1')));
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'notifications', 'n1'), { read: true }));
+      await assertSucceeds(getDoc(famDoc(dbAs('uidB'), 'notifications', 'n1')));
+      await assertSucceeds(updateDoc(famDoc(dbAs('uidB'), 'notifications', 'n1'), { read: true }));
+    });
   });
 
-  it('16b. Notification read — শুধু targetUid নিজেই তার notification পড়তে পারবেন, অন্য কেউ না', async () => {
-    let notifId;
-    await seed(async (db) => {
-      const ref = doc(collection(db, 'families', FAMILY_ID, 'notifications'));
-      notifId = ref.id;
-      await setDoc(ref, {
-        targetUid: 'uidNotifOwner', type: 'access-grant-request',
-        message: 'test', read: false, createdAt: new Date(),
+  // ============================================================
+  describe('11. Global reference DB ও General Chat', () => {
+    it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {
+      await seed(async (db) => {
+        await setDoc(doc(db, 'medicineDatabase', 'good'), { genericName: 'A', status: 'verified' });
+        await setDoc(doc(db, 'medicineDatabase', 'draft'), { genericName: 'B', status: 'draft' });
       });
+      const db = dbAs('uidA');
+      await assertSucceeds(getDoc(doc(db, 'medicineDatabase', 'good')));
+      await assertFails(getDoc(doc(db, 'medicineDatabase', 'draft')));
+      await assertFails(setDoc(doc(db, 'medicineDatabase', 'x'), { genericName: 'X', status: 'verified' }));
+      await assertFails(
+        setDoc(doc(dbAs(ADMIN_UID), 'medicineDatabase', 'y'), { genericName: 'Y', status: 'verified' })
+      );
     });
-    const ref = doc(dbAs('uidSomeoneElse'), 'families', FAMILY_ID, 'notifications', notifId);
-    await assertFails(getDoc(ref));
+
+    it('11b. General Chat শুধু Admin-এর', async () => {
+      await seedOwned('mA', 'uidA');
+      await assertSucceeds(setDoc(famDoc(dbAs(ADMIN_UID), 'generalChatSessions', 's1'), { title: 'x' }));
+      await assertFails(setDoc(famDoc(dbAs('uidA'), 'generalChatSessions', 's2'), { title: 'y' }));
+    });
   });
 });
