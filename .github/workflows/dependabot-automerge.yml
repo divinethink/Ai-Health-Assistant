@@ -1,0 +1,52 @@
+name: dependabot-automerge
+
+# Dependabot-এর নিরাপদ আপডেট PR — ci সবুজ হলে নিজে merge হয়। কোনো মানুষের কাজ নেই।
+# নিয়ম (সবগুলো মিলতে হবে, নইলে PR খোলা থাকে — কিছু ভাঙে না):
+#  - শুধু package.json / package-lock.json বদলেছে
+#  - major বদলায়নি; 0.x হলে শুধু patch
+#  - production dependency (chore(deps)) হলে শুধু patch; dev dependency (chore(deps-dev)) হলে patch+minor
+#  - ci-র সময়ের commit-ই এখনো PR-এর মাথায়
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Merge safe update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PR" ]; then echo "no PR attached"; exit 0; fi
+          info=$(gh pr view "$PR" --json title,state,headRefOid,author)
+          state=$(jq -r .state <<<"$info"); title=$(jq -r .title <<<"$info")
+          head=$(jq -r .headRefOid <<<"$info"); author=$(jq -r .author.login <<<"$info")
+          [ "$state" = "OPEN" ] || { echo "not open"; exit 0; }
+          [ "$author" = "app/dependabot" ] || [ "$author" = "dependabot[bot]" ] || { echo "not dependabot ($author)"; exit 0; }
+          [ "$head" = "$CI_SHA" ] || { echo "PR head changed since CI — wait for next run"; exit 0; }
+          other=$(gh pr diff "$PR" --name-only | grep -vxE 'package\.json|package-lock\.json' || true)
+          [ -z "$other" ] || { echo "other files changed — manual: $other"; exit 0; }
+          re='^chore\((deps|deps-dev)\): bump .+ from ([0-9]+)\.([0-9]+)\.([0-9]+) to ([0-9]+)\.([0-9]+)\.([0-9]+)( |$)'
+          [[ "$title" =~ $re ]] || { echo "title not a simple bump — manual: $title"; exit 0; }
+          kind=${BASH_REMATCH[1]}
+          fM=${BASH_REMATCH[2]}; fm=${BASH_REMATCH[3]}; tM=${BASH_REMATCH[5]}; tm=${BASH_REMATCH[6]}
+          [ "$fM" = "$tM" ] || { echo "major bump — manual"; exit 0; }
+          if [ "$fM" = "0" ] && [ "$fm" != "$tm" ]; then echo "0.x minor bump — manual"; exit 0; fi
+          if [ "$kind" = "deps" ] && [ "$fm" != "$tm" ]; then echo "prod minor bump — manual"; exit 0; fi
+          echo "safe: $title — merging"
+          gh pr merge "$PR" --squash --delete-branch

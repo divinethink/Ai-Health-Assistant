@@ -1,8 +1,12 @@
 name: unzip-upload
 
-# Upload a *.zip to the repo ROOT (web "Upload files" -> commit to main). This workflow unpacks it over the repo,
-# deletes the zip, commits, and starts CI. Works with a flat zip or GitHub's "Download ZIP" (one wrapper folder).
-# .github/ inside a zip is ignored on purpose: the built-in token may not change workflow files (upload those by hand).
+# রেপোর ROOT-এ *.zip আপলোড (web "Upload files" → commit to main) করলে এই workflow
+# zip খুলে রেপোর উপর বসায়, zip মুছে commit করে এবং CI চালু করে।
+# deploy.yml (wrangler) আলাদাভাবে চালু হয়।
+# Flat zip বা একটি wrapper-folder-যুক্ত zip — দুটোই চলে। zip-এর ভেতরের .github/ ইচ্ছাকৃতভাবে উপেক্ষিত
+# (built-in token workflow-ফাইল বদলাতে পারে না — ওগুলো হাতে আপলোড করুন)।
+# Health: CI-র পাশাপাশি deploy (Cloudflare Pages) ও চালু হয়।
+# নোট: zip শুধু ফাইল যোগ/overwrite করে; মুছতে হলে GitHub-এ হাতে মুছুন।
 on:
   push:
     branches: [main]
@@ -18,7 +22,7 @@ concurrency:
 
 jobs:
   unzip:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -29,8 +33,21 @@ jobs:
           zips=(*.zip)
           if [ ${#zips[@]} -eq 0 ]; then echo "no zip at repo root"; exit 0; fi
           for z in "${zips[@]}"; do
+            # ZIP-slip / symlink গার্ড: বিপজ্জনক ZIP হলে কিছুই বসানো হয় না, workflow ব্যর্থ হয়।
+            # (pipefail + grep -q SIGPIPE ঝুঁকি এড়াতে আউটপুট আগে ভ্যারিয়েবলে নেওয়া হয়)
+            names=$(unzip -Z1 "$z"); listing=$(unzip -Z "$z")
+            if grep -qE '(^/|(^|/)\.\.(/|$)|\\)' <<<"$names"; then
+              echo "::error::unsafe path in $z (absolute, '..' or backslash) — rejected"; exit 1
+            fi
+            if grep -qE '^l' <<<"$listing"; then
+              echo "::error::symlink inside $z — rejected"; exit 1
+            fi
             tmp=$(mktemp -d)
             unzip -q "$z" -d "$tmp"
+            links=$(find "$tmp" -type l)
+            if [ -n "$links" ]; then
+              echo "::error::symlink found after extract of $z — rejected"; exit 1
+            fi
             rm -rf "$tmp/__MACOSX"
             entries=("$tmp"/*)
             if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then src="${entries[0]}"; else src="$tmp"; fi
@@ -49,7 +66,7 @@ jobs:
             git push origin HEAD:main
           fi
 
-      # Pushes made with the built-in token do not start other workflows, so start CI explicitly.
+      # built-in token দিয়ে push করলে অন্য workflow নিজে চালু হয় না — তাই CI স্পষ্টভাবে চালু।
       - name: Trigger CI
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

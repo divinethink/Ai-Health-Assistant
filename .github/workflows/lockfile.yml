@@ -1,0 +1,30 @@
+name: lockfile
+
+# package-lock.json নিজে বানায় ও main-এ commit করে (Actions → lockfile → Run workflow)।
+# একবার চালালেই যথেষ্ট; lock বসার পর ci/deploy নিজে থেকে `npm ci` ব্যবহার করে।
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate lock (node_modules ইনস্টল ছাড়া)
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit
+        run: |
+          set -euo pipefail
+          git config user.name "lock-bot"
+          git config user.email "lock-bot@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "chore: add package-lock.json"
+          git push origin HEAD:main

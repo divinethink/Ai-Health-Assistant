@@ -1,23 +1,44 @@
 name: deploy-rules
-# ম্যানুয়াল: Actions → deploy-rules → Run workflow
+
+# Firestore Rules হাতে-চালানো deploy (Actions → deploy-rules → Run workflow)।
+# ভুলে ট্যাপ ঠেকাতে confirm ঘরে DEPLOY লিখতে হয়।
+# Secret: FIREBASE_SERVICE_ACCOUNT (service-account JSON, পুরোটা)। project id ওই JSON থেকেই নেওয়া হয়।
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'নিশ্চিত করতে DEPLOY লিখুন'
+        required: true
+
+permissions:
+  contents: read
+
 jobs:
   rules:
-    runs-on: ubuntu-latest
+    if: ${{ inputs.confirm == 'DEPLOY' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      # Process Rule ৯: rules deploy-এর আগে emulator test বাধ্যতামূলক
+      - run: npm run test:rules
       - name: Service account
         run: printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
         env:
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      - name: Deploy Firestore rules
+      - name: Deploy firestore.rules
         env:
-          FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: npm run deploy:rules
+        run: |
+          set -euo pipefail
+          PID=$(node -p "require(process.env.GOOGLE_APPLICATION_CREDENTIALS).project_id")
+          echo "Deploying rules to project: $PID"
+          npx --yes firebase-tools@15.32.1 deploy --only firestore:rules --project "$PID"

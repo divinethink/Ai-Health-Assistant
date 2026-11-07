@@ -1,23 +1,48 @@
 name: ci
+
+# কোড ভাঙলে সাথে সাথে ধরা পড়ে: lint + build + Firestore rules test।
 on:
   push:
+    branches: [main]
     paths-ignore: ['*.zip']
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Java: Firestore emulator (test:rules) এর জন্য
+      # package-lock.json repo-তে থাকলে npm ci, না থাকলে npm install
+      - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      # প্রথম রানে lint ব্লক করবে না (বাস্তব কোডে যাচাই হয়নি) — সবুজ হলে continue-on-error লাইনটি মুছুন
+      - run: npm run lint
+        continue-on-error: true
+      - run: npm run build
+
+  # Firestore Rules emulator test। আলাদা job — ব্যর্থ হলে build/lint ফল ঢাকা পড়ে না।
+  rules:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-      # package-lock.json repo-তে নেই বলে npm ci নয়
-      - run: npm install --no-audit --no-fund
+          java-version: '21'
+      - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
       - run: npm run test:rules
-      - run: npm run build
