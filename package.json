@@ -24,7 +24,7 @@
     "vite": "^5.4.0",
     "@vitejs/plugin-react": "^4.3.1",
     "@firebase/rules-unit-testing": "^3.0.4",
-    "firebase-tools": "^13.29.1",
+    "firebase-tools": "^15.35.0",
     "mocha": "^12.0.3",
     "firebase-admin": "^12.6.0"
   }
