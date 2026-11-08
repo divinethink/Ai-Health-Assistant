@@ -173,13 +173,33 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
 }
 
 function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
+  const [copied, setCopied] = useState(false);
+  const initial = ((memberDoc.name || "?").trim()[0] || "?").toUpperCase();
+  const copyCode = () => {
+    try {
+      navigator.clipboard.writeText(familyDoc.familyCodeDisplay).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {});
+    } catch (e) { /* noop */ }
+  };
   return React.createElement(
-    "div", { style: { border: "1px solid var(--hs-border)", borderRadius: "16px", padding: "16px", marginBottom: "14px", background: "var(--hs-surface)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)" } },
-    React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "👤 " + memberDoc.name),
+    "div", { style: { display: "flex", alignItems: "center", gap: "14px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "16px", marginBottom: "14px", background: "var(--hs-surface)", boxShadow: "0 2px 10px rgba(14,75,67,0.09)" } },
+    React.createElement("div", { style: { width: "56px", height: "56px", flexShrink: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: 800, color: "var(--hs-primary-contrast)", background: "var(--hs-primary)" } }, initial),
     React.createElement(
-      "div", { style: { fontSize: "14px", color: "var(--hs-muted)", marginTop: "4px" } },
-      t("top.role") + ": ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role),
-      " · " + t("top.familyCode") + ": ", React.createElement("b", null, familyDoc.familyCodeDisplay)
+      "div", { style: { flex: 1, minWidth: 0 } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" } },
+        React.createElement("span", { style: { fontWeight: 800, color: "var(--hs-primary)", fontSize: "17px" } }, memberDoc.name),
+        React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg)", color: "var(--hs-primary)" } }, isAdmin ? "Admin" : memberDoc.role)
+      ),
+      React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted)", marginTop: "6px" } }, t("top.familyCode")),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" } },
+        React.createElement("b", { style: { fontSize: "14px", wordBreak: "break-all" } }, familyDoc.familyCodeDisplay),
+        React.createElement("button", {
+          onClick: copyCode,
+          style: { fontSize: "13px", padding: "3px 10px", borderRadius: "999px", border: "1px solid var(--hs-primary)", background: "transparent", color: "var(--hs-primary)", cursor: "pointer" },
+        }, copied ? t("menu.copied") : "📋 " + t("menu.copy"))
+      )
     )
   );
 }
@@ -305,36 +325,18 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 }
 
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
-  // মেনু-reorg (owner-approved, ২০২৬-১১-০৮): দ্রুত-কার্ড (ডাক্তার/জরুরি) উপরে, পরিবার
-  // (সদস্য-তালিকা আগে, Admin-টুল ভাঁজে), ডেটা, সবশেষে ভাষা+থিম একটাই "সেটিংস" ভাঁজে।
-  // শুধু সাজানো — কোনো component/permission/data বদলায়নি।
+  // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
+  // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
+  // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
   const [showCare, setShowCare] = useState(false);
-  const quickBtn = (label, onClick, primary) => React.createElement("button", {
-    onClick,
-    style: {
-      flex: 1, minHeight: "52px", padding: "10px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
-      border: "1px solid var(--hs-primary)",
-      background: primary ? "var(--hs-primary)" : "var(--hs-surface, #fff)",
-      color: primary ? "var(--hs-primary-contrast)" : "var(--hs-primary)",
-    },
-  }, label);
-  return React.createElement(
-    "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" } },
-    React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
-    React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
-    React.createElement(
-      "div", { style: { display: "flex", gap: "10px", marginBottom: "14px" } },
-      quickBtn(t("menu.doctor"), onOpenDoctorDetails, true),
-      quickBtn(showCare ? "✕ " + t("menu.emergencyShort") : t("menu.emergencyShort"), () => setShowCare((v) => !v), false)
-    ),
-    showCare && React.createElement(
-      "div", { style: { marginBottom: "14px" } },
-      React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
-      React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
-    ),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.family"), defaultOpen: true,
-      children: React.createElement(
+  const [sub, setSub] = useState(null); // null | "family" | "data" | "settings"
+  const wrapStyle = { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
+
+  if (sub) {
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
+    let body = null;
+    if (sub === "family") {
+      body = React.createElement(
         React.Fragment, null,
         React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
         isAdmin && React.createElement(CollapsibleSection, {
@@ -342,25 +344,72 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
           children: React.createElement(
             React.Fragment, null,
             React.createElement(InviteLinkPanel, { familyId, familyDoc, isAdmin }),
-            React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) })
+            React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((x) => x + 1) })
           ),
         })
-      ),
-    }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.data"), defaultOpen: false,
-      children: React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
-    }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.settings"), defaultOpen: false,
-      children: React.createElement(
+      );
+    } else if (sub === "data") {
+      body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
+    } else {
+      body = React.createElement(
         React.Fragment, null,
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", marginBottom: "6px" } }, t("menu.language")),
         React.createElement(LanguageSwitcher),
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", margin: "14px 0 6px" } }, t("menu.prefs")),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", margin: "16px 0 6px" } }, t("menu.prefs")),
         React.createElement(ThemeSwitcher)
-      ),
-    })
+      );
+    }
+    return React.createElement(
+      "div", { style: wrapStyle },
+      React.createElement("button", {
+        onClick: () => setSub(null),
+        style: { border: "none", background: "none", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", padding: "6px 0", minHeight: "40px" },
+      }, t("menu.back")),
+      React.createElement("h3", { style: { fontSize: "18px", color: "var(--hs-primary)", margin: "2px 0 12px" } }, titles[sub][0] + " " + titles[sub][1]),
+      body
+    );
+  }
+
+  const tile = (icon, label, onClick, urgent) => React.createElement("button", {
+    onClick,
+    style: {
+      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", minHeight: "88px", padding: "12px 8px",
+      borderRadius: "18px", cursor: "pointer", fontSize: "14px", fontWeight: 700, lineHeight: 1.3, textAlign: "center",
+      border: "1px solid " + (urgent ? "#E5A29A" : "var(--hs-border)"),
+      background: urgent ? "#FFF1EE" : "var(--hs-chip-bg)",
+      color: urgent ? "#C0392B" : "var(--hs-primary)",
+      boxShadow: "0 2px 8px rgba(14,75,67,0.08)",
+    },
+  }, React.createElement("span", { style: { fontSize: "26px" } }, icon), label);
+
+  const row = (icon, title, subtitle, onClick) => React.createElement("button", {
+    key: title, onClick,
+    style: { width: "100%", display: "flex", alignItems: "center", gap: "14px", padding: "14px", marginBottom: "10px", borderRadius: "16px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", cursor: "pointer", textAlign: "left", color: "var(--hs-text)" },
+  },
+    React.createElement("span", { style: { width: "42px", height: "42px", flexShrink: 0, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", background: "var(--hs-chip-bg)" } }, icon),
+    React.createElement("span", { style: { flex: 1, minWidth: 0 } },
+      React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700, color: "var(--hs-primary)" } }, title),
+      React.createElement("span", { style: { display: "block", fontSize: "13px", color: "var(--hs-muted)", marginTop: "2px" } }, subtitle)),
+    React.createElement("span", { style: { fontSize: "22px", color: "var(--hs-muted)" } }, "›")
+  );
+
+  return React.createElement(
+    "div", { style: wrapStyle },
+    React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
+    React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
+    React.createElement(
+      "div", { style: { display: "flex", gap: "10px", marginBottom: "14px" } },
+      tile("🩺", t("menu.doctor").replace("🩺 ", ""), onOpenDoctorDetails, false),
+      tile(showCare ? "✕" : "📞", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
+    ),
+    showCare && React.createElement(
+      "div", { style: { marginBottom: "14px" } },
+      React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
+      React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
+    ),
+    row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
+    row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
+    row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"))
   );
 }
 
