@@ -10,6 +10,9 @@ import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, todayISO } from "./trackerData.js";
 import { buildMealPlan, allergyTagsOf, caloriesForEaten } from "./mealPlanData.js";
 import { exercisePlan, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import { TrendChart } from "../reports/TrendChart.js";
+import { TrendBars } from "./TrendBars.js";
+import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
@@ -189,6 +192,41 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         DAY_LABELS[i] + ": " + (items.length ? items.map((x) => x.label + " " + bnNum(x.min) + " মি.").join(" + ") : "বিশ্রাম")))),
     React.createElement(Notice, null, "বুকে ব্যথা, মাথা ঘোরা বা শ্বাসকষ্ট হলে থামুন ও ডাক্তার দেখান।"),
     React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। WHO-ভিত্তিক সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
+}
+
+// ---------- ট্রেন্ড ও সাপ্তাহিক রিভিউ (গত ৭ দিন) ----------
+function TrendTab({ info, familyId, memberId }) {
+  const { goal, gate, age } = info;
+  const [docs, setDocs] = useState(null);
+  const [err, setErr] = useState(null);
+  const dates = last7DatesISO();
+  useEffect(() => {
+    getWeekDaily(familyId, memberId, last7DatesISO()).then(setDocs).catch((x) => setErr(errText(x)));
+  }, [familyId, memberId]);
+  if (err) return ErrorBox(err);
+  if (!docs) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+
+  const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
+  const [sMin, sMax] = sleepTargetHours(age);
+  const plan = exercisePlan(age, goal ? goal.goalType : null);
+  const t = buildTrend(docs, dates, { calorieTarget, sleepMinH: sMin, weeklyExerciseTarget: plan ? plan.weeklyTargetMin : null });
+  const labels = dates.map((d) => bnNum(Number(d.slice(8))));
+  const card = (title, sub, body) => React.createElement("div", { style: CARD },
+    React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, title),
+    sub && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", margin: "2px 0 6px" } }, sub), body);
+  const none = (txt) => React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", padding: "8px 0" } }, txt);
+  const wPts = t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg }));
+  const points = reviewPoints(t, bnNum);
+
+  return React.createElement("div", null,
+    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length ? React.createElement(TrendChart, { unit: "কেজি", referenceRange: null, points: wPts }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
+    calorieTarget && card("ক্যালরি (লক্ষ্য " + bnNum(calorieTarget) + ")", "বিন্দু-রেখা = লক্ষ্য", t.calDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.calories), target: calorieTarget, color: "#E0A100" }) : none("এই সপ্তাহে মিল টিক দেওয়া হয়নি।")),
+    card("ঘুম (ঘণ্টা, লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + ")", "বিন্দু-রেখা = সর্বনিম্ন লক্ষ্য", t.sleepDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.sleepH), target: sMin, color: "#6B5BD2" }) : none("এই সপ্তাহে ঘুমের তথ্য দেওয়া হয়নি।")),
+    card("সাপ্তাহিক রিভিউ", "শুধু আপনার দেওয়া তথ্য থেকে",
+      React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", lineHeight: 1.6 } },
+        points.map((p, i) => React.createElement("div", { key: "p" + i }, "• " + p)),
+        reviewComment(t, bnNum).map((c, i) => React.createElement("div", { key: "c" + i, style: { marginTop: i === 0 ? "8px" : "4px" } }, c)))),
+    React.createElement(Notice, null, "এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়। অস্বাভাবিক ওজন বা শরীর খারাপ হলে ডাক্তার দেখান।"));
 }
 
 // ---------- খাওয়া যাবে না (বিদ্যমান খাদ্য-নির্দেশিকা reuse) ----------
@@ -396,7 +434,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
+  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["trend", "ট্রেন্ড"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, TabPills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
@@ -407,6 +445,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && tab === "meal" && React.createElement(MealTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "exercise" && React.createElement(ExerciseTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId }),
       data && tab === "avoid" && React.createElement(AvoidTab, { key: selectedMemberId, familyId, memberId: selectedMemberId }),
       data && tab === "input" && React.createElement(InputTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })

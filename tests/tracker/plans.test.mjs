@@ -55,3 +55,26 @@ test("সপ্তাহ শনি–শুক্র", () => {
   const m = weekDatesISO(new Date(2026, 11, 31)); // মাস/বছর পেরোনো
   assert.equal(m.length, 7);
 });
+
+import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "../../src/health/tracker/weeklyTrend.js";
+test("ট্রেন্ড: ৭ দিন, শেষ দিন আজ", () => {
+  const d = last7DatesISO(new Date(2026, 10, 8));
+  assert.equal(d.length, 7); assert.equal(d[6], "2026-11-08"); assert.equal(d[0], "2026-11-02");
+  assert.equal(last7DatesISO(new Date(2026, 0, 3))[0], "2025-12-28");
+});
+test("ট্রেন্ড-সারাংশ ও মন্তব্য", () => {
+  const dates = last7DatesISO(new Date(2026, 10, 8));
+  const docs = [
+    { date: dates[0], weightKg: 68.4, caloriesIn: 1600, sleepMinutes: 360, exerciseMin: 30 },
+    { date: dates[3], caloriesIn: 1650, sleepMinutes: 380, exerciseMin: 20 },
+    { date: dates[6], weightKg: 67.8, caloriesIn: 1200, sleepMinutes: 400, exerciseMin: 0 },
+  ];
+  const t = buildTrend(docs, dates, { calorieTarget: 1650, sleepMinH: 7, weeklyExerciseTarget: 150 });
+  assert.equal(t.weightChange, -0.6); assert.equal(t.calInRange, 2); assert.equal(t.sleepLow, 3); assert.equal(t.exerciseTotal, 50);
+  const bn = String;
+  assert.ok(reviewPoints(t, bn).some((x) => x.includes("কমেছে")));
+  assert.ok(reviewComment(t, bn).some((x) => x.includes("100")));
+  assert.equal(reviewComment(buildTrend([], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null }), bn).length, 1);
+  const big = buildTrend([{ date: dates[0], weightKg: 70 }, { date: dates[1], weightKg: 68 }, { date: dates[2], exerciseMin: 1 }], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null });
+  assert.ok(reviewComment(big, bn).some((x) => x.includes("ডাক্তার")));
+});
