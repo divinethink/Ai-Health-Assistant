@@ -11,6 +11,20 @@ import { listHealthRecords, describeHealthRecord, RESOURCE_TYPE_LABELS } from ".
 import { listDocuments, DOC_TYPE_LABELS } from "../documents/documentsData.js";
 import { listEpisodesForMember, getTriageResult } from "../episodes/episodesData.js";
 
+// টাইমলাইনের জন্য পুরো-বাংলা লেবেল ও ফিল্টার-category (শুধু display)
+const RECORD_LABELS_BN = {
+  condition: "রোগ/সমস্যা",
+  observation: "পরিমাপ/টেস্ট",
+  medicationStatement: "ওষুধ",
+  allergy: "এলার্জি",
+};
+const RECORD_CATEGORIES = {
+  condition: "illness",
+  observation: "measurement",
+  medicationStatement: "medication",
+};
+const TAG_LABELS_BN = { "emergency-checklist": "জরুরি চেকলিস্ট" };
+
 const RECORD_ICONS = {
   condition: "🩺",
   observation: "📈",
@@ -53,10 +67,12 @@ export async function buildTimeline(familyId, targetMemberId) {
     return {
       id: "record-" + r.id,
       icon: RECORD_ICONS[r.resourceType] || "🩺",
-      label: RESOURCE_TYPE_LABELS[r.resourceType] || r.resourceType,
+      label: RECORD_LABELS_BN[r.resourceType] || RESOURCE_TYPE_LABELS[r.resourceType] || r.resourceType,
       description: describeHealthRecord(r),
       displayDate: explicitDate,
+      // তারিখ না থাকলে createdAt fallback — শুধু display, stored data বদলায় না
       sortMillis: sortMillis !== null ? sortMillis : toMillis(r.createdAt),
+      category: RECORD_CATEGORIES[r.resourceType] || null,
       url: null,
     };
   });
@@ -70,6 +86,7 @@ export async function buildTimeline(familyId, targetMemberId) {
       description: d.fileName + (d.source ? " (" + d.source + ")" : ""),
       displayDate: d.date || null,
       sortMillis: sortMillis !== null ? sortMillis : toMillis(d.createdAt),
+      category: null,
       url: d.status === "ready" ? d.cloudinaryUrl : null,
     };
   });
@@ -94,10 +111,13 @@ export async function buildTimeline(familyId, targetMemberId) {
     return {
       id: "episode-" + ep.id,
       icon: RISK_ICONS[riskLevel] || "🩹",
-      label: "Symptom Check" + (ep.chiefComplaintTag && ep.chiefComplaintTag !== "general" ? " — " + ep.chiefComplaintTag : ""),
+      label: "লক্ষণ যাচাই" + (ep.chiefComplaintTag && ep.chiefComplaintTag !== "general" ? " — " + (TAG_LABELS_BN[ep.chiefComplaintTag] || ep.chiefComplaintTag) : ""),
       description: (riskLevel ? RISK_LABELS_BN[riskLevel] || riskLevel : "ফলাফল পাওয়া যায়নি") + (ep.status === "archived" ? " (আর্কাইভড)" : ""),
       displayDate: createdDate ? createdDate.toLocaleDateString("bn-BD", { year: "numeric", month: "long", day: "numeric" }) : null,
       sortMillis: toMillis(ep.createdAt),
+      category: "symptom",
+      riskLevel: riskLevel || null,
+      hasTime: true,
       url: null,
     };
   });

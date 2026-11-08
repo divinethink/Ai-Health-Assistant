@@ -14,10 +14,13 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "./epiSchedule.js";
 import { listCalendarEvents, createCalendarEvent } from "./calendarData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
+import { bnDate } from "../../shared/dates.js";
 
 const { useState, useEffect } = React;
 
-export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberId }) {
+// `inline` (নতুন): টাইমলাইন-ট্যাবের "টিকা" পিল-এ CollapsibleSection ছাড়া সরাসরি দেখায়, আর
+// প্রাপ্তবয়স্কের ক্ষেত্রে ফাঁকা না রেখে ব্যাখ্যা-বার্তা দেখায়।
+export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberId, inline }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [doneDoseIds, setDoneDoseIds] = useState([]);
@@ -59,12 +62,17 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
   const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
 
   // প্রাপ্তবয়স্ক সদস্য নির্বাচিত থাকলে এই widget-ই দেখানো হবে না (owner-request)।
-  if (ageYears !== null && ageYears >= CHILD_AGE_CUTOFF_YEARS) return null;
+  if (ageYears !== null && ageYears >= CHILD_AGE_CUTOFF_YEARS) {
+    return inline ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "EPI টিকার শিডিউল শুধু ৬ বছরের নিচের শিশুদের জন্য — এই সদস্যের জন্য প্রযোজ্য নয়।") : null;
+  }
 
   const schedule = targetMember ? computeVaccinationDueDates(targetMember.dob) : [];
   const today = new Date().toISOString().slice(0, 10);
 
-  return React.createElement(CollapsibleSection, { title: "💉 Vaccination Scheduler (EPI)" },
+  const Wrap = inline
+    ? (props, ...kids) => React.createElement("div", { style: { background: "#fff", padding: "12px", borderRadius: "10px", border: "1px solid #D3E0D9" } }, React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, props.title), ...kids)
+    : (props, ...kids) => React.createElement(CollapsibleSection, props, ...kids);
+  return Wrap({ title: "💉 টিকা শিডিউল (EPI)" },
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px" } },
       "বাংলাদেশ সরকারের EPI স্ট্যান্ডার্ড শিডিউল অনুযায়ী — জন্ম-তারিখ থেকে হিসাব করা প্রত্যাশিত তারিখ, প্রকৃত টিকাদান-তথ্যের জন্য টিকা-কার্ড/স্বাস্থ্যকর্মীর সাথে মিলিয়ে নিন।"
     ),
@@ -85,7 +93,7 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
             React.createElement(
               "div", null,
               React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A" } }, d.name),
-              React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57" } }, "প্রত্যাশিত তারিখ: " + d.dueDate + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
+              React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57" } }, "প্রত্যাশিত তারিখ: " + bnDate(d.dueDate) + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
             ),
             !isDone && React.createElement(
               "button", {

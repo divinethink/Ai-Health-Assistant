@@ -43,6 +43,13 @@ import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js
 
 const { useState } = React;
 
+// টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
+const TIMELINE_SUBS = [
+  { id: "calendar", label: "📅 ক্যালেন্ডার" },
+  { id: "vaccine", label: "💉 টিকা" },
+  { id: "timeline", label: "🕘 টাইমলাইন" },
+];
+
 const TABS = [
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
@@ -53,6 +60,7 @@ const TABS = [
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
   const [activeTab, setActiveTab] = useState("profile");
+  const [timelineSub, setTimelineSub] = useState("calendar");
   const topPx = (topOffsetPx || 44) + "px";
 
   return React.createElement(
@@ -82,9 +90,20 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
       activeTab === "timeline" && React.createElement(
         React.Fragment, null,
-        React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
-        React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId }),
-        React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })
+        React.createElement(
+          "div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
+          TIMELINE_SUBS.map((sb) => React.createElement("button", {
+            key: sb.id, onClick: () => setTimelineSub(sb.id), "aria-pressed": timelineSub === sb.id,
+            style: {
+              flex: 1, minHeight: "40px", padding: "6px 8px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
+              border: timelineSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
+              background: timelineSub === sb.id ? "#0E4B43" : "#fff", color: timelineSub === sb.id ? "#fff" : "#2B3A36",
+            },
+          }, sb.label))
+        ),
+        timelineSub === "calendar" && React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
+        timelineSub === "vaccine" && React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId, inline: true }),
+        timelineSub === "timeline" && React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })
       )
     )
   );
