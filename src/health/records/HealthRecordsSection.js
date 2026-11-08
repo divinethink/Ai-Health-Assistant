@@ -39,7 +39,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   }
 
   return React.createElement(
-    "div", { style: { marginTop: "20px" } },
+    "div", { style: { marginTop: "0" } },
     (section === "all" || section === "profile") && React.createElement(HealthSummaryCard, {
       key: "summary-" + targetMemberId,
       familyId, selectedMemberId: targetMemberId, refreshTick,

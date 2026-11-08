@@ -58,13 +58,13 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
-      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "10px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0 } },
+      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0 } },
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,
           onClick: () => setActiveTab(tb.id),
           style: {
-            flexShrink: 0, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
+            flexShrink: 0, padding: "6px 14px", minHeight: "32px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
             border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
             background: activeTab === tb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff",
             color: activeTab === tb.id ? "#fff" : "#2B3A36",
@@ -75,7 +75,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
     !selectedMemberId
       ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
       : React.createElement(
-      "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
+      "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
       activeTab === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
       activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),

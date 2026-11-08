@@ -49,6 +49,19 @@ function nextAppointmentOf(memberId, events, today) {
   return events.find((e) => e.memberId === memberId && (e.eventType === "appointment" || e.eventType === "checkup") && e.status !== "done" && (e.date || "") >= today) || null;
 }
 
+// খাদ্য তালিকা — বুলেটে সাজানো (লম্বা কমা-লাইনের বদলে), ৫টার বেশি হলে বাকিগুলো "আরও দেখুন"-এ।
+function dietList(title, items, color, bg) {
+  const clean = items.map((x) => String(x).trim()).filter(Boolean);
+  const mk = (x, i) => React.createElement("li", { key: i, style: { marginBottom: "3px" } }, x);
+  const first = clean.slice(0, 5), rest = clean.slice(5);
+  return React.createElement("div", { style: { background: bg, borderRadius: "10px", padding: "8px 10px", marginTop: "8px" } },
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color, marginBottom: "4px" } }, title),
+    React.createElement("ul", { style: { margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#1F2D2A", lineHeight: 1.5 } }, first.map(mk)),
+    rest.length > 0 && React.createElement("details", { style: { marginTop: "4px" } },
+      React.createElement("summary", { style: { fontSize: "13px", color, cursor: "pointer" } }, "আরও " + rest.length + "টি দেখুন"),
+      React.createElement("ul", { style: { margin: "4px 0 0", paddingLeft: "18px", fontSize: "13px", color: "#1F2D2A", lineHeight: 1.5 } }, rest.map(mk))));
+}
+
 export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -148,8 +161,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
     (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0) && React.createElement(
       React.Fragment, null,
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🍽️ খাদ্য নির্দেশিকা (সংক্ষিপ্ত)"),
-      dietResult.avoidFoods.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#B3261E", marginTop: "2px" } }, "❌ এড়িয়ে চলুন: " + dietResult.avoidFoods.join(", ")),
-      dietResult.includeFoods.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "2px" } }, "✅ বেশি খান: " + dietResult.includeFoods.join(", ")),
+      dietResult.avoidFoods.length > 0 && dietList("❌ এড়িয়ে চলুন", dietResult.avoidFoods, "#B3261E", "#FDF0EE"),
+      dietResult.includeFoods.length > 0 && dietList("✅ বেশি খান", dietResult.includeFoods, "#0E4B43", "#EAF6F0"),
       React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
     )
   );

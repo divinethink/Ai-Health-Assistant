@@ -140,8 +140,11 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
             boxShadow: "0 8px 24px rgba(0,0,0,0.18)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
           },
         },
-        React.createElement("div", { style: { color: "var(--hs-muted)" } }, t("top.role") + ": ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
-        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "2px", fontSize: "14px" } }, t("top.familyCode") + ": " + familyDoc.familyCodeDisplay),
+        React.createElement("div", { style: { fontWeight: 700, fontSize: "16px", color: "var(--hs-primary)" } }, memberDoc.name),
+        auth.currentUser && auth.currentUser.email && React.createElement("div", { style: { color: "var(--hs-muted)", fontSize: "13px", marginTop: "2px", wordBreak: "break-all" } }, auth.currentUser.email),
+        React.createElement("div", { style: { marginTop: "8px" } },
+          React.createElement("span", { style: { display: "inline-block", padding: "3px 10px", borderRadius: "999px", background: "var(--hs-border)", fontSize: "12px", fontWeight: 600 } }, isAdmin ? "Admin" : memberDoc.role)),
+        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "8px", fontSize: "13px" } }, t("top.familyCode") + ": " + familyDoc.familyCodeDisplay),
         isAdmin && React.createElement(
           "button", {
             onClick: () => { setOpen(false); onOpenGeneralChat(); },
