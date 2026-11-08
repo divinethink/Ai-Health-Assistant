@@ -31,6 +31,7 @@ import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSect
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
+import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
 import { listMembers } from "./familyIdentity.js";
 
@@ -478,6 +479,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
       members: showMemberSelect ? members : null, selectedMemberId, onChangeMember: setSelectedMemberId,
     }),
     tabContent,
+    React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
     React.createElement(BottomNav, { active: activeTab, onChange: setActiveTab })
   );
 }

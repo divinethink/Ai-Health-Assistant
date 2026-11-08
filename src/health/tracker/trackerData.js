@@ -3,7 +3,7 @@
 // তাই বারবার সেভ করলেও ডুপ্লিকেট হয় না (idempotent)। read সবসময় equality-query (rules-এ
 // resource.data.memberId লাগে বলে সরাসরি get() নয়)।
 // `sources` map: প্রতিটি ফিল্ডের উৎস ("manual" এখন; পরে "health-connect")।
-// `reminders`: ধাপ ৩-এর জন্য ঘর রাখা (এখন null)।
+// `reminders`: ধাপ ৩-এর রিমাইন্ডার-সেটিং (saveReminders)। saveGoal এটা ছোঁয় না, তাই লক্ষ্য বদলালে সেটিং হারায় না।
 
 import { db } from "../../legacy/firebaseConfig.js";
 import { createHealthRecord, updateHealthRecord } from "../records/healthRecordsData.js";
@@ -38,9 +38,16 @@ export async function saveGoal(familyId, memberId, callerMemberId, { goalType, a
     weeks: weeks ? Number(weeks) : null,
     flags: { pregnant: !!flags.pregnant, diabetes: !!flags.diabetes, kidney: !!flags.kidney },
     calc: calc || null,
-    reminders: null,
     lastEditedByMemberId: callerMemberId,
     updatedAt: ts(),
+    ...(prevGoal ? {} : { createdAt: ts() }),
+  }, { merge: true });
+}
+
+export async function saveReminders(familyId, memberId, callerMemberId, reminders, prevGoal) {
+  await col(familyId).doc("goal_" + memberId).set({
+    type: "goal", memberId, reminders,
+    lastEditedByMemberId: callerMemberId, updatedAt: ts(),
     ...(prevGoal ? {} : { createdAt: ts() }),
   }, { merge: true });
 }

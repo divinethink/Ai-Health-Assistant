@@ -78,3 +78,39 @@ test("ট্রেন্ড-সারাংশ ও মন্তব্য", () =>
   const big = buildTrend([{ date: dates[0], weightKg: 70 }, { date: dates[1], weightKg: 68 }, { date: dates[2], exerciseMin: 1 }], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null });
   assert.ok(reviewComment(big, bn).some((x) => x.includes("ডাক্তার")));
 });
+
+import { normalizeReminders, expandReminders, anyReminderOn, buildReminderContext, DEFAULT_REMINDERS } from "../../src/health/tracker/reminderData.js";
+test("রিমাইন্ডার: নষ্ট/খালি ডেটা সামলায়, ডিফল্ট সব বন্ধ", () => {
+  for (const bad of [null, undefined, 5, "x", {}, { meal: 3, water: { everyHours: 99, from: "xx", to: "05:00" }, sleep: { time: "25:99", on: 1 } }]) {
+    const n = normalizeReminders(bad);
+    assert.ok(/^\d\d:\d\d$/.test(n.sleep.time) && n.water.everyHours >= 1 && n.water.everyHours <= 6 && n.water.to > n.water.from);
+  }
+  assert.equal(anyReminderOn(normalizeReminders(null)), false);
+  assert.equal(normalizeReminders({ sleep: { on: 1, time: "25:99" } }).sleep.time, DEFAULT_REMINDERS.sleep.time);
+});
+test("রিমাইন্ডার-তালিকা", () => {
+  const s = normalizeReminders({ meal: { on: true }, water: { on: true, everyHours: 3, from: "08:00", to: "20:00" }, exercise: { on: true }, sleep: { on: true } });
+  const plan = buildMealPlan(1650, []);
+  const ctx = { mealPlan: plan, exerciseToday: [{ label: "দ্রুত হাঁটা", min: 30, counted: true }], sleepRange: [7, 9], kidney: false };
+  const list = expandReminders(s, ctx);
+  assert.equal(list.filter((r) => r.id.startsWith("meal_")).length, 5);
+  assert.deepEqual(list.filter((r) => r.id.startsWith("water_")).map((r) => r.time), ["08:00", "11:00", "14:00", "17:00", "20:00"]);
+  assert.ok(list.find((r) => r.id === "meal_lunch").body.includes("ভাত"));
+  assert.ok(list.find((r) => r.id === "exercise").body.includes("30"));
+  assert.deepEqual(list.map((r) => r.time), [...list.map((r) => r.time)].sort());
+  // কিডনি → পানি নেই; বিশ্রামের দিন/প্ল্যানহীন → ব্যায়াম নেই; মিল-প্ল্যান নেই → body খালি
+  const k = expandReminders(s, { ...ctx, kidney: true, exerciseToday: [], mealPlan: null });
+  assert.equal(k.filter((r) => r.id.startsWith("water_")).length, 0);
+  assert.equal(k.find((r) => r.id === "exercise"), undefined);
+  assert.equal(k.find((r) => r.id === "meal_lunch").body, "");
+});
+test("রিমাইন্ডার-ctx: গেট বন্ধ হলে মিল-প্ল্যান নেই, কিডনি-ফ্ল্যাগ ধরে", () => {
+  const goal = { goalType: "fit", calc: { calorieTarget: 1650 } };
+  const adult = { dob: "1995-01-01" };
+  const c1 = buildReminderContext({ goal, records: [], member: adult, now: new Date(2026, 10, 8) });
+  assert.ok(c1.mealPlan && c1.exerciseToday && c1.sleepRange[0] === 7);
+  const c2 = buildReminderContext({ goal, records: [{ resourceType: "condition", name: "কিডনি রোগ", status: "active" }], member: adult, now: new Date(2026, 10, 8) });
+  assert.equal(c2.mealPlan, null); assert.equal(c2.kidney, true);
+  const c3 = buildReminderContext({ goal: null, records: [], member: null });
+  assert.equal(c3.mealPlan, null); assert.equal(c3.sleepRange, null);
+});

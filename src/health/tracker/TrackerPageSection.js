@@ -2,7 +2,7 @@
 // হিসাব trackerCalc.js-এ (ফিক্সড সূত্র); Firestore trackerData.js-এ। এই ফাইলে শুধু UI।
 // ধাপ ২: মিল-প্ল্যান (mealPlanData.js), ব্যায়াম-প্ল্যান (exercisePlanData.js), "খাওয়া যাবে না"
 // (বিদ্যমান DietGuidanceSection reuse — Condition/Allergy/BMI থেকে স্বয়ংক্রিয়)।
-// রিমাইন্ডার (ধাপ ৩), Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
+// ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
 import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
@@ -10,6 +10,7 @@ import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, todayISO } from "./trackerData.js";
 import { buildMealPlan, allergyTagsOf, caloriesForEaten } from "./mealPlanData.js";
 import { exercisePlan, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
@@ -434,7 +435,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["trend", "ট্রেন্ড"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
+  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, TabPills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
@@ -445,6 +446,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && tab === "meal" && React.createElement(MealTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "exercise" && React.createElement(ExerciseTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && tab === "reminder" && React.createElement(ReminderSettings, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, callerMemberId, onSaved: load }),
       data && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId }),
       data && tab === "avoid" && React.createElement(AvoidTab, { key: selectedMemberId, familyId, memberId: selectedMemberId }),
       data && tab === "input" && React.createElement(InputTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
