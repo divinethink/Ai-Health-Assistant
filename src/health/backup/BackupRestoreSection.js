@@ -126,11 +126,11 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডেটা ব্যাকআপ / রিস্টোর"),
-    React.createElement("p", { style: { fontSize: "14px", color: "#888" } },
+    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C" } },
       "সম্পূর্ণ manual, plaintext JSON (কোনো auto-backup না, encryption ছাড়া — roadmap §13)।"),
 
     // --- Backup ---
-    React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "8px" } },
+    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "8px" } },
       React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ রাখুন"),
       isAdmin && React.createElement(
         "div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
@@ -151,7 +151,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
     ),
 
     // --- Restore ---
-    React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "10px" } },
+    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "10px" } },
       React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ থেকে রিস্টোর করুন"),
       !plan && React.createElement("input", { type: "file", accept: "application/json,.json", onChange: handleFileChosen, disabled: restoreBusyAny }),
       driveConfigured && !plan && React.createElement(
@@ -164,7 +164,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
         ),
         SecondaryButton(driveRestoreBusy ? "Drive থেকে আনা হচ্ছে..." : "Google Drive থেকে যাচাই করুন", handleDriveRestore, restoreBusyAny)
       ),
-      restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "14px", color: "#888" } }, "যাচাই করা হচ্ছে..."),
+      restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C" } }, "যাচাই করা হচ্ছে..."),
       restoreErr && ErrorBox(restoreErr),
       previewSummary && React.createElement(
         "div", { style: { marginTop: "8px" } },
@@ -176,11 +176,11 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
           "div", { style: { display: "flex", gap: "8px" } },
           React.createElement("button", {
             onClick: handleConfirmRestore, disabled: restoreBusyAny,
-            style: { flex: 1, padding: "10px", borderRadius: "8px", background: "#0E4B43", color: "#fff", border: "none", fontWeight: 600 }
+            style: { flex: 1, padding: "10px", borderRadius: "14px", background: "#0E4B43", color: "#fff", border: "none", fontWeight: 600 }
           }, restoreBusy ? "রিস্টোর হচ্ছে..." : "নিশ্চিত করে রিস্টোর করুন"),
           React.createElement("button", {
             onClick: cancelPreview, disabled: restoreBusyAny,
-            style: { flex: 1, padding: "10px", borderRadius: "8px", background: "#fff", color: "#0E4B43", border: "1px solid #0E4B43", fontWeight: 600 }
+            style: { flex: 1, padding: "10px", borderRadius: "14px", background: "#fff", color: "#0E4B43", border: "1px solid #0E4B43", fontWeight: 600 }
           }, "বাতিল")
         )
       ),

@@ -105,7 +105,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
 
   if (!candidates || candidates.length === 0) {
     return React.createElement(
-      "div", { style: { marginTop: "14px", fontSize: "14px", color: "#888" } },
+      "div", { style: { marginTop: "14px", fontSize: "14px", color: "#5F716C" } },
       "রিপোর্ট থেকে কোনো পরিচিত টেস্ট-মান শনাক্ত করা যায়নি। প্রয়োজনে ম্যানুয়ালি Health Record যোগ করুন।"
     );
   }
@@ -113,15 +113,15 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "রিপোর্টের মান যাচাই করুন"),
-    React.createElement("div", { style: { fontSize: "14px", color: "#666", margin: "4px 0 10px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", margin: "4px 0 10px" } },
       "OCR/extraction থেকে পাওয়া মান — Save করার আগে প্রতিটা যাচাই করে নিন। ভুল মনে হলে আনচেক করুন বা সংশোধন করুন।"
     ),
     ...rows.map((r, idx) => React.createElement(
       "div", {
         key: r.testId + "-" + idx,
         style: {
-          marginBottom: "10px", padding: "10px", borderRadius: "8px",
-          border: "1px solid " + (r.status === "ok" ? "#CBD5E1" : "#E0A72E"),
+          marginBottom: "10px", padding: "10px", borderRadius: "14px",
+          border: "1px solid " + (r.status === "ok" ? "#D3E0D9" : "#E0A72E"),
           background: r.status === "ok" ? "#fff" : "#FFF9EC",
         },
       },
@@ -130,7 +130,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
         r.canonicalNameEn
       ),
       r.referenceRange
-        ? React.createElement("div", { style: { fontSize: "14px", color: "#888", margin: "2px 0 6px" } },
+        ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px" } },
             "স্বাভাবিক রেঞ্জ: " + r.referenceRange.low + "–" + r.referenceRange.high + (r.unit ? " " + r.unit : ""))
         : null,
       TextField("মান", r.value, (v) => updateRow(idx, { value: v })),

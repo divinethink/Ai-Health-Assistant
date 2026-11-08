@@ -26,7 +26,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
   }, [familyId, targetMemberId]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
@@ -34,12 +34,12 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.timeline")),
 
     entriesErr && ErrorBox(entriesErr),
-    !entriesErr && !entries && React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    !entriesErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
     !entriesErr && entries && entries.length === 0 &&
-      React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।"),
+      React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।"),
 
     !entriesErr && entries && entries.length > 0 && React.createElement(
-      "div", { style: { marginTop: "12px", borderLeft: "2px solid #CBD5E1", paddingLeft: "14px" } },
+      "div", { style: { marginTop: "12px", borderLeft: "2px solid #D3E0D9", paddingLeft: "14px" } },
       entries.map((e) =>
         React.createElement(
           "div", { key: e.id, style: { marginBottom: "16px", position: "relative" } },
@@ -49,10 +49,10 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
               borderRadius: "50%", background: "#0E4B43", border: "2px solid #F5F7F5",
             },
           }),
-          React.createElement("div", { style: { fontSize: "14px", color: "#888" } }, e.displayDate || "তারিখ অজানা"),
+          React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, e.displayDate || "তারিখ অজানা"),
           React.createElement("div", { style: { fontSize: "14px", marginTop: "2px" } },
             e.icon + " ", React.createElement("b", null, e.label)),
-          React.createElement("div", { style: { fontSize: "14px", color: "#333", marginTop: "1px" } }, e.description),
+          React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "1px" } }, e.description),
           e.url && React.createElement("a", {
             href: e.url, target: "_blank", rel: "noopener noreferrer",
             style: { fontSize: "14px", color: "#0E4B43" },

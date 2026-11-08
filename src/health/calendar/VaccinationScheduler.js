@@ -65,12 +65,12 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
   const today = new Date().toISOString().slice(0, 10);
 
   return React.createElement(CollapsibleSection, { title: "💉 Vaccination Scheduler (EPI)" },
-    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "8px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px" } },
       "বাংলাদেশ সরকারের EPI স্ট্যান্ডার্ড শিডিউল অনুযায়ী — জন্ম-তারিখ থেকে হিসাব করা প্রত্যাশিত তারিখ, প্রকৃত টিকাদান-তথ্যের জন্য টিকা-কার্ড/স্বাস্থ্যকর্মীর সাথে মিলিয়ে নিন।"
     ),
 
     !targetMember || !targetMember.dob
-      ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এই সদস্যের জন্ম-তারিখ profile-এ নেই — vaccination-schedule হিসাব করা সম্ভব না।")
+      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এই সদস্যের জন্ম-তারিখ profile-এ নেই — vaccination-schedule হিসাব করা সম্ভব না।")
       : schedule.map((d) => {
           const doneKey = targetMemberId + "_" + d.doseId;
           const isDone = doneDoseIds.includes(doneKey);
@@ -78,19 +78,19 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
           return React.createElement(
             "div", {
               key: d.doseId,
-              style: { marginTop: "8px", padding: "10px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center",
+              style: { marginTop: "8px", padding: "10px", borderRadius: "14px", display: "flex", justifyContent: "space-between", alignItems: "center",
                 background: isDone ? "#EAF6F0" : isOverdue ? "#FDECEA" : "#F7FAF9",
-                border: "1px solid " + (isDone ? "#A9D8C4" : isOverdue ? "#F5C6C0" : "#E0E4E2") },
+                border: "1px solid " + (isDone ? "#A9D8C4" : isOverdue ? "#F5C6C0" : "#D3E0D9") },
             },
             React.createElement(
               "div", null,
-              React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#333" } }, d.name),
-              React.createElement("div", { style: { fontSize: "14px", color: "#666" } }, "প্রত্যাশিত তারিখ: " + d.dueDate + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
+              React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A" } }, d.name),
+              React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57" } }, "প্রত্যাশিত তারিখ: " + d.dueDate + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
             ),
             !isDone && React.createElement(
               "button", {
                 onClick: () => markDone(d.doseId, d.name), disabled: busy === d.doseId,
-                style: { padding: "6px 10px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
+                style: { padding: "6px 10px", border: "1px solid #0E4B43", borderRadius: "10px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
               }, busy === d.doseId ? "..." : "সম্পন্ন করুন"
             )
           );

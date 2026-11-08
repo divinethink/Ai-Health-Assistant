@@ -14,14 +14,14 @@ export function TriageResultView({ result }) {
   const style = RISK_STYLE[result.riskLevel] || RISK_STYLE.routine;
   return React.createElement(
     "div",
-    { style: { marginTop: "14px", padding: "12px", borderRadius: "8px", background: style.bg, border: "1px solid " + style.border } },
+    { style: { marginTop: "14px", padding: "12px", borderRadius: "14px", background: style.bg, border: "1px solid " + style.border } },
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: style.color } }, style.label),
     result.triggeredRules.length > 0 && React.createElement(
       "div", { style: { fontSize: "14px", marginTop: "6px", color: style.color } },
       "কারণ: " + result.triggeredRules.map((r) => r.description).join("; ")
     ),
     React.createElement(
-      "div", { style: { fontSize: "14px", marginTop: "6px", color: "#333" } },
+      "div", { style: { fontSize: "14px", marginTop: "6px", color: "#1F2D2A" } },
       "পরামর্শ: " + result.recommendedAction.timeframe
     ),
     result.recommendedAction.emergencyContact && React.createElement(
@@ -30,13 +30,13 @@ export function TriageResultView({ result }) {
         href: "tel:" + result.recommendedAction.emergencyContact.number,
         style: {
           display: "inline-block", marginTop: "10px", padding: "10px 16px", background: "#C0392B",
-          color: "#fff", borderRadius: "8px", fontWeight: 700, textDecoration: "none", fontSize: "14px",
+          color: "#fff", borderRadius: "14px", fontWeight: 700, textDecoration: "none", fontSize: "14px",
         },
       },
       "☎ এখনই কল করুন — " + result.recommendedAction.emergencyContact.number
     ),
     result.uncertaintyLevel === "high" && result.missingInformation.length > 0 && React.createElement(
-      "div", { style: { fontSize: "14px", color: "#888", marginTop: "8px" } },
+      "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "8px" } },
       result.missingInformation.join(" ")
     )
   );

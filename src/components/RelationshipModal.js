@@ -80,16 +80,16 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
         React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43" } },
           targetMember.name + "-এর সম্পর্ক ও অভিভাবকত্ব"),
 
-        React.createElement("label", { style: { fontSize: "14px", color: "#555", marginTop: "10px", display: "block" } }, "সম্পর্ক"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "10px", display: "block" } }, "সম্পর্ক"),
         React.createElement(
           "select", {
             value: label, onChange: (e) => setLabel(e.target.value),
-            style: { width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", marginTop: "4px", fontSize: "14px" },
+            style: { width: "100%", padding: "8px", borderRadius: "10px", border: "1px solid #D3E0D9", marginTop: "4px", fontSize: "14px" },
           },
           RELATIONSHIP_OPTIONS.map(([v, l]) => React.createElement("option", { key: v, value: v }, l))
         ),
 
-        React.createElement("label", { style: { fontSize: "14px", color: "#555", marginTop: "14px", display: "block" } }, "অভিভাবক (guardian)"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "14px", display: "block" } }, "অভিভাবক (guardian)"),
         React.createElement(
           "div", { style: { marginTop: "4px", maxHeight: "180px", overflowY: "auto" } },
           allMembers.filter((m) => m.id !== targetMember.id).map((m) =>
@@ -111,7 +111,7 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
           React.createElement("button", {
             onClick: save, disabled: busy,
             style: {
-              flex: 1, padding: "10px", borderRadius: "6px", border: "none",
+              flex: 1, padding: "10px", borderRadius: "10px", border: "none",
               background: "#0E4B43", color: "#fff", cursor: busy ? "default" : "pointer",
               opacity: busy ? 0.6 : 1, fontSize: "14px",
             },
@@ -119,7 +119,7 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
           React.createElement("button", {
             onClick: onClose, disabled: busy,
             style: {
-              flex: 1, padding: "10px", borderRadius: "6px", border: "1px solid #CBD5E1",
+              flex: 1, padding: "10px", borderRadius: "10px", border: "1px solid #D3E0D9",
               background: "#fff", cursor: "pointer", fontSize: "14px",
             },
           }, "Cancel")

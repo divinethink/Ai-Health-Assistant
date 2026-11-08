@@ -103,16 +103,16 @@ export function NutritionGuidance({ familyId, selectedMemberId }) {
   if (!members || !targetMemberId) return null;
 
   return React.createElement(
-    "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
+    "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: "0 0 8px" } }, "Nutrition / Fitness Guidance"),
-    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "6px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
       "সাধারণ খাদ্য/ব্যায়াম-সংক্রান্ত পরামর্শ — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন।"
     ),
     TextField("আপনার প্রশ্ন (যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা)", question, setQuestion, "এখানে লিখুন..."),
 
     // Cloud AI Hosting Disclosure (roadmap §13) — TriageForm.js-এর একই টেক্সট/প্যাটার্ন পুনর্ব্যবহার।
     React.createElement(
-      "details", { style: { marginTop: "12px", fontSize: "14px", color: "#555", background: "#F3F6F5", padding: "8px 10px", borderRadius: "6px", border: "1px solid #D8E3E0" } },
+      "details", { style: { marginTop: "12px", fontSize: "14px", color: "#3E4E49", background: "#F3F6F5", padding: "8px 10px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
       React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "#0E4B43" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
       React.createElement(
         "div", { style: { marginTop: "6px", lineHeight: "1.5" } },
@@ -127,22 +127,22 @@ export function NutritionGuidance({ familyId, selectedMemberId }) {
     // Diet Guidance grounding card (amendment item ১) — deterministic reference-
     // list, AI-generated না; transparency-এর জন্য AI response-এর আগে দেখানো হয়।
     dietGuidance && (dietGuidance.avoidFoods.length > 0 || dietGuidance.includeFoods.length > 0) && React.createElement(
-      "div", { style: { marginTop: "12px", background: "#FBF7EC", padding: "12px", borderRadius: "8px", border: "1px solid #E8DDBB" } },
+      "div", { style: { marginTop: "12px", background: "#FBF7EC", padding: "12px", borderRadius: "14px", border: "1px solid #E8DDBB" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "6px" } }, "আপনার স্বাস্থ্য-তথ্য অনুযায়ী খাদ্য নির্দেশিকা (রেফারেন্স)"),
       dietGuidance.avoidFoods.length > 0 && React.createElement(
-        "div", { style: { fontSize: "14px", color: "#333", marginBottom: "4px" } },
+        "div", { style: { fontSize: "14px", color: "#1F2D2A", marginBottom: "4px" } },
         React.createElement("b", null, "এড়িয়ে চলুন: "), dietGuidance.avoidFoods.join(", ")
       ),
       dietGuidance.includeFoods.length > 0 && React.createElement(
-        "div", { style: { fontSize: "14px", color: "#333" } },
+        "div", { style: { fontSize: "14px", color: "#1F2D2A" } },
         React.createElement("b", null, "বেশি রাখুন: "), dietGuidance.includeFoods.join(", ")
       )
     ),
 
     response && React.createElement(
-      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
+      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#333" } }, response)
+      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, response)
     )
   );
 }

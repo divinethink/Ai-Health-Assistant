@@ -27,7 +27,7 @@ const { useState, useEffect } = React;
 function RemedyCard(r) {
   return React.createElement(
     "div",
-    { key: r.id, style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px" } },
+    { key: r.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
     React.createElement("div", { style: { fontWeight: 600, marginBottom: "6px" } }, r.name),
     React.createElement(EvidenceBadge, {
       evidenceTier: r.evidenceTier,
@@ -35,7 +35,7 @@ function RemedyCard(r) {
       disclaimerText: r.disclaimerText,
     }),
     React.createElement(
-      "div", { style: { fontSize: "14px", color: "#555", marginTop: "6px" } },
+      "div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px" } },
       (r.useCase || []).join(" · ")
     )
   );
@@ -61,7 +61,7 @@ function ComparisonView({ herbal, homeo }) {
   const useCases = Object.keys(byUseCase).sort();
   if (useCases.length === 0) {
     return React.createElement(
-      "p", { style: { color: "#888", fontSize: "14px" } },
+      "p", { style: { color: "#5F716C", fontSize: "14px" } },
       "এখনো কোনো verified remedy নেই — pharmacist/physician review-এর অপেক্ষায়।"
     );
   }
@@ -69,20 +69,20 @@ function ComparisonView({ herbal, homeo }) {
     "div", { style: { display: "flex", flexDirection: "column", gap: "14px", marginTop: "10px" } },
     ...useCases.map((uc) =>
       React.createElement(
-        "div", { key: uc, style: { border: "1px solid #D8E3E0", borderRadius: "8px", padding: "10px", background: "#FAFCFB" } },
+        "div", { key: uc, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px", background: "#FAFCFB" } },
         React.createElement("div", { style: { fontWeight: 700, fontSize: "14px", color: "#0E4B43", marginBottom: "8px" } }, uc),
         React.createElement(
           "div", { style: { display: "flex", gap: "10px", flexWrap: "wrap" } },
           React.createElement(
             "div", { style: { flex: "1 1 160px" } },
-            React.createElement("div", { style: { fontSize: "14px", color: "#888", marginBottom: "4px" } }, "Herbal / ভেষজ"),
+            React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "4px" } }, "Herbal / ভেষজ"),
             byUseCase[uc].herbal.length
               ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } }, ...byUseCase[uc].herbal.map(RemedyCard))
               : React.createElement("div", { style: { fontSize: "14px", color: "#AAA" } }, "—")
           ),
           React.createElement(
             "div", { style: { flex: "1 1 160px" } },
-            React.createElement("div", { style: { fontSize: "14px", color: "#888", marginBottom: "4px" } }, "Homeopathy"),
+            React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "4px" } }, "Homeopathy"),
             byUseCase[uc].homeopathy.length
               ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } }, ...byUseCase[uc].homeopathy.map(RemedyCard))
               : React.createElement("div", { style: { fontSize: "14px", color: "#AAA" } }, "—")
@@ -99,7 +99,7 @@ function RemedyGroup({ title, list }) {
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", marginBottom: "6px" } }, title),
     list.length === 0
       ? React.createElement(
-          "p", { style: { color: "#888", fontSize: "14px" } },
+          "p", { style: { color: "#5F716C", fontSize: "14px" } },
           "এখনো কোনো verified remedy নেই — pharmacist/physician review-এর অপেক্ষায়।"
         )
       : React.createElement(
@@ -107,7 +107,7 @@ function RemedyGroup({ title, list }) {
           ...list.map((r) =>
             React.createElement(
               "div",
-              { key: r.id, style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px" } },
+              { key: r.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
               React.createElement("div", { style: { fontWeight: 600, marginBottom: "6px" } }, r.name),
               React.createElement(EvidenceBadge, {
                 evidenceTier: r.evidenceTier,
@@ -115,7 +115,7 @@ function RemedyGroup({ title, list }) {
                 disclaimerText: r.disclaimerText,
               }),
               React.createElement(
-                "div", { style: { fontSize: "14px", color: "#555", marginTop: "6px" } },
+                "div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px" } },
                 (r.useCase || []).join(" · ")
               )
             )
@@ -141,7 +141,7 @@ export function RemedySection({ familyId, selectedMemberId }) {
 
   if (loadErr) return ErrorBox(loadErr);
   if (herbal === null || homeo === null) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "Remedy তালিকা লোড হচ্ছে...");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "Remedy তালিকা লোড হচ্ছে...");
   }
 
   return React.createElement(
@@ -153,7 +153,7 @@ export function RemedySection({ familyId, selectedMemberId }) {
         "button",
         {
           onClick: () => setCompareMode((v) => !v),
-          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", cursor: "pointer" },
         },
         compareMode ? "সাধারণ তালিকা দেখুন" : "Use-case অনুযায়ী তুলনা করুন"
       )

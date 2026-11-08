@@ -72,13 +72,13 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
   }, [familyId, myMemberId, myShares]);
 
   if (err) return ErrorBox(err);
-  if (!members) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+  if (!members) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
 
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "পরিবারের সদস্য"),
     myMemberId && React.createElement(
-      "p", { style: { fontSize: "14px", color: "#888", marginTop: "-6px", marginBottom: "8px" } },
+      "p", { style: { fontSize: "14px", color: "#5F716C", marginTop: "-6px", marginBottom: "8px" } },
       "প্রতিটা সদস্যের পাশে Read/Write টিক দিয়ে আপনার নিজের প্রোফাইলে তার access সরাসরি ঠিক করুন।"
     ),
     members.map((m) => {
@@ -93,7 +93,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
       const share = myShares[m.id] || { read: false, write: false };
 
       return React.createElement(
-        "div", { key: m.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px" } },
+        "div", { key: m.id, style: { padding: "8px 0", borderBottom: "1px solid #D3E0D9", fontSize: "14px" } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
           React.createElement("span", null,
             React.createElement("b", null, m.name),

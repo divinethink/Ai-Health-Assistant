@@ -49,7 +49,7 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
   }, [familyId, callerMemberId, name, specialtyCategory, area, hospital, chamberAddress, phone, file, isEdit, editingDoctor, onSaved]);
 
   return React.createElement(
-    "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
+    "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 6px" } }, isEdit ? "ডাক্তারের তথ্য এডিট করুন" : "নতুন ডাক্তার যোগ করুন"),
     TextField("ডাক্তারের নাম", name, setName, "যেমন: ডা. রহিম উদ্দিন"),
     SelectField("বিশেষত্ব / ক্যাটেগরি", specialtyCategory, setSpecialtyCategory, DOCTOR_CATEGORIES),
@@ -59,14 +59,14 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
     TextField("ফোন/যোগাযোগ (ঐচ্ছিক)", phone, setPhone, "যেমন: 01XXXXXXXXX"),
     !isEdit && React.createElement(
       "div", { style: { marginTop: "8px" } },
-      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "ভিজিটিং কার্ডের ছবি (ঐচ্ছিক)"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#1F2D2A", display: "block", marginBottom: "4px" } }, "ভিজিটিং কার্ডের ছবি (ঐচ্ছিক)"),
       React.createElement("input", {
         ref: fileInputRef, type: "file", accept: "image/*", onChange: onFileChange,
         style: { fontSize: "14px" },
       })
     ),
     isEdit && React.createElement(
-      "p", { style: { fontSize: "14px", color: "#888", marginTop: "8px" } },
+      "p", { style: { fontSize: "14px", color: "#5F716C", marginTop: "8px" } },
       "ভিজিটিং কার্ডের ছবি বদলাতে চাইলে এই এন্ট্রি ডিলিট করে নতুন করে যোগ করুন।"
     ),
     err && ErrorBox(err),

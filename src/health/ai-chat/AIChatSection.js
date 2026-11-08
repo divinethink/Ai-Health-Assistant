@@ -45,7 +45,7 @@ export function AIChatSection({ familyId, callerMemberId, selectedMemberId, topO
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab),
       !selectedMemberId
-        ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+        ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
         : React.createElement(
           React.Fragment, null,
           tab === "symptom-check" && React.createElement(TriageForm, { familyId, callerMemberId, selectedMemberId }),

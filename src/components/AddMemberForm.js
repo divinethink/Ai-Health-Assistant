@@ -44,24 +44,24 @@ export function AddMemberForm({ familyId, onAdded }) {
   }
 
   return React.createElement(
-    "div", { style: { marginTop: "16px", padding: "14px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
+    "div", { style: { marginTop: "16px", padding: "14px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "নতুন সদস্য"),
     TextField("নাম", name, setName, "সদস্যের নাম"),
     React.createElement(
       "div", { style: { marginTop: "10px" } },
-      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "জন্ম-তারিখ"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#1F2D2A", display: "block", marginBottom: "4px" } }, "জন্ম-তারিখ"),
       React.createElement("input", {
         type: "date", min: "1960-01-01", max: todayISO, value: dob,
         onChange: (e) => setDob(e.target.value),
-        style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
+        style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px" },
       })
     ),
     React.createElement(
       "div", { style: { marginTop: "10px" } },
-      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "লিঙ্গ"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#1F2D2A", display: "block", marginBottom: "4px" } }, "লিঙ্গ"),
       React.createElement(
         "select", { value: sex, onChange: (e) => setSex(e.target.value),
-          style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" } },
+          style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px" } },
         React.createElement("option", { value: "male" }, "পুরুষ"),
         React.createElement("option", { value: "female" }, "মহিলা")
       )

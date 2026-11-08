@@ -147,7 +147,7 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
             onClick: () => { setOpen(false); onOpenGeneralChat(); },
             style: {
               marginTop: "10px", width: "100%", padding: "8px", border: "1px solid #1B2430",
-              borderRadius: "6px", background: "#1B2430", color: "#fff", fontSize: "14px",
+              borderRadius: "10px", background: "#1B2430", color: "#fff", fontSize: "14px",
               fontWeight: 600, cursor: "pointer",
             },
           },
@@ -158,7 +158,7 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
             onClick: () => { setOpen(false); auth.signOut(); },
             style: {
               marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B",
-              borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "14px",
+              borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px",
               fontWeight: 600, cursor: "pointer",
             },
           },
@@ -276,27 +276,27 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   };
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "10px", border: "1px dashed var(--hs-border)", borderRadius: "8px" } },
+    "div", { style: { marginTop: "14px", padding: "10px", border: "1px dashed var(--hs-border)", borderRadius: "14px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary)", margin: "0 0 6px" } }, "🔗 আমন্ত্রণ লিংক"),
     isLive
       ? React.createElement(
           React.Fragment, null,
-          React.createElement("div", { style: { fontSize: "14px", wordBreak: "break-all", background: "var(--hs-chip-bg)", padding: "6px", borderRadius: "6px" } }, link),
+          React.createElement("div", { style: { fontSize: "14px", wordBreak: "break-all", background: "var(--hs-chip-bg)", padding: "6px", borderRadius: "10px" } }, link),
           React.createElement(
             "div", { style: { display: "flex", gap: "8px", marginTop: "6px" } },
             React.createElement("button", {
               onClick: handleCopy, disabled: busy,
-              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "#fff", color: "var(--hs-primary)", cursor: "pointer" },
+              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid var(--hs-primary)", background: "#fff", color: "var(--hs-primary)", cursor: "pointer" },
             }, copied ? "কপি হয়েছে ✓" : "লিংক কপি করুন"),
             React.createElement("button", {
               onClick: handleRevoke, disabled: busy,
-              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
             }, "বাতিল করুন")
           )
         )
       : React.createElement("button", {
           onClick: handleGenerate, disabled: busy,
-          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "var(--hs-primary)", color: "#fff", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid var(--hs-primary)", background: "var(--hs-primary)", color: "#fff", cursor: "pointer" },
         }, busy ? "তৈরি হচ্ছে..." : "লিংক তৈরি করুন")
   );
 }
@@ -328,7 +328,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       children: React.createElement(
         "button", {
           onClick: onOpenDoctorDetails,
-          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "8px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "14px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         },
         t("menu.doctor")
       ),

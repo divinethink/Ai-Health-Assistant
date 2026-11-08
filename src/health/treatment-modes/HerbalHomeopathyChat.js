@@ -72,15 +72,15 @@ export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
   if (!members || !targetMemberId) return null;
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
+    "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "Herbal / Homeopathy — জিজ্ঞাসা করুন"),
-    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "6px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
       "সাধারণ ভেষজ/হোমিওপ্যাথি তথ্য — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন। কোনো dose/মাত্রা এখানে বলা হবে না, শুধু evidence-level-সচেতন সাধারণ তথ্য।"
     ),
     TextField("আপনার প্রশ্ন (যেমন: সর্দি-কাশিতে কী ভেষজ সাহায্য করতে পারে?)", question, setQuestion, "এখানে লিখুন..."),
 
     React.createElement(
-      "details", { style: { marginTop: "10px", fontSize: "14px", color: "#555", background: "#F3F6F5", padding: "8px 10px", borderRadius: "6px", border: "1px solid #D8E3E0" } },
+      "details", { style: { marginTop: "10px", fontSize: "14px", color: "#3E4E49", background: "#F3F6F5", padding: "8px 10px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
       React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "#0E4B43" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
       React.createElement(
         "div", { style: { marginTop: "6px", lineHeight: "1.5" } },
@@ -93,9 +93,9 @@ export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
     err && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "8px" } }, "AI response পাওয়া যায়নি: " + err),
 
     response && React.createElement(
-      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
+      "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#333" } }, response)
+      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, response)
     )
   );
 }

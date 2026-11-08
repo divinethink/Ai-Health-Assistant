@@ -39,16 +39,16 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!docs) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে...");
-  if (docs.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "কোনো Document নেই।");
+  if (!docs) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (docs.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কোনো Document নেই।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
     docs.map((d) =>
       React.createElement(
-        "div", { key: d.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px" } },
+        "div", { key: d.id, style: { padding: "8px 0", borderBottom: "1px solid #D3E0D9", fontSize: "14px" } },
         React.createElement("div", null, React.createElement("b", null, DOC_TYPE_LABELS[d.docType] || d.docType)),
-        React.createElement("div", { style: { color: "#555" } },
+        React.createElement("div", { style: { color: "#3E4E49" } },
           d.fileName + (d.date ? " — " + d.date : "") + (d.source ? " (" + d.source + ")" : "")),
         d.status === "pending" && React.createElement("div", { style: { color: "#B8860B", fontSize: "14px" } },
           "আপলোড অসম্পূর্ণ (হয়তো নেটওয়ার্ক-সমস্যায় থেমে গেছে) — মুছে আবার চেষ্টা করুন।"),
@@ -75,7 +75,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
                 }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
                 React.createElement("button", {
                   onClick: () => setConfirmId(null),
-                  style: { fontSize: "14px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#5F716C", cursor: "pointer", padding: 0 },
                 }, "না")
               )
             : React.createElement("button", {

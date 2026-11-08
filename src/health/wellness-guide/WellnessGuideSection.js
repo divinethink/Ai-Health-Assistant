@@ -40,38 +40,38 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
   const hasMore = !!split || !!post.summary;
 
   return React.createElement(
-    "div", { key: post.id, style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px", marginBottom: "8px" } },
+    "div", { key: post.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px", marginBottom: "8px" } },
     React.createElement(
       "div", { style: { cursor: "pointer" }, onClick: onToggle },
       React.createElement("div", { style: { fontWeight: 600, color: "#0E4B43", fontSize: "14px" } }, post.title),
       React.createElement(
-        "div", { style: { fontSize: "14px", color: "#888", marginTop: "2px" } },
+        "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "2px" } },
         (rangeLabel ? rangeLabel + " · " : "") + (post.tags || []).join(", ")
       ),
-      previewText && React.createElement("div", { style: { fontSize: "14px", color: "#555", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
+      previewText && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
       !expanded && hasMore && React.createElement(
         "span", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600, marginTop: "4px", display: "inline-block" } },
         "আরো পড়ুন »"
       )
     ),
     expanded && React.createElement(
-      "div", { style: { fontSize: "14px", color: "#333", marginTop: "10px", whiteSpace: "pre-wrap", borderTop: "1px solid #EEE", paddingTop: "8px" } },
+      "div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px", whiteSpace: "pre-wrap", borderTop: "1px solid #D3E0D9", paddingTop: "8px" } },
       remainingText,
-      post.sourceNote && React.createElement("div", { style: { fontSize: "14px", color: "#999", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
+      post.sourceNote && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
     ),
     (canEdit || canDelete) && React.createElement(
       "div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
       canEdit && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onEdit(post); },
-          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #CBD5E1", background: "#fff", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #D3E0D9", background: "#fff", cursor: "pointer" },
         },
         "এডিট"
       ),
       canDelete && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onDelete(post); },
-          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
         },
         "ডিলিট"
       )
@@ -82,7 +82,7 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
 function CategorySidebar({ category, onSelect }) {
   const items = [["all", "সব"], ...WELLNESS_CATEGORIES];
   return React.createElement(
-    "div", { style: { width: "100%", height: "100%", background: "#F5F5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
+    "div", { style: { width: "100%", height: "100%", background: "#EEF5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", padding: "4px 8px", marginBottom: "4px" } }, "ক্যাটেগরি"),
     items.map(([catId, label]) => {
       const active = category === catId;
@@ -90,8 +90,8 @@ function CategorySidebar({ category, onSelect }) {
         "div", {
           key: catId, onClick: () => onSelect(catId),
           style: {
-            padding: "8px 10px", borderRadius: "6px", fontSize: "14px", cursor: "pointer", marginBottom: "2px",
-            background: active ? "#0E4B43" : "transparent", color: active ? "#fff" : "#333",
+            padding: "8px 10px", borderRadius: "10px", fontSize: "14px", cursor: "pointer", marginBottom: "2px",
+            background: active ? "#0E4B43" : "transparent", color: active ? "#fff" : "#1F2D2A",
           },
         },
         label
@@ -152,13 +152,13 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
     "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#0E4B43", color: "#fff" } },
     React.createElement("button", {
       onClick: () => setSidebarOpen((o) => !o), title: "ক্যাটেগরি",
-      style: { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "14px", padding: "4px 8px", borderRadius: "6px", cursor: "pointer" },
+      style: { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "14px", padding: "4px 8px", borderRadius: "10px", cursor: "pointer" },
     }, "☰"),
     React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px" } }, "🌿 স্বাস্থ্য ব্লগ"),
     !showForm && !editingPost && React.createElement(
       "button", {
         onClick: () => { setEditingPost(null); setShowForm(true); },
-        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600 },
+        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600 },
       },
       "+ নতুন লেখা"
     )
@@ -181,8 +181,8 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       onCancel: () => { setShowForm(false); setEditingPost(null); },
     }),
     err && ErrorBox(err),
-    !err && posts === null && React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে..."),
-    !err && posts && posts.length === 0 && React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।"),
+    !err && posts === null && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    !err && posts && posts.length === 0 && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।"),
     !err && posts && posts.map((p) =>
       React.createElement(PostCard, {
         key: p.id, post: p, expanded: expandedId === p.id,
@@ -194,7 +194,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       })
     ),
     pendingDelete && React.createElement(
-      "div", { style: { marginTop: "10px", padding: "10px", border: "1px solid #C0392B", borderRadius: "8px", background: "#FDF2F2" } },
+      "div", { style: { marginTop: "10px", padding: "10px", border: "1px solid #C0392B", borderRadius: "14px", background: "#FDF2F2" } },
       React.createElement("div", { style: { fontSize: "14px", marginBottom: "8px" } }, "\"" + pendingDelete.title + "\" পোস্টটা স্থায়ীভাবে ডিলিট করবেন?"),
       PrimaryButton("হ্যাঁ, ডিলিট করুন", confirmDelete, false),
       SecondaryButton("বাতিল", () => setPendingDelete(null), false)
@@ -210,10 +210,10 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       mainContent
     ),
     React.createElement(
-      "div", { style: { padding: "8px 14px", background: "#F5F5F0", borderTop: "1px solid #E2E8F0", textAlign: "right" } },
+      "div", { style: { padding: "8px 14px", background: "#EEF5F0", borderTop: "1px solid #D3E0D9", textAlign: "right" } },
       React.createElement("button", {
         onClick: onExit,
-        style: { background: "none", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "14px", padding: "5px 12px", borderRadius: "6px", cursor: "pointer" },
+        style: { background: "none", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "14px", padding: "5px 12px", borderRadius: "10px", cursor: "pointer" },
       }, "← ফিরে যান")
     )
   );

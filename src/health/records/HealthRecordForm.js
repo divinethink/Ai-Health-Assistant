@@ -121,7 +121,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       }),
       t("f.chronic")
     ));
-    typeFields.push(React.createElement("div", { style: { fontSize: "14px", color: "#888", margin: "8px 0 2px" } }, t("f.physician")));
+    typeFields.push(React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "8px 0 2px" } }, t("f.physician")));
     typeFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
     typeFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));
     typeFields.push(TextField("হাসপাতাল/চেম্বার", physicianHospital, setPhysicianHospital, "যেমন: হাসপাতালের নাম"));
@@ -144,10 +144,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : undefined } },
+    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
     isEdit
-      ? React.createElement("div", { style: { fontSize: "14px", color: "#888", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
+      ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
       : SelectField(t("f.type"), resourceType, changeResourceType, [
           ["condition", t("type.condition")], ["observation", t("type.observation")],
           ["medicationStatement", t("type.medicationStatement")], ["allergy", t("type.allergy")],

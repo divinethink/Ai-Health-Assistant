@@ -20,10 +20,10 @@ function groupByType(entries) {
 function EntryRow(e) {
   return React.createElement(
     "div",
-    { key: e.id, style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px" } },
+    { key: e.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
     React.createElement("div", { style: { fontWeight: 600 } }, e.name),
     React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "2px" } }, e.contact),
-    e.notes && React.createElement("div", { style: { fontSize: "14px", color: "#888", marginTop: "4px" } }, e.notes)
+    e.notes && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "4px" } }, e.notes)
   );
 }
 
@@ -39,10 +39,10 @@ export function CareEscalationDirectory() {
 
   if (loadErr) return ErrorBox(loadErr);
   if (entries === null) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "Directory লোড হচ্ছে...");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "Directory লোড হচ্ছে...");
   }
   if (entries.length === 0) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এখনো কোনো entry নেই।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো entry নেই।");
   }
 
   const groups = groupByType(entries);
@@ -52,7 +52,7 @@ export function CareEscalationDirectory() {
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "Verified Care-Escalation Directory"),
     React.createElement(
-      "p", { style: { fontSize: "14px", color: "#888", margin: "4px 0 10px" } },
+      "p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0 10px" } },
       "জরুরি/স্বাস্থ্য/সুরক্ষা-সংক্রান্ত verified হেল্পলাইন ও যোগাযোগ — সব পরিবার একই তালিকা শেয়ার করে।"
     ),
     ...typeOrder.map((type) =>

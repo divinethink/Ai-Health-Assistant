@@ -20,7 +20,7 @@ export function AccessGrantButton({ status, busy, onRequest, onCancelPending, on
       "div", { style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" } },
       React.createElement("button", {
         disabled: true,
-        style: { ...btnBase, border: "1px solid #ccc", background: "#f5f5f5", color: "#888", cursor: "default" },
+        style: { ...btnBase, border: "1px solid #D3E0D9", background: "#f5f5f5", color: "#5F716C", cursor: "default" },
       }, "Pending for Approval"),
       React.createElement("button", {
         onClick: onCancelPending, disabled: busy, title: "অনুরোধ বাতিল করুন",

@@ -91,11 +91,11 @@ export function ManualReportEntryForm({ familyId, targetMemberId, callerMemberId
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    React.createElement("p", { style: { fontSize: "14px", color: "#888", margin: "4px 0" } },
+    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } },
       "হাতে-লেখা রিপোর্টে OCR নির্ভরযোগ্য না — রিপোর্ট দেখে সরাসরি মান লিখুন।"
     ),
     ...rows.map((r, idx) => React.createElement(
-      "div", { key: idx, style: { marginBottom: "10px", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
+      "div", { key: idx, style: { marginBottom: "10px", padding: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
       SelectField("টেস্ট", r.testId, (v) => updateRow(idx, { testId: v }), testOptions),
       r.testId === CUSTOM_OPTION || !r.testId
         ? TextField("টেস্টের নাম", r.customName, (v) => updateRow(idx, { customName: v }), "যেমন: Vitamin D")

@@ -29,7 +29,7 @@ export function isHighRiskContext({ riskLevel, ageGroupContext, chronicManagemen
 }
 
 const CARD_BASE_STYLE = {
-  border: "1px solid #CBD5E1",
+  border: "1px solid #D3E0D9",
   borderRadius: "10px",
   padding: "14px",
   background: "#fff",

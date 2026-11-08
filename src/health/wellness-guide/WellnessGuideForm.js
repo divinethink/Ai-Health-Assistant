@@ -14,10 +14,10 @@ const { useState, useEffect, useCallback } = React;
 function TextAreaField(label, value, onChange, placeholder) {
   return React.createElement(
     "div", { style: { marginBottom: "8px" } },
-    React.createElement("label", { style: { fontSize: "14px", color: "#555", display: "block", marginBottom: "2px" } }, label),
+    React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49", display: "block", marginBottom: "2px" } }, label),
     React.createElement("textarea", {
       value, placeholder, onChange: (e) => onChange(e.target.value), rows: 8,
-      style: { width: "100%", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontFamily: "inherit", fontSize: "14px", boxSizing: "border-box" },
+      style: { width: "100%", padding: "8px", border: "1px solid #D3E0D9", borderRadius: "10px", fontFamily: "inherit", fontSize: "14px", boxSizing: "border-box" },
     })
   );
 }
@@ -81,7 +81,7 @@ export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, 
   }, [familyId, myMemberId, category, title, body, tagsText, ageMin, ageMax, monthMin, monthMax, sourceNote, needsAgeRange, needsMonthRange, isEdit, editingPost, onSaved]);
 
   return React.createElement(
-    "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
+    "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 6px" } }, isEdit ? "পোস্ট এডিট করুন" : "নতুন লেখা যোগ করুন"),
     SelectField("ক্যাটেগরি", category, setCategory, WELLNESS_CATEGORIES),
     TextField("শিরোনাম", title, setTitle, "যেমন: গর্ভাবস্থার ৩য় মাসের পুষ্টি"),
@@ -96,7 +96,7 @@ export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, 
       TextField("মাস পর্যন্ত (১-৯)", monthMax, setMonthMax, "যেমন: 3")
     ),
     React.createElement(
-      "p", { style: { fontSize: "14px", color: "#888", margin: "6px 0" } },
+      "p", { style: { fontSize: "14px", color: "#5F716C", margin: "6px 0" } },
       "প্রিভিউ কতটুকু দেখাবে তা ঠিক করতে, নিচের লেখায় যেখানে কাটতে চান সেখানে ঠিক এই শব্দটা বসান: ",
       React.createElement("b", { style: { color: "#0E4B43" } }, "[MORE]"),
       " — এর আগে পর্যন্ত অংশ প্রিভিউ হিসেবে দেখাবে, বাকিটা \"আরো পড়ুন\"-এ ক্লিক করলে দেখা যাবে। না বসালে পুরো লেখা ক্লিকেই দেখাবে।"

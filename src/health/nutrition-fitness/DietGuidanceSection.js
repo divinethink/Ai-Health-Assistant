@@ -58,9 +58,9 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    !result && React.createElement("div", { style: { marginTop: "8px", color: "#888", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    !result && React.createElement("div", { style: { marginTop: "8px", color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
     result && result.matchedTags.length === 0 && React.createElement(
-      "div", { style: { marginTop: "10px", padding: "10px", background: "#F5F5F0", borderRadius: "8px", fontSize: "14px", color: "#555" } },
+      "div", { style: { marginTop: "10px", padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: "14px", color: "#3E4E49" } },
       "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"
     ),
     result && result.matchedTags.length > 0 && React.createElement(
@@ -68,7 +68,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
       result.matchedTags.map((tag) => {
         const isOpen = openTag === tag;
         return React.createElement(
-          "div", { key: tag, style: { border: "1px solid #ddd", borderRadius: "8px", overflow: "hidden" } },
+          "div", { key: tag, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", overflow: "hidden" } },
           React.createElement(
             "button", {
               onClick: () => setOpenTag(isOpen ? null : tag),
@@ -77,7 +77,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
             tag, React.createElement("span", null, isOpen ? "▲" : "▼")
           ),
           isOpen && React.createElement(
-            "div", { style: { padding: "10px 12px", background: "#F5F5F0", fontSize: "14px" } },
+            "div", { style: { padding: "10px 12px", background: "#EEF5F0", fontSize: "14px" } },
             React.createElement("div", { style: { color: "#B3261E", fontWeight: 600, marginBottom: "4px" } }, "❌ এড়িয়ে চলুন"),
             React.createElement("div", { style: { marginBottom: "10px" } }, result.avoidFoods.length ? result.avoidFoods.join(", ") : "নির্দিষ্ট কিছু নেই"),
             React.createElement("div", { style: { color: "#0E4B43", fontWeight: 600, marginBottom: "4px" } }, "✅ বেশি খান"),

@@ -35,7 +35,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   useEffect(() => { setEditingRecord(null); }, [targetMemberId]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(

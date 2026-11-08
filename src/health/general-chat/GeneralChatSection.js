@@ -338,7 +338,7 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement(
         "button", {
           onClick: () => setSidebarOpen((v) => !v), title: "মেনু",
-          style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D6DEE6", fontSize: "16px", padding: "4px 10px", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
+          style: { background: sidebarOpen ? "#22303F" : "none", border: "1px solid #3A4756", color: "#D3E0D9", fontSize: "16px", padding: "4px 10px", borderRadius: "10px", cursor: "pointer", flexShrink: 0 },
         }, "☰"
       ),
       React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "🌐 " + (activeSessionId ? activeTitle : "General Chat"))
@@ -359,10 +359,10 @@ export function GeneralChatSection({ familyId, onExit }) {
   );
 
   const chatsPanel = React.createElement(
-    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D6DEE6", display: "flex", flexDirection: "column" } },
+    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D3E0D9", display: "flex", flexDirection: "column" } },
     drawerTabsBar,
     React.createElement(
-      "button", { onClick: startNewChat, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D6DEE6", borderRadius: "6px", cursor: "pointer", fontSize: "14px" } },
+      "button", { onClick: startNewChat, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D3E0D9", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } },
       "+ নতুন চ্যাট"
     ),
     React.createElement(
@@ -384,10 +384,10 @@ export function GeneralChatSection({ familyId, onExit }) {
   );
 
   const projectsPanel = React.createElement(
-    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D6DEE6", display: "flex", flexDirection: "column" } },
+    "div", { style: { width: "100%", height: "100%", background: "#1B2430", color: "#D3E0D9", display: "flex", flexDirection: "column" } },
     drawerTabsBar,
     React.createElement(
-      "button", { onClick: openNewProject, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D6DEE6", borderRadius: "6px", cursor: "pointer", fontSize: "14px" } },
+      "button", { onClick: openNewProject, style: { margin: "10px 12px", padding: "8px", border: "1px dashed #3A4756", background: "none", color: "#D3E0D9", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } },
       "+ নতুন Project"
     ),
     React.createElement(
@@ -429,12 +429,12 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement(
         "div", { key: m.id || i, style: { display: "flex", alignItems: "center", gap: "6px", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: "10px" } },
         React.createElement(
-          "div", { style: { maxWidth: "78%", background: m.role === "user" ? "#0E4B43" : "#fff", color: m.role === "user" ? "#fff" : "#222", border: m.role === "user" ? "none" : "1px solid #E0E4E2", borderRadius: "10px", padding: "10px 12px" } },
-          m.imageUrl && React.createElement("img", { src: m.imageUrl, style: { maxWidth: "220px", borderRadius: "6px", display: "block", marginBottom: m.text ? "6px" : 0 } }),
+          "div", { style: { maxWidth: "78%", background: m.role === "user" ? "#0E4B43" : "#fff", color: m.role === "user" ? "#fff" : "#222", border: m.role === "user" ? "none" : "1px solid #D3E0D9", borderRadius: "10px", padding: "10px 12px" } },
+          m.imageUrl && React.createElement("img", { src: m.imageUrl, style: { maxWidth: "220px", borderRadius: "10px", display: "block", marginBottom: m.text ? "6px" : 0 } }),
           m.text && React.createElement("div", { style: { fontSize: "14px", lineHeight: "1.7" } }, renderLiteMarkdown(m.text)),
           m.sources && m.sources.length > 0 && React.createElement(
-            "div", { style: { marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #EEE", fontSize: "14px" } },
-            React.createElement("div", { style: { color: "#888", marginBottom: "2px" } }, "🔗 সূত্র:"),
+            "div", { style: { marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #D3E0D9", fontSize: "14px" } },
+            React.createElement("div", { style: { color: "#5F716C", marginBottom: "2px" } }, "🔗 সূত্র:"),
             m.sources.slice(0, 5).map((s, si) =>
               React.createElement("a", { key: si, href: s.url, target: "_blank", rel: "noopener noreferrer", style: { display: "block", color: "#3B7DBF", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.title || s.url)
             )
@@ -468,13 +468,13 @@ export function GeneralChatSection({ familyId, onExit }) {
     err && ErrorBox(err),
     retryNote && React.createElement("div", { style: { fontSize: "14px", color: "#7A5B00" } }, retryNote),
     contextTrimmed && React.createElement(
-      "div", { style: { fontSize: "14px", color: "#7A5B00", background: "#FFF6DD", border: "1px solid #F0DFA0", borderRadius: "6px", padding: "6px 10px", marginTop: "6px" } },
+      "div", { style: { fontSize: "14px", color: "#7A5B00", background: "#FFF6DD", border: "1px solid #F0DFA0", borderRadius: "10px", padding: "6px 10px", marginTop: "6px" } },
       "⚠️ আলোচনা অনেক বড় হয়ে গেছে — AI এখন শুধু সাম্প্রতিক অংশ মনে রাখছে (পুরনো অংশ এখানে দেখা যাচ্ছে, শুধু AI-কে পাঠানো হচ্ছে না)। নতুন প্রসঙ্গের জন্য চাইলে নতুন চ্যাট শুরু করুন।"
     )
   );
 
   const composer = React.createElement(
-    "div", { style: { padding: "10px 16px", background: "#fff", borderTop: "1px solid #E0E4E2" } },
+    "div", { style: { padding: "10px 16px", background: "#fff", borderTop: "1px solid #D3E0D9" } },
     // owner-request (এই থ্রেড): edit-mode-এর ব্যাখ্যা-বার্তা বাদ দেওয়া হয়েছে,
     // শুধু একটা ছোট বাতিল-আইকন রাখা হলো (কার্যকারিতা অক্ষত, শুধু টেক্সট নেই)।
     editingIndex !== null && React.createElement(
@@ -482,12 +482,12 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement("span", { onClick: cancelEditMessage, title: "সম্পাদনা বাতিল", style: { cursor: "pointer", fontSize: "14px", color: "#C0392B" } }, "✕")
     ),
     !activeSessionId && projects && projects.length > 0 && React.createElement(
-      "div", { style: { marginBottom: "6px", fontSize: "14px", color: "#666", display: "flex", alignItems: "center", gap: "6px" } },
+      "div", { style: { marginBottom: "6px", fontSize: "14px", color: "#4B5C57", display: "flex", alignItems: "center", gap: "6px" } },
       "Project:",
       React.createElement(
         "select", {
           value: activeProjectId || "", onChange: (e) => setActiveProjectId(e.target.value || null),
-          style: { fontSize: "14px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #CBD5E1" },
+          style: { fontSize: "14px", padding: "3px 6px", borderRadius: "4px", border: "1px solid #D3E0D9" },
         },
         React.createElement("option", { value: "" }, "কোনোটি না"),
         projects.map((p) => React.createElement("option", { key: p.id, value: p.id }, p.name))
@@ -496,30 +496,30 @@ export function GeneralChatSection({ familyId, onExit }) {
     pendingImage && React.createElement(
       "div", { style: { marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" } },
       pendingImage.uploading
-        ? React.createElement("span", { style: { fontSize: "14px", color: "#888" } }, "ছবি আপলোড হচ্ছে...")
+        ? React.createElement("span", { style: { fontSize: "14px", color: "#5F716C" } }, "ছবি আপলোড হচ্ছে...")
         : React.createElement(React.Fragment, null,
-            React.createElement("img", { src: pendingImage.secureUrl, style: { width: "48px", height: "48px", objectFit: "cover", borderRadius: "6px" } }),
+            React.createElement("img", { src: pendingImage.secureUrl, style: { width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" } }),
             React.createElement("span", { onClick: removePendingImage, style: { cursor: "pointer", fontSize: "14px", color: "#C0392B" } }, "✕ বাদ দিন")
           )
     ),
     React.createElement(
-      "label", { style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#666", marginBottom: "6px" } },
+      "label", { style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
       React.createElement("input", { type: "checkbox", checked: useWebSearch, disabled: !!pendingImage, onChange: (e) => setUseWebSearch(e.target.checked) }),
       "🌐 প্রয়োজনে ওয়েব থেকে সর্বশেষ তথ্য আনুন",
-      pendingImage && React.createElement("span", { style: { color: "#999" } }, "(ছবি-সহ প্রশ্নে ওয়েব-সার্চ প্রযোজ্য না)")
+      pendingImage && React.createElement("span", { style: { color: "#6B7B76" } }, "(ছবি-সহ প্রশ্নে ওয়েব-সার্চ প্রযোজ্য না)")
     ),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", alignItems: "flex-end" } },
       React.createElement("input", { ref: fileInputRef, type: "file", accept: "image/*", onChange: onFileChange, style: { display: "none" } }),
-      React.createElement("button", { onClick: () => fileInputRef.current && fileInputRef.current.click(), title: "ছবি যোগ করুন", style: { border: "1px solid #CBD5E1", background: "#fff", borderRadius: "8px", padding: "10px 12px", cursor: "pointer" } }, "📎"),
+      React.createElement("button", { onClick: () => fileInputRef.current && fileInputRef.current.click(), title: "ছবি যোগ করুন", style: { border: "1px solid #D3E0D9", background: "#fff", borderRadius: "14px", padding: "10px 12px", cursor: "pointer" } }, "📎"),
       React.createElement("textarea", {
         value: text, onChange: (e) => setText(e.target.value), placeholder: "যেকোনো বিষয়ে লিখুন...", rows: 1,
         onKeyDown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } },
-        style: { flex: 1, resize: "none", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "8px", fontSize: "14px", fontFamily: "inherit" },
+        style: { flex: 1, resize: "none", padding: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", fontSize: "14px", fontFamily: "inherit" },
       }),
       React.createElement("button", {
         onClick: handleSend, disabled: loading,
-        style: { border: "none", background: loading ? "#8FAFA9" : "#0E4B43", color: "#fff", borderRadius: "8px", padding: "10px 16px", cursor: loading ? "default" : "pointer", fontWeight: 600 },
+        style: { border: "none", background: loading ? "#8FAFA9" : "#0E4B43", color: "#fff", borderRadius: "14px", padding: "10px 16px", cursor: loading ? "default" : "pointer", fontWeight: 600 },
       }, loading ? "..." : "➤")
     )
   );
@@ -532,24 +532,24 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement("input", {
         placeholder: "Project-এর নাম", value: editingProject.name,
         onChange: (e) => setEditingProject({ ...editingProject, name: e.target.value }),
-        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
+        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px" },
       }),
       React.createElement("textarea", {
         placeholder: "Instructions (AI কীভাবে আচরণ করবে)", value: editingProject.instructions, rows: 3,
         onChange: (e) => setEditingProject({ ...editingProject, instructions: e.target.value }),
-        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", fontFamily: "inherit" },
+        style: { width: "100%", padding: "8px", marginBottom: "8px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px", fontFamily: "inherit" },
       }),
       React.createElement("textarea", {
         placeholder: "Knowledge (প্রাসঙ্গিক তথ্য পেস্ট করুন)", value: editingProject.knowledge, rows: 6,
         maxLength: KNOWLEDGE_MAX_CHARS,
         onChange: (e) => setEditingProject({ ...editingProject, knowledge: e.target.value }),
-        style: { width: "100%", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", fontFamily: "inherit" },
+        style: { width: "100%", padding: "8px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px", fontFamily: "inherit" },
       }),
-      React.createElement("div", { style: { fontSize: "14px", color: "#999", textAlign: "right", marginBottom: "10px" } }, `${(editingProject.knowledge || "").length}/${KNOWLEDGE_MAX_CHARS}`),
+      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", textAlign: "right", marginBottom: "10px" } }, `${(editingProject.knowledge || "").length}/${KNOWLEDGE_MAX_CHARS}`),
       React.createElement(
         "div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
-        React.createElement("button", { onClick: () => setEditingProject(null), style: { padding: "8px 14px", border: "1px solid #CBD5E1", background: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "14px" } }, "বাতিল"),
-        React.createElement("button", { onClick: saveProject, style: { padding: "8px 14px", border: "none", background: "#0E4B43", color: "#fff", borderRadius: "6px", cursor: "pointer", fontSize: "14px" } }, "সেভ করুন")
+        React.createElement("button", { onClick: () => setEditingProject(null), style: { padding: "8px 14px", border: "1px solid #D3E0D9", background: "#fff", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } }, "বাতিল"),
+        React.createElement("button", { onClick: saveProject, style: { padding: "8px 14px", border: "none", background: "#0E4B43", color: "#fff", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } }, "সেভ করুন")
       )
     )
   );
@@ -571,7 +571,7 @@ export function GeneralChatSection({ familyId, onExit }) {
     ),
     React.createElement(
       "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "6px 16px", background: "#12181F", color: "#5A6B7D", fontSize: "14px" } },
-      React.createElement("button", { onClick: onExit, style: { background: "none", border: "1px solid #3A4756", color: "#A9C4DE", fontSize: "14px", padding: "3px 10px", borderRadius: "6px", cursor: "pointer", flexShrink: 0 } }, "← ফিরে যান"),
+      React.createElement("button", { onClick: onExit, style: { background: "none", border: "1px solid #3A4756", color: "#A9C4DE", fontSize: "14px", padding: "3px 10px", borderRadius: "10px", cursor: "pointer", flexShrink: 0 } }, "← ফিরে যান"),
       React.createElement("span", null, "🔒 ক্লাউড-ভিত্তিক AI ব্যবহার হচ্ছে। এই মোডে app-এর নিজস্ব health-restriction প্রযোজ্য নয়; ব্যক্তিগত স্বাস্থ্য-পরামর্শের জন্য মূল Symptom Check ব্যবহার করুন।")
     ),
     projectEditorModal

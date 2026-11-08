@@ -73,7 +73,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
         }, t(tb.label))
       )),
     !selectedMemberId
-      ? React.createElement("p", { style: { color: "#888", fontSize: "14px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),

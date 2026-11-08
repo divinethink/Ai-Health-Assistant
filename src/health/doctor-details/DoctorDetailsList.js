@@ -33,11 +33,11 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
   }, [familyId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!doctors) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (!doctors) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
   const filtered = !category || category === "all" ? doctors : doctors.filter((d) => d.specialtyCategory === category);
-  if (doctors.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি।");
-  if (filtered.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এই ক্যাটেগরিতে এখনো কোনো ডাক্তার যোগ হয়নি।");
+  if (doctors.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি।");
+  if (filtered.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এই ক্যাটেগরিতে এখনো কোনো ডাক্তার যোগ হয়নি।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" } },
@@ -45,19 +45,19 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
       const canEdit = !!callerMemberId && d.lastEditedByMemberId === callerMemberId;
       const canDelete = isAdmin || canEdit;
       return React.createElement(
-        "div", { key: d.id, style: { display: "flex", gap: "10px", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "10px" } },
+        "div", { key: d.id, style: { display: "flex", gap: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
         d.visitingCardImageUrl && React.createElement("img", {
           src: d.visitingCardImageUrl,
-          style: { width: "64px", height: "64px", objectFit: "cover", borderRadius: "6px", flexShrink: 0 },
+          style: { width: "64px", height: "64px", objectFit: "cover", borderRadius: "10px", flexShrink: 0 },
         }),
         React.createElement(
           "div", { style: { flex: 1, minWidth: 0 } },
           React.createElement("div", { style: { fontWeight: 600, color: "#0E4B43", fontSize: "14px" } }, "🩺 " + d.name),
-          React.createElement("div", { style: { fontSize: "14px", color: "#555" } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory),
+          React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory),
           d.area && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600 } }, "📍 " + d.area),
-          d.hospital && React.createElement("div", { style: { fontSize: "14px", color: "#555" } }, d.hospital),
-          d.chamberAddress && React.createElement("div", { style: { fontSize: "14px", color: "#888" } }, d.chamberAddress),
-          d.phone && React.createElement("div", { style: { fontSize: "14px", color: "#555" } }, "📞 " + d.phone),
+          d.hospital && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, d.hospital),
+          d.chamberAddress && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, d.chamberAddress),
+          d.phone && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, "📞 " + d.phone),
           d.status === "pending" && React.createElement(
             "div", { style: { fontSize: "14px", color: "#B8860B" } },
             "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে ডিলিট করে আবার যোগ করুন।"
@@ -78,7 +78,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
                   }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
                   React.createElement("button", {
                     onClick: () => setConfirmId(null),
-                    style: { fontSize: "14px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
+                    style: { fontSize: "14px", border: "none", background: "none", color: "#5F716C", cursor: "pointer", padding: 0 },
                   }, "না")
                 )
               : React.createElement("button", {

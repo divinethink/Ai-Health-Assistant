@@ -39,16 +39,16 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!records) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে...");
-  if (records.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "কোনো record নেই।");
+  if (!records) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (records.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কোনো record নেই।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
     records.map((r) =>
       React.createElement(
-        "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px" } },
+        "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #D3E0D9", fontSize: "14px" } },
         React.createElement("div", null, React.createElement("b", null, RESOURCE_TYPE_LABELS[r.resourceType] || r.resourceType)),
-        React.createElement("div", { style: { color: "#555" } }, describeHealthRecord(r)),
+        React.createElement("div", { style: { color: "#3E4E49" } }, describeHealthRecord(r)),
         React.createElement(
           "div", { style: { display: "flex", gap: "10px", marginTop: "4px" } },
           React.createElement("button", {
@@ -65,7 +65,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
                 }, busyId === r.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
                 React.createElement("button", {
                   onClick: () => setConfirmId(null),
-                  style: { fontSize: "14px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#5F716C", cursor: "pointer", padding: 0 },
                 }, "না")
               )
             : React.createElement("button", {

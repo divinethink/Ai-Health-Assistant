@@ -39,7 +39,11 @@ export function SecondaryButton(label, onClick, busy) {
 }
 
 export function Card(children) {
-  return React.createElement("div", { style: { padding: "24px", maxWidth: "420px", margin: "40px auto", fontFamily: "'Hind Siliguri', sans-serif" } }, children);
+  // লগইন/লোডিং/ত্রুটির স্ক্রিন — নরম সবুজ জমির ওপর কেন্দ্রে সাদা কার্ড
+  return React.createElement(
+    "div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", boxSizing: "border-box", background: "linear-gradient(160deg, #E4F0E9 0%, #F1F6F2 55%, #FFFFFF 100%)", fontFamily: "'Hind Siliguri', sans-serif" } },
+    React.createElement("div", { className: "hs-page", style: { width: "100%", maxWidth: "400px", padding: "28px 24px", boxSizing: "border-box", background: "#fff", borderRadius: "24px", boxShadow: "0 12px 36px rgba(14,75,67,0.14)", border: "1px solid #D9E5DE" } }, children)
+  );
 }
 
 // dropdown ও date-picker — Health Record ফর্মে বারবার লাগে।
