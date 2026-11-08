@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog, mealOptions, exerciseOptions,
   applyMealPrefs, caloriesForDay, extraFoodsKcal, mealWarnings, applyExercisePrefs, exerciseLogMinutes, exerciseWarnings,
+  setSlotPref, clearSlotPref, setDayPref, clearDayPref, draftFromSlotItems, addDraftFood, changeDraftQty, removeDraftAt, draftKcal,
+  draftFromDayItems, addDraftExercise, changeDraftMin, reconcileExerciseDone, checkExtraFood, checkExerciseLog,
 } from "../../src/health/tracker/planPrefs.js";
 import { buildMealPlan, caloriesForEaten } from "../../src/health/tracker/mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes } from "../../src/health/tracker/exercisePlanData.js";
@@ -109,4 +111,80 @@ test("exerciseLogMinutes: স্ট্রেচিং গোনা হয় ন
   const heavy = applyExercisePrefs(plan, { exercise: { 0: [{ type: "run", min: 130 }], 1: [{ type: "run", min: 120 }], 2: [{ type: "run", min: 100 }] } });
   assert.equal(exerciseWarnings(heavy, plannedWeeklyMinutes(heavy)).length, 2);
   assert.deepEqual(exerciseWarnings(exercisePlan(3, null), 0), []);
+});
+
+// ---------- ধাপ B-২ এডিট-হেল্পার ----------
+test("setSlotPref/clearSlotPref: শুধু ওই বেলা বদলায়, অবৈধ স্লট উপেক্ষিত, mutate নয়", () => {
+  const a = setSlotPref(undefined, "lunch", [{ food: "rice", qty: 1 }]);
+  const frozen = JSON.stringify(a);
+  const b = setSlotPref(a, "dinner", [{ food: "roti", qty: 2 }, { food: "bogus", qty: 1 }]);
+  assert.deepEqual(Object.keys(b.meal).sort(), ["dinner", "lunch"]);
+  assert.deepEqual(b.meal.dinner, [{ food: "roti", qty: 2 }]);
+  assert.equal(JSON.stringify(a), frozen);
+  assert.deepEqual(setSlotPref(a, "nope", [{ food: "rice", qty: 1 }]), a);
+  const c = clearSlotPref(b, "lunch");
+  assert.deepEqual(Object.keys(c.meal), ["dinner"]);
+  assert.deepEqual(clearSlotPref(undefined, "lunch"), EMPTY);
+});
+test("setDayPref/clearDayPref: দিন ০–৬ ছাড়া উপেক্ষিত; খালি তালিকা = বিশ্রাম", () => {
+  const a = setDayPref(undefined, 2, [{ type: "yoga", min: 20 }]);
+  assert.deepEqual(a.exercise, { 2: [{ type: "yoga", min: 20 }] });
+  assert.deepEqual(setDayPref(a, 7, [{ type: "walk", min: 30 }]), a);
+  assert.deepEqual(setDayPref(a, 1.5, []), a);
+  assert.deepEqual(setDayPref(a, 3, []).exercise[3], []);
+  assert.deepEqual(clearDayPref(a, 2).exercise, {});
+});
+test("মিল-খসড়া: যোগ/পরিমাণ/মুছা সীমা মানে; একই খাবার দ্বিতীয়বার যোগ করলে পরিমাণ বাড়ে", () => {
+  const plan = buildMealPlan(1800, []);
+  const lunch = plan.slots.find((s) => s.id === "lunch");
+  let d = draftFromSlotItems(lunch.items);
+  assert.equal(draftKcal(d), lunch.kcal);
+  d = addDraftFood(d, "rice");
+  assert.equal(d.find((r) => r.food === "rice").qty, lunch.items.find((i) => i.key === "rice").qty + 0.5);
+  assert.equal(addDraftFood(d, "bogus"), d);
+  d = changeDraftQty(d, 0, -100);
+  assert.equal(d[0].qty, 0.5);
+  d = changeDraftQty(d, 0, 100);
+  assert.equal(d[0].qty, 10);
+  assert.equal(removeDraftAt(d, 0).length, d.length - 1);
+  let many = [];
+  Object.keys({ roti: 1, rice: 1, dal: 1, veg: 1, salad: 1, egg: 1, fish: 1, chicken: 1, banana: 1, muri: 1, tea: 1, greentea: 1 }).forEach((k) => { many = addDraftFood(many, k); });
+  assert.equal(many.length, 12);
+});
+test("ব্যায়াম-খসড়া: বিদ্যমান আইটেম থেকে type চেনা; মিনিট ৫–৩০০ সীমায়; দিনে সর্বোচ্চ ৬", () => {
+  const plan = exercisePlan(34, "fit");
+  const d = draftFromDayItems(plan.routine[1]); // শক্তির ব্যায়াম + স্ট্রেচিং
+  assert.deepEqual(d.map((x) => x.type), ["gym", "stretch"]);
+  assert.deepEqual(draftFromDayItems(plan.routine[0]).map((x) => x.type), ["walk", "stretch"]);
+  assert.equal(draftFromDayItems(exercisePlan(10, null).routine[0])[0].type, "sports");
+  assert.equal(changeDraftMin([{ type: "walk", min: 30 }], 0, -100)[0].min, 5);
+  assert.equal(changeDraftMin([{ type: "walk", min: 30 }], 0, 1000)[0].min, 300);
+  let x = [];
+  for (let i = 0; i < 10; i++) x = addDraftExercise(x, "walk");
+  assert.equal(x.length, 6);
+  assert.equal(addDraftExercise([], "bogus").length, 0);
+});
+test("reconcileExerciseDone: আজকের রুটিন বদলালে টিক ও মিনিটের মিল (counted-ই শুধু; হারানো key বাদ)", () => {
+  const oldI = [{ key: "main", min: 30, counted: true }, { key: "stretch", min: 10, counted: false }];
+  const same = reconcileExerciseDone(oldI, oldI, ["main", "stretch"]);
+  assert.deepEqual(same, { done: ["main", "stretch"], deltaMin: 0 });
+  const longer = reconcileExerciseDone(oldI, [{ key: "main", min: 45, counted: true }, { key: "stretch", min: 10, counted: false }], ["main"]);
+  assert.deepEqual(longer, { done: ["main"], deltaMin: 15 });
+  const dropped = reconcileExerciseDone(oldI, [{ key: "stretch", min: 10, counted: false }], ["main", "stretch"]);
+  assert.deepEqual(dropped, { done: ["stretch"], deltaMin: -30 });
+  assert.deepEqual(reconcileExerciseDone(oldI, [], undefined), { done: [], deltaMin: 0 });
+});
+test("checkExtraFood/checkExerciseLog: যাচাই ও সীমা", () => {
+  assert.equal(checkExtraFood("ভাত", 200, 0), null);
+  assert.ok(checkExtraFood("  ", 200, 0));
+  assert.ok(checkExtraFood("x".repeat(41), 200, 0));
+  assert.ok(checkExtraFood("ভাত", "", 0));
+  assert.ok(checkExtraFood("ভাত", 3001, 0));
+  assert.ok(checkExtraFood("ভাত", -1, 0));
+  assert.ok(checkExtraFood("ভাত", 1.5, 0));
+  assert.ok(checkExtraFood("ভাত", 100, 20));
+  assert.equal(checkExerciseLog(30, 0), null);
+  assert.ok(checkExerciseLog(0, 0));
+  assert.ok(checkExerciseLog(301, 0));
+  assert.ok(checkExerciseLog(30, 20));
 });

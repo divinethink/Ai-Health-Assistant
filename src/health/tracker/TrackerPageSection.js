@@ -1,5 +1,6 @@
 // হেলথ ট্র্যাকার (ধাপ ১) — লক্ষ্য সেটআপ, দৈনিক কার্ড, দৈনিক ইনপুট (ওজন/পানি/স্টেপ/ব্যায়াম/ঘুম)।
 // হিসাব trackerCalc.js-এ (ফিক্সড সূত্র); Firestore trackerData.js-এ। এই ফাইলে শুধু UI।
+// ধাপ B-২: "বদলান" শিট (PlanEditSheets.js) — মিল/ব্যায়াম এডিট; সংরক্ষণ planPrefs.js (pure) + trackerData.js দিয়ে।
 // ধাপ ২: মিল-প্ল্যান (mealPlanData.js), ব্যায়াম-প্ল্যান (exercisePlanData.js), "খাওয়া যাবে না"
 // (বিদ্যমান DietGuidanceSection reuse — Condition/Allergy/BMI থেকে স্বয়ংক্রিয়)।
 // ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
@@ -7,9 +8,14 @@
 import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, todayISO } from "./trackerData.js";
-import { buildMealPlan, allergyTagsOf, caloriesForEaten } from "./mealPlanData.js";
-import { exercisePlan, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
+import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
+import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import {
+  EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog,
+  setSlotPref, clearSlotPref, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog,
+} from "./planPrefs.js";
+import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
 import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
@@ -104,40 +110,79 @@ function errText(x) {
 }
 
 // ---------- মিল-প্ল্যান ----------
+// কার্যকর প্ল্যান = বেস-প্ল্যান + goal.planPrefs ("আমার প্ল্যান"); আজ-শুধু নিজের খাবার = daily.extraFoods (ধাপ B-২)।
 function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
-  const { daily, goal, gate, allergyTags } = info;
+  const { daily, goal, gate, allergyTags, member } = info;
   const d = daily || {};
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [sheet, setSheet] = useState(null); // বেলার id
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
 
   if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথিপত্র → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
   if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।");
 
-  const plan = buildMealPlan(calc.calorieTarget, allergyTags);
+  const base = buildMealPlan(calc.calorieTarget, allergyTags);
+  const plan = applyMealPrefs(base, goal.planPrefs, allergyTags);
+  const extras = sanitizeExtraFoods(d.extraFoods);
   const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
+  const warnings = mealWarnings(plan.total, { sex: member && member.sex, target: calc.calorieTarget });
+  const slotName = (id) => (MEAL_SLOTS.find((x) => x.id === id) || {}).label;
 
-  const toggle = async (slotId) => {
+  // সংরক্ষণের একই পথ: লিখুন → ডেটা রিফ্রেশ (শেষ হওয়া পর্যন্ত busy, তাই double-tap নিরাপদ) → ব্যর্থ হলেও রিফ্রেশ।
+  const run = async (fn, closeAfter) => {
     setErr(null); setBusy(true);
-    try {
-      const next = eaten.includes(slotId) ? eaten.filter((x) => x !== slotId) : [...eaten, slotId];
-      await saveDaily(familyId, memberId, callerMemberId, todayISO(), { mealsEaten: next, caloriesIn: caloriesForEaten(plan, next) }, daily);
-      onSaved();
-    } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
+    try { await fn(); await onSaved(); if (closeAfter) setSheet(null); }
+    catch (x) { setErr(errText(x)); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
+    finally { setBusy(false); }
   };
+  const openSheet = (id) => { setErr(null); setSheet(id); };
+  const closeSheet = () => { setErr(null); setSheet(null); };
+
+  const toggle = (slotId) => run(async () => {
+    const next = eaten.includes(slotId) ? eaten.filter((x) => x !== slotId) : [...eaten, slotId];
+    await saveDaily(familyId, memberId, callerMemberId, todayISO(), { mealsEaten: next, caloriesIn: caloriesForDay(plan, next, extras) }, daily);
+  });
+
+  // "প্রতিদিনের জন্য": প্ল্যান বদলালে আজকের caloriesIn নতুন প্ল্যান থেকে আবার হিসাব (শুধু মান বদলালে লেখা হয়)।
+  const savePrefs = (prefs) => run(async () => {
+    await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
+    const cal = caloriesForDay(applyMealPrefs(base, prefs, allergyTags), eaten, extras);
+    if (cal !== (d.caloriesIn || 0)) await saveDaily(familyId, memberId, callerMemberId, todayISO(), { caloriesIn: cal }, daily);
+  }, true);
+
+  const writeExtras = (next) => run(() => saveDaily(familyId, memberId, callerMemberId, todayISO(), { extraFoods: next, caloriesIn: caloriesForDay(plan, eaten, next) }, daily), false);
+
+  const sheetSlot = sheet ? plan.slots.find((s) => s.id === sheet) : null;
 
   return React.createElement("div", null,
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } },
       "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
-    plan.total < calc.calorieTarget - 100 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
+    plan.total < calc.calorieTarget - 100 && warnings.length === 0 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
+    warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
     plan.notes.length > 0 && React.createElement(Notice, null, plan.notes.map((n, i) => React.createElement("div", { key: i }, n))),
-    err && ErrorBox(err),
-    plan.slots.map((s) => React.createElement("div", { key: s.id, style: { ...CARD, display: "flex", alignItems: "center", gap: "12px" } },
-      React.createElement("div", { style: { flex: 1 } },
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, s.label + " · " + bnTimeHM(s.time)),
-        React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px", lineHeight: 1.5 } }, s.items.map((i) => i.text).join(", ") + " · " + bnNum(s.kcal)),
-      ),
-      React.createElement(Tick, { on: eaten.includes(s.id), onClick: () => toggle(s.id), busy, label: s.label + " খেয়েছি" }))),
+    plan.custom.length > 0 && React.createElement(Notice, { tone: "info" }, "আপনার বদলানো বেলা: " + plan.custom.map(slotName).join(", ") + "। ডিফল্টে ফিরতে সেই বেলার ‘বদলান’ → ‘ডিফল্টে ফিরুন’।"),
+    err && !sheet && ErrorBox(err),
+    plan.slots.map((s) => {
+      const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
+      return React.createElement("div", { key: s.id, style: CARD },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+          React.createElement("div", { style: { flex: 1 } },
+            React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, s.label + " · " + bnTimeHM(s.time) + (plan.custom.includes(s.id) ? " · আমার" : "")),
+            React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px", lineHeight: 1.5 } }, (s.items.length ? s.items.map((i) => i.text).join(", ") : "এই বেলা বাদ") + " · " + bnNum(s.kcal)),
+            mine.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "4px", lineHeight: 1.5 } }, "আজ নিজের: " + mine.map((x) => x.name + " " + bnNum(x.kcal)).join(", "))),
+          React.createElement(Tick, { on: eaten.includes(s.id), onClick: () => toggle(s.id), busy, label: s.label + " খেয়েছি" })),
+        React.createElement("button", { onClick: () => openSheet(s.id), disabled: busy, "aria-label": s.label + " বদলান", style: { marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "✎ বদলান"));
+    }),
+    sheetSlot && React.createElement(MealEditSheet, {
+      key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags,
+      isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, busy, err,
+      onSavePerm: (draft) => savePrefs(setSlotPref(goal.planPrefs, sheet, draft)),
+      onReset: () => savePrefs(clearSlotPref(goal.planPrefs, sheet)),
+      onAddExtra: (name, kcal) => writeExtras([...extras, { name, kcal, slot: sheet }]),
+      onRemoveExtra: (idx) => writeExtras(extras.filter((_, i) => i !== idx)),
+      onClose: closeSheet,
+    }),
     React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের এলার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 
@@ -147,52 +192,117 @@ function bnTimeHM(hhmm) {
 }
 
 // ---------- ব্যায়াম-প্ল্যান ----------
+// কার্যকর রুটিন = বেস-রুটিন + goal.planPrefs.exercise; "আজ আসলে" = daily.exerciseLog (ধাপ B-২)।
+// নিরাপত্তা-গেট বন্ধ হলে (বয়স<১৮/গর্ভবতী/ডায়াবেটিস/কিডনি/৬৫+) রুটিন-এডিট বন্ধ ও সংরক্ষিত prefs উপেক্ষিত; ‘আজ আসলে’ লগ চলে।
 function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
-  const { daily, goal, age, flags, weekMin } = info;
+  const { daily, goal, age, flags, weekMin, gate } = info;
   const d = daily || {};
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  const plan = exercisePlan(age, goal ? goal.goalType : null);
+  const [sheet, setSheet] = useState(null); // { kind: "day", idx } | { kind: "log", type }
+  const base = exercisePlan(age, goal ? goal.goalType : null);
 
-  if (!plan) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
+  if (!base) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
 
+  const canEdit = !gate.blocked && !!base.routine;
+  const plan = canEdit ? applyExercisePrefs(base, goal && goal.planPrefs) : base;
+  const planned = plannedWeeklyMinutes(plan);
+  const warnings = canEdit ? exerciseWarnings(plan, planned) : [];
   const todayIdx = bdDayIndex();
   const todayItems = plan.routine ? plan.routine[todayIdx] : [];
   const done = Array.isArray(d.exerciseDone) ? d.exerciseDone : [];
+  const log = sanitizeExerciseLog(d.exerciseLog);
   const needsDoctor = flags.pregnant || flags.diabetes || flags.kidney || age >= 65;
 
-  const toggle = async (item) => {
+  const run = async (fn, closeAfter) => {
     setErr(null); setBusy(true);
-    try {
-      const on = done.includes(item.key);
-      const next = on ? done.filter((x) => x !== item.key) : [...done, item.key];
-      const delta = item.counted ? (on ? -item.min : item.min) : 0;
-      const fields = { exerciseDone: next };
-      if (delta) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + delta);
-      await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
-      onSaved();
-    } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
+    try { await fn(); await onSaved(); if (closeAfter) setSheet(null); }
+    catch (x) { setErr(errText(x)); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
+    finally { setBusy(false); }
   };
+  const closeSheet = () => { setErr(null); setSheet(null); };
+
+  const toggle = (item) => run(async () => {
+    const on = done.includes(item.key);
+    const next = on ? done.filter((x) => x !== item.key) : [...done, item.key];
+    const delta = item.counted ? (on ? -item.min : item.min) : 0;
+    const fields = { exerciseDone: next };
+    if (delta) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + delta);
+    await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
+  });
+
+  // দিনের রুটিন সংরক্ষণ। আজকের দিন বদলালে টিক ও exerciseMin নতুন রুটিনের সাথে মেলানো হয়।
+  const saveDay = (idx, prefs) => run(async () => {
+    await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
+    if (idx !== todayIdx) return;
+    const r = reconcileExerciseDone(todayItems, applyExercisePrefs(base, prefs).routine[idx], done);
+    const fields = {};
+    if (r.done.length !== done.length) fields.exerciseDone = r.done;
+    if (r.deltaMin) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + r.deltaMin);
+    if (Object.keys(fields).length) await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
+  }, true);
+
+  const writeLog = (next, deltaMin) => run(() => {
+    const fields = { exerciseLog: next };
+    if (deltaMin) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + deltaMin);
+    return saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
+  }, false);
+
+  const addLog = (type, min) => {
+    const e = checkExerciseLog(min, log.length);
+    if (e) { setErr(e); return; }
+    return writeLog([...log, { type, min }], EXERCISE_TYPES[type].counted ? min : 0);
+  };
+  const removeLog = (i) => writeLog(log.filter((_, k) => k !== i), EXERCISE_TYPES[log[i].type].counted ? -log[i].min : 0);
+
+  const editBtn = (idx, label) => React.createElement("button", {
+    onClick: () => { setErr(null); setSheet({ kind: "day", idx }); }, disabled: busy, "aria-label": DAY_LABELS[idx] + " বদলান",
+    style: { flexShrink: 0, minHeight: "44px", padding: "6px 14px", borderRadius: "12px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+  }, label);
 
   return React.createElement("div", null,
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px", lineHeight: 1.5 } }, plan.summary),
     needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
+    gate.blocked && plan.routine && React.createElement(Notice, { tone: "info" }, "আপনার ক্ষেত্রে রুটিন নিজে বদলানো বন্ধ — ডাক্তারের পরামর্শ অনুযায়ী করুন। নিচে ‘আজ আসলে’ লগ করা যাবে।"),
+    warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
     plan.weeklyTargetMin && React.createElement(Stat, {
-      title: "এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(weekMin || 0) + " মিনিট",
+      title: "এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(weekMin || 0) + " মিনিট" + (plan.custom && plan.custom.length ? " · পরিকল্পিত " + bnNum(planned) + " মিনিট" : ""),
       pct: ((weekMin || 0) / plan.weeklyTargetMin) * 100, color: "#17705F",
     }),
-    err && ErrorBox(err),
+    err && !sheet && ErrorBox(err),
     plan.routine && React.createElement("div", { style: CARD },
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "আজ · " + DAY_LABELS[todayIdx]),
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "6px" } },
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "আজ · " + DAY_LABELS[todayIdx]),
+        canEdit && editBtn(todayIdx, "✎ বদলান")),
       todayItems.length === 0
         ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "আজ বিশ্রামের দিন।")
         : todayItems.map((it) => React.createElement("div", { key: it.key, style: { display: "flex", alignItems: "center", gap: "12px", padding: "4px 0" } },
           React.createElement(Tick, { on: done.includes(it.key), onClick: () => toggle(it), busy, label: it.label + " করেছি" }),
-          React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A" } }, it.label + " · " + bnNum(it.min) + " মিনিট")))),
+          React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A" } }, it.label + " · " + bnNum(it.min) + " মিনিট" + (it.counted ? "" : " · সাপ্তাহিক গণনায় নয়"))))),
     plan.routine && React.createElement("div", { style: CARD },
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সপ্তাহের রুটিন"),
-      plan.routine.map((items, i) => React.createElement("div", { key: i, style: { fontSize: "13px", color: i === todayIdx ? "#0E4B43" : "#5F716C", fontWeight: i === todayIdx ? 700 : 400, padding: "3px 0", lineHeight: 1.5 } },
-        DAY_LABELS[i] + ": " + (items.length ? items.map((x) => x.label + " " + bnNum(x.min) + " মি.").join(" + ") : "বিশ্রাম")))),
+      plan.routine.map((items, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" } },
+        React.createElement("div", { style: { fontSize: "13px", color: i === todayIdx ? "#0E4B43" : "#5F716C", fontWeight: i === todayIdx ? 700 : 400, padding: "3px 0", lineHeight: 1.5 } },
+          DAY_LABELS[i] + (plan.custom && plan.custom.includes(i) ? " (আমার)" : "") + ": " + (items.length ? items.map((x) => x.label + " " + bnNum(x.min) + " মি.").join(" + ") : "বিশ্রাম")),
+        canEdit && i !== todayIdx && editBtn(i, "✎")))),
+    React.createElement("div", { style: CARD },
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", marginBottom: "8px" } }, "আজ আসলে কী করলেন?"),
+      log.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#1F2D2A", lineHeight: 1.6, marginBottom: "8px" } },
+        log.map((x, i) => React.createElement("div", { key: i }, "• " + EXERCISE_TYPES[x.type].label + " " + bnNum(x.min) + " মিনিট"))),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+        ["walk", "cycling", "gym", "sports", "other"].map((t) => React.createElement("button", {
+          key: t, onClick: () => { setErr(null); setSheet({ kind: "log", type: t }); }, disabled: busy,
+          style: { minHeight: "44px", padding: "6px 14px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+        }, (EX_ICON[t] || "") + " " + EXERCISE_TYPES[t].label)))),
+    sheet && sheet.kind === "day" && React.createElement(ExerciseEditSheet, {
+      key: "day" + sheet.idx, dayLabel: DAY_LABELS[sheet.idx], items: plan.routine[sheet.idx], isCustom: !!(plan.custom && plan.custom.includes(sheet.idx)), busy, err,
+      onSave: (draft) => saveDay(sheet.idx, setDayPref(goal && goal.planPrefs, sheet.idx, draft)),
+      onReset: () => saveDay(sheet.idx, clearDayPref(goal && goal.planPrefs, sheet.idx)),
+      onClose: closeSheet,
+    }),
+    sheet && sheet.kind === "log" && React.createElement(ExerciseLogSheet, {
+      key: "log", initialType: sheet.type, entries: log, busy, err, onAdd: addLog, onRemove: removeLog, onClose: closeSheet,
+    }),
     React.createElement(Notice, null, "বুকে ব্যথা, মাথা ঘোরা বা শ্বাসকষ্ট হলে থামুন ও ডাক্তার দেখান।"),
     React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। WHO-ভিত্তিক সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }

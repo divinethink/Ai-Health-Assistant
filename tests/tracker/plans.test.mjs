@@ -114,3 +114,18 @@ test("রিমাইন্ডার-ctx: গেট বন্ধ হলে ম�
   const c3 = buildReminderContext({ goal: null, records: [], member: null });
   assert.equal(c3.mealPlan, null); assert.equal(c3.sleepRange, null);
 });
+
+test("রিমাইন্ডার-ctx: planPrefs থাকলে কার্যকর প্ল্যান পড়ে; গেট বন্ধ হলে prefs উপেক্ষিত", () => {
+  const adult = { dob: "1992-01-01" };
+  const now = new Date(2026, 10, 8); // রবিবার → day-index ১
+  const prefs = { v: 1, meal: { lunch: [{ food: "dal", qty: 1 }] }, exercise: { 1: [{ type: "yoga", min: 20 }] } };
+  const goal = { goalType: "fit", activity: "medium", calc: { calorieTarget: 1800 }, planPrefs: prefs };
+  const c = buildReminderContext({ goal, records: [], member: adult, now });
+  assert.deepEqual(c.mealPlan.slots.find((s) => s.id === "lunch").items.map((i) => i.key), ["dal"]);
+  assert.deepEqual(c.exerciseToday.map((i) => i.label), ["যোগব্যায়াম"]);
+  const plain = buildReminderContext({ goal: { ...goal, planPrefs: undefined }, records: [], member: adult, now });
+  assert.ok(plain.mealPlan.slots.find((s) => s.id === "lunch").items.length > 1);
+  const blocked = buildReminderContext({ goal, records: [{ resourceType: "condition", name: "ডায়াবেটিস", status: "active" }], member: adult, now });
+  assert.equal(blocked.mealPlan, null);
+  assert.notDeepEqual(blocked.exerciseToday.map((i) => i.label), ["যোগব্যায়াম"]);
+});

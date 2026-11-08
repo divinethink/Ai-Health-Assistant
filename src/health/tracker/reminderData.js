@@ -5,6 +5,7 @@
 
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, bdDayIndex } from "./exercisePlanData.js";
+import { applyMealPrefs, applyExercisePrefs } from "./planPrefs.js";
 import { ageYears, safetyGate, sleepTargetHours, detectFlagsFromConditions } from "./trackerCalc.js";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -81,8 +82,11 @@ export function buildReminderContext({ goal, records, member, now = new Date() }
   };
   const gate = safetyGate({ age, flags });
   const allergyTags = allergyTagsOf((records || []).filter((r) => r.resourceType === "allergy").map((r) => r.substance));
-  const mealPlan = !gate.blocked && goal && goal.calc ? buildMealPlan(goal.calc.calorieTarget, allergyTags) : null;
-  const plan = exercisePlan(age, goal ? goal.goalType : null);
+  // "আমার প্ল্যান" (planPrefs) থাকলে রিমাইন্ডারও সেই কার্যকর প্ল্যান পড়ে; গেট বন্ধ হলে prefs উপেক্ষিত (নিরাপত্তা)।
+  const prefs = goal ? goal.planPrefs : null;
+  const mealPlan = !gate.blocked && goal && goal.calc ? applyMealPrefs(buildMealPlan(goal.calc.calorieTarget, allergyTags), prefs, allergyTags) : null;
+  const base = exercisePlan(age, goal ? goal.goalType : null);
+  const plan = gate.blocked ? base : applyExercisePrefs(base, prefs);
   const exerciseToday = plan && plan.routine ? plan.routine[bdDayIndex(now)] : null;
   return { mealPlan, exerciseToday, sleepRange: age === null ? null : sleepTargetHours(age), kidney: flags.kidney };
 }

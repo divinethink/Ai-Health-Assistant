@@ -176,3 +176,94 @@ export function exerciseWarnings(plan, weeklyMin) {
   if ((plan.band === "adult" || plan.band === "senior") && weeklyMin > 300) w.push("সপ্তাহে ৩০০ মিনিটের বেশি রাখা হয়েছে (WHO: এর পরে বাড়তি উপকার কম)। হঠাৎ না বাড়িয়ে ধীরে বাড়ান।");
   return w;
 }
+
+// ---------- এডিট-হেল্পার (ধাপ B-২; UI এগুলো ডাকে, সব pure — ইনপুট mutate করে না) ----------
+// prefs-এর বদল সবসময় sanitize হয়ে বেরোয়, তাই Firestore-এ অবৈধ কিছু যায় না।
+export function setSlotPref(prefs, slotId, items) {
+  const p = sanitizePlanPrefs(prefs);
+  if (!SLOT_IDS.includes(slotId)) return p;
+  return sanitizePlanPrefs({ ...p, meal: { ...p.meal, [slotId]: items } });
+}
+export function clearSlotPref(prefs, slotId) {
+  const p = sanitizePlanPrefs(prefs);
+  const meal = { ...p.meal };
+  delete meal[slotId];
+  return { ...p, meal };
+}
+export function setDayPref(prefs, dayIdx, items) {
+  const p = sanitizePlanPrefs(prefs);
+  if (!Number.isInteger(dayIdx) || dayIdx < 0 || dayIdx > 6) return p;
+  return sanitizePlanPrefs({ ...p, exercise: { ...p.exercise, [String(dayIdx)]: items } });
+}
+export function clearDayPref(prefs, dayIdx) {
+  const p = sanitizePlanPrefs(prefs);
+  const exercise = { ...p.exercise };
+  delete exercise[String(dayIdx)];
+  return { ...p, exercise };
+}
+
+// বেলার বর্তমান আইটেম (buildMealPlan/applyMealPrefs-এর slot.items) → এডিটের খসড়া [{food, qty}]
+export const draftFromSlotItems = (items) => (items || []).map((i) => ({ food: i.key, qty: i.qty }));
+
+// খসড়া-তালিকার ছোট অপারেশন (শেষ ফল sanitize-এর আগের খসড়া; সীমা এখানেই মানা হয়)
+export function addDraftFood(draft, food) {
+  if (!hasOwn(FOODS, food)) return draft;
+  const i = draft.findIndex((r) => r.food === food);
+  if (i >= 0) return changeDraftQty(draft, i, 0.5);
+  if (draft.length >= MAX_ITEMS_PER_SLOT) return draft;
+  return [...draft, { food, qty: 1 }];
+}
+export function changeDraftQty(draft, i, delta) {
+  return draft.map((r, k) => (k === i ? { ...r, qty: Math.min(MAX_QTY, Math.max(0.5, r.qty + delta)) } : r));
+}
+export const removeDraftAt = (draft, i) => draft.filter((_, k) => k !== i);
+export const draftKcal = (draft) => Math.round(draft.reduce((a, r) => a + kcalOf(r.food, r.qty), 0));
+
+// ব্যায়ামের বিদ্যমান আইটেম (type নেই) → খসড়া [{type, min}]
+export function draftFromDayItems(items) {
+  return (items || []).map((it) => {
+    let type = it.type;
+    if (!hasOwn(EXERCISE_TYPES, type)) {
+      if (it.key === "stretch") type = "stretch";
+      else if ((it.label || "").startsWith("শক্তির")) type = "gym";
+      else if ((it.label || "").includes("খেলাধুলা")) type = "sports";
+      else if ((it.label || "").includes("হাঁটা")) type = "walk";
+      else type = "other";
+    }
+    return { type, min: it.min };
+  });
+}
+export function addDraftExercise(draft, type) {
+  if (!hasOwn(EXERCISE_TYPES, type) || draft.length >= MAX_ITEMS_PER_DAY) return draft;
+  return [...draft, { type, min: type === "stretch" ? 10 : 30 }];
+}
+export function changeDraftMin(draft, i, delta) {
+  return draft.map((r, k) => (k === i ? { ...r, min: Math.min(MAX_EX_MIN, Math.max(MIN_EX_MIN, r.min + delta)) } : r));
+}
+export const draftDayMinutes = (draft) => draft.reduce((a, r) => a + r.min, 0);
+
+// আজকের রুটিন বদলালে: টিক-করা আইটেমের মিনিট নতুন/পুরনো তালিকা থেকে মিলিয়ে exerciseMin-এর বদল (delta) ও
+// বৈধ থাকা টিক-key ফেরত দেয় (যে key আর নেই সেটার টিক বাদ)। counted=false (স্ট্রেচিং) মিনিটে গোনা হয় না।
+export function reconcileExerciseDone(oldItems, newItems, done) {
+  const set = new Set(Array.isArray(done) ? done : []);
+  const sum = (items) => items.filter((i) => set.has(i.key) && i.counted).reduce((a, i) => a + i.min, 0);
+  const keep = (done || []).filter((k) => newItems.some((i) => i.key === k));
+  return { done: keep, deltaMin: sum(newItems) - sum(oldItems) };
+}
+
+// "নিজের খাবার" ও "আজ আসলে" ফর্মের যাচাই — ত্রুটি-বার্তা অথবা null
+export function checkExtraFood(name, kcal, currentCount) {
+  const n = String(name || "").replace(/\s+/g, " ").trim();
+  if (!n) return "খাবারের নাম দিন।";
+  if (n.length > 40) return "নাম ৪০ অক্ষরের মধ্যে দিন।";
+  const k = Number(kcal);
+  if (String(kcal).trim() === "" || !Number.isInteger(k) || k < 0 || k > MAX_KCAL) return "কিলোক্যালরি ০–" + bnNum(MAX_KCAL) + " এর মধ্যে পূর্ণসংখ্যা দিন।";
+  if (currentCount >= MAX_LIST) return "আজকের জন্য সর্বোচ্চ " + bnNum(MAX_LIST) + "টি খাবার যোগ করা যায়।";
+  return null;
+}
+export function checkExerciseLog(min, currentCount) {
+  const m = Number(min);
+  if (!Number.isInteger(m) || m < 1 || m > MAX_EX_MIN) return "মিনিট ১–" + bnNum(MAX_EX_MIN) + " এর মধ্যে দিন।";
+  if (currentCount >= MAX_LIST) return "আজকের জন্য সর্বোচ্চ " + bnNum(MAX_LIST) + "টি যোগ করা যায়।";
+  return null;
+}
