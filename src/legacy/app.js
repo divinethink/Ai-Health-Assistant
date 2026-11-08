@@ -65,11 +65,11 @@ const { useState, useEffect, useCallback } = React;
 const BOTTOM_NAV_HEIGHT = 56;
 
 const NAV_TABS = [
+  // ৫ ট্যাব (owner-request): এআই চ্যাট এখন মেনু থেকে খোলে (activeTab "aichat" থাকে, শুধু বটম-নেভে বাটন নেই)
   ["home", "🏠", "nav.home"],
-  ["aichat", "🩺", "nav.aichat"],
+  ["documents", "📁", "nav.docs"],
   ["tracker", "📈", "nav.tracker"],
   ["blog", "📚", "nav.blog"],
-  ["documents", "📁", "nav.docs"],
   ["menu", "☰", "nav.menu"],
 ];
 
@@ -327,7 +327,7 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   );
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails, onOpenAIChat }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
@@ -410,6 +410,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
+    row("🩺", t("nav.aichat"), t("menu.aichatSub"), onOpenAIChat),
     row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
     row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
     row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"))
@@ -458,7 +459,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   if (activeTab === "home") {
     tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
-    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
     tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
   } else if (activeTab === "blog") {
@@ -468,7 +469,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenDoctorDetails: () => setShowDoctorDetails(true),
+      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"),
     });
   }
 
@@ -480,7 +481,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     }),
     tabContent,
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
-    React.createElement(BottomNav, { active: activeTab, onChange: setActiveTab })
+    React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: setActiveTab })
   );
 }
 
