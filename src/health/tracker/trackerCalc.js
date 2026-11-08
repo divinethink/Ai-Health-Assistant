@@ -102,6 +102,18 @@ export function sleepTargetHours(age) {
   return [7, 8];
 }
 
+// বয়সভিত্তিক সাধারণ পানির লক্ষ্য (গ্লাস/দিন) — সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।
+// কিডনি রোগ বা <২ বছর → null (লক্ষ্য নেই: ডাক্তার/শিশুর দুধের নির্দেশ); বয়স অজানা → ৮ (আগের আচরণ)।
+// ব্যান্ড: ২–৪ = ৪, ৫–১২ = ৬, ১৩+ = ৮।
+export function waterTargetFor(age, flags) {
+  if (flags && flags.kidney) return null;
+  if (age === null || age === undefined || Number.isNaN(age)) return 8;
+  if (age < 2) return null;
+  if (age < 5) return 4;
+  if (age < 13) return 6;
+  return 8;
+}
+
 // WHO সাধারণ গাইড: প্রাপ্তবয়স্ক সপ্তাহে ১৫০ মিনিট (দৈনিক ~৩০), শিশু-কিশোর দৈনিক ৬০ মিনিট
 export function exerciseTargetMinPerDay(age) {
   return age !== null && age !== undefined && age < 18 ? 60 : 30;

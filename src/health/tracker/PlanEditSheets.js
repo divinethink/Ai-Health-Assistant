@@ -6,7 +6,7 @@
 import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText } from "./mealPlanData.js";
-import { FOOD_GROUPS, TAGS, searchFoods, tagsOf } from "./foodCatalog.js";
+import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, tagsOf, posTagsOf } from "./foodCatalog.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
   draftFromSlotItems, addDraftFood, changeDraftQty, removeDraftAt, draftKcal,
@@ -22,6 +22,7 @@ const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
 const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
 const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "11px", fontWeight: 700 };
+const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "11px", fontWeight: 700 };
 const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
 function Sheet({ title, subtitle, onClose, children }) {
@@ -87,7 +88,8 @@ function FoodPicker({ allergyTags, onPick }) {
       found.map(({ key, f }) => React.createElement("button", {
         key, onClick: () => onPick(key),
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A" },
-      }, "+ " + f.n + " · " + bnNum(f.k), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+      }, "+ " + f.n + " · " + bnNum(f.k), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+    found.some(({ key }) => posTagsOf(key).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সবুজ চিপ = প্রোটিন/আঁশের সাধারণ উৎস (শুধু তথ্য)।"),
     found.some(({ f }) => tagsOf(f).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "হলুদ চিপ = সাধারণ সতর্কতা (ব্লক নয়); ডাক্তার/ডায়েটিশিয়ানের নির্দেশ প্রাধান্য পায়।"),
     found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বাছুন।"),
     React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সংখ্যা = এক ইউনিটের আনুমানিক কিলোক্যালরি; রান্না ও পরিমাণে বদলায়।"));
@@ -97,8 +99,8 @@ const MODES = [["perm", "প্রতিদিনের জন্য"], ["today"
 
 // ---------- মিল: একটি বেলা ----------
 // props: slot (কার্যকর প্ল্যানের বেলা), planTotal, target, sex, allergyTags, isCustom, extras [{name,kcal,idx}] (এই বেলার আজকের নিজের খাবার),
-// extraCount (আজকের মোট নিজের-খাবার), busy, err, onSavePerm(draft), onReset(), onAddExtra(name,kcal), onRemoveExtra(idx), onClose
-export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCustom, extras, extraCount, busy, err, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
+// extraCount (আজকের মোট নিজের-খাবার), recentFoods [{name,kcal,count}] (গত ৭ দিনের সেরা, ঐচ্ছিক), busy, err, onSavePerm(draft), onReset(), onAddExtra(name,kcal), onRemoveExtra(idx), onClose
+export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCustom, extras, extraCount, recentFoods, busy, err, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
   const [mode, setMode] = useState("perm");
   const [draft, setDraft] = useState(() => draftFromSlotItems(slot.items));
   const [name, setName] = useState("");
@@ -115,6 +117,13 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
     if (e) return;
     onAddExtra(name.replace(/\s+/g, " ").trim(), Number(kcal));
     setName(""); setKcal("");
+  };
+
+  const addRecent = (r) => {
+    const e = checkExtraFood(r.name, r.kcal, extraCount);
+    setFormErr(e);
+    if (e) return;
+    onAddExtra(r.name, r.kcal);
   };
 
   return React.createElement(Sheet, { title: slot.label + " বদলান", subtitle: "ক্যালরি আনুমানিক", onClose },
@@ -145,6 +154,13 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       extras.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, x.name + " · " + bnNum(x.kcal) + " কিলোক্যালরি"),
         React.createElement("button", { onClick: () => onRemoveExtra(x.idx), disabled: busy, "aria-label": x.name + " মুছুন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
+      Array.isArray(recentFoods) && recentFoods.length > 0 && React.createElement("div", null,
+        React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "10px 0 6px" } }, "সাম্প্রতিক খাবার (গত ৭ দিন) — ট্যাপে যোগ"),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+          recentFoods.map((r) => React.createElement("button", {
+            key: r.name, onClick: () => addRecent(r), disabled: busy, "aria-label": r.name + " আজকের জন্য যোগ করুন",
+            style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A", opacity: busy ? 0.5 : 1 },
+          }, "+ " + r.name + " · " + bnNum(r.kcal))))),
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "10px 0 6px" } }, "তালিকা থেকে বাছুন (ঐচ্ছিক)"),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
         React.createElement("span", { style: { fontSize: "13px", color: MUTED } }, "পরিমাণ"),

@@ -19,6 +19,33 @@ export const TAGS = {
   sugar: ["চিনি", "চিনি বেশি — পরিমাণ সীমিত রাখুন"],
 };
 
+// ইতিবাচক চিপ (সবুজ): "প্রোটিনযুক্ত" / "আঁশযুক্ত" — শুধু লেবেল; কোনো গ্রাম/সংখ্যা দেখানো হয় না, কোনো দাবি/পরামর্শ নয়।
+// সতর্কতা-ট্যাগ (TAGS/tg) থেকে সম্পূর্ণ আলাদা — তাই হলুদ সতর্কতা-চিপ ও ⚠ বার্তা অপরিবর্তিত।
+// খাবারের key (কোর + ক্যাটালগ) → ট্যাগ-তালিকা। রক্ষণশীল: শুধু স্পষ্টভাবে পরিচিত উৎস।
+export const POS_TAGS = {
+  protein: ["প্রোটিনযুক্ত", "প্রোটিনের ভালো উৎস"],
+  fibre: ["আঁশযুক্ত", "খাদ্য-আঁশের ভালো উৎস"],
+};
+export const POS_TAG_FOODS = {
+  protein: [
+    "egg", "fish", "chicken", "dal",
+    "hilshaBhaja", "hilshaJhol", "ruiJhol", "chotoMach", "chingri", "seaFishJhol", "beef", "mutton",
+    "eggFry", "omelette", "eggCurry", "eggWhite", "eggVegBhuna", "chickenJhol",
+    "tofu", "chhola", "mugDal", "daalSoup", "sprouts", "haleem", "tokDoi", "tokDoi100", "milk", "tonedMilk",
+  ],
+  fibre: [
+    "dal", "veg", "salad",
+    "shak", "palongShak", "korolaBhaji", "dherosBhaji", "kakrol", "kochu", "mishtiKumra", "kanchaKola", "vegSoup",
+    "chhola", "mugDal", "daalSoup", "sprouts", "oats", "redRice", "redRoti", "redChira", "vegKhichuri", "oatsVegKhichuri",
+    "guava", "papaya", "apple", "orange", "nashpati", "pomegranate", "carrot", "dates", "tishi", "isabgol",
+  ],
+};
+
+// খাবারের key → প্রযোজ্য ইতিবাচক ট্যাগ (নির্দিষ্ট ক্রমে: protein, fibre)
+export function posTagsOf(key) {
+  return Object.keys(POS_TAGS).filter((t) => (POS_TAG_FOODS[t] || []).includes(key));
+}
+
 export function tagsOf(f) {
   return ((f && f.tg) || []).filter((t) => TAGS[t]);
 }

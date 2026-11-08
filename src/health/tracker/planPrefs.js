@@ -84,6 +84,34 @@ export function sanitizeExtraFoods(raw) {
   }).filter(Boolean);
 }
 
+// গত `days` দিনের (আজসহ) দৈনিক ডক থেকে "সাম্প্রতিক খাবার" — নাম অনুযায়ী ফ্রিকোয়েন্সিতে সেরা `limit`টি (১-ট্যাপ চিপের জন্য)।
+// pure; নতুন Firestore read নেই (বিদ্যমান ৩০-দিনের `recent` ডক ব্যবহার)। একই নাম (ছোট-হাতের, ফাঁকা-স্পেস সমান) = এক খাবার;
+// সমান ফ্রিকোয়েন্সিতে নতুনটি আগে, তারপর নামের ক্রম। kcal = সবচেয়ে সাম্প্রতিক এন্ট্রির মান।
+export function recentExtraFoods(dailyDocs, { now = new Date(), days = 7, limit = 8 } = {}) {
+  const p2 = (n) => String(n).padStart(2, "0");
+  const dates = new Set(Array.from({ length: days }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+  }));
+  const seen = new Map();
+  (Array.isArray(dailyDocs) ? dailyDocs : []).forEach((doc) => {
+    if (!isObj(doc) || !dates.has(doc.date)) return;
+    sanitizeExtraFoods(doc.extraFoods).forEach((x) => {
+      const key = x.name.toLowerCase();
+      const cur = seen.get(key);
+      if (!cur) seen.set(key, { name: x.name, kcal: x.kcal, count: 1, last: doc.date });
+      else {
+        cur.count++;
+        if (doc.date > cur.last) { cur.last = doc.date; cur.kcal = x.kcal; cur.name = x.name; }
+      }
+    });
+  });
+  return [...seen.values()]
+    .sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || a.name.localeCompare(b.name))
+    .slice(0, Math.max(0, limit))
+    .map(({ name, kcal, count }) => ({ name, kcal, count }));
+}
+
 export function sanitizeExerciseLog(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, MAX_LIST).map((r) => {

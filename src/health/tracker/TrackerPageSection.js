@@ -15,7 +15,7 @@ import { last30DatesISO } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
 import {
-  EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog,
+  EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog, recentExtraFoods,
   setSlotPref, clearSlotPref, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog,
 } from "./planPrefs.js";
 import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
@@ -143,7 +143,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     }),
     sheetSlot && React.createElement(MealEditSheet, {
       key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags,
-      isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, busy, err,
+      isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, recentFoods: recentExtraFoods(info.recent), busy, err,
       onSavePerm: (draft) => savePrefs(setSlotPref(goal.planPrefs, sheet, draft)),
       onReset: () => savePrefs(clearSlotPref(goal.planPrefs, sheet)),
       onAddExtra: (name, kcal) => writeExtras([...extras, { name, kcal, slot: sheet }]),
