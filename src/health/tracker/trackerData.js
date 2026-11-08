@@ -7,6 +7,7 @@
 
 import { db } from "../../legacy/firebaseConfig.js";
 import { createHealthRecord, updateHealthRecord } from "../records/healthRecordsData.js";
+import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
 
 function col(familyId) {
   return db.collection("families").doc(familyId).collection("healthTracker");
@@ -52,7 +53,20 @@ export async function saveReminders(familyId, memberId, callerMemberId, reminder
   }, { merge: true });
 }
 
-// fields: { weightKg, waterGlasses, steps, exerciseMin, sleep, sleepMinutes, mealsEaten, caloriesIn, exerciseDone } — সব ঐচ্ছিক।
+// "আমার প্ল্যান" (ধাপ B): goal-ডকের `planPrefs` পুরোটা একসাথে বদলায় (mergeFields — তাই "ডিফল্টে ফিরুন" = খালি prefs
+// লিখলে পুরনো স্লট/দিনের বদল মুছে যায়)। নির্দিষ্ট ডক-ID → retry/double-submit-এ ডুপ্লিকেট নয়; conflict = last-write-wins
+// (`updatedAt`, `lastEditedByMemberId`)। লক্ষ্য (saveGoal) ও রিমাইন্ডার এটা ছোঁয় না।
+export async function savePlanPrefs(familyId, memberId, callerMemberId, planPrefs, prevGoal) {
+  const fields = ["type", "memberId", "planPrefs", "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
+  await col(familyId).doc("goal_" + memberId).set({
+    type: "goal", memberId, planPrefs: sanitizePlanPrefs(planPrefs),
+    lastEditedByMemberId: callerMemberId, updatedAt: ts(),
+    ...(prevGoal ? {} : { createdAt: ts() }),
+  }, { mergeFields: fields });
+}
+
+// fields: { weightKg, waterGlasses, steps, exerciseMin, sleep, sleepMinutes, mealsEaten, caloriesIn, exerciseDone, extraFoods, exerciseLog } — সব ঐচ্ছিক।
+// extraFoods/exerciseLog (ধাপ B, "আজ শুধু"): পুরো তালিকা একসাথে বদলায় (array merge হয় না)।
 // mealsEaten/exerciseDone: টিক-করা মিল-স্লট ও ব্যায়াম-আইটেমের আইডি (ধাপ ২); caloriesIn মিল-টিক থেকে হিসাব-করা।
 // ওজন দিলে বিদ্যমান Observation-এও যায় (BMI/ডাক্তার-এক্সপোর্টের জন্য)।
 export async function saveDaily(familyId, memberId, callerMemberId, date, fields, prev) {
@@ -65,6 +79,8 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
   if (fields.mealsEaten !== undefined) out.mealsEaten = fields.mealsEaten;
   if (fields.caloriesIn !== undefined) out.caloriesIn = fields.caloriesIn;
   if (fields.exerciseDone !== undefined) out.exerciseDone = fields.exerciseDone;
+  if (fields.extraFoods !== undefined) out.extraFoods = sanitizeExtraFoods(fields.extraFoods);
+  if (fields.exerciseLog !== undefined) out.exerciseLog = sanitizeExerciseLog(fields.exerciseLog);
   if (fields.sleep !== undefined) {
     out.sleep = fields.sleep; out.sleepMinutes = fields.sleepMinutes; out.sources.sleep = "manual";
   }

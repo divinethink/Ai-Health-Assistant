@@ -749,6 +749,39 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 't1'), { memberId: 'mB', lastEditedByMemberId: 'mA' }));
       await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'healthTracker', 't1')));
     });
+
+    // ধাপ B: নতুন ঐচ্ছিক ফিল্ড (planPrefs → goal; extraFoods/exerciseLog → daily)
+    const goalDoc = (extra = {}) => tr('mA', 'mA', { type: 'goal', ...extra });
+    const prefs = { v: 1, meal: { lunch: [{ food: 'rice', qty: 1 }] }, exercise: { 0: [{ type: 'walk', min: 30 }] } };
+
+    it('12e. owner বৈধ planPrefs (goal), extraFoods ও exerciseLog (daily) লিখতে পারেন; খালি prefs-ও চলে', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goalDoc({ planPrefs: prefs })));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { planPrefs: { v: 1, meal: {}, exercise: {} }, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'daily_mA_2026-11-08'),
+        tr('mA', 'mA', { extraFoods: [{ name: 'সমুচা', kcal: 200, slot: 'snack2' }], exerciseLog: [{ type: 'walk', min: 20 }] })));
+    });
+
+    it('12f. planPrefs daily-তে, extraFoods/exerciseLog goal-এ, অজানা planPrefs-key, ভুল ধরন ও বড় আকার reject', async () => {
+      const db = dbAs('uidA');
+      const big = Array.from({ length: 21 }, () => ({ name: 'a', kcal: 1, slot: 'lunch' }));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y1'), tr('mA', 'mA', { planPrefs: prefs })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y2'), goalDoc({ extraFoods: [] })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y3'), goalDoc({ exerciseLog: [] })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y4'), goalDoc({ planPrefs: { v: 1, surprise: {} } })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y5'), goalDoc({ planPrefs: 'x' })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y6'), goalDoc({ planPrefs: { v: 1, meal: [] } })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y7'), tr('mA', 'mA', { extraFoods: big })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y8'), tr('mA', 'mA', { extraFoods: 'x' })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'y9'), tr('mA', 'mA', { exerciseLog: big })));
+    });
+
+    it('12g. অন্য সদস্য (grant ছাড়া) planPrefs/extraFoods লিখতে পারে না; update-পথেও একই নিয়ম', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goalDoc()); });
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { planPrefs: prefs, lastEditedByMemberId: 'mB' }, { merge: true }));
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { extraFoods: [], lastEditedByMemberId: 'mA' }));
+      await assertSucceeds(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { planPrefs: prefs, lastEditedByMemberId: 'mA' }));
+    });
   });
 
   // ============================================================

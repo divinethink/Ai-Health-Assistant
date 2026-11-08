@@ -4,7 +4,7 @@
 export const GOAL_LABELS = { lose: "ওজন কমানো", gain: "ওজন বাড়ানো", fit: "ফিট থাকা", muscle: "পেশি গঠন" };
 export const ACTIVITY_LABELS = { low: "কম", medium: "মাঝারি", high: "বেশি" };
 export const ACTIVITY_FACTOR = { low: 1.2, medium: 1.55, high: 1.725 };
-const MIN_KCAL = { female: 1200, male: 1500 };
+export const MIN_KCAL = { female: 1200, male: 1500 };
 const KCAL_PER_KG = 7700;
 const MAX_LOSS_KG_WEEK = 0.5;
 const MAX_GAIN_KG_WEEK = 0.25;

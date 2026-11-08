@@ -13,7 +13,7 @@ export const MEAL_SLOTS = [
 ];
 
 // k = এক ইউনিটের আনুমানিক কিলোক্যালরি; al = এলার্জি-ট্যাগ; swap = [বিকল্প খাবার, অনুপাত]
-const FOODS = {
+export const FOODS = {
   roti: { n: "রুটি", u: "টি", k: 80, al: "wheat", swap: ["rice", 0.5] },
   rice: { n: "ভাত", u: "কাপ", k: 200 },
   dal: { n: "ডাল", u: "বাটি", k: 110 },
@@ -61,7 +61,7 @@ const KNOBS = [
   ["snack2", "muri", 1, 1, 2],
 ];
 
-const kcalOf = (key, qty) => FOODS[key].k * qty;
+export const kcalOf = (key, qty) => FOODS[key].k * qty;
 const totalOf = (rows) => rows.reduce((s, r) => s + kcalOf(r[1], r[2]), 0);
 
 export function qtyText(qty) {
@@ -72,7 +72,7 @@ export function qtyText(qty) {
   return whole === 0 ? "আধা" : whole === 1 ? "দেড়" : bn(whole) + "½";
 }
 
-function itemText(key, qty) {
+export function itemText(key, qty) {
   const f = FOODS[key];
   return qtyText(qty) + (f.u === "টি" ? "" : " ") + f.u + " " + f.n;
 }

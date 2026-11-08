@@ -88,6 +88,18 @@ service cloud.firestore {
       return isAdminOfFamily(familyId) || isOwnerOfMember(familyId, targetMemberId);
     }
 
+    // healthTracker-এর নতুন ঐচ্ছিক ফিল্ড (ট্র্যাকার ধাপ B): planPrefs শুধু goal-ডকে,
+    // extraFoods/exerciseLog শুধু daily-ডকে; ধরন ও আকার-সীমা (গভীর যাচাই client-এর lib/planPrefs.js-এ)।
+    function trackerPlanFieldsOk(d) {
+      let planOk = !('planPrefs' in d) || (d.type == 'goal' && d.planPrefs is map
+        && d.planPrefs.keys().hasOnly(['v', 'meal', 'exercise'])
+        && (!('meal' in d.planPrefs) || (d.planPrefs.meal is map && d.planPrefs.meal.size() <= 5))
+        && (!('exercise' in d.planPrefs) || (d.planPrefs.exercise is map && d.planPrefs.exercise.size() <= 7)));
+      let foodsOk = !('extraFoods' in d) || (d.type == 'daily' && d.extraFoods is list && d.extraFoods.size() <= 20);
+      let logOk = !('exerciseLog' in d) || (d.type == 'daily' && d.exerciseLog is list && d.exerciseLog.size() <= 20);
+      return planOk && foodsOk && logOk;
+    }
+
     // ============================================================
     // GLOBAL COLLECTIONS (family-independent)
     // ============================================================
@@ -492,7 +504,9 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
+               'planPrefs', 'extraFoods', 'exerciseLog',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId
@@ -501,7 +515,9 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
+               'planPrefs', 'extraFoods', 'exerciseLog',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
