@@ -74,76 +74,63 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
   if (err) return ErrorBox(err);
   if (!members) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
 
+  const iconBtn = (label, title, onClick) => React.createElement("button", {
+    onClick, title, "aria-label": title,
+    style: { width: "40px", height: "40px", borderRadius: "50%", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-chip-bg, #E4F0E9)", cursor: "pointer", fontSize: "16px", color: "var(--hs-primary, #0E4B43)" },
+  }, label);
+
+  const toggleChip = (label, on, disabled, onClick) => React.createElement("button", {
+    onClick, disabled,
+    style: {
+      flex: 1, minHeight: "42px", padding: "6px 8px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: disabled ? "default" : "pointer",
+      border: "1.5px solid " + (on ? "#0E4B43" : "#C3D2CA"),
+      background: on ? "#0E4B43" : "#fff", color: on ? "#fff" : "#4B5C57",
+    },
+  }, (on ? "✓ " : "") + label);
+
   return React.createElement(
-    "div", { style: { marginTop: "14px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "পরিবারের সদস্য"),
+    "div", { style: { marginTop: "4px" } },
     myMemberId && React.createElement(
-      "p", { style: { fontSize: "14px", color: "#5F716C", marginTop: "-6px", marginBottom: "8px" } },
-      "প্রতিটা সদস্যের পাশে Read/Write টিক দিয়ে আপনার নিজের প্রোফাইলে তার access সরাসরি ঠিক করুন।"
+      "p", { style: { fontSize: "14px", color: "var(--hs-muted, #5F716C)", margin: "0 0 12px" } },
+      "প্রতিটা সদস্য আপনার প্রোফাইলে কী করতে পারবে, নিচে ঠিক করুন।"
     ),
     members.map((m) => {
       const isSelf = m.id === myMemberId;
       // structural access (Admin — সবার প্রোফাইলে স্বয়ংক্রিয় access, বা এই
       // সদস্য আমার guardian — অর্থাৎ আমি m.guardianMemberIds-এ আছি) থাকলে
-      // sharing-checkbox দেখানো হয় না, কারণ সেই access আগে থেকেই স্বয়ংক্রিয়/
+      // sharing-toggle দেখানো হয় না, কারণ সেই access আগে থেকেই স্বয়ংক্রিয়/
       // non-revocable (Admin/Parent-Child<18, roadmap §3.1.1)।
       const isMyGuardian = Array.isArray(m.guardianMemberIds) && m.guardianMemberIds.includes(myMemberId);
       const showShareControls = !isSelf && myMemberId && m.role !== "admin" && !isMyGuardian;
       const relLabel = m.relationshipLabel ? RELATIONSHIP_LABEL_MAP[m.relationshipLabel] : null;
       const share = myShares[m.id] || { read: false, write: false };
+      const roleText = m.role === "admin" ? "Admin" : (m.role === "guardian-managed" ? "অভিভাবক-পরিচালিত" : "সাধারণ সদস্য");
+      const statusText = m.googleUid ? "✅ claim হয়েছে" : (m.email ? "⏳ claim বাকি (ইমেইল দেওয়া আছে)" : "👤 no-account (অভিভাবক-পরিচালিত)");
+      const initial = ((m.name || "?").trim()[0] || "?").toUpperCase();
 
       return React.createElement(
-        "div", { key: m.id, style: { padding: "8px 0", borderBottom: "1px solid #D3E0D9", fontSize: "14px" } },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px" } },
-          React.createElement("span", null,
-            React.createElement("b", null, m.name),
-            " — ", m.role === "admin" ? "Admin" : (m.role === "guardian-managed" ? "অভিভাবক-পরিচালিত" : "সাধারণ সদস্য"),
-            " — ", m.googleUid ? "claim হয়েছে" : (m.email ? "claim বাকি (ইমেইল দেওয়া আছে)" : "no-account (অভিভাবক-পরিচালিত)"),
-            relLabel ? " — " + relLabel : ""
-          ),
-          (isSelf || isAdmin) && React.createElement("button", {
-            onClick: () => setProfileModalTarget(m),
-            title: "Health Profile এডিট করুন",
-            style: {
-              marginLeft: "auto", border: "none", background: "none", cursor: "pointer",
-              fontSize: "14px", color: "#0E4B43", padding: "2px 6px",
-            },
-          }, "🩺"),
-          isAdmin && !isSelf && React.createElement("button", {
-            onClick: () => setRelModalTarget(m),
-            title: "সম্পর্ক ও অভিভাবকত্ব এডিট করুন",
-            style: {
-              border: "none", background: "none", cursor: "pointer",
-              fontSize: "14px", color: "#0E4B43", padding: "2px 6px",
-            },
-          }, "✎")
+        "div", { key: m.id, style: { padding: "14px", marginBottom: "10px", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "16px", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+          React.createElement("div", { style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", fontWeight: 800, color: "var(--hs-primary-contrast, #fff)", background: "var(--hs-primary, #0E4B43)" } }, initial),
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" } },
+              React.createElement("b", { style: { fontSize: "15px" } }, m.name + (isSelf ? " (আপনি)" : "")),
+              React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, padding: "2px 9px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)" } }, roleText),
+              relLabel && React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, relLabel)),
+            React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", marginTop: "2px" } }, statusText)),
+          (isSelf || isAdmin) && iconBtn("🩺", "Health Profile এডিট করুন", () => setProfileModalTarget(m)),
+          isAdmin && !isSelf && iconBtn("✎", "সম্পর্ক ও অভিভাবকত্ব এডিট করুন", () => setRelModalTarget(m))
         ),
         showShareControls
           ? React.createElement(
-              "div", { style: { marginTop: "6px", display: "flex", alignItems: "center", gap: "14px", opacity: busyId === m.id ? 0.5 : 1 } },
-              React.createElement(
-                "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", cursor: "pointer" } },
-                React.createElement("input", {
-                  type: "checkbox", checked: !!share.read, disabled: busyId === m.id,
-                  onChange: (e) => onToggleShare(m.id, "read", e.target.checked),
-                }),
-                "আমার প্রোফাইল Read করতে পারবেন"
-              ),
-              React.createElement(
-                "label", { style: { display: "flex", alignItems: "center", gap: "4px", fontSize: "14px", cursor: "pointer" } },
-                React.createElement("input", {
-                  type: "checkbox", checked: !!share.write, disabled: busyId === m.id,
-                  onChange: (e) => onToggleShare(m.id, "write", e.target.checked),
-                }),
-                "Write/Edit করতে পারবেন"
-              )
+              "div", { style: { marginTop: "12px", display: "flex", gap: "8px", opacity: busyId === m.id ? 0.5 : 1 } },
+              toggleChip("👁 আমার প্রোফাইল দেখতে পারবে", !!share.read, busyId === m.id, () => onToggleShare(m.id, "read", !share.read)),
+              toggleChip("✏️ এডিট করতে পারবে", !!share.write, busyId === m.id, () => onToggleShare(m.id, "write", !share.write))
             )
-          // Architecture Part A §3.1 / Part C §11.1 অনুযায়ী: structural-access
-          // (Admin, বা Parent-Child<18 — এখানে "m আমার guardian" দিক থেকে)
-          // সদস্যের row-এ toggle না দেখিয়ে শুধু informational label দেখানো
-          // উচিত ছিল, আগে এই স্থানে কিছুই render হতো না (gap-fix, pure UI)।
+          // Architecture Part A §3.1 / Part C §11.1: structural-access সদস্যের row-এ
+          // toggle না দেখিয়ে শুধু informational label।
           : !isSelf && (m.role === "admin" || isMyGuardian) && React.createElement(
-              "div", { style: { marginTop: "4px", fontSize: "14px", color: "#8A9A96" } },
+              "div", { style: { marginTop: "10px", fontSize: "13px", color: "#6B7A76" } },
               "🔒 সবসময় access আছে (" + (m.role === "admin" ? "Admin" : "অভিভাবক-সম্পর্ক") + ")"
             )
       );

@@ -2,7 +2,7 @@
 // §8, §11.3)। ২-ধাপ flow (দুই উৎসই শেয়ার করে): ফাইল/Drive থেকে "যাচাই করুন"
 // (dry-run plan) → merge-summary preview → "নিশ্চিত করে রিস্টোর করুন" (§8.4)।
 
-import { ErrorBox, SuccessBox, SecondaryButton } from "../../shared/ui.js";
+import { ErrorBox, SuccessBox } from "../../shared/ui.js";
 import { buildBackupPayload, buildBackupFileName, planRestore, commitRestore, summarizePlan } from "../../legacy/backupData.js";
 import { isGoogleDriveConfigured, backupToGoogleDrive, fetchGoogleDriveBackup } from "../../legacy/googleDrive.js";
 
@@ -123,70 +123,79 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
   const driveConfigured = isGoogleDriveConfigured();
   const restoreBusyAny = restoreBusy || driveRestoreBusy;
 
+  // ---- UI helpers (শুধু presentation; উপরের logic অপরিবর্তিত) ----
+  const card = (icon, title, sub, children) => React.createElement(
+    "div", { style: { border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "18px", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)", padding: "16px", marginTop: "14px" } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+      React.createElement("span", { style: { width: "42px", height: "42px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", background: "var(--hs-chip-bg, #E4F0E9)" } }, icon),
+      React.createElement("div", null,
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, title),
+        sub && React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)" } }, sub))),
+    children
+  );
+  const btn = (label, onClick, disabled, primary) => React.createElement("button", {
+    onClick, disabled,
+    style: {
+      width: "100%", minHeight: "48px", marginTop: "10px", padding: "10px", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: disabled ? "default" : "pointer",
+      border: primary ? "none" : "1.5px solid #0E4B43",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
+      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "#0E4B43"),
+    },
+  }, label);
+  const segmented = (value, onChange, disabled) => React.createElement(
+    "div", { style: { display: "flex", marginTop: "12px", padding: "3px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)" } },
+    [["personal", "👤 আমার ডেটা"], ["family", "👨‍👩‍👧‍👦 পরিবারের ডেটা"]].map(([v, l]) => React.createElement("button", {
+      key: v, onClick: () => onChange(v), disabled,
+      style: { flex: 1, minHeight: "38px", border: "none", borderRadius: "999px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
+        background: value === v ? "#0E4B43" : "transparent", color: value === v ? "#fff" : "#0E4B43" },
+    }, l))
+  );
+  const stat = (n, label, color) => React.createElement(
+    "div", { style: { flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: "14px", background: "var(--hs-chip-bg, #E4F0E9)" } },
+    React.createElement("div", { style: { fontSize: "22px", fontWeight: 800, color } }, n),
+    React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)" } }, label)
+  );
+
   return React.createElement(
-    "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডেটা ব্যাকআপ / রিস্টোর"),
-    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C" } },
-      "সম্পূর্ণ manual, plaintext JSON (কোনো auto-backup না, encryption ছাড়া — roadmap §13)।"),
+    "div", null,
+    React.createElement("div", { style: { padding: "12px 14px", borderRadius: "14px", background: "#FFF4DC", color: "#6B4A00", fontSize: "14px", lineHeight: 1.5 } },
+      "💡 ব্যাকআপ নিজে হাতে নিতে হয়, নিজে থেকে হয় না। ফাইলটি এনক্রিপ্ট করা থাকে না — নিরাপদ জায়গায় রাখুন।"),
 
     // --- Backup ---
-    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "8px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ রাখুন"),
-      isAdmin && React.createElement(
-        "div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-        React.createElement("label", { style: { fontSize: "14px" } },
-          React.createElement("input", { type: "radio", checked: scope === "personal", onChange: () => setScope("personal") }),
-          " আমার ডেটা"),
-        React.createElement("label", { style: { fontSize: "14px" } },
-          React.createElement("input", { type: "radio", checked: scope === "family", onChange: () => setScope("family") }),
-          " পরিবারের ডেটা")
-      ),
-      SecondaryButton(backupBusy ? "তৈরি হচ্ছে..." : "আপনার ডিভাইসে ব্যাকআপ ডাউনলোড করুন", handleBackup, backupBusy || driveBackupBusy),
-      driveConfigured
-        ? React.createElement("div", { style: { marginTop: "6px" } },
-            SecondaryButton(driveBackupBusy ? "Drive-এ পাঠানো হচ্ছে..." : "Google Drive-এ ব্যাকআপ রাখুন", handleDriveBackup, backupBusy || driveBackupBusy))
-        : React.createElement("p", { style: { fontSize: "14px", color: "#aaa", marginTop: "6px" } }, "Google Drive ব্যাকআপ এখনো সেটআপ করা হয়নি।"),
-      backupMsg && SuccessBox(backupMsg),
-      backupErr && ErrorBox(backupErr)
-    ),
+    card("📤", "ব্যাকআপ রাখুন", "আপনার তথ্যের একটা কপি সংরক্ষণ করুন",
+      React.createElement(React.Fragment, null,
+        isAdmin && segmented(scope, setScope, backupBusy || driveBackupBusy),
+        btn(backupBusy ? "তৈরি হচ্ছে..." : "⬇ এই ডিভাইসে ডাউনলোড করুন", handleBackup, backupBusy || driveBackupBusy, true),
+        driveConfigured
+          ? btn(driveBackupBusy ? "Drive-এ পাঠানো হচ্ছে..." : "☁️ Google Drive-এ রাখুন", handleDriveBackup, backupBusy || driveBackupBusy, false)
+          : React.createElement("p", { style: { fontSize: "13px", color: "#8A9A96", margin: "10px 0 0" } }, "Google Drive ব্যাকআপ এখনো সেটআপ করা হয়নি।"),
+        backupMsg && SuccessBox(backupMsg),
+        backupErr && ErrorBox(backupErr))),
 
     // --- Restore ---
-    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ থেকে রিস্টোর করুন"),
-      !plan && React.createElement("input", { type: "file", accept: "application/json,.json", onChange: handleFileChosen, disabled: restoreBusyAny }),
-      driveConfigured && !plan && React.createElement(
-        "div", { style: { marginTop: "8px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" } },
-        isAdmin && React.createElement(
-          "select", { value: driveRestoreScope, onChange: (e) => setDriveRestoreScope(e.target.value), disabled: restoreBusyAny,
-            style: { fontSize: "14px", padding: "4px" } },
-          React.createElement("option", { value: "personal" }, "আমার ডেটা"),
-          React.createElement("option", { value: "family" }, "পরিবারের ডেটা")
-        ),
-        SecondaryButton(driveRestoreBusy ? "Drive থেকে আনা হচ্ছে..." : "Google Drive থেকে যাচাই করুন", handleDriveRestore, restoreBusyAny)
-      ),
-      restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C" } }, "যাচাই করা হচ্ছে..."),
-      restoreErr && ErrorBox(restoreErr),
-      previewSummary && React.createElement(
-        "div", { style: { marginTop: "8px" } },
-        React.createElement("p", { style: { fontSize: "14px" } },
-          "ফাইল: ", React.createElement("b", null, restoreFile)),
-        React.createElement("p", { style: { fontSize: "14px" } },
-          previewSummary.added + " টা নতুন যোগ হবে, " + previewSummary.updated + " টা আপডেট হবে, " + previewSummary.skipped + " টা অপরিবর্তিত থাকবে।"),
-        React.createElement(
-          "div", { style: { display: "flex", gap: "8px" } },
-          React.createElement("button", {
-            onClick: handleConfirmRestore, disabled: restoreBusyAny,
-            style: { flex: 1, padding: "10px", borderRadius: "14px", background: "#0E4B43", color: "#fff", border: "none", fontWeight: 600 }
-          }, restoreBusy ? "রিস্টোর হচ্ছে..." : "নিশ্চিত করে রিস্টোর করুন"),
-          React.createElement("button", {
-            onClick: cancelPreview, disabled: restoreBusyAny,
-            style: { flex: 1, padding: "10px", borderRadius: "14px", background: "#fff", color: "#0E4B43", border: "1px solid #0E4B43", fontWeight: 600 }
-          }, "বাতিল")
-        )
-      ),
-      restoreDone && SuccessBox(
-        "রিস্টোর সম্পন্ন — " + restoreDone.added + " টা নতুন যোগ হয়েছে, " + restoreDone.updated + " টা আপডেট হয়েছে, " + restoreDone.skipped + " টা অপরিবর্তিত ছিল।"
-      )
-    )
+    card("📥", "ব্যাকআপ থেকে ফিরিয়ে আনুন", "আগে যাচাই হবে, নিশ্চিত করলে তবেই রিস্টোর হবে",
+      React.createElement(React.Fragment, null,
+        !plan && React.createElement("label", {
+          style: { display: "block", marginTop: "12px", textAlign: "center", padding: "12px", borderRadius: "14px", border: "1.5px dashed #0E4B43", color: "#0E4B43", fontWeight: 700, fontSize: "14px", cursor: restoreBusyAny ? "default" : "pointer", opacity: restoreBusyAny ? 0.6 : 1 },
+        },
+          "📂 ব্যাকআপ ফাইল বেছে নিন",
+          React.createElement("input", { type: "file", accept: "application/json,.json", onChange: handleFileChosen, disabled: restoreBusyAny, style: { display: "none" } })),
+        driveConfigured && !plan && React.createElement(React.Fragment, null,
+          isAdmin && segmented(driveRestoreScope, setDriveRestoreScope, restoreBusyAny),
+          btn(driveRestoreBusy ? "Drive থেকে আনা হচ্ছে..." : "☁️ Google Drive থেকে যাচাই করুন", handleDriveRestore, restoreBusyAny, false)),
+        restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "10px 0 0" } }, "যাচাই করা হচ্ছে..."),
+        restoreErr && ErrorBox(restoreErr),
+        previewSummary && React.createElement(
+          "div", { style: { marginTop: "12px" } },
+          React.createElement("p", { style: { fontSize: "14px", margin: "0 0 8px", wordBreak: "break-all" } }, "📄 ", React.createElement("b", null, restoreFile)),
+          React.createElement("div", { style: { display: "flex", gap: "8px" } },
+            stat(previewSummary.added, "নতুন যোগ হবে", "#0E4B43"),
+            stat(previewSummary.updated, "আপডেট হবে", "#8A5A00"),
+            stat(previewSummary.skipped, "অপরিবর্তিত", "#5F716C")),
+          btn(restoreBusy ? "রিস্টোর হচ্ছে..." : "✅ নিশ্চিত করে রিস্টোর করুন", handleConfirmRestore, restoreBusyAny, true),
+          btn("বাতিল", cancelPreview, restoreBusyAny, false)),
+        restoreDone && SuccessBox(
+          "রিস্টোর সম্পন্ন — " + restoreDone.added + " টা নতুন যোগ হয়েছে, " + restoreDone.updated + " টা আপডেট হয়েছে, " + restoreDone.skipped + " টা অপরিবর্তিত ছিল।"
+        )))
   );
 }
