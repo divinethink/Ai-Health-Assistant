@@ -85,6 +85,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [meds, setMeds] = useState(null);
   const [members, setMembers] = useState([]);
   const [knownNames, setKnownNames] = useState([]);
+  const [pastCourses, setPastCourses] = useState([]);
   const [loadErr, setLoadErr] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [openId, setOpenId] = useState(null);
@@ -116,15 +117,23 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       const ms = await listMembers(familyId);
       setMembers(ms);
       const perMember = await Promise.all(ms.map((m) => listHealthRecords(familyId, m.id).then((records) => ({ member: m, records }))));
-      const flat = []; const names = [];
+      const flat = []; const names = []; const pastMap = {};
+      const todayS = todayStr();
       perMember.forEach(({ member, records }) => {
         records.filter((r) => r.resourceType === "medicationStatement").forEach((r) => {
           if (r.genericName) names.push(r.genericName);
+          const expiredNow = r.status === "active" && (r.endDate || fallbackEndDate(r.startDate, r.durationDays)) && todayS > (r.endDate || fallbackEndDate(r.startDate, r.durationDays));
+          if ((r.status !== "active" || expiredNow) && r.genericName) {
+            const k = member.id + "|" + r.genericName.trim().toLowerCase();
+            if (!pastMap[k]) pastMap[k] = { key: k, memberId: member.id, memberName: member.name, name: r.genericName, times: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], meal: r.mealTiming || "after", days: r.durationDays ? Number(r.durationDays) : 0 };
+          }
           if (r.status !== "active") return;
           flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [] });
         });
       });
       setMeds(flat);
+      const activeKeys = new Set(flat.filter((m) => !(m.endDate && todayS > m.endDate)).map((m) => m.memberId + "|" + m.genericName.trim().toLowerCase()));
+      setPastCourses(Object.values(pastMap).filter((p) => !activeKeys.has(p.key)));
       setKnownNames([...new Set(names)]);
       const ev = {};
       flat.forEach((m) => { ev[m.recordId] = { slots: [...m.reminderTimes], endDate: m.endDate || fallbackEndDate(m.startDate, m.durationDays), mealTiming: m.mealTiming || "any" }; });
@@ -153,6 +162,31 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     }, 60000);
     return () => clearInterval(interval);
   }, [meds, permission]);
+
+  // ঘ) কোর্স শেষ হতে চলেছে (আর ২ দিন বা কম) — দিনে একবার নোটিফিকেশন (app খোলা থাকলে)।
+  useEffect(() => {
+    if (!meds || permission !== "granted") return;
+    meds.forEach((m) => {
+      const left = daysLeft(m.endDate);
+      if (left === null || left < 0 || left > 2) return;
+      const k = "hs-med-endwarn-" + m.recordId;
+      try {
+        if (localStorage.getItem(k) === todayStr()) return;
+        localStorage.setItem(k, todayStr());
+        new Notification("ওষুধ শেষ হতে চলেছে", { body: m.memberName + " — " + m.genericName + (left === 0 ? " আজ শেষ দিন" : " আর " + bn(left) + " দিন বাকি") + "। প্রয়োজনে ডাক্তার দেখান/ওষুধ কিনে রাখুন।" });
+      } catch (e) { /* ignore */ }
+    });
+  }, [meds, permission]);
+
+  // গ) আগের কোর্সের ওষুধ আবার — ফর্ম আগে থেকে ভরে দেয়, সেভ চাপলেই নতুন কোর্স শুরু।
+  function reuseCourse(p) {
+    const n = Math.min(4, Math.max(1, p.times.length || 3));
+    setAName(p.name); setAMember(p.memberId); setACount(n);
+    setASlots(p.times.length >= 1 && p.times.length <= 4 ? [...p.times].sort() : SLOT_DEFAULTS[n]);
+    setAMeal(["before", "after", "any"].includes(p.meal) ? p.meal : "after");
+    setADays(p.days && DAY_OPTIONS.includes(p.days) ? p.days : (p.days ? p.days : 0));
+    setAErr(null); setAddOpen(true); setSuggOpen(false);
+  }
 
   function requestPermission() {
     if (typeof Notification === "undefined") return;
@@ -214,7 +248,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     const name = aName.trim();
     if (!name) { setAErr("ওষুধের নাম লিখুন।"); return; }
     if (!aMember) { setAErr("সদস্য বাছুন।"); return; }
-    if (meds.some((m) => m.memberId === aMember && m.genericName.trim().toLowerCase() === name.toLowerCase())) { setAErr("এই ওষুধ এই সদস্যের তালিকায় আগেই আছে।"); return; }
+    if (meds.some((m) => m.memberId === aMember && !(m.endDate && todayStr() > m.endDate) && m.genericName.trim().toLowerCase() === name.toLowerCase())) { setAErr("এই ওষুধ এই সদস্যের তালিকায় আগেই আছে।"); return; }
     const times = [...new Set(aSlots)].sort();
     const start = todayStr();
     const endDate = aDays ? addDays(start, aDays - 1) : null;
@@ -248,6 +282,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   doses.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
   const takenCount = doses.filter((d) => taken[d.key]).length;
 
+  const endingSoon = shown.filter((m) => { const l = daysLeft(m.endDate); return l !== null && l >= 0 && l <= 2; });
+  const pastShown = pastCourses.filter((p) => filter === "all" || p.memberId === filter).slice(0, 8);
+
   // নাম-সাজেশন
   const q = aName.trim().toLowerCase();
   const pool = [...knownNames, ...COMMON_MEDS].filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
@@ -266,6 +303,12 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     members.length > 1 && h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
       [chip(filter === "all", "সবাই", () => setFilter("all"), "all"), ...members.map((mm) => chip(filter === mm.id, mm.name, () => setFilter(mm.id), mm.id))]),
 
+    // ঘ) শেষ হতে চলেছে
+    endingSoon.length > 0 && h("div", { style: { ...card, background: "#FFF6E5", border: "1px solid #F0D9A8" } },
+      h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#8A5A00", marginBottom: "6px" } }, "⚠️ ওষুধ শেষ হতে চলেছে"),
+      endingSoon.map((m) => h("div", { key: m.recordId, style: { fontSize: F, color: "#5B3B00", marginBottom: "3px" } }, "• " + m.genericName + (members.length > 1 ? " (" + m.memberName + ")" : "") + " — " + (daysLeft(m.endDate) === 0 ? "আজ শেষ দিন" : "আর " + bn(daysLeft(m.endDate)) + " দিন"))),
+      h("div", { style: { fontSize: "12px", color: "#8A5A00", marginTop: "4px" } }, "চালিয়ে যেতে হলে ডাক্তারের পরামর্শ নিন ও ওষুধ কিনে রাখুন।")),
+
     // আজকের ওষুধ
     doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
       h("button", { onClick: () => setTodayOpen((o) => !o), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer" } },
@@ -282,6 +325,10 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       todayOpen && h("div", { style: { fontSize: "12px", color: "#6B7B76", marginTop: "2px" } }, "(এই চিহ্ন শুধু এই ফোনে থাকে)")),
 
     // নতুন ওষুধ যোগ
+    !addOpen && pastShown.length > 0 && h("div", { style: { marginBottom: "10px" } },
+      h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
+      h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
+        pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
     !addOpen && h("button", { onClick: () => setAddOpen(true), style: { width: "100%", padding: "12px", marginBottom: "10px", borderRadius: "14px", border: "1px dashed " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "➕ নতুন ওষুধ যোগ করুন"),
     addOpen && h("div", { style: card },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
