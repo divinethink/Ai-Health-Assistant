@@ -9,14 +9,26 @@ import { listDocuments, DOC_TYPE_LABELS } from "../documents/documentsData.js";
 
 const { useState, useEffect, useMemo } = React;
 
+// সব কার্ড এক স্টাইলে: আইকন + বাংলা শিরোনাম + এক-লাইন বর্ণনা + (ঐচ্ছিক) ছোট লেবেল।
+export function exportCard(icon, title, subtitle, tag, children) {
+  return React.createElement("div", { style: { border: "1px solid #D9E5DE", borderRadius: "16px", background: "#fff", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", padding: "14px", marginTop: "12px" } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+      React.createElement("div", { style: { fontSize: "24px" } }, icon),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "#0E4B43" } }, title)),
+    subtitle && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "6px 0 0" } }, subtitle),
+    tag && React.createElement("div", { style: { display: "inline-block", marginTop: "6px", padding: "3px 10px", borderRadius: "999px", background: "#FFF4DC", color: "#8A5A00", fontSize: "12px", fontWeight: 600 } }, tag),
+    children
+  );
+}
+
 function actionBtn(label, onClick, disabled, primary) {
   return React.createElement("button", {
-    onClick, disabled,
+    key: label, onClick, disabled,
     style: {
-      padding: "10px 14px", borderRadius: "14px", fontWeight: 600, fontSize: "14px", marginRight: "8px", marginTop: "8px", cursor: disabled ? "default" : "pointer",
-      border: primary ? "none" : "1px solid #0E4B43",
-      background: disabled ? "#C9D6D1" : (primary ? "#0E4B43" : "#fff"),
-      color: disabled ? "#fff" : (primary ? "#fff" : "#0E4B43"),
+      flex: 1, minHeight: "46px", padding: "10px 8px", borderRadius: "14px", fontWeight: 700, fontSize: "14px", cursor: disabled ? "default" : "pointer",
+      border: primary ? "none" : "1.5px solid #0E4B43",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
+      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "#0E4B43"),
     },
   }, label);
 }
@@ -30,7 +42,7 @@ export function buildShareText(memberName, docs) {
   return lines.join("\n");
 }
 
-export function DoctorDocumentPicker({ familyId, targetMemberId, memberName }) {
+export function DoctorDocumentPicker({ familyId, targetMemberId, memberName, onGoUpload }) {
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
   const [picked, setPicked] = useState({});
@@ -76,13 +88,17 @@ export function DoctorDocumentPicker({ familyId, targetMemberId, memberName }) {
     }
   };
 
-  const box = { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "10px", background: "#fff" };
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   let body;
   if (err && !docs) body = ErrorBox(err);
   else if (!docs) body = React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", margin: 0 } }, "লোড হচ্ছে...");
-  else if (docs.length === 0) body = React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", margin: 0 } }, "জমা নথি নেই — আগে “জমা নথি” ট্যাবে নথি যোগ করুন।");
+  else if (docs.length === 0) body = React.createElement("div", { style: { marginTop: "10px" } },
+    React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", margin: 0 } }, "এখনো কোনো নথি জমা নেই।"),
+    onGoUpload && React.createElement("button", {
+      onClick: onGoUpload,
+      style: { marginTop: "10px", minHeight: "44px", padding: "8px 16px", borderRadius: "14px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 700, fontSize: "14px", cursor: "pointer" },
+    }, "📁 জমা নথিতে গিয়ে যোগ করুন"));
   else body = React.createElement(
     React.Fragment, null,
     React.createElement("button", {
@@ -99,15 +115,12 @@ export function DoctorDocumentPicker({ familyId, targetMemberId, memberName }) {
     )),
     React.createElement("div", { style: { fontSize: "14px", color: "#8A5A00", marginTop: "8px" } },
       "⚠️ লিংক যার কাছে যাবে সে-ই নথি খুলতে পারবে — শুধু বিশ্বস্ত ডাক্তার/ব্যক্তিকে পাঠান।"),
-    canShare && actionBtn("📤 শেয়ার (" + chosen.length + ")", share, chosen.length === 0, true),
-    actionBtn("📋 লিংক কপি করুন", copy, chosen.length === 0, !canShare),
+    React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
+      canShare && actionBtn("📤 শেয়ার (" + chosen.length + ")", share, chosen.length === 0, true),
+      actionBtn("📋 লিংক কপি", copy, chosen.length === 0, !canShare)),
     msg && SuccessBox(msg),
     err && ErrorBox(err)
   );
 
-  return React.createElement(
-    "div", { style: box },
-    React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ডাক্তারকে দেখানোর নথি বেছে নিন"),
-    body
-  );
+  return exportCard("📎", "জমা নথি থেকে বেছে নিন", "যে নথিগুলো ডাক্তারকে দেখাতে চান, বেছে শেয়ার করুন।", null, body);
 }

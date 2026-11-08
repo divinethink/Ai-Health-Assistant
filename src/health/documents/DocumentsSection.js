@@ -67,7 +67,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
     ),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
-      onDeleted: refresh,
+      onDeleted: refresh, onAdd: () => setPanel({ mode: "add" }),
     })
   );
 }

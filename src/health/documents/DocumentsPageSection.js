@@ -45,7 +45,7 @@ export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberI
         : React.createElement(
           React.Fragment, null,
           tab === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
-          tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId })
+          tab === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => setTab("upload") })
         )
     )
   );

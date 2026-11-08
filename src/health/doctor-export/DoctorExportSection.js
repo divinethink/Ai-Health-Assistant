@@ -14,7 +14,7 @@ import { buildAiHealthSummary } from "./aiSummaryData.js";
 import { DoctorExportPrintView } from "./DoctorExportPrintView.js";
 import { AiSummaryPrintView } from "./AiSummaryPrintView.js";
 import { exportHealthProfileDocx, exportAiHealthSummaryDocx } from "./docxExport.js";
-import { DoctorDocumentPicker } from "./DoctorDocumentPicker.js";
+import { DoctorDocumentPicker, exportCard } from "./DoctorDocumentPicker.js";
 
 const { useState, useEffect } = React;
 
@@ -22,15 +22,20 @@ function actionButton(label, onClick, disabled, primary) {
   return React.createElement("button", {
     onClick, disabled,
     style: {
-      padding: "9px 14px", borderRadius: "14px", fontWeight: 600, fontSize: "14px", marginRight: "8px", marginTop: "6px",
-      border: primary ? "none" : "1px solid #0E4B43",
-      background: primary ? "#0E4B43" : "#fff",
+      flex: 1, minHeight: "46px", padding: "10px 8px", borderRadius: "14px", fontWeight: 700, fontSize: "14px", cursor: disabled ? "default" : "pointer",
+      border: primary ? "none" : "1.5px solid #0E4B43",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
       color: primary ? "#fff" : "#0E4B43",
+      boxShadow: primary && !disabled ? "0 3px 8px rgba(14,75,67,0.22)" : "none",
     },
   }, label);
 }
 
-export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId }) {
+function buttonRow(...btns) {
+  return React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } }, ...btns);
+}
+
+export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId, onGoUpload }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const targetMemberId = selectedMemberId;
@@ -86,28 +91,27 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   if (loadErr) return ErrorBox(loadErr);
   if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
 
+  const memberName = (members.find((m) => m.id === targetMemberId) || {}).name;
   return React.createElement(
-    "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডাক্তার দেখানোর ডকুমেন্ট"),
+    "div", { style: { marginTop: "12px" } },
+    React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: 0 } }, "ডাক্তারকে দেখানোর জন্য"),
 
-    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "4px" } }, "Health Profile (factual, কোনো AI মতামত নেই)"),
-      actionButton(profileBusy === "pdf" ? "তৈরি হচ্ছে..." : "PDF (প্রিন্ট/প্রিভিউ)", () => handleHealthProfile("pdf"), !!profileBusy || !targetMemberId, true),
-      actionButton(profileBusy === "docx" ? "তৈরি হচ্ছে..." : "DOCX ডাউনলোড", () => handleHealthProfile("docx"), !!profileBusy || !targetMemberId),
-      profileErr && ErrorBox(profileErr)
-    ),
+    exportCard("🧾", "স্বাস্থ্য প্রোফাইল", "যাচাই-করা তথ্য থেকে — কোনো AI মতামত নেই।", null,
+      React.createElement(React.Fragment, null,
+        buttonRow(
+          actionButton(profileBusy === "pdf" ? "তৈরি হচ্ছে..." : "📄 PDF দেখুন/প্রিন্ট", () => handleHealthProfile("pdf"), !!profileBusy || !targetMemberId, true),
+          actionButton(profileBusy === "docx" ? "তৈরি হচ্ছে..." : "⬇ DOCX", () => handleHealthProfile("docx"), !!profileBusy || !targetMemberId)),
+        profileErr && ErrorBox(profileErr))),
 
-    React.createElement("div", { style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "4px" } }, "AI Health Summary — Not a Medical Prescription"),
-      React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", marginTop: 0 } }, "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance session থেকে।"),
-      actionButton(summaryBusy === "pdf" ? "তৈরি হচ্ছে..." : "PDF (প্রিন্ট/প্রিভিউ)", () => handleAiSummary("pdf"), !!summaryBusy || !targetMemberId, true),
-      actionButton(summaryBusy === "docx" ? "তৈরি হচ্ছে..." : "DOCX ডাউনলোড", () => handleAiSummary("docx"), !!summaryBusy || !targetMemberId),
-      summaryErr && ErrorBox(summaryErr)
-    ),
+    exportCard("🤖", "AI স্বাস্থ্য সারাংশ", "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance session থেকে।", "AI Health Guidance — Not a Medical Prescription",
+      React.createElement(React.Fragment, null,
+        buttonRow(
+          actionButton(summaryBusy === "pdf" ? "তৈরি হচ্ছে..." : "📄 PDF দেখুন/প্রিন্ট", () => handleAiSummary("pdf"), !!summaryBusy || !targetMemberId, true),
+          actionButton(summaryBusy === "docx" ? "তৈরি হচ্ছে..." : "⬇ DOCX", () => handleAiSummary("docx"), !!summaryBusy || !targetMemberId)),
+        summaryErr && ErrorBox(summaryErr))),
 
     React.createElement(DoctorDocumentPicker, {
-      key: "docs-" + targetMemberId, familyId, targetMemberId,
-      memberName: (members.find((m) => m.id === targetMemberId) || {}).name,
+      key: "docs-" + targetMemberId, familyId, targetMemberId, memberName, onGoUpload,
     })
   );
 }

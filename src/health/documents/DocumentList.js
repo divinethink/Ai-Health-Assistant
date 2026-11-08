@@ -39,7 +39,7 @@ function chipStyle(active) {
   };
 }
 
-export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted }) {
+export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd }) {
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -74,9 +74,14 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   if (err) return ErrorBox(err);
   if (!docs) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
   if (docs.length === 0) {
-    return React.createElement("div", { style: { textAlign: "center", padding: "28px 12px", color: "#5F716C", fontSize: "14px" } },
-      React.createElement("div", { style: { fontSize: "32px" } }, "🗂️"),
-      "এখনো কোনো নথি নেই। উপরের “＋ নতুন যোগ করুন” দিয়ে প্রথমটি রাখুন।");
+    return React.createElement("div", { style: { textAlign: "center", padding: "28px 16px", border: "1px dashed #B9CFC4", borderRadius: "16px", background: "#fff", color: "#5F716C", fontSize: "14px" } },
+      React.createElement("div", { style: { fontSize: "40px" } }, "🗂️"),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "#0E4B43", margin: "6px 0 4px" } }, "এখনো কোনো নথি নেই"),
+      React.createElement("div", null, "Prescription, ল্যাব রিপোর্ট বা ছবি/PDF এক জায়গায় নিরাপদে রাখুন।"),
+      onAdd && React.createElement("button", {
+        onClick: onAdd,
+        style: { marginTop: "14px", minHeight: "44px", padding: "8px 20px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer" },
+      }, "＋ প্রথম নথি যোগ করুন"));
   }
 
   const counts = {};
