@@ -31,15 +31,15 @@ const TABS = [
   ["doctor-export", "tab.export"],
 ];
 
-export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
+export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
   const [tab, setTab] = useState(TABS[0][0]);
-  const topPx = (topOffsetPx || 44) + "px";
+  const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
-      TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab),
+      TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab, chip),
       !selectedMemberId
         ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
         : React.createElement(

@@ -101,75 +101,68 @@ function BottomNav({ active, onChange }) {
   );
 }
 
-function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members, selectedMemberId, onChangeMember }) {
+// প্রোফাইল-চিপ — পুরনো স্থির TopBar-এর বদলে (৪৪px ফেরত)। প্রতিটি পেজের
+// ট্যাব-পিল-সারির বামে বসে। ড্রপডাউন position:fixed — পিল-সারির overflow-এ কাটা পড়ে না।
+function ProfileChip({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members, selectedMemberId, onChangeMember }) {
   const [open, setOpen] = useState(false);
+  const first = ((memberDoc.name || "?").trim().split(/\s+/)[0]) || "?";
   return React.createElement(
-    "div", {
-      style: {
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 46, height: "44px",
-        display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "0 14px", background: "var(--hs-primary)",
-        backgroundImage: "linear-gradient(135deg, var(--hs-primary), color-mix(in srgb, var(--hs-primary) 68%, #000))",
-        color: "var(--hs-primary-contrast)", boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
-      },
-    },
-    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary-contrast)", fontSize: "16px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, t(title)),
-    members && members.length > 1 && React.createElement(
-      "select", {
-        className: "hs-compact", value: selectedMemberId || "", onChange: (e) => onChangeMember(e.target.value), "aria-label": t("top.member"),
-        style: { maxWidth: "110px", margin: "0 6px", fontSize: "14px", background: "#fff", color: "#1B2430" },
-      },
-      members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
-    ),
+    React.Fragment, null,
     React.createElement(
-      "div", { style: { position: "relative" } },
+      "button", {
+        onClick: () => setOpen((o) => !o), "aria-label": memberDoc.name,
+        style: {
+          flexShrink: 0, display: "flex", alignItems: "center", gap: "4px", minHeight: "42px", maxWidth: "96px",
+          border: "1px solid var(--hs-primary)", borderRadius: "999px", padding: "4px 10px", cursor: "pointer",
+          background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        },
+      },
+      "👤 " + first + " ▾"
+    ),
+    open && React.createElement("div", { onClick: () => setOpen(false), style: { position: "fixed", inset: 0, zIndex: 59, background: "rgba(0,0,0,0.15)" } }),
+    open && React.createElement(
+      "div", {
+        style: {
+          position: "fixed", left: "12px", top: "56px", zIndex: 60, background: "var(--hs-surface)",
+          border: "1px solid var(--hs-border)", borderRadius: "14px", minWidth: "220px", maxWidth: "calc(100vw - 24px)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.18)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
+        },
+      },
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "16px", color: "var(--hs-primary)" } }, memberDoc.name),
+      auth.currentUser && auth.currentUser.email && React.createElement("div", { style: { color: "var(--hs-muted)", fontSize: "13px", marginTop: "2px", wordBreak: "break-all" } }, auth.currentUser.email),
+      React.createElement("div", { style: { marginTop: "8px" } },
+        React.createElement("span", { style: { display: "inline-block", padding: "3px 10px", borderRadius: "999px", background: "var(--hs-border)", fontSize: "12px", fontWeight: 600 } }, isAdmin ? "Admin" : memberDoc.role)),
+      React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "8px", fontSize: "13px" } }, t("top.familyCode") + ": " + familyDoc.familyCodeDisplay),
+      members && members.length > 1 && React.createElement(
+        "div", { style: { marginTop: "10px" } },
+        React.createElement("div", { style: { color: "var(--hs-muted)", fontSize: "12px", marginBottom: "4px" } }, t("top.member")),
+        members.map((m) => React.createElement(
+          "button", {
+            key: m.id, onClick: () => { onChangeMember(m.id); setOpen(false); },
+            style: {
+              display: "block", width: "100%", textAlign: "left", padding: "8px 10px", marginTop: "4px", minHeight: "40px", borderRadius: "10px", cursor: "pointer", fontSize: "14px",
+              border: m.id === selectedMemberId ? "1px solid var(--hs-primary)" : "1px solid var(--hs-border)",
+              background: m.id === selectedMemberId ? "var(--hs-chip-bg)" : "var(--hs-surface)", color: "var(--hs-text)",
+              fontWeight: m.id === selectedMemberId ? 700 : 500,
+            },
+          },
+          (m.id === selectedMemberId ? "✓ " : "") + m.name
+        ))
+      ),
+      isAdmin && React.createElement(
+        "button", {
+          onClick: () => { setOpen(false); onOpenGeneralChat(); },
+          style: { marginTop: "10px", width: "100%", padding: "8px", border: "1px solid #1B2430", borderRadius: "10px", background: "#1B2430", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+        },
+        t("top.generalChat")
+      ),
       React.createElement(
         "button", {
-          onClick: () => setOpen((o) => !o),
-          style: {
-            display: "flex", alignItems: "center", gap: "4px", border: "1px solid rgba(255,255,255,0.45)", minHeight: "36px",
-            borderRadius: "999px", padding: "4px 12px", background: "rgba(255,255,255,0.18)", cursor: "pointer",
-            fontSize: "14px", color: "var(--hs-primary-contrast)", fontWeight: 600,
-            maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          },
+          onClick: () => { setOpen(false); auth.signOut(); },
+          style: { marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B", borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         },
-        "👤 " + memberDoc.name + (open ? " ▲" : " ▼")
-      ),
-      open && React.createElement(
-        "div", {
-          style: {
-            position: "absolute", right: 0, top: "42px", zIndex: 50, background: "var(--hs-surface)",
-            border: "1px solid var(--hs-border)", borderRadius: "14px", minWidth: "220px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
-          },
-        },
-        React.createElement("div", { style: { fontWeight: 700, fontSize: "16px", color: "var(--hs-primary)" } }, memberDoc.name),
-        auth.currentUser && auth.currentUser.email && React.createElement("div", { style: { color: "var(--hs-muted)", fontSize: "13px", marginTop: "2px", wordBreak: "break-all" } }, auth.currentUser.email),
-        React.createElement("div", { style: { marginTop: "8px" } },
-          React.createElement("span", { style: { display: "inline-block", padding: "3px 10px", borderRadius: "999px", background: "var(--hs-border)", fontSize: "12px", fontWeight: 600 } }, isAdmin ? "Admin" : memberDoc.role)),
-        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "8px", fontSize: "13px" } }, t("top.familyCode") + ": " + familyDoc.familyCodeDisplay),
-        isAdmin && React.createElement(
-          "button", {
-            onClick: () => { setOpen(false); onOpenGeneralChat(); },
-            style: {
-              marginTop: "10px", width: "100%", padding: "8px", border: "1px solid #1B2430",
-              borderRadius: "10px", background: "#1B2430", color: "#fff", fontSize: "14px",
-              fontWeight: 600, cursor: "pointer",
-            },
-          },
-          t("top.generalChat")
-        ),
-        React.createElement(
-          "button", {
-            onClick: () => { setOpen(false); auth.signOut(); },
-            style: {
-              marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B",
-              borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px",
-              fontWeight: 600, cursor: "pointer",
-            },
-          },
-          t("top.logout")
-        )
+        t("top.logout")
       )
     )
   );
@@ -327,13 +320,13 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   );
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails, onOpenAIChat }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails, onOpenAIChat, chip }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
   const [showCare, setShowCare] = useState(false);
   const [sub, setSub] = useState(null); // null | "family" | "data" | "settings"
-  const wrapStyle = { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
+  const wrapStyle = { paddingTop: "8px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
 
   if (sub) {
     const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
@@ -364,6 +357,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     }
     return React.createElement(
       "div", { style: wrapStyle },
+      React.createElement("div", { style: { display: "flex", marginBottom: "4px" } }, chip),
       React.createElement("button", {
         onClick: () => setSub(null),
         style: { border: "none", background: "none", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", padding: "6px 0", minHeight: "40px" },
@@ -398,6 +392,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
 
   return React.createElement(
     "div", { style: wrapStyle },
+    React.createElement("div", { style: { display: "flex", marginBottom: "10px" } }, chip),
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(
@@ -417,7 +412,6 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   );
 }
 
-const TAB_TITLES = { home: "title.home", aichat: "title.aichat", tracker: "title.tracker", blog: "title.blog", documents: "title.docs", menu: "title.menu" };
 
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   useLang(); // ভাষা বদলালে পুরো স্ক্রিন নতুন করে আঁকা হয় (state অক্ষত থাকে)
@@ -451,34 +445,33 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
 
-  // হেডার এখন দুই স্তর: (১) TopBar — পেজের নাম + সদস্য-বাছাই + অ্যাকাউন্ট, (২) পেজের নিজস্ব ট্যাব-পিল।
-  const showMemberSelect = members && members.length > 1 && ["home", "aichat", "tracker", "documents"].includes(activeTab);
-  const topOffsetPx = 44;
+  // স্থির TopBar নেই — প্রোফাইল-চিপ (👤 নাম ▾) প্রতিটি পেজের পিল-সারির বামে।
+  const topOffsetPx = 0;
+  const chip = React.createElement(ProfileChip, {
+    key: "profile-chip", memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true),
+    members, selectedMemberId, onChangeMember: setSelectedMemberId,
+  });
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, chip, onExit: goHome });
   } else if (activeTab === "aichat") {
-    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
+    tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, chip, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
-    tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
+    tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, chip });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else if (activeTab === "documents") {
-    tabContent = React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, chip, onExit: goHome });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"),
+      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), chip,
     });
   }
 
   return React.createElement(
     React.Fragment, null,
-    React.createElement(TopBar, {
-      title: TAB_TITLES[activeTab] || "title.home", memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true),
-      members: showMemberSelect ? members : null, selectedMemberId, onChangeMember: setSelectedMemberId,
-    }),
     tabContent,
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
     React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: setActiveTab })

@@ -58,15 +58,16 @@ const TABS = [
   { id: "timeline", label: "tab.timeline" },
 ];
 
-export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
+export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
   const [activeTab, setActiveTab] = useState("profile");
   const [timelineSub, setTimelineSub] = useState("calendar");
-  const topPx = (topOffsetPx || 44) + "px";
+  const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
-      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0 } },
+      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
+      chip || null,
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,

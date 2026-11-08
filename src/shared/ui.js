@@ -63,9 +63,10 @@ export function SelectField(label, value, onChange, options) {
 // পাশাপাশি স্তূপ না করে ট্যাব হিসেবে ভাগ করার জন্য (roadmap §1_5-এর "sub-tab
 // pill" pattern, প্রথম ব্যবহার: AI চ্যাট ও Documents full-page reorg, ২০২৬-০৯-১৬)।
 // শুধু presentation primitive — কোনো state/business-logic এখানে নেই।
-export function TabPills(tabs, activeId, onChange) {
+export function TabPills(tabs, activeId, onChange, leading) {
   return React.createElement(
     "div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px", marginBottom: "12px" } },
+    leading || null,
     tabs.map(([id, label]) => {
       const active = id === activeId;
       return React.createElement(
