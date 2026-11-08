@@ -7,7 +7,7 @@
 // primitives-এর (shared/ui.js) সাথে সংগতিপূর্ণ।
 //
 // @param {{ unit: string, referenceRange: {low:number, high:number}|null, points: Array<{date:string, value:number}> }} props
-export function TrendChart({ unit, referenceRange, points }) {
+export function TrendChart({ unit, referenceRange, points, targetLine }) {
   const width = 320, height = 180;
   const padding = { top: 16, right: 16, bottom: 24, left: 8 };
   const plotW = width - padding.left - padding.right;
@@ -20,6 +20,7 @@ export function TrendChart({ unit, referenceRange, points }) {
     minV = Math.min(minV, referenceRange.low);
     maxV = Math.max(maxV, referenceRange.high);
   }
+  if (targetLine) { minV = Math.min(minV, targetLine.value); maxV = Math.max(maxV, targetLine.value); }
   if (minV === maxV) { minV -= 1; maxV += 1; }
   const rangePad = (maxV - minV) * 0.15;
   minV -= rangePad; maxV += rangePad;
@@ -37,11 +38,20 @@ export function TrendChart({ unit, referenceRange, points }) {
       })
     : null;
 
+  // ঐচ্ছিক লক্ষ্য-রেখা (ট্র্যাকারের ওজন-চার্ট); অন্য ব্যবহারে targetLine না দিলে কিছু বদলায় না
+  const tLine = targetLine
+    ? [
+        React.createElement("line", { key: "tl", x1: padding.left, x2: padding.left + plotW, y1: yFor(targetLine.value), y2: yFor(targetLine.value), stroke: "#E8892B", strokeWidth: 1.5, strokeDasharray: "5 4" }),
+        React.createElement("text", { key: "tt", x: padding.left + plotW, y: yFor(targetLine.value) - 4, fontSize: 9, textAnchor: "end", fill: "#B5651B" }, targetLine.label),
+      ]
+    : null;
+
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
     React.createElement(
       "svg", { width, height, style: { background: "#fff", border: "1px solid #E5E7EB", borderRadius: "8px" } },
       refBand,
+      ...(tLine || []),
       React.createElement("polyline", { points: linePoints, fill: "none", stroke: "#0E4B43", strokeWidth: 2 }),
       ...points.map((p, i) => React.createElement("circle", { key: "dot" + i, cx: xFor(i), cy: yFor(p.value), r: 3, fill: "#0E4B43" })),
       ...points.map((p, i) => React.createElement("text", {

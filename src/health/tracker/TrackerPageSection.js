@@ -9,6 +9,9 @@ import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
+import { TodayTab } from "./TodayTab.js";
+import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
+import { last30DatesISO } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
 import {
@@ -25,12 +28,12 @@ import { PlanWhyCard } from "./PlanWhyCard.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
-  sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, detectFlagsFromConditions,
+  sleepTargetHours, detectFlagsFromConditions,
 } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
 
-const CARD = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+const CARD = CARD_STYLE;
 const INPUT = { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px" };
 const LABEL = { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", display: "block", margin: "12px 0 6px" };
 
@@ -55,45 +58,6 @@ function Stat({ title, line, pct, color, extra }) {
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px" } }, line),
     pct !== undefined && React.createElement(Bar, { pct, color }),
     extra && React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "6px" } }, extra));
-}
-
-// ---------- আজকের অবস্থা ----------
-function TodayTab({ info }) {
-  const { daily, goal, age, flags, gate } = info;
-  const d = daily || {};
-  const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
-  const [sMin, sMax] = sleepTargetHours(age);
-  const exTarget = exerciseTargetMinPerDay(age);
-  const stTarget = stepsTarget(age);
-  const sleepH = d.sleepMinutes ? d.sleepMinutes / 60 : null;
-  const fmtH = (m) => bnNum(Math.floor(m / 60)) + " ঘ. " + bnNum(m % 60) + " মি.";
-
-  return React.createElement(React.Fragment, null,
-    gate.blocked && React.createElement(Notice, null,
-      React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason,
-      React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে। ওজন নিয়ে চিন্তা থাকলে ডাক্তারের পরামর্শ নিন।"),
-    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ যান।"),
-    calc && React.createElement(Stat, {
-      title: "ক্যালরি", line: "লক্ষ্য: " + bnNum(calc.calorieTarget) + " কিলোক্যালরি/দিন (" + GOAL_LABELS[goal.goalType] + ")",
-      pct: (((d.caloriesIn || 0) / calc.calorieTarget) * 100), color: "#E0A100",
-      extra: "খাওয়া হয়েছে: " + bnNum(d.caloriesIn || 0) + " · খাওয়া যাবে আরও " + bnNum(Math.max(0, calc.calorieTarget - (d.caloriesIn || 0))) + " (প্ল্যান → মিলে টিক দিলে যোগ হয়)",
-    }),
-    React.createElement(Stat, {
-      title: "ব্যায়াম", line: bnNum(d.exerciseMin || 0) + " / " + bnNum(exTarget) + " মিনিট" + (stTarget ? " · স্টেপ " + bnNum(d.steps || 0) + " / " + bnNum(stTarget) : ""),
-      pct: ((d.exerciseMin || 0) / exTarget) * 100, color: "#17705F",
-    }),
-    !flags.kidney && React.createElement(Stat, {
-      title: "পানি", line: bnNum(d.waterGlasses || 0) + " / " + bnNum(age !== null && age < 13 ? 6 : 8) + " গ্লাস",
-      pct: ((d.waterGlasses || 0) / (age !== null && age < 13 ? 6 : 8)) * 100, color: "#2F7FD1",
-    }),
-    flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
-    React.createElement(Stat, {
-      title: "রাতের ঘুম", line: d.sleepMinutes ? fmtH(d.sleepMinutes) + " · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘণ্টা" + (d.sleep && d.sleep.quality ? " · মান " + bnNum(d.sleep.quality) + "/৫" : "") : "আজ এখনো দেওয়া হয়নি · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘণ্টা",
-      pct: sleepH ? (sleepH / sMin) * 100 : 0, color: "#6B5BD2",
-    }),
-    d.weightKg && React.createElement(Stat, { title: "আজকের ওজন", line: bnNum(d.weightKg) + " কেজি" }),
-    React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।")
-  );
 }
 
 // টিক-বাটন (৪৪px)
@@ -158,6 +122,8 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   return React.createElement("div", null,
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } },
       "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
+    React.createElement(Bar, { pct: ((d.caloriesIn || 0) / calc.calorieTarget) * 100, color: T.amber }),
+    React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "4px 0 10px" } }, "আজ খাওয়া হয়েছে " + bnNum(d.caloriesIn || 0) + " কিলোক্যালরি"),
     plan.total < calc.calorieTarget - 100 && warnings.length === 0 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
     plan.notes.length > 0 && React.createElement(Notice, null, plan.notes.map((n, i) => React.createElement("div", { key: i }, n))),
@@ -167,6 +133,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
       return React.createElement("div", { key: s.id, style: CARD },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+          React.createElement("div", { "aria-hidden": "true", style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "12px", background: SLOT_TINT[s.id] || T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px" } }, SLOT_ICON[s.id] || "🍽"),
           React.createElement("div", { style: { flex: 1 } },
             React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, s.label + " · " + bnTimeHM(s.time) + (plan.custom.includes(s.id) ? " · আমার" : "")),
             React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px", lineHeight: 1.5 } }, (s.items.length ? s.items.map((i) => i.text).join(", ") : "এই বেলা বাদ") + " · " + bnNum(s.kcal)),
@@ -328,11 +295,12 @@ function TrendTab({ info, familyId, memberId }) {
     React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, title),
     sub && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", margin: "2px 0 6px" } }, sub), body);
   const none = (txt) => React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", padding: "8px 0" } }, txt);
+  const targetKg = !gate.blocked && goal && Number(goal.targetWeightKg) > 0 ? Number(goal.targetWeightKg) : null;
   const wPts = t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg }));
   const points = reviewPoints(t, bnNum);
 
   return React.createElement("div", null,
-    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length ? React.createElement(TrendChart, { unit: "কেজি", referenceRange: null, points: wPts }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
+    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length ? React.createElement(TrendChart, { unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
     calorieTarget && card("ক্যালরি (লক্ষ্য " + bnNum(calorieTarget) + ")", "বিন্দু-রেখা = লক্ষ্য", t.calDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.calories), target: calorieTarget, color: "#E0A100" }) : none("এই সপ্তাহে মিল টিক দেওয়া হয়নি।")),
     card("ঘুম (ঘণ্টা, লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + ")", "বিন্দু-রেখা = সর্বনিম্ন লক্ষ্য", t.sleepDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.sleepH), target: sMin, color: "#6B5BD2" }) : none("এই সপ্তাহে ঘুমের তথ্য দেওয়া হয়নি।")),
     card("সাপ্তাহিক রিভিউ", "শুধু আপনার দেওয়া তথ্য থেকে",
@@ -540,13 +508,14 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
     if (!selectedMemberId) return;
     setErr(null);
     try {
-      const [recs, goal, daily, week] = await Promise.all([
+      const [recs, goal, daily, recent] = await Promise.all([
         listHealthRecords(familyId, selectedMemberId),
         getGoal(familyId, selectedMemberId),
         getDaily(familyId, selectedMemberId, todayISO()),
-        getWeekDaily(familyId, selectedMemberId, weekDatesISO()),
+        getWeekDaily(familyId, selectedMemberId, last30DatesISO()),
       ]);
-      const weekMin = week.reduce((a, x) => a + (x.exerciseMin || 0), 0);
+      const weekDates = weekDatesISO();
+      const weekMin = recent.filter((x) => weekDates.includes(x.date)).reduce((a, x) => a + (x.exerciseMin || 0), 0);
       const allergyTags = allergyTagsOf(recs.filter((r) => r.resourceType === "allergy").map((r) => r.substance));
       const member = (members || []).find((m) => m.id === selectedMemberId) || null;
       const h = recs.find((r) => isType(r, ["height", "উচ্চতা"]));
@@ -560,7 +529,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ weekMin, allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ weekMin, recent, allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
@@ -576,7 +545,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       err && ErrorBox(err),
       !selectedMemberId && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে..."),
       selectedMemberId && !data && !err && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
-      data && tab === "today" && React.createElement(TodayTab, { info: data }),
+      data && tab === "today" && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && tab === "plan" && React.createElement(PlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "reminder" && React.createElement(ReminderSettings, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, callerMemberId, onSaved: load }),
