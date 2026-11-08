@@ -124,20 +124,26 @@ function RemedyGroup({ title, list }) {
   );
 }
 
-export function RemedySection({ familyId, selectedMemberId }) {
+const MODE_LABEL = { herbal: "Herbal / ভেষজ", homeopathy: "Homeopathy / হোমিওপ্যাথি" };
+
+// mode: "herbal" | "homeopathy" — শুধু সেই চিকিৎসা-ধরনের তালিকা ও প্রশ্ন-বক্স। mode না দিলে আগের মতো দুটোই (তুলনা-সহ)।
+export function RemedySection({ familyId, selectedMemberId, mode }) {
   const [herbal, setHerbal] = useState(null);
   const [homeo, setHomeo] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [compareMode, setCompareMode] = useState(false);
 
   useEffect(() => {
-    Promise.all([listVerifiedRemedies("herbal"), listVerifiedRemedies("homeopathy")])
+    Promise.all([
+      mode === "homeopathy" ? Promise.resolve([]) : listVerifiedRemedies("herbal"),
+      mode === "herbal" ? Promise.resolve([]) : listVerifiedRemedies("homeopathy"),
+    ])
       .then(([h, ho]) => {
         setHerbal(h);
         setHomeo(ho);
       })
       .catch((e) => setLoadErr(e.message || String(e)));
-  }, []);
+  }, [mode]);
 
   if (loadErr) return ErrorBox(loadErr);
   if (herbal === null || homeo === null) {
@@ -148,8 +154,8 @@ export function RemedySection({ familyId, selectedMemberId }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" } },
-      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "Herbal / Homeopathy — Evidence-Level Reference"),
-      React.createElement(
+      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, (mode ? MODE_LABEL[mode] : "Herbal / Homeopathy") + " — Evidence-Level Reference"),
+      !mode && React.createElement(
         "button",
         {
           onClick: () => setCompareMode((v) => !v),
@@ -162,9 +168,9 @@ export function RemedySection({ familyId, selectedMemberId }) {
       ? React.createElement(ComparisonView, { herbal, homeo })
       : React.createElement(
           React.Fragment, null,
-          React.createElement(RemedyGroup, { title: "Herbal / ভেষজ", list: herbal }),
-          React.createElement(RemedyGroup, { title: "Homeopathy", list: homeo })
+          mode !== "homeopathy" && React.createElement(RemedyGroup, { title: "Herbal / ভেষজ", list: herbal }),
+          mode !== "herbal" && React.createElement(RemedyGroup, { title: "Homeopathy", list: homeo })
         ),
-    React.createElement(HerbalHomeopathyChat, { familyId, selectedMemberId })
+    React.createElement(HerbalHomeopathyChat, { familyId, selectedMemberId, mode })
   );
 }

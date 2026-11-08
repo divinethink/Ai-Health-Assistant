@@ -18,7 +18,14 @@ const { useState, useEffect } = React;
 
 // member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
 // (AIChatSection → RemedySection)-এর `selectedMemberId` প্রপ ব্যবহার।
-export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
+// mode: "herbal" | "homeopathy" (না দিলে দুটোই) — AI-কে শুধু ওই ধরনের চিকিৎসা নিয়ে বলতে বিষয়-ইঙ্গিত যায়।
+const MODE_TEXT = {
+  herbal: { title: "Herbal / ভেষজ", hint: "[বিষয়: শুধু ভেষজ চিকিৎসা] ", sample: "যেমন: সর্দি-কাশিতে কী ভেষজ সাহায্য করতে পারে?" },
+  homeopathy: { title: "Homeopathy / হোমিওপ্যাথি", hint: "[বিষয়: শুধু হোমিওপ্যাথি] ", sample: "যেমন: হোমিওপ্যাথিতে সর্দি-কাশির সাধারণ ধারণা কী?" },
+};
+
+export function HerbalHomeopathyChat({ familyId, selectedMemberId, mode }) {
+  const mt = MODE_TEXT[mode] || { title: "Herbal / Homeopathy", hint: "", sample: "যেমন: সর্দি-কাশিতে কী ভেষজ সাহায্য করতে পারে?" };
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -48,7 +55,7 @@ export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
     setRetryNote(null);
     setResponse(null);
     try {
-      const { context, ageYears } = await assembleHealthContext(familyId, targetMemberId, null, { symptoms: text });
+      const { context, ageYears } = await assembleHealthContext(familyId, targetMemberId, null, { symptoms: mt.hint + text });
       context.specialty = "herbal-homeopathy"; // দেখুন উপরের নোট — definitional override
       const data = await askAI(familyId, context, [], {
         onRetry: (attempt, max) => setRetryNote("একটু অপেক্ষা করুন... (retry " + attempt + "/" + max + ")"),
@@ -73,11 +80,11 @@ export function HerbalHomeopathyChat({ familyId, selectedMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "Herbal / Homeopathy — জিজ্ঞাসা করুন"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, mt.title + " — জিজ্ঞাসা করুন"),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
       "সাধারণ ভেষজ/হোমিওপ্যাথি তথ্য — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন। কোনো dose/মাত্রা এখানে বলা হবে না, শুধু evidence-level-সচেতন সাধারণ তথ্য।"
     ),
-    TextField("আপনার প্রশ্ন (যেমন: সর্দি-কাশিতে কী ভেষজ সাহায্য করতে পারে?)", question, setQuestion, "এখানে লিখুন..."),
+    TextField("আপনার প্রশ্ন (" + mt.sample + ")", question, setQuestion, "এখানে লিখুন..."),
 
     React.createElement(
       "details", { style: { marginTop: "10px", fontSize: "14px", color: "#3E4E49", background: "#F3F6F5", padding: "8px 10px", borderRadius: "10px", border: "1px solid #D3E0D9" } },

@@ -31,8 +31,10 @@ const { useState } = React;
 const TABS = [
   ["symptom-check", "tab.symptom"],
   ["medical-science", "tab.medsci"],
-  ["herbal-homeopathy", "tab.herbal"],
-  ["nutrition-fitness", "tab.nutrition"],
+  ["herbal", "tab.herbal"],
+  ["homeopathy", "tab.homeo"],
+  ["nutrition", "tab.nutrition"],
+  ["fitness", "tab.fitness"],
 ];
 
 export function AIChatSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
@@ -50,8 +52,10 @@ export function AIChatSection({ familyId, callerMemberId, selectedMemberId, topO
           React.Fragment, null,
           tab === "symptom-check" && React.createElement(TriageForm, { familyId, callerMemberId, selectedMemberId }),
           tab === "medical-science" && React.createElement(MedicalScienceChat, { familyId, selectedMemberId }),
-          tab === "herbal-homeopathy" && React.createElement(RemedySection, { familyId, selectedMemberId }),
-          tab === "nutrition-fitness" && React.createElement(NutritionGuidance, { familyId, selectedMemberId })
+          tab === "herbal" && React.createElement(RemedySection, { key: "herbal", familyId, selectedMemberId, mode: "herbal" }),
+          tab === "homeopathy" && React.createElement(RemedySection, { key: "homeopathy", familyId, selectedMemberId, mode: "homeopathy" }),
+          tab === "nutrition" && React.createElement(NutritionGuidance, { key: "nutrition", familyId, selectedMemberId, focus: "nutrition" }),
+          tab === "fitness" && React.createElement(NutritionGuidance, { key: "fitness", familyId, selectedMemberId, focus: "fitness" })
         )
     )
   );

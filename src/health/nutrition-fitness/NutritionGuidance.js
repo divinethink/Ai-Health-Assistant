@@ -24,7 +24,14 @@ const { useState, useEffect } = React;
 
 // member-selector unification (owner-request): নিজস্ব dropdown সরিয়ে parent
 // (AIChatSection)-এর `selectedMemberId` প্রপ ব্যবহার।
-export function NutritionGuidance({ familyId, selectedMemberId }) {
+// focus: "nutrition" | "fitness" — পুষ্টি ও ব্যায়াম এখন আলাদা ট্যাব; AI-কে শুধু ওই বিষয়ে বলতে ইঙ্গিত যায়।
+const FOCUS_TEXT = {
+  nutrition: { title: "Nutrition / পুষ্টি", hint: "[বিষয়: শুধু খাদ্য ও পুষ্টি] ", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি", note: "সাধারণ খাদ্য-সংক্রান্ত পরামর্শ" },
+  fitness: { title: "Fitness / ব্যায়াম", hint: "[বিষয়: শুধু ব্যায়াম ও ফিটনেস] ", sample: "যেমন: ব্যায়ামের পরিকল্পনা, হাঁটার অভ্যাস", note: "সাধারণ ব্যায়াম-সংক্রান্ত পরামর্শ" },
+};
+
+export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
+  const ft = FOCUS_TEXT[focus] || { title: "Nutrition / Fitness", hint: "", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা", note: "সাধারণ খাদ্য/ব্যায়াম-সংক্রান্ত পরামর্শ" };
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -61,7 +68,7 @@ export function NutritionGuidance({ familyId, selectedMemberId }) {
     setRetryNote(null);
     setResponse(null);
     try {
-      const { context, ageYears } = await assembleHealthContext(familyId, targetMemberId, null, { symptoms: text });
+      const { context, ageYears } = await assembleHealthContext(familyId, targetMemberId, null, { symptoms: ft.hint + text });
       context.specialty = "nutrition-fitness"; // দেখুন উপরের নোট — keyword-detection বাইপাস, definitional override
 
       // Diet/Food Guidance grounding (amendment item ১) — member-এর
@@ -71,6 +78,7 @@ export function NutritionGuidance({ familyId, selectedMemberId }) {
       // safe-default: কিছুই পাওয়া না গেলে dietGuidanceContext পাঠানো হয় না)।
       let guidance = null;
       try {
+        if (focus === "fitness") throw new Error("skip-diet-grounding"); // ব্যায়াম-ট্যাবে খাদ্য-তালিকা দরকার নেই
         const allRules = await listVerifiedDietGuidanceRules();
         const tags = [
           ...(context.relevantClinicalContext.relevantConditions || []),
@@ -104,11 +112,11 @@ export function NutritionGuidance({ familyId, selectedMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: "0 0 8px" } }, "Nutrition / Fitness Guidance"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: "0 0 8px" } }, ft.title),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
-      "সাধারণ খাদ্য/ব্যায়াম-সংক্রান্ত পরামর্শ — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন।"
+      ft.note + " — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন।"
     ),
-    TextField("আপনার প্রশ্ন (যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা)", question, setQuestion, "এখানে লিখুন..."),
+    TextField("আপনার প্রশ্ন (" + ft.sample + ")", question, setQuestion, "এখানে লিখুন..."),
 
     // Cloud AI Hosting Disclosure (roadmap §13) — TriageForm.js-এর একই টেক্সট/প্যাটার্ন পুনর্ব্যবহার।
     React.createElement(
