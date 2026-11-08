@@ -481,6 +481,31 @@ service cloud.firestore {
         allow delete: if request.auth != null && request.auth.uid == resource.data.targetUid;
       }
 
+      // হেলথ ট্র্যাকার (লক্ষ্য + দৈনিক ডাটা) — memberId-ভিত্তিক, healthRecords-এর
+      // একই hasReadAccess/hasWriteAccess/hasDeleteAccess। কড়া field-allowlist।
+      match /healthTracker/{docId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && request.resource.data.type in ['goal', 'daily']
+          && request.resource.data.keys().hasOnly([
+               'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
+               'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'sources', 'weightObsId',
+               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && request.resource.data.type == resource.data.type
+          && request.resource.data.keys().hasOnly([
+               'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
+               'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'sources', 'weightObsId',
+               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
+      }
+
       match /healthCalendarEvents/{eventId} {
         allow read: if request.auth != null && isFamilyMember(familyId);
         allow create: if request.auth != null

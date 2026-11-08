@@ -37,9 +37,9 @@ export function useLang() {
 
 const DICT = {
   bn: {
-    "nav.home": "হোম", "nav.aichat": "এআই চ্যাট", "nav.blog": "ব্লগ", "nav.docs": "নথিপত্র", "nav.menu": "মেনু",
+    "nav.home": "হোম", "nav.aichat": "এআই চ্যাট", "nav.blog": "ব্লগ", "nav.tracker": "ট্র্যাকার", "nav.docs": "নথিপত্র", "nav.menu": "মেনু",
 
-    "title.home": "🏠 স্বাস্থ্য রেকর্ড", "title.aichat": "🩺 এআই চ্যাট", "title.blog": "🌿 স্বাস্থ্য ব্লগ",
+    "title.home": "🏠 স্বাস্থ্য রেকর্ড", "title.aichat": "🩺 এআই চ্যাট", "title.blog": "🌿 স্বাস্থ্য ব্লগ", "title.tracker": "📈 হেলথ ট্র্যাকার",
     "title.docs": "📁 নথিপত্র", "title.menu": "☰ মেনু",
 
     "tab.profile": "প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
@@ -79,9 +79,9 @@ const DICT = {
     "err.denied": "এই সদস্যের স্বাস্থ্য রেকর্ডে পরিবর্তন করার অনুমতি আপনার নেই।",
   },
   en: {
-    "nav.home": "Home", "nav.aichat": "AI Chat", "nav.blog": "Blog", "nav.docs": "Documents", "nav.menu": "Menu",
+    "nav.home": "Home", "nav.aichat": "AI Chat", "nav.blog": "Blog", "nav.tracker": "Tracker", "nav.docs": "Documents", "nav.menu": "Menu",
 
-    "title.home": "🏠 Health Records", "title.aichat": "🩺 AI Chat", "title.blog": "🌿 Health Blog",
+    "title.home": "🏠 Health Records", "title.aichat": "🩺 AI Chat", "title.blog": "🌿 Health Blog", "title.tracker": "📈 Health Tracker",
     "title.docs": "📁 Documents", "title.menu": "☰ Menu",
 
     "tab.profile": "Profile", "tab.records": "Health Info", "tab.diet": "Diet Guide",

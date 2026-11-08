@@ -11,7 +11,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, getDoc, deleteDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, deleteField, collection, query, where } from 'firebase/firestore';
 
 const FAMILY_ID = 'fam1';
 const ADMIN_UID = 'admin-uid-1';
@@ -30,6 +30,7 @@ function dbAs(uid, token) {
 }
 
 const famDoc = (db, ...path) => doc(db, 'families', FAMILY_ID, ...path);
+const famCol = (db, ...path) => collection(db, 'families', FAMILY_ID, ...path);
 
 async function seedFamily(familyId, adminUids, extra = {}) {
   await seed(async (db) => {
@@ -705,6 +706,48 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(updateDoc(famDoc(dbAs('uidA'), 'notifications', 'n1'), { read: true }));
       await assertSucceeds(getDoc(famDoc(dbAs('uidB'), 'notifications', 'n1')));
       await assertSucceeds(updateDoc(famDoc(dbAs('uidB'), 'notifications', 'n1'), { read: true }));
+    });
+  });
+
+  // ============================================================
+  describe('12. Health tracker (healthTracker)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const tr = (memberId, editor, extra = {}) => ({
+      type: 'daily', memberId, date: '2026-11-08', waterGlasses: 5, sources: { waterGlasses: 'manual' },
+      lastEditedByMemberId: editor, createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+
+    it('12. owner নিজের tracker doc তৈরি, পড়া (query), update ও delete করতে পারেন', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'daily_mA_2026-11-08'), tr('mA', 'mA')));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'daily_mA_2026-11-08'), { steps: 100, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(getDocs(query(famCol(db, 'healthTracker'), where('memberId', '==', 'mA'), where('date', '==', '2026-11-08'))));
+      await assertSucceeds(deleteDoc(famDoc(db, 'healthTracker', 'daily_mA_2026-11-08')));
+    });
+
+    it('12b. grant ছাড়া অন্য সদস্য পড়তে/লিখতে পারেন না; approved grant থাকলে পারেন', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 't1'), tr('mA', 'mA')); });
+      await assertFails(getDocs(query(famCol(dbAs('uidB'), 'healthTracker'), where('memberId', '==', 'mA'))));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 't2'), tr('mA', 'mB')));
+      await seedGrant('mA', 'mB');
+      await assertSucceeds(getDocs(query(famCol(dbAs('uidB'), 'healthTracker'), where('memberId', '==', 'mA'))));
+      await assertSucceeds(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 't3'), tr('mA', 'mB')));
+    });
+
+    it('12c. অবৈধ type, অজানা field ও lastEditedBy spoof reject', async () => {
+      const db = dbAs('uidA');
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'x1'), tr('mA', 'mA', { type: 'bogus' })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'x2'), tr('mA', 'mA', { surprise: 1 })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'x3'), tr('mA', 'mB')));
+    });
+
+    it('12d. update-এ memberId বদলানো reject; non-owner delete reject', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 't1'), tr('mA', 'mA')); });
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 't1'), { memberId: 'mB', lastEditedByMemberId: 'mA' }));
+      await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'healthTracker', 't1')));
     });
   });
 

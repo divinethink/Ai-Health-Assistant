@@ -30,6 +30,7 @@ import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
+import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
 import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
 import { listMembers } from "./familyIdentity.js";
 
@@ -65,6 +66,7 @@ const BOTTOM_NAV_HEIGHT = 56;
 const NAV_TABS = [
   ["home", "🏠", "nav.home"],
   ["aichat", "🩺", "nav.aichat"],
+  ["tracker", "📈", "nav.tracker"],
   ["blog", "📚", "nav.blog"],
   ["documents", "📁", "nav.docs"],
   ["menu", "☰", "nav.menu"],
@@ -413,7 +415,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   );
 }
 
-const TAB_TITLES = { home: "title.home", aichat: "title.aichat", blog: "title.blog", documents: "title.docs", menu: "title.menu" };
+const TAB_TITLES = { home: "title.home", aichat: "title.aichat", tracker: "title.tracker", blog: "title.blog", documents: "title.docs", menu: "title.menu" };
 
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   useLang(); // ভাষা বদলালে পুরো স্ক্রিন নতুন করে আঁকা হয় (state অক্ষত থাকে)
@@ -448,7 +450,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   }
 
   // হেডার এখন দুই স্তর: (১) TopBar — পেজের নাম + সদস্য-বাছাই + অ্যাকাউন্ট, (২) পেজের নিজস্ব ট্যাব-পিল।
-  const showMemberSelect = members && members.length > 1 && ["home", "aichat", "documents"].includes(activeTab);
+  const showMemberSelect = members && members.length > 1 && ["home", "aichat", "tracker", "documents"].includes(activeTab);
   const topOffsetPx = 44;
 
   let tabContent;
@@ -456,6 +458,8 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
     tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+  } else if (activeTab === "tracker") {
+    tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else if (activeTab === "documents") {
