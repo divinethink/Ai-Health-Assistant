@@ -8,7 +8,7 @@
 import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
+import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
 import { TodayTab } from "./TodayTab.js";
 import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { last30DatesISO } from "./todaySummary.js";
@@ -29,8 +29,7 @@ import { PlanWhyCard } from "./PlanWhyCard.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
-  sleepTargetHours, detectFlagsFromConditions,
-} from "./trackerCalc.js";
+  sleepTargetHours, detectFlagsFromConditions, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -121,6 +120,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const sheetSlot = sheet ? plan.slots.find((s) => s.id === sheet) : null;
 
   return React.createElement("div", null,
+    isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ উপবাস-দিন — ক্যালরি-টার্গেট আজ স্থগিত। মিল-প্ল্যান শুধু দেখার জন্য; আজকের ক্যালরি দিয়ে স্ট্রিক ভাঙে না।"),
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } },
       "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
     React.createElement(Bar, { pct: ((d.caloriesIn || 0) / calc.calorieTarget) * 100, color: T.amber }),
@@ -290,7 +290,7 @@ function TrendTab({ info, familyId, memberId }) {
   const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
   const [sMin, sMax] = sleepTargetHours(age);
   const plan = exercisePlan(age, goal ? goal.goalType : null);
-  const t = buildTrend(docs, dates, { calorieTarget, sleepMinH: sMin, weeklyExerciseTarget: plan ? plan.weeklyTargetMin : null });
+  const t = buildTrend(docs, dates, { calorieTarget, fastDays: info.fastDays, sleepMinH: sMin, weeklyExerciseTarget: plan ? plan.weeklyTargetMin : null });
   const labels = dates.map((d) => bnNum(Number(d.slice(8))));
   const card = (title, sub, body) => React.createElement("div", { style: CARD },
     React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, title),
@@ -416,6 +416,57 @@ function InputTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   );
 }
 
+// ---------- উপবাস-দিবস মোড + ব্যক্তিগত পানির লক্ষ্য (পার্ট ১০) ----------
+// গেট: fastModeGate (সেফটি-গেটের উপর) — ব্লক হলে দিন-বাছাই দেখানোই হয় না, সেভে [] লেখা হয়।
+function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved }) {
+  const g = goal || {};
+  const gate = fastModeGate({ age, flags });
+  const [days, setDays] = useState(() => sanitizeFastDays(g.fastDays));
+  const [water, setWater] = useState(g.waterTarget ? String(g.waterTarget) : "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [ok, setOk] = useState(false);
+  const defaultWater = waterTargetFor(age, flags);
+  const waterLocked = defaultWater === null; // কিডনি/<২ বছর: ওভাররাইড চলে না
+  const toggle = (i) => { setOk(false); setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : d.length >= MAX_FAST_DAYS ? d : [...d, i].sort((a, b) => a - b))); };
+
+  const submit = async () => {
+    setErr(null); setOk(false);
+    const fd = gate.blocked ? [] : days;
+    const e = checkFastDaysInput(fd, { age, flags }) || (waterLocked ? null : checkWaterTargetInput(water));
+    if (e) { setErr(e); return; }
+    setBusy(true);
+    try {
+      await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: fd, waterTarget: waterLocked ? null : water }, goal);
+      setOk(true);
+      await onSaved();
+    } catch (x) {
+      setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x)));
+    } finally { setBusy(false); }
+  };
+
+  return React.createElement("div", { style: CARD },
+    React.createElement("b", null, "উপবাস-দিবস ও পানির লক্ষ্য (ঐচ্ছিক)"),
+    gate.blocked
+      ? React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, "🌙 " + gate.reason))
+      : React.createElement("div", null,
+        React.createElement("label", { style: LABEL }, "উপবাস/রোজার দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+          DAY_LABELS.map((lbl, i) => React.createElement("button", {
+            key: i, onClick: () => toggle(i), "aria-pressed": days.includes(i), disabled: busy,
+            style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid #0E4B43", background: days.includes(i) ? "#0E4B43" : "#fff", color: days.includes(i) ? "#fff" : "#0E4B43" },
+          }, lbl))),
+        React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px", lineHeight: 1.5 } }, "উপবাস-দিনে ক্যালরি-টার্গেট স্থগিত থাকে এবং স্ট্রিক ভাঙে না। শরীর খারাপ লাগলে উপবাস ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
+    !waterLocked && React.createElement("div", null,
+      React.createElement("label", { style: LABEL }, "পানির লক্ষ্য (গ্লাস/দিন) — খালি রাখলে সাধারণ গাইড: " + bnNum(defaultWater)),
+      React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => { setWater(e.target.value); setOk(false); }, style: INPUT }),
+      React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px" } }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।")),
+    waterLocked && React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "8px" } }, "এই ক্ষেত্রে পানির পরিমাণ ডাক্তার ঠিক করেন — তাই লক্ষ্য দেওয়া যায় না।"),
+    err && ErrorBox(err),
+    ok && React.createElement(Notice, { tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
+    PrimaryButton("সংরক্ষণ", submit, busy));
+}
+
 // ---------- লক্ষ্য ----------
 function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const { goal, age, member, heightCm, weightKg, detected } = info;
@@ -488,6 +539,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", value: target, onChange: (e) => setTarget(e.target.value), style: INPUT }),
           React.createElement("label", { style: LABEL }, "কত সপ্তাহে"),
           React.createElement("input", { type: "number", inputMode: "numeric", value: weeks, onChange: (e) => setWeeks(e.target.value), style: INPUT }))),
+    React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved }),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
     result && !result.blocked && React.createElement(Notice, { tone: "info" },
@@ -530,7 +582,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ weekMin, recent, activeMeds: activeMedNames(recs), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ weekMin, recent, activeMeds: activeMedNames(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));

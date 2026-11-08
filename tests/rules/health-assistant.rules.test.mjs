@@ -785,6 +785,51 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
+  // পার্ট ১০: goal-এর নতুন ঐচ্ছিক ফিল্ড fastDays / waterTarget
+  describe('12h. Tracker goal: fastDays ও waterTarget', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const goal = (extra = {}) => ({
+      type: 'goal', memberId: 'mA', sources: {}, lastEditedByMemberId: 'mA', createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+
+    it('12h-1. owner বৈধ fastDays/waterTarget লিখতে পারেন (তৈরি, merge, খালি/null সহ)', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goal({ fastDays: [0, 3], waterTarget: 12 })));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { fastDays: [6], waterTarget: 1, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { fastDays: [], waterTarget: null, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { waterTarget: 20, lastEditedByMemberId: 'mA' }, { merge: true }));
+    });
+
+    it('12h-2. অবৈধ ধরন/সীমা/অতিরিক্ত ফিল্ড reject; daily-ডকে এই ফিল্ড চলে না', async () => {
+      const db = dbAs('uidA');
+      const f = (id, d) => assertFails(setDoc(famDoc(db, 'healthTracker', id), d));
+      await f('z1', goal({ fastDays: [0, 1, 2] }));          // ২টির বেশি
+      await f('z2', goal({ fastDays: [7] }));                // সীমার বাইরে
+      await f('z3', goal({ fastDays: [-1] }));
+      await f('z4', goal({ fastDays: [1, 1] }));             // ডুপ্লিকেট
+      await f('z5', goal({ fastDays: ['1'] }));              // ভুল ধরন
+      await f('z6', goal({ fastDays: 'sat' }));
+      await f('z7', goal({ waterTarget: 0 }));
+      await f('z8', goal({ waterTarget: 21 }));
+      await f('z9', goal({ waterTarget: 8.5 }));
+      await f('z10', goal({ waterTarget: '8' }));
+      await f('z11', { ...goal({ fastDays: [1] }), type: 'daily', date: '2026-11-08' });
+      await f('z12', { ...goal({ waterTarget: 8 }), type: 'daily', date: '2026-11-08' });
+    });
+
+    it('12h-3. অন্যের ডকে (grant ছাড়া) লেখা যায় না; update-পথেও একই নিয়ম', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goal()); });
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { fastDays: [1], lastEditedByMemberId: 'mB' }, { merge: true }));
+      await assertFails(updateDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { waterTarget: 10, lastEditedByMemberId: 'mB' }));
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { fastDays: [9], lastEditedByMemberId: 'mA' }));
+      await assertSucceeds(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { fastDays: [2, 5], waterTarget: 9, lastEditedByMemberId: 'mA' }));
+    });
+  });
+
+  // ============================================================
   describe('11. Global reference DB ও General Chat', () => {
     it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {
       await seed(async (db) => {

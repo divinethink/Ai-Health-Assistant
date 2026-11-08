@@ -103,15 +103,70 @@ export function sleepTargetHours(age) {
 }
 
 // বয়সভিত্তিক সাধারণ পানির লক্ষ্য (গ্লাস/দিন) — সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।
-// কিডনি রোগ বা <২ বছর → null (লক্ষ্য নেই: ডাক্তার/শিশুর দুধের নির্দেশ); বয়স অজানা → ৮ (আগের আচরণ)।
-// ব্যান্ড: ২–৪ = ৪, ৫–১২ = ৬, ১৩+ = ৮।
-export function waterTargetFor(age, flags) {
+// কিডনি রোগ বা <২ বছর → null (লক্ষ্য নেই: ডাক্তার/শিশুর দুধের নির্দেশ) — ব্যক্তিগত ওভাররাইডও এটা এড়াতে পারে না।
+// বয়স অজানা → ৮ (আগের আচরণ)। ব্যান্ড: ২–৪ = ৪, ৫–১২ = ৬, ১৩+ = ৮।
+// override (ঐচ্ছিক, goal.waterTarget): ১–২০ পূর্ণসংখ্যা হলে ব্যান্ডের বদলে সেটা; অবৈধ হলে উপেক্ষা (ব্যান্ডই চলে)।
+export const WATER_TARGET_MIN = 1;
+export const WATER_TARGET_MAX = 20;
+export function sanitizeWaterTarget(raw) {
+  const n = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
+  return Number.isInteger(n) && n >= WATER_TARGET_MIN && n <= WATER_TARGET_MAX ? n : null;
+}
+export function checkWaterTargetInput(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return null; // খালি = ডিফল্ট
+  return sanitizeWaterTarget(raw) === null ? "পানির লক্ষ্য " + WATER_TARGET_MIN + "–" + WATER_TARGET_MAX + " এর মধ্যে পূর্ণসংখ্যা দিন।" : null;
+}
+export function waterTargetFor(age, flags, override) {
   if (flags && flags.kidney) return null;
-  if (age === null || age === undefined || Number.isNaN(age)) return 8;
-  if (age < 2) return null;
+  const hasAge = !(age === null || age === undefined || Number.isNaN(age));
+  if (hasAge && age < 2) return null;
+  const o = sanitizeWaterTarget(override);
+  if (o !== null) return o;
+  if (!hasAge) return 8;
   if (age < 5) return 4;
   if (age < 13) return 6;
   return 8;
+}
+
+// ---------- উপবাস-দিবস মোড (পার্ট ১০) ----------
+// goal.fastDays = সর্বোচ্চ ২টি সপ্তাহ-দিনের সূচক, শনি=০ … শুক্র=৬ (exercisePlanData.bdDayIndex-এর মতো)।
+// সেফটি-গেট ব্লক হলে (<১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+, বয়স অজানা) মোড বন্ধ — সেভ-যাচাই ও পড়া, দুই পথেই; UI এড়াতে পারে না।
+export const MAX_FAST_DAYS = 2;
+export const FAST_BLOCK_REASON = "উপবাস-দিবস মোড আপনার ক্ষেত্রে বন্ধ — ডাক্তারের পরামর্শ নিন।";
+
+export function sanitizeFastDays(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  raw.forEach((x) => { if (Number.isInteger(x) && x >= 0 && x <= 6 && !out.includes(x)) out.push(x); });
+  return out.sort((a, b) => a - b).slice(0, MAX_FAST_DAYS);
+}
+export function fastModeGate({ age, flags }) {
+  const g = safetyGate({ age, flags });
+  return g.blocked ? { blocked: true, reason: FAST_BLOCK_REASON } : { blocked: false, reason: null };
+}
+// পড়ার পথ: গেট ব্লক হলে সংরক্ষিত মান থাকলেও [] (পরে ডায়াবেটিস/বয়স ইত্যাদি বদলালে আপনা-আপনি বন্ধ)
+export function activeFastDays(goal, { age, flags }) {
+  if (fastModeGate({ age, flags }).blocked) return [];
+  return sanitizeFastDays(goal && goal.fastDays);
+}
+// সেভের আগে যাচাই: ত্রুটি-বার্তা অথবা null। খালি তালিকা (মোড বন্ধ করা) সবসময় বৈধ।
+export function checkFastDaysInput(raw, { age, flags }) {
+  if (!Array.isArray(raw)) return "উপবাস-দিন বাছুন।";
+  if (raw.length === 0) return null;
+  if (fastModeGate({ age, flags }).blocked) return FAST_BLOCK_REASON;
+  if (raw.length > MAX_FAST_DAYS) return "সর্বোচ্চ " + MAX_FAST_DAYS + " দিন বাছা যায়।";
+  if (sanitizeFastDays(raw).length !== raw.length) return "অবৈধ দিন।";
+  return null;
+}
+// dateISO "YYYY-MM-DD" → শনি=০ … শুক্র=৬
+export function weekdayIndexOf(dateISO) {
+  const d = new Date(dateISO + "T00:00:00");
+  return Number.isNaN(d.getTime()) ? null : (d.getDay() + 1) % 7;
+}
+export function isFastDate(dateISO, fastDays) {
+  if (!Array.isArray(fastDays) || fastDays.length === 0) return false;
+  const i = weekdayIndexOf(dateISO);
+  return i !== null && fastDays.includes(i);
 }
 
 // WHO সাধারণ গাইড: প্রাপ্তবয়স্ক সপ্তাহে ১৫০ মিনিট (দৈনিক ~৩০), শিশু-কিশোর দৈনিক ৬০ মিনিট

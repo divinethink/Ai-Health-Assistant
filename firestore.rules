@@ -88,7 +88,7 @@ service cloud.firestore {
       return isAdminOfFamily(familyId) || isOwnerOfMember(familyId, targetMemberId);
     }
 
-    // healthTracker-এর নতুন ঐচ্ছিক ফিল্ড (ট্র্যাকার ধাপ B): planPrefs শুধু goal-ডকে,
+    // healthTracker-এর নতুন ঐচ্ছিক ফিল্ড (ট্র্যাকার ধাপ B/পার্ট ১০): planPrefs/fastDays/waterTarget শুধু goal-ডকে,
     // extraFoods/exerciseLog শুধু daily-ডকে; ধরন ও আকার-সীমা (গভীর যাচাই client-এর lib/planPrefs.js-এ)।
     function trackerPlanFieldsOk(d) {
       let planOk = !('planPrefs' in d) || (d.type == 'goal' && d.planPrefs is map
@@ -97,7 +97,14 @@ service cloud.firestore {
         && (!('exercise' in d.planPrefs) || (d.planPrefs.exercise is map && d.planPrefs.exercise.size() <= 7)));
       let foodsOk = !('extraFoods' in d) || (d.type == 'daily' && d.extraFoods is list && d.extraFoods.size() <= 20);
       let logOk = !('exerciseLog' in d) || (d.type == 'daily' && d.exerciseLog is list && d.exerciseLog.size() <= 20);
-      return planOk && foodsOk && logOk;
+      // পার্ট ১০: ঐচ্ছিক goal-ফিল্ড — fastDays (সর্বোচ্চ ২টি পূর্ণসংখ্যা, ০–৬; [] = মোড বন্ধ), waterTarget (পূর্ণসংখ্যা ১–২০; null = ডিফল্ট)।
+      // সেফটি-গেট (<১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+) client-এর safetyGate-এ (rules-এ বয়স/রোগ নেই); এখানে শুধু ধরন ও সীমা।
+      let fastOk = !('fastDays' in d) || (d.type == 'goal' && d.fastDays is list && d.fastDays.size() <= 2
+        && (d.fastDays.size() < 1 || (d.fastDays[0] is int && d.fastDays[0] >= 0 && d.fastDays[0] <= 6))
+        && (d.fastDays.size() < 2 || (d.fastDays[1] is int && d.fastDays[1] >= 0 && d.fastDays[1] <= 6 && d.fastDays[1] != d.fastDays[0])));
+      let waterOk = !('waterTarget' in d) || (d.type == 'goal'
+        && (d.waterTarget == null || (d.waterTarget is int && d.waterTarget >= 1 && d.waterTarget <= 20)));
+      return planOk && foodsOk && logOk && fastOk && waterOk;
     }
 
     // ============================================================
@@ -504,7 +511,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
@@ -515,7 +522,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);

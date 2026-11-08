@@ -3,6 +3,8 @@
 // ক্যালরি পূরণ = টার্গেটের ৮০%–১১০% — কম খাওয়াকে "সফল" ধরা হয় না।
 // ডেটা শুধু ব্যবহারকারীর নিজের দেওয়া; কিছু বানানো হয় না।
 
+import { isFastDate } from "./trackerCalc.js";
+
 export const STREAK_MAX = 30; // Firestore `in` সীমা (৩০)
 
 const p2 = (n) => String(n).padStart(2, "0");
@@ -25,21 +27,23 @@ export function pctOf(value, target) {
   return ((value || 0) / target) * 100;
 }
 
-// ctx: { calorieTarget|null, exTarget, waterTarget|null, sleepMinH }
-export function metricsOf(doc, ctx) {
+// ctx: { calorieTarget|null, exTarget, waterTarget|null, sleepMinH, fastDays? }
+// ctx.fastDays (পার্ট ১০): উপবাস-দিনে ক্যালরি-লক্ষ্য প্রযোজ্য নয়। date না দিলে doc.date।
+export function metricsOf(doc, ctx, date) {
   const d = doc || {};
+  const onFast = isFastDate(date || d.date, ctx.fastDays);
   const applicable = [];
   const met = [];
   const add = (key, ok) => { applicable.push(key); if (ok) met.push(key); };
-  if (ctx.calorieTarget) add("calories", d.caloriesIn >= ctx.calorieTarget * 0.8 && d.caloriesIn <= ctx.calorieTarget * 1.1);
+  if (ctx.calorieTarget && !onFast) add("calories", d.caloriesIn >= ctx.calorieTarget * 0.8 && d.caloriesIn <= ctx.calorieTarget * 1.1);
   if (ctx.exTarget) add("exercise", (d.exerciseMin || 0) >= ctx.exTarget);
   if (ctx.waterTarget) add("water", (d.waterGlasses || 0) >= ctx.waterTarget);
   if (ctx.sleepMinH) add("sleep", (d.sleepMinutes || 0) >= ctx.sleepMinH * 60);
   return { applicable, met };
 }
 
-export function dayHit(doc, ctx) {
-  const { applicable, met } = metricsOf(doc, ctx);
+export function dayHit(doc, ctx, date) {
+  const { applicable, met } = metricsOf(doc, ctx, date);
   if (!applicable.length || !met.length) return false;
   return met.length >= Math.min(2, applicable.length);
 }
@@ -57,20 +61,22 @@ export function streakOf(docs, todayISO, ctx) {
   let count = 0;
   for (let i = 0; i < STREAK_MAX; i++) {
     const date = iso(new Date(y, mo - 1, da - i));
-    if (dayHit(m[date], ctx)) count++;
+    if (dayHit(m[date], ctx, date)) count++;
+    else if (isFastDate(date, ctx.fastDays)) continue; // উপবাস-দিন: গোনাও হয় না, ভাঙেও না
     else if (i > 0) break;
   }
   return count;
 }
 
-// weekDates: শনি–শুক্র (৭টি)। state: "hit" | "miss" | "today" | "future"
+// weekDates: শনি–শুক্র (৭টি)। state: "hit" | "miss" | "today" | "future" | "fast" (উপবাস-দিন, টার্গেট না হলেও miss নয়)
 export function weekSummary(docs, weekDates, todayISO, ctx) {
   const m = byDateMap(docs);
   let hitCount = 0;
   const days = weekDates.map((date) => {
     let state;
     if (date > todayISO) state = "future";
-    else if (dayHit(m[date], ctx)) { state = "hit"; hitCount++; }
+    else if (dayHit(m[date], ctx, date)) { state = "hit"; hitCount++; }
+    else if (isFastDate(date, ctx.fastDays)) state = "fast"; // উপবাস-দিন: miss নয়
     else state = date === todayISO ? "today" : "miss";
     return { date, state };
   });

@@ -5,7 +5,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO } from "./trackerData.js";
 import { weekDatesISO } from "./exercisePlanData.js";
-import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor } from "./trackerCalc.js";
+import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 
@@ -39,14 +39,16 @@ function MiniRing({ value, pct, color, caption, label }) {
 
 export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const { daily, goal, age, flags, gate, recent } = info;
+  const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   const d = daily || {};
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
   const [sMin, sMax] = sleepTargetHours(age);
   const exTarget = exerciseTargetMinPerDay(age);
   const stTarget = stepsTarget(age);
-  const waterTarget = waterTargetFor(age, flags);
+  const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget);
   const today = todayISO();
-  const ctx = { calorieTarget: calc ? calc.calorieTarget : null, exTarget, waterTarget, sleepMinH: sMin };
+  const ctx = { calorieTarget: calc ? calc.calorieTarget : null, exTarget, waterTarget, sleepMinH: sMin, fastDays };
+  const onFast = isFastDate(today, fastDays);
   const streak = streakOf(recent, today, ctx);
   const week = weekSummary(recent, weekDatesISO(), today, ctx);
   const [busy, setBusy] = useState(false);
@@ -72,8 +74,16 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে। ওজন নিয়ে চিন্তা থাকলে ডাক্তারের পরামর্শ নিন।"),
     !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ যান।"),
 
+    // উপবাস-দিন (পার্ট ১০): ক্যালরি-টার্গেট স্থগিত; স্ট্রিক ভাঙে না
+    onFast && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },
+      React.createElement("div", { style: { fontSize: "20px", fontWeight: 800 } }, "🌙 আজ রোজা/উপবাস"),
+      React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "6px", lineHeight: 1.6 } },
+        "আজ ক্যালরি-টার্গেট স্থগিত। পানি পান করুন; সেহরি/ইফতারে হালকা ও সুষম খাবার নিন। শরীর খারাপ লাগলে উপবাস ভাঙুন ও ডাক্তারের পরামর্শ নিন।"),
+      React.createElement("div", { style: { display: "inline-block", marginTop: "10px", padding: "6px 12px", borderRadius: "999px", background: "rgba(255,255,255,0.16)", fontSize: "13px", fontWeight: 600 } },
+        streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক — আজ ভাঙবে না" : "🔥 স্ট্রিক আজ ভাঙবে না")),
+
     // ক্যালরি হিরো-কার্ড + স্ট্রিক
-    calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, display: "flex", alignItems: "center", gap: "16px", padding: "16px" } },
+    !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, display: "flex", alignItems: "center", gap: "16px", padding: "16px" } },
       React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 112, stroke: 13, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
         React.createElement("span", { style: { fontSize: "22px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
         React.createElement("span", { style: { fontSize: "11px", color: T.onDarkSoft } }, "কিলোক্যালরি")),
@@ -111,14 +121,14 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
         React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, bnNum(week.hitCount) + "/৭ দিন টার্গেটে")),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "10px" } },
         week.days.map((x, i) => {
-          const hit = x.state === "hit", isToday = x.state === "today";
+          const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
           return React.createElement("div", { key: x.date, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: 1 } },
             React.createElement("span", { style: { fontSize: "11px", color: T.muted } }, SHORT_DAYS[i]),
-            React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : isToday ? " আজ" : ""), style: { width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
-              background: hit ? T.green : isToday ? T.orange : "transparent", color: hit || isToday ? T.onDark : T.muted,
-              border: hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " #C9C3D6" } }, hit ? "✓" : isToday ? "আজ" : ""));
+            React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : isFast ? " উপবাস-দিন" : isToday ? " আজ" : ""), style: { width: "34px", height: "34px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
+              background: hit ? T.green : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || isToday ? T.onDark : T.muted,
+              border: hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : isToday ? "আজ" : isFast ? "🌙" : ""));
         })),
-      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "8px" } }, "দিন গোনা হয় ক্যালরি/ব্যায়াম/পানি/ঘুমের অন্তত ২টি লক্ষ্য পূরণ হলে।")),
+      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "8px" } }, "দিন গোনা হয় ক্যালরি/ব্যায়াম/পানি/ঘুমের অন্তত ২টি লক্ষ্য পূরণ হলে।" + (fastDays.length ? " 🌙 উপবাস-দিনে ক্যালরি ধরা হয় না, স্ট্রিকও ভাঙে না।" : ""))),
 
     d.weightKg && React.createElement("div", { style: CARD_STYLE },
       React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "আজকের ওজন "), React.createElement("span", { style: { color: T.muted } }, bnNum(d.weightKg) + " কেজি")),
