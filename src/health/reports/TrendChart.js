@@ -7,8 +7,8 @@
 // primitives-এর (shared/ui.js) সাথে সংগতিপূর্ণ।
 //
 // @param {{ unit: string, referenceRange: {low:number, high:number}|null, points: Array<{date:string, value:number}> }} props
-export function TrendChart({ unit, referenceRange, points, targetLine }) {
-  const width = 320, height = 180;
+export function TrendChart({ unit, referenceRange, points, targetLine, height: heightProp }) {
+  const width = 320, height = heightProp || 180;
   const padding = { top: 16, right: 16, bottom: 24, left: 8 };
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;

@@ -1,6 +1,6 @@
 // ছোট SVG bar-chart (নতুন dependency নেই)। values: সংখ্যা বা null; target: আনুমানিক লক্ষ্য-রেখা (ঐচ্ছিক)।
 export function TrendBars({ labels, values, target, color }) {
-  const w = 320, h = 120, pad = { t: 10, r: 8, b: 20, l: 8 };
+  const w = 320, h = 96, pad = { t: 10, r: 8, b: 20, l: 8 };
   const plotW = w - pad.l - pad.r, plotH = h - pad.t - pad.b;
   const max = Math.max(1, target || 0, ...values.map((v) => v || 0)) * 1.1;
   const bw = plotW / values.length;

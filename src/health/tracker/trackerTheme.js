@@ -2,16 +2,16 @@
 // নতুন ট্র্যাকার-UI এখান থেকে নেবে; হাতে hex বসানো নয়।
 
 export const T = {
-  ink: "#1F2D2A", muted: "#5F716C", green: "#0E4B43", green2: "#17705F",
+  ink: "var(--hs-text, #1F2D2A)", muted: "var(--hs-muted, #5F716C)", green: "#0E4B43", green2: "#17705F",
   amber: "#E0A100", amberSoft: "#FFC86B", orange: "#E8892B", blue: "#3B8ED8", blueSoft: "#D6E6F5",
-  purple: "#7B6BC9", leaf: "#2FAE6B", track: "#E4ECE7", surface: "#FFFFFF", canvas: "#F1F6F2",
-  sand: "#FBF1DF", sandBorder: "#EBD9B4", border: "#D9E5DE",
+  purple: "#7B6BC9", leaf: "#2FAE6B", track: "#E4ECE7", surface: "var(--hs-surface, #FFFFFF)", canvas: "var(--hs-bg, #F1F6F2)",
+  sand: "#FBF1DF", sandBorder: "#EBD9B4", border: "var(--hs-border, #D9E5DE)", inputBorder: "#C3D2CA",
   onDark: "#FFFFFF", onDarkSoft: "rgba(255,255,255,0.85)", ringTrackOnDark: "rgba(255,255,255,0.22)",
 };
 
 export const GRADIENT_HERO = "linear-gradient(135deg, #0E4B43, #17705F)";
 
-export const CARD_STYLE = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+export const CARD_STYLE = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "10px 12px", marginBottom: "8px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
 // বেলা-আইকন (emoji — অ্যাপের বাকি অংশের মতো) ও আইকন-টালির নরম রং
 export const SLOT_ICON = { breakfast: "🌅", snack1: "🍎", lunch: "☀️", snack2: "🫖", dinner: "🌙" };
