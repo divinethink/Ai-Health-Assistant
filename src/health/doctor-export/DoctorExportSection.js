@@ -14,6 +14,7 @@ import { buildAiHealthSummary } from "./aiSummaryData.js";
 import { DoctorExportPrintView } from "./DoctorExportPrintView.js";
 import { AiSummaryPrintView } from "./AiSummaryPrintView.js";
 import { exportHealthProfileDocx, exportAiHealthSummaryDocx } from "./docxExport.js";
+import { DoctorDocumentPicker } from "./DoctorDocumentPicker.js";
 
 const { useState, useEffect } = React;
 
@@ -102,6 +103,11 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
       actionButton(summaryBusy === "pdf" ? "তৈরি হচ্ছে..." : "PDF (প্রিন্ট/প্রিভিউ)", () => handleAiSummary("pdf"), !!summaryBusy || !targetMemberId, true),
       actionButton(summaryBusy === "docx" ? "তৈরি হচ্ছে..." : "DOCX ডাউনলোড", () => handleAiSummary("docx"), !!summaryBusy || !targetMemberId),
       summaryErr && ErrorBox(summaryErr)
-    )
+    ),
+
+    React.createElement(DoctorDocumentPicker, {
+      key: "docs-" + targetMemberId, familyId, targetMemberId,
+      memberName: (members.find((m) => m.id === targetMemberId) || {}).name,
+    })
   );
 }
