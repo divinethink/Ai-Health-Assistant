@@ -43,6 +43,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   const [profileBusy, setProfileBusy] = useState(null); // "pdf" | "docx" | null
   const [profileErr, setProfileErr] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
+  const [includeTracker, setIncludeTracker] = useState(true); // পার্ট ৮: ট্র্যাকারের ৭-দিন সারাংশ (ডেটা থাকলেই দেখায়)
 
   const [summaryBusy, setSummaryBusy] = useState(null);
   const [summaryErr, setSummaryErr] = useState(null);
@@ -57,7 +58,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   const handleHealthProfile = async (mode) => {
     setProfileBusy(mode); setProfileErr(null);
     try {
-      const data = await buildHealthProfileExport(familyId, targetMemberId, callerMemberId);
+      const data = await buildHealthProfileExport(familyId, targetMemberId, callerMemberId, { includeTracker });
       if (mode === "pdf") setProfilePreview(data);
       else await exportHealthProfileDocx(data);
     } catch (e) {
@@ -98,6 +99,9 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
 
     exportCard("🧾", "স্বাস্থ্য প্রোফাইল", "যাচাই-করা তথ্য থেকে — কোনো AI মতামত নেই।", null,
       React.createElement(React.Fragment, null,
+        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "10px", fontSize: "13px", color: "#1F2D2A", minHeight: "44px" } },
+          React.createElement("input", { type: "checkbox", checked: includeTracker, onChange: (e) => setIncludeTracker(e.target.checked), style: { width: "20px", height: "20px" } }),
+          "গত ৭ দিনের ট্র্যাকার সারাংশ যোগ করুন (ডেটা থাকলে)"),
         buttonRow(
           actionButton(profileBusy === "pdf" ? "তৈরি হচ্ছে..." : "📄 PDF দেখুন/প্রিন্ট", () => handleHealthProfile("pdf"), !!profileBusy || !targetMemberId, true),
           actionButton(profileBusy === "docx" ? "তৈরি হচ্ছে..." : "⬇ DOCX", () => handleHealthProfile("docx"), !!profileBusy || !targetMemberId)),

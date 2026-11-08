@@ -5,6 +5,7 @@
 // আধুনিক ব্রাউজারে সাপোর্টেড। DOCX output পরবর্তী ধাপ হিসেবে deferred (নিচে
 // UI-নোট)।
 import { describeHealthRecord } from "../records/healthRecordsData.js";
+import { weeklySummaryRows } from "../tracker/weeklyTrend.js";
 
 const { useEffect } = React;
 
@@ -96,6 +97,12 @@ export function DoctorExportPrintView({ data, onBack }) {
         : React.createElement("table", null, React.createElement("tbody", null,
             data.pastHistory.map((c) => React.createElement("tr", { key: c.id },
               React.createElement("td", null, c.name), React.createElement("td", null, describeHealthRecord(c)))))),
+
+      data.trackerWeek && React.createElement(React.Fragment, null,
+        React.createElement("h4", null, "৬. গত ৭ দিনের ট্র্যাকার সারাংশ (ব্যবহারকারীর দেওয়া তথ্য)"),
+        React.createElement("table", null, React.createElement("tbody", null,
+          weeklySummaryRows(data.trackerWeek).map(([k, v]) => React.createElement("tr", { key: k }, React.createElement("td", null, k), React.createElement("td", null, v))))),
+        React.createElement("p", { style: { fontSize: "10px", color: "#888", margin: "4px 0 0" } }, "ব্যবহারকারীর নিজের ইনপুট থেকে সাধারণ গড়/যোগফল; আনুমানিক, কোনো মূল্যায়ন নয়।")),
 
       React.createElement("p", { style: { fontSize: "10px", color: "#888", borderTop: "1px solid #ccc", marginTop: "16px", paddingTop: "6px", textAlign: "center" } },
         "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — শুধু পরিবার কর্তৃক সংরক্ষিত factual তথ্যের সারাংশ। Health Assistant App।")

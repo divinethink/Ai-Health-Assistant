@@ -6,6 +6,7 @@
 // substitute করবে (ডেটা/লে-আউট অক্ষত থাকে, §10.6 নোট)।
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType } from "docx";
 import { describeHealthRecord } from "../records/healthRecordsData.js";
+import { weeklySummaryRows } from "../tracker/weeklyTrend.js";
 
 const FONT = "Hind Siliguri";
 
@@ -78,6 +79,12 @@ export async function exportHealthProfileDocx(data) {
 
   children.push(heading("৫. অতীত রোগের ইতিহাস (সমাধানকৃত)"));
   children.push(...(data.pastHistory.length === 0 ? [para("কোনো তথ্য নেই।")] : [simpleTable(data.pastHistory.map((c) => [c.name, describeHealthRecord(c)]))]));
+
+  if (data.trackerWeek) {
+    children.push(heading("৬. গত ৭ দিনের ট্র্যাকার সারাংশ (ব্যবহারকারীর দেওয়া তথ্য)"));
+    children.push(simpleTable(weeklySummaryRows(data.trackerWeek)));
+    children.push(para("ব্যবহারকারীর নিজের ইনপুট থেকে সাধারণ গড়/যোগফল; আনুমানিক, কোনো মূল্যায়ন নয়।", { size: 16, color: "888888" }));
+  }
 
   children.push(new Paragraph({ spacing: { before: 300 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — শুধু পরিবার কর্তৃক সংরক্ষিত factual তথ্যের সারাংশ।", size: 16, font: FONT, color: "888888" })] }));

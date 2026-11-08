@@ -1,6 +1,9 @@
 // সাপ্তাহিক ট্রেন্ড ও রিভিউ — pure functions (ধাপ ৫)। AI নয়: মন্তব্য ফিক্সড নিয়মে,
 // শুধু ব্যবহারকারীর নিজের দেওয়া ডাটা থেকে; নতুন সংখ্যা বানানো হয় না।
 
+import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate } from "./trackerCalc.js";
+import { dayHit } from "./todaySummary.js";
+
 export function last7DatesISO(now = new Date()) {
   const p = (n) => String(n).padStart(2, "0");
   return Array.from({ length: 7 }, (_, i) => {
@@ -63,4 +66,50 @@ export function reviewComment(t, bn) {
   if (t.weightChange !== null && Math.abs(t.weightChange) >= 1) lines.push("এক সপ্তাহে ওজনের বড় পরিবর্তন হয়েছে। অস্বাভাবিক মনে হলে ডাক্তার দেখান।");
   if (!lines.length) lines.push("এই সপ্তাহে বড় কোনো সমস্যা চোখে পড়েনি। এভাবেই চালিয়ে যান।");
   return lines;
+}
+
+// ---------- পার্ট ৮: সাপ্তাহিক সারাংশ (ডাক্তার-এক্সপোর্টের জন্য) ----------
+// লক্ষ্য-ctx (todaySummary.dayHit-এর মতো) — TodayTab-এর হিসাবের সাথে একই নিয়ম। goal ঐচ্ছিক।
+export function targetCtxFor({ age, flags, goal }) {
+  const gate = safetyGate({ age, flags });
+  const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
+  return { calorieTarget: calc ? calc.calorieTarget : null, exTarget: exerciseTargetMinPerDay(age), waterTarget: waterTargetFor(age, flags), sleepMinH: sleepTargetHours(age)[0] };
+}
+
+// docs: দৈনিক ডক; dates: সাতটি ISO তারিখ; ctx: targetCtxFor()। কোনো দিনের ডক না থাকলে null (সেকশন লুকাবে)।
+// শুধু ব্যবহারকারীর দেওয়া সংখ্যার গড়/যোগফল — কোনো মূল্যায়ন/মন্তব্য নয়।
+export function weeklySummary(docs, dates, ctx) {
+  const byDate = {};
+  (docs || []).forEach((d) => { if (d && d.date) byDate[d.date] = d; });
+  const days = dates.map((date) => byDate[date]).filter(Boolean);
+  if (!days.length) return null;
+  const kcal = days.filter((d) => d.caloriesIn > 0).map((d) => d.caloriesIn);
+  const sleep = days.filter((d) => d.sleepMinutes > 0).map((d) => d.sleepMinutes);
+  const weights = dates.map((date) => (byDate[date] || {}).weightKg).filter((w) => w > 0);
+  const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  return {
+    loggedDays: days.length,
+    totalDays: dates.length,
+    avgKcal: kcal.length ? Math.round(avg(kcal)) : null,
+    kcalDays: kcal.length,
+    exerciseTotalMin: days.reduce((a, d) => a + (d.exerciseMin || 0), 0),
+    avgSleepH: sleep.length ? round1(avg(sleep) / 60) : null,
+    sleepDays: sleep.length,
+    weightFirst: weights.length >= 2 ? weights[0] : null,
+    weightLast: weights.length >= 2 ? weights[weights.length - 1] : null,
+    weightChangeKg: weights.length >= 2 ? round1(weights[weights.length - 1] - weights[0]) : null,
+    targetDays: dates.filter((date) => dayHit(byDate[date], ctx)).length,
+  };
+}
+
+// এক্সপোর্টের টেবিল-সারি [লেবেল, মান] — PDF ও DOCX একই সূত্র থেকে। ইংরেজি সংখ্যা (বাকি এক্সপোর্টের মতো)। ডেটা না থাকা সারি বাদ।
+export function weeklySummaryRows(s) {
+  if (!s) return [];
+  const rows = [["লগ-করা দিন", s.loggedDays + "/" + s.totalDays]];
+  if (s.avgKcal !== null) rows.push(["গড় ক্যালরি (আনুমানিক)", s.avgKcal + " kcal/দিন (" + s.kcalDays + " দিনের তথ্যে)"]);
+  rows.push(["ব্যায়াম (সাত দিনে মোট)", s.exerciseTotalMin + " মিনিট"]);
+  if (s.avgSleepH !== null) rows.push(["গড় ঘুম", s.avgSleepH + " ঘণ্টা/রাত (" + s.sleepDays + " দিনের তথ্যে)"]);
+  if (s.weightChangeKg !== null) rows.push(["ওজন-পরিবর্তন", (s.weightChangeKg > 0 ? "+" : "") + s.weightChangeKg + " kg (" + s.weightFirst + " → " + s.weightLast + ")"]);
+  rows.push(["টার্গেট-দিন", s.targetDays + "/" + s.totalDays + " (ক্যালরি/ব্যায়াম/পানি/ঘুমের অন্তত ২টি লক্ষ্য পূরণ)"]);
+  return rows;
 }
