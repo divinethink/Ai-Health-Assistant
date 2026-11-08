@@ -162,7 +162,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
       React.Fragment, null,
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🍽️ খাদ্য নির্দেশিকা (সংক্ষিপ্ত)"),
       dietResult.avoidFoods.length > 0 && dietList("❌ এড়িয়ে চলুন", dietResult.avoidFoods, "#B3261E", "#FDF0EE"),
-      dietResult.includeFoods.length > 0 && dietList("✅ বেশি খান", dietResult.includeFoods, "#0E4B43", "#EAF6F0"),
+      dietResult.includeFoods.length > 0 && dietList("✅ খাবেন", dietResult.includeFoods, "#0E4B43", "#EAF6F0"),
       React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
     )
   );

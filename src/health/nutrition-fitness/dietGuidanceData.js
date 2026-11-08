@@ -37,7 +37,13 @@ export function matchDietGuidanceForTags(allRules, tagValues) {
     });
   });
 
-  const avoidFoods = [...new Set(matched.flatMap((r) => r.avoidFoods || []))];
-  const includeFoods = [...new Set(matched.flatMap((r) => r.includeFoods || []))];
-  return { avoidFoods, includeFoods, matchedTags: matched.map((r) => r.linkedTag?.value) };
+  const clean = (arr) => (arr || []).map((x) => String(x).trim()).filter(Boolean);
+  const avoidFoods = [...new Set(matched.flatMap((r) => clean(r.avoidFoods)))];
+  const avoidSet = new Set(avoidFoods);
+  // নিরাপত্তা: কোনো খাবার এক অসুখে "এড়িয়ে চলুন" হলে অন্য অসুখের "খাবেন" তালিকা থেকে বাদ — avoid সবসময় জেতে।
+  const includeFoods = [...new Set(matched.flatMap((r) => clean(r.includeFoods)))].filter((f) => !avoidSet.has(f));
+  const avoidSources = {};
+  matched.forEach((r) => clean(r.avoidFoods).forEach((f) => { (avoidSources[f] = avoidSources[f] || []).push(r.linkedTag?.value); }));
+  const byTag = matched.map((r) => ({ tag: r.linkedTag?.value, avoid: clean(r.avoidFoods), include: clean(r.includeFoods) }));
+  return { avoidFoods, includeFoods, avoidSources, byTag, matchedTags: matched.map((r) => r.linkedTag?.value) };
 }

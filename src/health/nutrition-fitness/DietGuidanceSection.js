@@ -56,35 +56,38 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
   if (loadErr) return ErrorBox(loadErr);
   if (!targetMemberId) return React.createElement("div", null, "সদস্য নির্বাচন করুন।");
 
+  const F = "14px";
+  const bullets = (items, sources) => React.createElement("ul", { style: { margin: 0, paddingLeft: "20px", fontSize: F, color: "#1F2D2A", lineHeight: 1.6 } },
+    items.map((x, i) => React.createElement("li", { key: i, style: { marginBottom: "4px" } }, x,
+      sources && sources[x] && sources[x].length > 1 && React.createElement("span", { style: { color: "#6B7B76", fontSize: "12px" } }, " (" + sources[x].join(", ") + ")"))));
+  const box = (title, items, color, bg, sources) => React.createElement("div", { style: { background: bg, borderRadius: "14px", padding: "12px", marginTop: "10px", border: "1px solid " + color + "33" } },
+    React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color, marginBottom: "8px" } }, title),
+    items.length ? bullets(items, sources) : React.createElement("div", { style: { fontSize: F, color: "#5F716C" } }, "নির্দিষ্ট কিছু নেই"));
+
   return React.createElement(
-    "div", { style: { marginTop: "10px" } },
-    !result && React.createElement("div", { style: { marginTop: "8px", color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    "div", { style: { marginTop: "0" } },
+    !result && React.createElement("div", { style: { marginTop: "8px", color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
     result && result.matchedTags.length === 0 && React.createElement(
-      "div", { style: { marginTop: "10px", padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: "14px", color: "#3E4E49" } },
+      "div", { style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } },
       "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"
     ),
     result && result.matchedTags.length > 0 && React.createElement(
-      "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "6px" } },
-      result.matchedTags.map((tag) => {
-        const isOpen = openTag === tag;
-        return React.createElement(
-          "div", { key: tag, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", overflow: "hidden" } },
-          React.createElement(
-            "button", {
-              onClick: () => setOpenTag(isOpen ? null : tag),
-              style: { width: "100%", textAlign: "left", padding: "10px 12px", background: "#fff", border: "none", fontSize: "14px", fontWeight: 600, color: "#0E4B43", cursor: "pointer", display: "flex", justifyContent: "space-between" },
-            },
-            tag, React.createElement("span", null, isOpen ? "▲" : "▼")
-          ),
-          isOpen && React.createElement(
-            "div", { style: { padding: "10px 12px", background: "#EEF5F0", fontSize: "14px" } },
-            React.createElement("div", { style: { color: "#B3261E", fontWeight: 600, marginBottom: "4px" } }, "❌ এড়িয়ে চলুন"),
-            React.createElement("div", { style: { marginBottom: "10px" } }, result.avoidFoods.length ? result.avoidFoods.join(", ") : "নির্দিষ্ট কিছু নেই"),
-            React.createElement("div", { style: { color: "#0E4B43", fontWeight: 600, marginBottom: "4px" } }, "✅ বেশি খান"),
-            React.createElement("div", null, result.includeFoods.length ? result.includeFoods.join(", ") : "নির্দিষ্ট কিছু নেই")
-          )
-        );
-      })
+      React.Fragment, null,
+      React.createElement("div", { style: { fontSize: F, fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "🩺 আপনার সমস্যা"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+        result.matchedTags.map((tag) => React.createElement("span", { key: tag, style: { padding: "4px 12px", borderRadius: "999px", background: "#fff", border: "1px solid #C3D2CA", fontSize: F, color: "#0E4B43", fontWeight: 600 } }, tag))),
+      box("❌ এড়িয়ে চলুন", result.avoidFoods, "#B3261E", "#FDF0EE", result.avoidSources),
+      box("✅ খাবেন", result.includeFoods, "#0E4B43", "#EAF6F0"),
+      result.matchedTags.length > 1 && React.createElement("button", {
+        onClick: () => setOpenTag(openTag ? null : "__all"),
+        style: { marginTop: "12px", width: "100%", padding: "10px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#0E4B43", fontSize: F, fontWeight: 600, cursor: "pointer" },
+      }, openTag ? "▲ অসুখ-ভিত্তিক বিস্তারিত বন্ধ করুন" : "▼ অসুখ-ভিত্তিক বিস্তারিত দেখুন"),
+      openTag && result.byTag.map((b) => React.createElement("div", { key: b.tag, style: { marginTop: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "10px 12px", background: "#fff" } },
+        React.createElement("div", { style: { fontSize: F, fontWeight: 700, color: "#0E4B43", marginBottom: "4px" } }, b.tag),
+        b.avoid.length > 0 && React.createElement("div", { style: { fontSize: F, color: "#B3261E", fontWeight: 600, marginTop: "4px" } }, "❌ এড়িয়ে চলুন"),
+        b.avoid.length > 0 && bullets(b.avoid),
+        b.include.length > 0 && React.createElement("div", { style: { fontSize: F, color: "#0E4B43", fontWeight: 600, marginTop: "6px" } }, "✅ খাবেন"),
+        b.include.length > 0 && bullets(b.include)))
     )
   );
 }
