@@ -6,7 +6,7 @@
 import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText } from "./mealPlanData.js";
-import { FOOD_GROUPS, searchFoods } from "./foodCatalog.js";
+import { FOOD_GROUPS, TAGS, searchFoods, tagsOf } from "./foodCatalog.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
   draftFromSlotItems, addDraftFood, changeDraftQty, removeDraftAt, draftKcal,
@@ -21,6 +21,7 @@ export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋�
 const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
 const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
+const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "11px", fontWeight: 700 };
 const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
 function Sheet({ title, subtitle, onClose, children }) {
@@ -86,7 +87,8 @@ function FoodPicker({ allergyTags, onPick }) {
       found.map(({ key, f }) => React.createElement("button", {
         key, onClick: () => onPick(key),
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A" },
-      }, "+ " + f.n + " · " + bnNum(f.k)))),
+      }, "+ " + f.n + " · " + bnNum(f.k), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+    found.some(({ f }) => tagsOf(f).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "হলুদ চিপ = সাধারণ সতর্কতা (ব্লক নয়); ডাক্তার/ডায়েটিশিয়ানের নির্দেশ প্রাধান্য পায়।"),
     found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বাছুন।"),
     React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সংখ্যা = এক ইউনিটের আনুমানিক কিলোক্যালরি; রান্না ও পরিমাণে বদলায়।"));
 }
@@ -121,7 +123,8 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       draft.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "এই বেলায় কোনো খাবার নেই (বেলা বাদ)। নিচ থেকে খাবার যোগ করুন।"),
       draft.map((r, i) => React.createElement("div", { key: r.food, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, itemText(r.food, r.qty),
-          React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(FOODS[r.food].k * r.qty)) + " কিলোক্যালরি")),
+          React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(FOODS[r.food].k * r.qty)) + " কিলোক্যালরি"),
+          tagsOf(FOODS[r.food]).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1]))),
         Stepper(qtyText(r.qty), () => setDraft(changeDraftQty(draft, i, -0.5)), () => setDraft(changeDraftQty(draft, i, 0.5)), r.qty <= 0.5, r.qty >= MAX_QTY, FOODS[r.food].n),
         React.createElement("button", { onClick: () => setDraft(removeDraftAt(draft, i)), "aria-label": FOODS[r.food].n + " বাদ দিন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 6px" } }, "খাবার যোগ করুন"),

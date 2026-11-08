@@ -26,8 +26,8 @@ const CORE_FOODS = {
   chicken: { n: "মুরগি", u: "টুকরা", k: 160, al: "chicken", swap: ["fish", 1], g: "protein" },
   banana: { n: "কলা", u: "টি", k: 90, g: "fruit" },
   muri: { n: "মুড়ি", u: "বাটি", k: 90, g: "snack" },
-  tea: { n: "চা (চিনি ছাড়া)", u: "কাপ", k: 30, al: "dairy", swap: ["greentea", 1], g: "drink" },
-  greentea: { n: "গ্রিন টি", u: "কাপ", k: 0, g: "drink" },
+  tea: { n: "চা (চিনি ছাড়া)", u: "কাপ", k: 30, al: "dairy", swap: ["greentea", 1], g: "drink", tg: ["caffeine"] },
+  greentea: { n: "গ্রিন টি", u: "কাপ", k: 0, g: "drink", tg: ["caffeine"] },
 };
 
 export const FOODS = { ...CORE_FOODS, ...CATALOG_FOODS };

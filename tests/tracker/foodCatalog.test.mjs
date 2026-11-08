@@ -47,3 +47,28 @@ test("নতুন খাবার প্ল্যানে: সংরক্ষ�
   assert.equal(draftKcal(addDraftFood([], "mango")), 130);
   assert.equal(itemText("pauruti", 2), "২ স্লাইস পাউরুটি");
 });
+
+// ---- ধাপ D-২: নতুন ৪৫ খাবার ও সতর্কতা-ট্যাগ ----
+import { TAGS as WARN_TAGS, tagsOf } from "../../src/health/tracker/foodCatalog.js";
+const NEW45 = ["redRice", "redRoti", "redChira", "sujiHalua", "muriMakha", "vegKhichuri", "oatsVegKhichuri", "ataPancake",
+  "mugDal", "lau", "patol", "mishtiKumra", "jhinge", "palongShak", "kakrol", "kanchaKola", "kochu", "vegSoup", "daalSoup", "sprouts",
+  "eggWhite", "eggYolk", "eggVegBhuna", "chickenJhol", "chickenSoup", "seaFishJhol", "tofu", "pomegranate", "jam", "nashpati",
+  "kathBadam", "akhrot", "kajuBadam", "kumraBeej", "tishi", "isabgol", "oatsBiscuit", "honey",
+  "tonedMilk", "tokDoi100", "goldenWater", "gingerTea", "redTea", "lemonWater", "mintGingerWater"];
+
+test("নতুন ৪৫টি খাবার আছে, কোরের সাথে সংঘর্ষ নেই, প্ল্যান-সংরক্ষণে বৈধ", () => {
+  assert.equal(NEW45.length, 45);
+  NEW45.forEach((k) => assert.ok(k in CATALOG_FOODS, k));
+  const s = sanitizePlanPrefs({ meal: { lunch: [{ food: "mugDal", qty: 1 }, { food: "kathBadam", qty: 4 }] } });
+  assert.deepEqual(s.meal.lunch.map((r) => r.food), ["mugDal", "kathBadam"]);
+  assert.equal(draftKcal(addDraftFood([], "redRice")), 190);
+});
+test("ট্যাগ: শুধু বৈধ ট্যাগ-কী; ট্যাগ কিছু ব্লক করে না; এলার্জি-ব্লক অপরিবর্তিত", () => {
+  Object.entries(FOODS).forEach(([k, f]) => (f.tg || []).forEach((t) => assert.ok(WARN_TAGS[t], k + " ট্যাগ")));
+  assert.ok(Object.values(WARN_TAGS).every(([short, msg]) => short && msg));
+  assert.deepEqual(tagsOf(FOODS.kathBadam), ["choke"]);
+  assert.deepEqual(tagsOf(FOODS.rice), []);
+  assert.ok(searchFoods(FOODS, { query: "বাদাম", allergyTags: [] }).some((x) => x.key === "kathBadam"));
+  assert.ok(!searchFoods(FOODS, { query: "ডিমের", allergyTags: ["egg"] }).some((x) => x.key === "eggYolk"));
+  assert.ok(!searchFoods(FOODS, { query: "দুধ", allergyTags: ["dairy"] }).some((x) => x.key === "tonedMilk"));
+});
