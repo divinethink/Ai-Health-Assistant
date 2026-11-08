@@ -6,6 +6,7 @@
 import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText } from "./mealPlanData.js";
+import { FOOD_GROUPS, searchFoods } from "./foodCatalog.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
   draftFromSlotItems, addDraftFood, changeDraftQty, removeDraftAt, draftKcal,
@@ -71,6 +72,25 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
   style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN, opacity: busy || disabled ? 0.5 : 1 },
 }, label);
 
+// খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবার তালিকায় আসে না। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
+// props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
+function FoodPicker({ allergyTags, onPick }) {
+  const [q, setQ] = useState("");
+  const [grp, setGrp] = useState("");
+  const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
+  return React.createElement("div", null,
+    React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন (যেমন: ইলিশ, আম)", "aria-label": "খাবার খুঁজুন", style: INPUT }),
+    React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
+    found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
+    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+      found.map(({ key, f }) => React.createElement("button", {
+        key, onClick: () => onPick(key),
+        style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A" },
+      }, "+ " + f.n + " · " + bnNum(f.k)))),
+    found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বাছুন।"),
+    React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সংখ্যা = এক ইউনিটের আনুমানিক কিলোক্যালরি; রান্না ও পরিমাণে বদলায়।"));
+}
+
 const MODES = [["perm", "প্রতিদিনের জন্য"], ["today", "আজ শুধু"]];
 
 // ---------- মিল: একটি বেলা ----------
@@ -82,7 +102,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
   const [name, setName] = useState("");
   const [kcal, setKcal] = useState("");
   const [formErr, setFormErr] = useState(null);
-  const tags = new Set(allergyTags || []);
+  const [pickQty, setPickQty] = useState(1);
   const newSlot = draftKcal(draft);
   const newTotal = planTotal - slot.kcal + newSlot;
   const warnings = mealWarnings(newTotal, { sex, target });
@@ -105,14 +125,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
         Stepper(qtyText(r.qty), () => setDraft(changeDraftQty(draft, i, -0.5)), () => setDraft(changeDraftQty(draft, i, 0.5)), r.qty <= 0.5, r.qty >= MAX_QTY, FOODS[r.food].n),
         React.createElement("button", { onClick: () => setDraft(removeDraftAt(draft, i)), "aria-label": FOODS[r.food].n + " বাদ দিন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 6px" } }, "খাবার যোগ করুন"),
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-        Object.entries(FOODS).map(([key, f]) => {
-          const blocked = !!(f.al && tags.has(f.al));
-          return React.createElement("button", {
-            key, disabled: blocked, onClick: () => setDraft(addDraftFood(draft, key)),
-            style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: blocked ? "#F4F4F4" : "#F1F6F2", color: blocked ? "#A0A8A5" : "#1F2D2A" },
-          }, blocked ? f.n + " (এলার্জি)" : "+ " + f.n);
-        })),
+      React.createElement(FoodPicker, { allergyTags, onPick: (key) => setDraft(addDraftFood(draft, key)) }),
       React.createElement("div", { style: { marginTop: "12px", padding: "10px 12px", borderRadius: "12px", background: "#E4F0E9", fontSize: "14px", color: GREEN, display: "flex", justifyContent: "space-between", gap: "8px" } },
         React.createElement("span", null, "নতুন মোট (" + slot.label + ")"),
         React.createElement("b", null, bnNum(slot.kcal) + " → " + bnNum(newSlot) + " কিলোক্যালরি")),
@@ -129,6 +142,11 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       extras.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, x.name + " · " + bnNum(x.kcal) + " কিলোক্যালরি"),
         React.createElement("button", { onClick: () => onRemoveExtra(x.idx), disabled: busy, "aria-label": x.name + " মুছুন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
+      React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "10px 0 6px" } }, "তালিকা থেকে বাছুন (ঐচ্ছিক)"),
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
+        React.createElement("span", { style: { fontSize: "13px", color: MUTED } }, "পরিমাণ"),
+        Stepper(qtyText(pickQty), () => setPickQty(Math.max(0.5, pickQty - 0.5)), () => setPickQty(Math.min(MAX_QTY, pickQty + 0.5)), pickQty <= 0.5, pickQty >= MAX_QTY, "পরিমাণ")),
+      React.createElement(FoodPicker, { allergyTags, onPick: (key) => { setName(itemText(key, pickQty)); setKcal(String(Math.round(FOODS[key].k * pickQty))); setFormErr(null); } }),
       React.createElement("label", { style: { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "12px 0 4px" } }, "খাবারের নাম"),
       React.createElement("input", { type: "text", maxLength: 40, value: name, onChange: (e) => setName(e.target.value), style: INPUT }),
       React.createElement("label", { style: { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "10px 0 4px" } }, "কিলোক্যালরি (আনুমানিক, ০–" + bnNum(MAX_KCAL) + ")"),

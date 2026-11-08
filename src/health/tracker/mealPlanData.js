@@ -4,6 +4,8 @@
 // ক্যালরি-টার্গেটের কাছাকাছি আনা হয়। এলার্জি মিললে খাবার বদলে দেওয়া হয়।
 // স্লটের `time` ধাপ ৩ (রিমাইন্ডার) আবার ব্যবহার করবে।
 
+import { CATALOG_FOODS } from "./foodCatalog.js";
+
 export const MEAL_SLOTS = [
   { id: "breakfast", label: "সকাল", time: "08:00" },
   { id: "snack1", label: "স্ন্যাকস", time: "11:00" },
@@ -13,20 +15,22 @@ export const MEAL_SLOTS = [
 ];
 
 // k = এক ইউনিটের আনুমানিক কিলোক্যালরি; al = এলার্জি-ট্যাগ; swap = [বিকল্প খাবার, অনুপাত]
-export const FOODS = {
-  roti: { n: "রুটি", u: "টি", k: 80, al: "wheat", swap: ["rice", 0.5] },
-  rice: { n: "ভাত", u: "কাপ", k: 200 },
-  dal: { n: "ডাল", u: "বাটি", k: 110 },
-  veg: { n: "সবজি", u: "বাটি", k: 80 },
-  salad: { n: "সালাদ", u: "বাটি", k: 25 },
-  egg: { n: "সেদ্ধ ডিম", u: "টি", k: 75, al: "egg", swap: ["dal", 0.5] },
-  fish: { n: "মাছ", u: "টুকরা", k: 130, al: "fish", swap: ["chicken", 1] },
-  chicken: { n: "মুরগি", u: "টুকরা", k: 160, al: "chicken", swap: ["fish", 1] },
-  banana: { n: "কলা", u: "টি", k: 90 },
-  muri: { n: "মুড়ি", u: "বাটি", k: 90 },
-  tea: { n: "চা (চিনি ছাড়া)", u: "কাপ", k: 30, al: "dairy", swap: ["greentea", 1] },
-  greentea: { n: "গ্রিন টি", u: "কাপ", k: 0 },
+const CORE_FOODS = {
+  roti: { n: "রুটি", u: "টি", k: 80, al: "wheat", swap: ["rice", 0.5], g: "rice" },
+  rice: { n: "ভাত", u: "কাপ", k: 200, g: "rice" },
+  dal: { n: "ডাল", u: "বাটি", k: 110, g: "curry" },
+  veg: { n: "সবজি", u: "বাটি", k: 80, g: "curry" },
+  salad: { n: "সালাদ", u: "বাটি", k: 25, g: "curry" },
+  egg: { n: "সেদ্ধ ডিম", u: "টি", k: 75, al: "egg", swap: ["dal", 0.5], g: "protein" },
+  fish: { n: "মাছ", u: "টুকরা", k: 130, al: "fish", swap: ["chicken", 1], g: "protein" },
+  chicken: { n: "মুরগি", u: "টুকরা", k: 160, al: "chicken", swap: ["fish", 1], g: "protein" },
+  banana: { n: "কলা", u: "টি", k: 90, g: "fruit" },
+  muri: { n: "মুড়ি", u: "বাটি", k: 90, g: "snack" },
+  tea: { n: "চা (চিনি ছাড়া)", u: "কাপ", k: 30, al: "dairy", swap: ["greentea", 1], g: "drink" },
+  greentea: { n: "গ্রিন টি", u: "কাপ", k: 0, g: "drink" },
 };
+
+export const FOODS = { ...CORE_FOODS, ...CATALOG_FOODS };
 
 // এলার্জি-ট্যাগ ← প্রোফাইলের এলার্জি-লেখার কী-ওয়ার্ড (ছোট হাতের)
 const ALLERGY_KEYWORDS = {
