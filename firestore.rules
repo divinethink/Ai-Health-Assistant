@@ -491,7 +491,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
-               'sleep', 'sleepMinutes', 'caloriesIn', 'sources', 'weightObsId',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
@@ -500,7 +500,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
-               'sleep', 'sleepMinutes', 'caloriesIn', 'sources', 'weightObsId',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);

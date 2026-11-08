@@ -1,11 +1,16 @@
 // হেলথ ট্র্যাকার (ধাপ ১) — লক্ষ্য সেটআপ, দৈনিক কার্ড, দৈনিক ইনপুট (ওজন/পানি/স্টেপ/ব্যায়াম/ঘুম)।
 // হিসাব trackerCalc.js-এ (ফিক্সড সূত্র); Firestore trackerData.js-এ। এই ফাইলে শুধু UI।
-// মিল-প্ল্যান (ধাপ ২), রিমাইন্ডার (ধাপ ৩), Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
+// ধাপ ২: মিল-প্ল্যান (mealPlanData.js), ব্যায়াম-প্ল্যান (exercisePlanData.js), "খাওয়া যাবে না"
+// (বিদ্যমান DietGuidanceSection reuse — Condition/Allergy/BMI থেকে স্বয়ংক্রিয়)।
+// রিমাইন্ডার (ধাপ ৩), Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
 import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { getGoal, getDaily, saveGoal, saveDaily, todayISO } from "./trackerData.js";
+import { getGoal, getDaily, getWeekDaily, saveGoal, saveDaily, todayISO } from "./trackerData.js";
+import { buildMealPlan, allergyTagsOf, caloriesForEaten } from "./mealPlanData.js";
+import { exercisePlan, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
   sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, detectFlagsFromConditions,
@@ -59,7 +64,7 @@ function TodayTab({ info }) {
     calc && React.createElement(Stat, {
       title: "ক্যালরি", line: "লক্ষ্য: " + bnNum(calc.calorieTarget) + " কিলোক্যালরি/দিন (" + GOAL_LABELS[goal.goalType] + ")",
       pct: (((d.caloriesIn || 0) / calc.calorieTarget) * 100), color: "#E0A100",
-      extra: "খাওয়া হয়েছে: " + bnNum(d.caloriesIn || 0) + " (মিল-প্ল্যান পরের ধাপে যোগ হবে)",
+      extra: "খাওয়া হয়েছে: " + bnNum(d.caloriesIn || 0) + " · খাওয়া যাবে আরও " + bnNum(Math.max(0, calc.calorieTarget - (d.caloriesIn || 0))) + " (মিল ট্যাবে টিক দিলে যোগ হয়)",
     }),
     React.createElement(Stat, {
       title: "ব্যায়াম", line: bnNum(d.exerciseMin || 0) + " / " + bnNum(exTarget) + " মিনিট" + (stTarget ? " · স্টেপ " + bnNum(d.steps || 0) + " / " + bnNum(stTarget) : ""),
@@ -77,6 +82,120 @@ function TodayTab({ info }) {
     d.weightKg && React.createElement(Stat, { title: "আজকের ওজন", line: bnNum(d.weightKg) + " কেজি" }),
     React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।")
   );
+}
+
+// টিক-বাটন (৪৪px)
+function Tick({ on, onClick, busy, label }) {
+  return React.createElement("button", {
+    onClick, disabled: busy, "aria-pressed": on, "aria-label": label,
+    style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "10px", cursor: busy ? "default" : "pointer", fontSize: "20px", fontWeight: 700, lineHeight: 1,
+      border: "2px solid #0E4B43", background: on ? "#0E4B43" : "#fff", color: "#fff" },
+  }, on ? "✓" : "");
+}
+
+function errText(x) {
+  return x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x));
+}
+
+// ---------- মিল-প্ল্যান ----------
+function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+  const { daily, goal, gate, allergyTags } = info;
+  const d = daily || {};
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
+
+  if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড ‘খাওয়া যাবে না’ ট্যাবে দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
+  if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য’ ট্যাবে ক্যালরির টার্গেট ঠিক করুন।");
+
+  const plan = buildMealPlan(calc.calorieTarget, allergyTags);
+  const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
+
+  const toggle = async (slotId) => {
+    setErr(null); setBusy(true);
+    try {
+      const next = eaten.includes(slotId) ? eaten.filter((x) => x !== slotId) : [...eaten, slotId];
+      await saveDaily(familyId, memberId, callerMemberId, todayISO(), { mealsEaten: next, caloriesIn: caloriesForEaten(plan, next) }, daily);
+      onSaved();
+    } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
+  };
+
+  return React.createElement("div", null,
+    React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } },
+      "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
+    plan.total < calc.calorieTarget - 100 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
+    plan.notes.length > 0 && React.createElement(Notice, null, plan.notes.map((n, i) => React.createElement("div", { key: i }, n))),
+    err && ErrorBox(err),
+    plan.slots.map((s) => React.createElement("div", { key: s.id, style: { ...CARD, display: "flex", alignItems: "center", gap: "12px" } },
+      React.createElement("div", { style: { flex: 1 } },
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, s.label + " · " + bnTimeHM(s.time)),
+        React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px", lineHeight: 1.5 } }, s.items.map((i) => i.text).join(", ") + " · " + bnNum(s.kcal)),
+      ),
+      React.createElement(Tick, { on: eaten.includes(s.id), onClick: () => toggle(s.id), busy, label: s.label + " খেয়েছি" }))),
+    React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের এলার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
+}
+
+function bnTimeHM(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return bnNum(h > 12 ? h - 12 : h) + ":" + bnNum(String(m).padStart(2, "0"));
+}
+
+// ---------- ব্যায়াম-প্ল্যান ----------
+function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+  const { daily, goal, age, flags, weekMin } = info;
+  const d = daily || {};
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const plan = exercisePlan(age, goal ? goal.goalType : null);
+
+  if (!plan) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
+
+  const todayIdx = bdDayIndex();
+  const todayItems = plan.routine ? plan.routine[todayIdx] : [];
+  const done = Array.isArray(d.exerciseDone) ? d.exerciseDone : [];
+  const needsDoctor = flags.pregnant || flags.diabetes || flags.kidney || age >= 65;
+
+  const toggle = async (item) => {
+    setErr(null); setBusy(true);
+    try {
+      const on = done.includes(item.key);
+      const next = on ? done.filter((x) => x !== item.key) : [...done, item.key];
+      const delta = item.counted ? (on ? -item.min : item.min) : 0;
+      const fields = { exerciseDone: next };
+      if (delta) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + delta);
+      await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
+      onSaved();
+    } catch (x) { setErr(errText(x)); } finally { setBusy(false); }
+  };
+
+  return React.createElement("div", null,
+    React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px", lineHeight: 1.5 } }, plan.summary),
+    needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
+    plan.weeklyTargetMin && React.createElement(Stat, {
+      title: "এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(weekMin || 0) + " মিনিট",
+      pct: ((weekMin || 0) / plan.weeklyTargetMin) * 100, color: "#17705F",
+    }),
+    err && ErrorBox(err),
+    plan.routine && React.createElement("div", { style: CARD },
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "আজ · " + DAY_LABELS[todayIdx]),
+      todayItems.length === 0
+        ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "আজ বিশ্রামের দিন।")
+        : todayItems.map((it) => React.createElement("div", { key: it.key, style: { display: "flex", alignItems: "center", gap: "12px", padding: "4px 0" } },
+          React.createElement(Tick, { on: done.includes(it.key), onClick: () => toggle(it), busy, label: it.label + " করেছি" }),
+          React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A" } }, it.label + " · " + bnNum(it.min) + " মিনিট")))),
+    plan.routine && React.createElement("div", { style: CARD },
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সপ্তাহের রুটিন"),
+      plan.routine.map((items, i) => React.createElement("div", { key: i, style: { fontSize: "13px", color: i === todayIdx ? "#0E4B43" : "#5F716C", fontWeight: i === todayIdx ? 700 : 400, padding: "3px 0", lineHeight: 1.5 } },
+        DAY_LABELS[i] + ": " + (items.length ? items.map((x) => x.label + " " + bnNum(x.min) + " মি.").join(" + ") : "বিশ্রাম")))),
+    React.createElement(Notice, null, "বুকে ব্যথা, মাথা ঘোরা বা শ্বাসকষ্ট হলে থামুন ও ডাক্তার দেখান।"),
+    React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। WHO-ভিত্তিক সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
+}
+
+// ---------- খাওয়া যাবে না (বিদ্যমান খাদ্য-নির্দেশিকা reuse) ----------
+function AvoidTab({ familyId, memberId }) {
+  return React.createElement("div", null,
+    React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
+    React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId }));
 }
 
 // ---------- দৈনিক ইনপুট ----------
@@ -248,11 +367,14 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
     if (!selectedMemberId) return;
     setErr(null);
     try {
-      const [recs, goal, daily] = await Promise.all([
+      const [recs, goal, daily, week] = await Promise.all([
         listHealthRecords(familyId, selectedMemberId),
         getGoal(familyId, selectedMemberId),
         getDaily(familyId, selectedMemberId, todayISO()),
+        getWeekDaily(familyId, selectedMemberId, weekDatesISO()),
       ]);
+      const weekMin = week.reduce((a, x) => a + (x.exerciseMin || 0), 0);
+      const allergyTags = allergyTagsOf(recs.filter((r) => r.resourceType === "allergy").map((r) => r.substance));
       const member = (members || []).find((m) => m.id === selectedMemberId) || null;
       const h = recs.find((r) => isType(r, ["height", "উচ্চতা"]));
       const w = recs.find((r) => isType(r, ["weight", "ওজন"]));
@@ -265,7 +387,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ weekMin, allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
@@ -274,7 +396,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["today", "আজকের অবস্থা"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
+  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, TabPills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
@@ -283,6 +405,9 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       selectedMemberId && !data && !err && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
       data && tab === "today" && React.createElement(TodayTab, { info: data }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
+      data && tab === "meal" && React.createElement(MealTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && tab === "exercise" && React.createElement(ExerciseTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && tab === "avoid" && React.createElement(AvoidTab, { key: selectedMemberId, familyId, memberId: selectedMemberId }),
       data && tab === "input" && React.createElement(InputTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
     )

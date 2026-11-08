@@ -45,7 +45,8 @@ export async function saveGoal(familyId, memberId, callerMemberId, { goalType, a
   }, { merge: true });
 }
 
-// fields: { weightKg, waterGlasses, steps, exerciseMin, sleepBed, sleepWake, sleepQuality } — সব ঐচ্ছিক।
+// fields: { weightKg, waterGlasses, steps, exerciseMin, sleep, sleepMinutes, mealsEaten, caloriesIn, exerciseDone } — সব ঐচ্ছিক।
+// mealsEaten/exerciseDone: টিক-করা মিল-স্লট ও ব্যায়াম-আইটেমের আইডি (ধাপ ২); caloriesIn মিল-টিক থেকে হিসাব-করা।
 // ওজন দিলে বিদ্যমান Observation-এও যায় (BMI/ডাক্তার-এক্সপোর্টের জন্য)।
 export async function saveDaily(familyId, memberId, callerMemberId, date, fields, prev) {
   const out = { type: "daily", memberId, date, sources: { ...((prev && prev.sources) || {}) } };
@@ -54,6 +55,9 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
   if (fields.waterGlasses !== undefined) put("waterGlasses", fields.waterGlasses);
   if (fields.steps !== undefined) put("steps", fields.steps);
   if (fields.exerciseMin !== undefined) put("exerciseMin", fields.exerciseMin);
+  if (fields.mealsEaten !== undefined) out.mealsEaten = fields.mealsEaten;
+  if (fields.caloriesIn !== undefined) out.caloriesIn = fields.caloriesIn;
+  if (fields.exerciseDone !== undefined) out.exerciseDone = fields.exerciseDone;
   if (fields.sleep !== undefined) {
     out.sleep = fields.sleep; out.sleepMinutes = fields.sleepMinutes; out.sources.sleep = "manual";
   }
@@ -70,6 +74,13 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
   const ref = col(familyId).doc("daily_" + memberId + "_" + date);
   await ref.set({
     ...out, lastEditedByMemberId: callerMemberId, updatedAt: ts(),
-    ...(prev ? {} : { createdAt: ts(), caloriesIn: 0 }),
+    ...(prev ? {} : { createdAt: ts(), ...(fields.caloriesIn === undefined ? { caloriesIn: 0 } : {}) }),
   }, { merge: true });
+}
+
+// সপ্তাহের (শনি–শুক্র) দৈনিক ডক। `in` = সমতা-ধরনের ফিল্টার, তাই নতুন index লাগে না;
+// memberId সমতা থাকায় rules-এর read-নিয়ম মানে। কোনো .limit() নেই (হিসাব truncate হবে না)।
+export async function getWeekDaily(familyId, memberId, dates) {
+  const snap = await col(familyId).where("memberId", "==", memberId).where("date", "in", dates).get();
+  return snap.docs.map((d) => d.data()).filter((x) => x.type === "daily");
 }
