@@ -19,7 +19,7 @@
 // সতর্কবার্তা দেখানো হচ্ছে; ভুল/অনির্ভরযোগ্য OCR-value ধরার দায়িত্ব পরের ধাপ
 // (mandatory verification + needs-review flag)-এর উপর।
 
-import { ErrorBox, SecondaryButton } from "../../shared/ui.js";
+import { ErrorBox, SuccessBox, SecondaryButton } from "../../shared/ui.js";
 import { extractPdfText } from "./pdfTextExtraction.js";
 import { ocrImageFile, ocrPdfPages } from "./ocrExtraction.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
@@ -27,11 +27,15 @@ import { parseAndValidateReportText } from "./reportParsing.js";
 import { ReportVerificationForm } from "./ReportVerificationForm.js";
 import { ManualReportEntryForm } from "./ManualReportEntryForm.js";
 
-const { useState, useCallback, useRef } = React;
+const { useState, useCallback, useRef, useEffect } = React;
 
-export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId }) {
-  const [handwrittenMode, setHandwrittenMode] = useState(false);
-  const [file, setFile] = useState(null);
+// নথিপত্র-ট্যাবের একীভূত ফ্লো: `presetFile` দিলে নিজস্ব file-picker লুকানো থাকে ও
+// mount-এ স্বয়ংক্রিয় বিশ্লেষণ শুরু হয় (ফাইল আগেই vault-এ সংরক্ষিত)। `initialManual`
+// হলে সরাসরি হাতে-লেখা ফর্মে খোলে। দুটোই ঐচ্ছিক — না দিলে আগের আচরণই বহাল।
+export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, presetFile, initialManual }) {
+  const [handwrittenMode, setHandwrittenMode] = useState(!!initialManual);
+  const [file, setFile] = useState(presetFile || null);
+  const [savedCount, setSavedCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState(""); // "" | "extracting" | "ocr" | "parsing" | "done"
@@ -95,6 +99,11 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId }
     }
   }, [file]);
 
+  useEffect(() => {
+    if (presetFile) analyze();
+    // শুধু mount-এ একবার
+  }, []);
+
   const stageLabels = {
     extracting: "PDF থেকে text পড়া হচ্ছে...",
     ocr: "OCR চলছে... (" + Math.round(progress * 100) + "%)",
@@ -117,18 +126,21 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId }
     React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } },
       "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান স্বয়ংক্রিয়ভাবে শনাক্ত করার চেষ্টা করা হবে (পরের ধাপে আপনাকে যাচাই করতে হবে)।"
     ),
-    React.createElement("input", {
-      ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
-      style: { fontSize: "14px" },
-    }),
-    SecondaryButton(busy ? busyLabel : "বিশ্লেষণ করুন", analyze, busy),
+    presetFile
+      ? React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600, margin: "6px 0" } }, "📄 " + presetFile.name)
+      : React.createElement("input", {
+          ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
+          style: { fontSize: "14px" },
+        }),
+    SecondaryButton(busy ? busyLabel : (presetFile ? "আবার বিশ্লেষণ করুন" : "বিশ্লেষণ করুন"), analyze, busy),
     SecondaryButton("এটা হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", () => setHandwrittenMode(true), false),
     err ? ErrorBox(err) : null,
     candidates
       ? React.createElement(ReportVerificationForm, {
           familyId, targetMemberId, callerMemberId, candidates, extractionMethod,
-          onSaved: () => setCandidates(null),
+          onSaved: (n) => { setCandidates(null); setSavedCount(n || 0); },
         })
-      : null
+      : null,
+    savedCount > 0 ? SuccessBox(savedCount + "টা মান সংরক্ষণ করা হয়েছে।") : null
   );
 }

@@ -2,14 +2,17 @@
 // ফর্ম-প্যাটার্ন reuse (state/logic component-এই, presentational callback দিয়ে
 // parent-কে জানায়, Process Rule ১১)।
 
-import { SelectField, DateField, ErrorBox, PrimaryButton } from "../../shared/ui.js";
+import { SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { uploadDocument, DOC_TYPE_LABELS, validateFile } from "./documentsData.js";
 
 const { useState, useCallback, useRef } = React;
 
-export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded }) {
+// একীভূত ফ্লো: ফাইল একবারই বাছা হয়। "সংরক্ষণ" = শুধু vault; "সংরক্ষণ + বিশ্লেষণ"
+// = আগে vault-এ আপলোড, সফল হলে `onAnalyze(file)` দিয়ে parent বিশ্লেষণ-ধাপ খোলে
+// (আপলোড ব্যর্থ হলে বিশ্লেষণ শুরু হয় না, ফাইলও হারায় না)।
+export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded, onAnalyze, onManual }) {
   const [docType, setDocType] = useState("prescription");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [source, setSource] = useState("");
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -26,17 +29,18 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     setFile(f || null);
   }, []);
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (andAnalyze) => {
     setErr(null);
     if (!file) { setErr("একটা ফাইল বেছে নিন।"); return; }
     setBusy(true);
     try {
       await uploadDocument(familyId, targetMemberId, callerMemberId, file, { docType, date, source });
+      const uploadedFile = file;
       setFile(null);
-      setDate("");
       setSource("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       onUploaded && onUploaded();
+      if (andAnalyze && onAnalyze) onAnalyze(uploadedFile);
     } catch (e) {
       setErr(e.code === "permission-denied"
         ? "এই সদস্যের জন্য Document আপলোড করার অনুমতি আপনার নেই।"
@@ -44,12 +48,11 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, file, docType, date, source, onUploaded]);
+  }, [familyId, targetMemberId, callerMemberId, file, docType, date, source, onUploaded, onAnalyze]);
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "নতুন Document/Report যোগ করুন"),
-    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, "ছবি বা PDF — আসল ফাইলই সংরক্ষিত হবে (পরে সম্পূর্ণ ডাউনলোড করা যাবে)।"),
+    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "0 0 4px" } }, "ছবি বা PDF — আসল ফাইলই সংরক্ষিত হবে (পরে সম্পূর্ণ ডাউনলোড করা যাবে)।"),
     SelectField("ধরন", docType, setDocType, Object.entries(DOC_TYPE_LABELS).map(([v, l]) => [v, l])),
     DateField("তারিখ (ঐচ্ছিক)", date, setDate),
     React.createElement(
@@ -68,7 +71,15 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
         style: { fontSize: "14px" },
       })
     ),
+    file && React.createElement("div", { style: { marginTop: "8px", fontSize: "14px", color: "#0E4B43", fontWeight: 600 } }, "📄 " + file.name),
     err && ErrorBox(err),
-    PrimaryButton("Upload করুন", submit, busy)
+    docType === "lab-report" && onAnalyze
+      ? React.createElement(React.Fragment, null,
+          PrimaryButton("সংরক্ষণ + AI/OCR বিশ্লেষণ", () => submit(true), busy),
+          SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy))
+      : React.createElement(React.Fragment, null,
+          PrimaryButton("সংরক্ষণ করুন", () => submit(false), busy),
+          onAnalyze && SecondaryButton("সংরক্ষণ + AI/OCR বিশ্লেষণ", () => submit(true), busy)),
+    onManual && SecondaryButton("✍️ হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", onManual, false)
   );
 }
