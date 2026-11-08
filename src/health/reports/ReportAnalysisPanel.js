@@ -114,12 +114,12 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId }
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "রিপোর্ট বিশ্লেষণ করুন (AI/OCR)"),
-    React.createElement("p", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } },
+    React.createElement("p", { style: { fontSize: "14px", color: "#888", margin: "4px 0" } },
       "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান স্বয়ংক্রিয়ভাবে শনাক্ত করার চেষ্টা করা হবে (পরের ধাপে আপনাকে যাচাই করতে হবে)।"
     ),
     React.createElement("input", {
       ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
-      style: { fontSize: "13px" },
+      style: { fontSize: "14px" },
     }),
     SecondaryButton(busy ? busyLabel : "বিশ্লেষণ করুন", analyze, busy),
     SecondaryButton("এটা হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", () => setHandwrittenMode(true), false),

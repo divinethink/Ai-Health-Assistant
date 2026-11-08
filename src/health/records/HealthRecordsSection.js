@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // Member-picker + form + list — কোন সদস্যের record দেখা/যোগ করা হচ্ছে তা বেছে
 // নেওয়া যায় (open roster থেকে, §3.1 অনুযায়ী)। Permission actual enforcement
 // সবসময় server-side rules করে — এই picker শুধু UI-convenience, security
@@ -34,7 +35,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   useEffect(() => { setEditingRecord(null); }, [targetMemberId]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
@@ -43,7 +44,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       key: "summary-" + targetMemberId,
       familyId, selectedMemberId: targetMemberId, refreshTick,
     }),
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Records"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.records")),
     (section === "all" || section === "profile") && React.createElement(HealthVitalsWidget, {
       key: "vitals-" + targetMemberId,
       familyId, targetMemberId, callerMemberId, refreshTick,

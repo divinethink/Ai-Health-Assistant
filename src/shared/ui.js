@@ -3,20 +3,20 @@
 
 export function ErrorBox(msg) {
   return React.createElement("div", {
-    style: { marginTop: "12px", padding: "10px", borderRadius: "8px", background: "#FDECEA", border: "1px solid #C0392B", color: "#7A1F14", fontSize: "13px" },
+    style: { marginTop: "12px", padding: "10px", borderRadius: "8px", background: "#FDECEA", border: "1px solid #C0392B", color: "#7A1F14", fontSize: "14px" },
   }, msg);
 }
 
 export function SuccessBox(children) {
   return React.createElement("div", {
-    style: { marginTop: "12px", padding: "10px", borderRadius: "8px", background: "#E8F3EC", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "13px" },
+    style: { marginTop: "12px", padding: "10px", borderRadius: "8px", background: "#E8F3EC", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "14px" },
   }, children);
 }
 
 export function TextField(label, value, onChange, placeholder) {
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, label),
+    React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, label),
     React.createElement("input", {
       type: "text", value, placeholder, onChange: (e) => onChange(e.target.value),
       style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
@@ -46,7 +46,7 @@ export function Card(children) {
 export function SelectField(label, value, onChange, options) {
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, label),
+    React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, label),
     React.createElement(
       "select", { value, onChange: (e) => onChange(e.target.value),
         style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" } },
@@ -68,7 +68,7 @@ export function TabPills(tabs, activeId, onChange) {
         "button", {
           key: id, onClick: () => onChange(id),
           style: {
-            flexShrink: 0, fontSize: "12px", fontWeight: 600, padding: "7px 12px", borderRadius: "999px", cursor: "pointer",
+            flexShrink: 0, fontSize: "14px", fontWeight: 600, padding: "7px 12px", borderRadius: "999px", cursor: "pointer",
             border: active ? "1px solid #0E4B43" : "1px solid #CBD5E1",
             background: active ? "#0E4B43" : "#fff", color: active ? "#fff" : "#333",
           },
@@ -95,7 +95,7 @@ export function CollapsibleSection({ title, defaultOpen, children }) {
         style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "var(--hs-chip-bg, #F5F5F0)", cursor: "pointer" },
       },
       React.createElement("span", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } }, title),
-      React.createElement("span", { style: { fontSize: "13px", color: "var(--hs-primary, #0E4B43)" } }, open ? "▲" : "▼")
+      React.createElement("span", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)" } }, open ? "▲" : "▼")
     ),
     open && React.createElement("div", { style: { padding: "12px", color: "var(--hs-text, #1B2430)" } }, children)
   );
@@ -105,7 +105,7 @@ export function DateField(label, value, onChange) {
   const todayISO = new Date().toISOString().slice(0, 10);
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, label),
+    React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, label),
     React.createElement("input", {
       type: "date", max: todayISO, value, onChange: (e) => onChange(e.target.value),
       style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },

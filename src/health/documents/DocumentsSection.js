@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // Document/Report vault section। Permission enforcement সবসময় server-side
 // rules (firestore.rules + storage.rules) করে (Process Rule ৪)।
 //
@@ -16,12 +17,12 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
   const targetMemberId = selectedMemberId;
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Documents / Reports"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.docs")),
     React.createElement(CollapsibleSection, {
       title: "📎 নতুন Document/Report যোগ করুন", defaultOpen: false,
       children: React.createElement(DocumentUploadForm, {

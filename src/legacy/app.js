@@ -17,6 +17,7 @@
 
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
+import { t, useLang, setLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
 import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
@@ -62,11 +63,11 @@ const { useState, useEffect, useCallback } = React;
 const BOTTOM_NAV_HEIGHT = 56;
 
 const NAV_TABS = [
-  ["home", "🏠", "হোম"],
-  ["aichat", "🩺", "AI চ্যাট"],
-  ["blog", "📚", "Health ব্লগ"],
-  ["documents", "📁", "Documents"],
-  ["menu", "☰", "Menu"],
+  ["home", "🏠", "nav.home"],
+  ["aichat", "🩺", "nav.aichat"],
+  ["blog", "📚", "nav.blog"],
+  ["documents", "📁", "nav.docs"],
+  ["menu", "☰", "nav.menu"],
 ];
 
 function BottomNav({ active, onChange }) {
@@ -91,13 +92,13 @@ function BottomNav({ active, onChange }) {
           },
         },
         React.createElement("span", { style: { fontSize: "18px", lineHeight: 1 } }, icon),
-        React.createElement("span", { style: { fontSize: "10px", lineHeight: 1 } }, label)
+        React.createElement("span", { style: { fontSize: "14px", lineHeight: 1 } }, t(label))
       );
     })
   );
 }
 
-function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
+function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members, selectedMemberId, onChangeMember }) {
   const [open, setOpen] = useState(false);
   return React.createElement(
     "div", {
@@ -108,7 +109,14 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
         borderBottom: "1px solid var(--hs-border)",
       },
     },
-    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "Health Assistant"),
+    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, t(title)),
+    members && members.length > 1 && React.createElement(
+      "select", {
+        value: selectedMemberId || "", onChange: (e) => onChangeMember(e.target.value), "aria-label": t("top.member"),
+        style: { maxWidth: "110px", margin: "0 6px", padding: "5px 6px", border: "1px solid var(--hs-border)", borderRadius: "8px", fontSize: "14px", background: "var(--hs-surface)", color: "var(--hs-text)" },
+      },
+      members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
+    ),
     React.createElement(
       "div", { style: { position: "relative" } },
       React.createElement(
@@ -117,7 +125,8 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
           style: {
             display: "flex", alignItems: "center", gap: "4px", border: "1px solid var(--hs-border)",
             borderRadius: "999px", padding: "5px 10px", background: "var(--hs-chip-bg)", cursor: "pointer",
-            fontSize: "12px", color: "var(--hs-primary)", fontWeight: 600,
+            fontSize: "14px", color: "var(--hs-primary)", fontWeight: 600,
+            maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           },
         },
         "👤 " + memberDoc.name + (open ? " ▲" : " ▼")
@@ -127,32 +136,32 @@ function TopBar({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat }) {
           style: {
             position: "absolute", right: 0, top: "36px", zIndex: 50, background: "var(--hs-surface)",
             border: "1px solid var(--hs-border)", borderRadius: "8px", minWidth: "210px",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.12)", padding: "10px", fontSize: "13px", color: "var(--hs-text)",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.12)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
           },
         },
-        React.createElement("div", { style: { color: "var(--hs-muted)" } }, "ভূমিকা: ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
-        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "2px", fontSize: "11px" } }, "পরিবারের কোড: " + familyDoc.familyCodeDisplay),
+        React.createElement("div", { style: { color: "var(--hs-muted)" } }, t("top.role") + ": ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
+        React.createElement("div", { style: { color: "var(--hs-muted)", marginTop: "2px", fontSize: "14px" } }, t("top.familyCode") + ": " + familyDoc.familyCodeDisplay),
         isAdmin && React.createElement(
           "button", {
             onClick: () => { setOpen(false); onOpenGeneralChat(); },
             style: {
               marginTop: "10px", width: "100%", padding: "8px", border: "1px solid #1B2430",
-              borderRadius: "6px", background: "#1B2430", color: "#fff", fontSize: "12px",
+              borderRadius: "6px", background: "#1B2430", color: "#fff", fontSize: "14px",
               fontWeight: 600, cursor: "pointer",
             },
           },
-          "🌐 General Chat"
+          t("top.generalChat")
         ),
         React.createElement(
           "button", {
             onClick: () => { setOpen(false); auth.signOut(); },
             style: {
               marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B",
-              borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "12px",
+              borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "14px",
               fontWeight: 600, cursor: "pointer",
             },
           },
-          "🚪 লগ-আউট"
+          t("top.logout")
         )
       )
     )
@@ -164,9 +173,9 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
     "div", { style: { border: "1px solid var(--hs-border)", borderRadius: "8px", padding: "12px", marginBottom: "12px", background: "var(--hs-surface)" } },
     React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "👤 " + memberDoc.name),
     React.createElement(
-      "div", { style: { fontSize: "12px", color: "var(--hs-muted)", marginTop: "4px" } },
-      "ভূমিকা: ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role),
-      " · পরিবারের কোড: ", React.createElement("b", null, familyDoc.familyCodeDisplay)
+      "div", { style: { fontSize: "14px", color: "var(--hs-muted)", marginTop: "4px" } },
+      t("top.role") + ": ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role),
+      " · " + t("top.familyCode") + ": ", React.createElement("b", null, familyDoc.familyCodeDisplay)
     )
   );
 }
@@ -177,9 +186,9 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
 // Firestore/schema টাচ হয় না, pure client-side preference।
 const HS_THEME_STORAGE_KEY = "hs-theme";
 const THEME_OPTIONS = [
-  ["light", "☀️ Light"],
-  ["sepia", "📜 Sepia"],
-  ["dark", "🌙 Dark"],
+  ["light", "theme.light"],
+  ["sepia", "theme.sepia"],
+  ["dark", "theme.dark"],
 ];
 
 function ThemeSwitcher() {
@@ -198,13 +207,35 @@ function ThemeSwitcher() {
         "button", {
           key: id, onClick: () => applyTheme(id),
           style: {
-            padding: "8px 14px", borderRadius: "999px", cursor: "pointer", fontSize: "13px",
+            padding: "8px 14px", borderRadius: "999px", cursor: "pointer", fontSize: "14px",
             border: theme === id ? "2px solid var(--hs-primary)" : "1px solid var(--hs-border)",
             background: theme === id ? "var(--hs-chip-bg)" : "var(--hs-surface)",
             color: "var(--hs-text)", fontWeight: theme === id ? 700 : 500,
           },
         },
-        label
+        t(label)
+      )
+    )
+  );
+}
+
+// ভাষা-নির্বাচন (বাংলা / English) — শুধু এই ডিভাইসের পছন্দ (shared/i18n.js)।
+function LanguageSwitcher() {
+  const lang = useLang();
+  return React.createElement(
+    "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+    ["bn", "en"].map((id) =>
+      React.createElement(
+        "button", {
+          key: id, onClick: () => setLang(id),
+          style: {
+            padding: "10px 18px", borderRadius: "999px", cursor: "pointer", fontSize: "14px",
+            border: lang === id ? "2px solid var(--hs-primary)" : "1px solid var(--hs-border)",
+            background: lang === id ? "var(--hs-chip-bg)" : "var(--hs-surface)",
+            color: "var(--hs-text)", fontWeight: lang === id ? 700 : 500,
+          },
+        },
+        t("lang." + id)
       )
     )
   );
@@ -245,26 +276,26 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "10px", border: "1px dashed var(--hs-border)", borderRadius: "8px" } },
-    React.createElement("h4", { style: { fontSize: "13px", color: "var(--hs-primary)", margin: "0 0 6px" } }, "🔗 আমন্ত্রণ লিংক"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary)", margin: "0 0 6px" } }, "🔗 আমন্ত্রণ লিংক"),
     isLive
       ? React.createElement(
           React.Fragment, null,
-          React.createElement("div", { style: { fontSize: "11px", wordBreak: "break-all", background: "var(--hs-chip-bg)", padding: "6px", borderRadius: "6px" } }, link),
+          React.createElement("div", { style: { fontSize: "14px", wordBreak: "break-all", background: "var(--hs-chip-bg)", padding: "6px", borderRadius: "6px" } }, link),
           React.createElement(
             "div", { style: { display: "flex", gap: "8px", marginTop: "6px" } },
             React.createElement("button", {
               onClick: handleCopy, disabled: busy,
-              style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "#fff", color: "var(--hs-primary)", cursor: "pointer" },
+              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "#fff", color: "var(--hs-primary)", cursor: "pointer" },
             }, copied ? "কপি হয়েছে ✓" : "লিংক কপি করুন"),
             React.createElement("button", {
               onClick: handleRevoke, disabled: busy,
-              style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+              style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
             }, "বাতিল করুন")
           )
         )
       : React.createElement("button", {
           onClick: handleGenerate, disabled: busy,
-          style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "var(--hs-primary)", color: "#fff", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--hs-primary)", background: "var(--hs-primary)", color: "#fff", cursor: "pointer" },
         }, busy ? "তৈরি হচ্ছে..." : "লিংক তৈরি করুন")
   );
 }
@@ -272,15 +303,18 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
   return React.createElement(
     "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" } },
-    React.createElement("h2", { style: { color: "var(--hs-primary)", fontSize: "17px", margin: "4px 0 12px" } }, "☰ মেনু"),
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(CollapsibleSection, {
-      title: "⚙️ প্রেফারেন্স — থিম", defaultOpen: false,
+      title: t("menu.language"), defaultOpen: true,
+      children: React.createElement(LanguageSwitcher),
+    }),
+    React.createElement(CollapsibleSection, {
+      title: t("menu.prefs"), defaultOpen: false,
       children: React.createElement(ThemeSwitcher),
     }),
     React.createElement(CollapsibleSection, {
-      title: "👨‍👩‍👧‍👦 পরিবার", defaultOpen: true,
+      title: t("menu.family"), defaultOpen: true,
       children: React.createElement(
         React.Fragment, null,
         isAdmin && React.createElement(InviteLinkPanel, { familyId, familyDoc, isAdmin }),
@@ -289,54 +323,30 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       ),
     }),
     React.createElement(CollapsibleSection, {
-      title: "🧭 নেভিগেশন", defaultOpen: false,
+      title: t("menu.nav"), defaultOpen: false,
       children: React.createElement(
         "button", {
           onClick: onOpenDoctorDetails,
-          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "8px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "8px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         },
-        "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"
+        t("menu.doctor")
       ),
     }),
     React.createElement(CollapsibleSection, {
-      title: "📞 রেফারেন্স — Verified Care-Escalation Directory", defaultOpen: false,
+      title: t("menu.care"), defaultOpen: false,
       children: React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
     }),
     React.createElement(CollapsibleSection, {
-      title: "💾 ডেটা-ম্যানেজমেন্ট — ব্যাকআপ/রিস্টোর", defaultOpen: false,
+      title: t("menu.data"), defaultOpen: false,
       children: React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
     })
   );
 }
 
-// App-wide member-switcher — Home/AI-চ্যাট/Documents ৩ ট্যাবে এই bar একবারই
-// দেখাবে (owner-request, item ১, ২০২৬-০৯-১৬): TopBar (৪৪px)-এর ঠিক নিচে,
-// শুধু family-তে ১-এর বেশি সদস্য থাকলে (একক-সদস্য পরিবারে অপ্রয়োজনীয় জায়গা
-// নেবে না)। state Dashboard-এ owned (§11 presentational-pattern), এই
-// component নিজে কোনো fetch করে না।
-const MEMBER_BAR_HEIGHT = 34;
-
-function MemberSwitcherBar({ members, selectedMemberId, onChange }) {
-  return React.createElement(
-    "div", {
-      style: {
-        position: "fixed", top: "44px", left: 0, right: 0, zIndex: 45, height: MEMBER_BAR_HEIGHT + "px",
-        display: "flex", alignItems: "center", gap: "8px", padding: "0 14px",
-        background: "var(--hs-chip-bg, #F5F5F0)", borderBottom: "1px solid var(--hs-border, #E2E8F0)",
-      },
-    },
-    React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted, #666)" } }, "সদস্য:"),
-    React.createElement(
-      "select", {
-        value: selectedMemberId || "", onChange: (e) => onChange(e.target.value),
-        style: { flex: 1, maxWidth: "220px", padding: "4px 8px", border: "1px solid var(--hs-border, #CBD5E1)", borderRadius: "6px", fontSize: "13px", background: "#fff" },
-      },
-      members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
-    )
-  );
-}
+const TAB_TITLES = { home: "title.home", aichat: "title.aichat", blog: "title.blog", documents: "title.docs", menu: "title.menu" };
 
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
+  useLang(); // ভাষা বদলালে পুরো স্ক্রিন নতুন করে আঁকা হয় (state অক্ষত থাকে)
   const [refreshTick, setRefreshTick] = useState(0);
   const [activeTab, setActiveTab] = useState("home");
   const [members, setMembers] = useState(null);
@@ -367,8 +377,9 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
 
-  const needsMemberBar = members && members.length > 1 && ["home", "aichat", "documents"].includes(activeTab);
-  const topOffsetPx = 44 + (needsMemberBar ? MEMBER_BAR_HEIGHT : 0);
+  // হেডার এখন দুই স্তর: (১) TopBar — পেজের নাম + সদস্য-বাছাই + অ্যাকাউন্ট, (২) পেজের নিজস্ব ট্যাব-পিল।
+  const showMemberSelect = members && members.length > 1 && ["home", "aichat", "documents"].includes(activeTab);
+  const topOffsetPx = 44;
 
   let tabContent;
   if (activeTab === "home") {
@@ -388,8 +399,10 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   return React.createElement(
     React.Fragment, null,
-    React.createElement(TopBar, { memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true) }),
-    needsMemberBar && React.createElement(MemberSwitcherBar, { members, selectedMemberId, onChange: setSelectedMemberId }),
+    React.createElement(TopBar, {
+      title: TAB_TITLES[activeTab] || "title.home", memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true),
+      members: showMemberSelect ? members : null, selectedMemberId, onChangeMember: setSelectedMemberId,
+    }),
     tabContent,
     React.createElement(BottomNav, { active: activeTab, onChange: setActiveTab })
   );

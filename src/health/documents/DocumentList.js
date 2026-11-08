@@ -39,28 +39,28 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!docs) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে...");
-  if (docs.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "কোনো Document নেই।");
+  if (!docs) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (docs.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "কোনো Document নেই।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
     docs.map((d) =>
       React.createElement(
-        "div", { key: d.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px" } },
+        "div", { key: d.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px" } },
         React.createElement("div", null, React.createElement("b", null, DOC_TYPE_LABELS[d.docType] || d.docType)),
         React.createElement("div", { style: { color: "#555" } },
           d.fileName + (d.date ? " — " + d.date : "") + (d.source ? " (" + d.source + ")" : "")),
-        d.status === "pending" && React.createElement("div", { style: { color: "#B8860B", fontSize: "12px" } },
+        d.status === "pending" && React.createElement("div", { style: { color: "#B8860B", fontSize: "14px" } },
           "আপলোড অসম্পূর্ণ (হয়তো নেটওয়ার্ক-সমস্যায় থেমে গেছে) — মুছে আবার চেষ্টা করুন।"),
         d.status === "ready" && React.createElement(
           "div", { style: { display: "flex", gap: "10px", marginTop: "4px" } },
           React.createElement("a", {
             href: d.cloudinaryUrl, target: "_blank", rel: "noopener noreferrer",
-            style: { fontSize: "12px", color: "#0E4B43" },
+            style: { fontSize: "14px", color: "#0E4B43" },
           }, "👁 দেখুন"),
           React.createElement("a", {
             href: getDownloadUrl(d.cloudinaryUrl), target: "_blank", rel: "noopener noreferrer",
-            style: { fontSize: "12px", color: "#0E4B43" },
+            style: { fontSize: "14px", color: "#0E4B43" },
           }, "⬇ ডাউনলোড")
         ),
         React.createElement(
@@ -68,19 +68,19 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           confirmId === d.id
             ? React.createElement(
                 React.Fragment, null,
-                React.createElement("span", { style: { fontSize: "12px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
+                React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
                 React.createElement("button", {
                   onClick: () => doDelete(d), disabled: busyId === d.id,
-                  style: { fontSize: "12px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
                 }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
                 React.createElement("button", {
                   onClick: () => setConfirmId(null),
-                  style: { fontSize: "12px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
                 }, "না")
               )
             : React.createElement("button", {
                 onClick: () => setConfirmId(d.id),
-                style: { fontSize: "12px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
+                style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
               }, "🗑 Delete")
         )
       )

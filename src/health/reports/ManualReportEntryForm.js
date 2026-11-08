@@ -91,7 +91,7 @@ export function ManualReportEntryForm({ familyId, targetMemberId, callerMemberId
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
-    React.createElement("p", { style: { fontSize: "12px", color: "#888", margin: "4px 0" } },
+    React.createElement("p", { style: { fontSize: "14px", color: "#888", margin: "4px 0" } },
       "হাতে-লেখা রিপোর্টে OCR নির্ভরযোগ্য না — রিপোর্ট দেখে সরাসরি মান লিখুন।"
     ),
     ...rows.map((r, idx) => React.createElement(

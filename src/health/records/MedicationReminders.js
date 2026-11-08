@@ -51,7 +51,7 @@ function fallbackEndDate(startDate, durationDays) {
 function sel(value, onChange, options, width) {
   return React.createElement("select", {
     value, onChange: (e) => onChange(e.target.value),
-    style: { padding: "7px 4px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", background: "#fff", width: width || "auto" },
+    style: { padding: "7px 4px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", background: "#fff", width: width || "auto" },
   }, options.map(([v, l]) => React.createElement("option", { key: v, value: v }, l)));
 }
 
@@ -193,30 +193,30 @@ export function MedicationReminders({ familyId, callerMemberId }) {
   return React.createElement(
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "💊 ওষুধ সেবনের রিমাইন্ডার"),
-    React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "8px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "8px" } },
       "কয় বেলা খাবেন, প্রতি বেলার সময় (১২-ঘণ্টা), খাবারের আগে/পরে এবং কত তারিখ পর্যন্ত খাবেন — বেছে নিয়ে সেভ করুন। ⚠️ app-এর নিজস্ব reminder শুধু app খোলা/ব্যাকগ্রাউন্ড ট্যাব অবস্থায় কাজ করে (কোনো backend push-server নেই) — app বন্ধ থাকলেও পেতে \"Google Calendar-এ যোগ করুন\" ব্যবহার করুন।"
     ),
     permission !== "granted" && permission !== "unsupported" && React.createElement(
       "button", {
         onClick: requestPermission,
-        style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#fff", color: "#0E4B43", fontSize: "13px", cursor: "pointer" },
+        style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#fff", color: "#0E4B43", fontSize: "14px", cursor: "pointer" },
       }, "🔔 নোটিফিকেশন অনুমতি দিন (রিমাইন্ডার সক্রিয় করতে প্রয়োজন)"
     ),
-    permission === "unsupported" && React.createElement("div", { style: { fontSize: "12px", color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজার/ডিভাইসে Notification সাপোর্ট নেই।"),
+    permission === "unsupported" && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজার/ডিভাইসে Notification সাপোর্ট নেই।"),
 
-    meds.length === 0 && React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "কোনো active ওষুধ (medicationStatement) পাওয়া যায়নি।"),
+    meds.length === 0 && React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "কোনো active ওষুধ (medicationStatement) পাওয়া যায়নি।"),
 
     meds.map((m) => {
       const ev = editValues[m.recordId] || { slots: [], endDate: "", mealTiming: "any" };
       const expired = m.endDate && todayStr() > m.endDate;
-      const lbl = { fontSize: "12px", color: "#555", margin: "8px 0 3px" };
+      const lbl = { fontSize: "14px", color: "#555", margin: "8px 0 3px" };
       return React.createElement(
         "div", { key: m.recordId, style: { marginTop: "10px", padding: "10px", background: "#F7FAF9", borderRadius: "8px", border: "1px solid #E0E4E2" } },
-        React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#333" } }, m.memberName + " — " + m.genericName),
-        (m.frequency || m.durationDays) && React.createElement("div", { style: { fontSize: "12px", color: "#666" } }, (m.frequency || "") + (m.durationDays ? " · " + m.durationDays + " দিন" : "")),
-        m.reminderTimes.length > 0 && React.createElement("div", { style: { fontSize: "12px", color: "#0E4B43", marginTop: "2px" } },
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#333" } }, m.memberName + " — " + m.genericName),
+        (m.frequency || m.durationDays) && React.createElement("div", { style: { fontSize: "14px", color: "#666" } }, (m.frequency || "") + (m.durationDays ? " · " + m.durationDays + " দিন" : "")),
+        m.reminderTimes.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "2px" } },
           "⏰ " + m.reminderTimes.map(label12).join(", ") + (m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "") + (m.endDate ? " · " + m.endDate + " পর্যন্ত" : "")),
-        expired && React.createElement("div", { style: { fontSize: "12px", color: "#B3261E", marginTop: "2px" } }, "⏹ মেয়াদ শেষ — রিমাইন্ডার আর আসবে না"),
+        expired && React.createElement("div", { style: { fontSize: "14px", color: "#B3261E", marginTop: "2px" } }, "⏹ মেয়াদ শেষ — রিমাইন্ডার আর আসবে না"),
 
         React.createElement("div", { style: lbl }, "কয় বেলা"),
         sel(String(ev.slots.length), (v) => setSlotCount(m.recordId, Number(v)), [["0", "রিমাইন্ডার নেই"], ["1", "১ বেলা"], ["2", "২ বেলা"], ["3", "৩ বেলা"], ["4", "৪ বেলা"], ["5", "৫ বেলা"], ["6", "৬ বেলা"]]),
@@ -225,7 +225,7 @@ export function MedicationReminders({ familyId, callerMemberId }) {
           const t = to12(slot);
           const upd = (patch) => setEdit(m.recordId, { slots: ev.slots.map((x, j) => (j === i ? to24({ ...t, ...patch }) : x)) });
           return React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" } },
-            React.createElement("span", { style: { fontSize: "12px", color: "#555", minWidth: "48px" } }, (i + 1) + "ম বেলা"),
+            React.createElement("span", { style: { fontSize: "14px", color: "#555", minWidth: "48px" } }, (i + 1) + "ম বেলা"),
             sel(String(t.h), (v) => upd({ h: Number(v) }), Array.from({ length: 12 }, (_, k) => [String(k + 1), String(k + 1)]), "56px"),
             React.createElement("span", null, ":"),
             sel(String(t.m), (v) => upd({ m: Number(v) }), Array.from({ length: 60 }, (_, k) => [String(k), String(k).padStart(2, "0")]), "60px"),
@@ -240,17 +240,17 @@ export function MedicationReminders({ familyId, callerMemberId }) {
         React.createElement("input", {
           type: "date", value: ev.endDate || "",
           onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }),
-          style: { padding: "7px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px" },
+          style: { padding: "7px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
         }),
 
         React.createElement("div", null,
           React.createElement(
             "button", {
               onClick: () => handleSave(m.recordId),
-              style: { marginTop: "10px", padding: "6px 12px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "12px", cursor: "pointer" },
+              style: { marginTop: "10px", padding: "6px 12px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
             }, "সেভ করুন"
           ),
-          savedFlash === m.recordId && React.createElement("span", { style: { marginLeft: "8px", fontSize: "12px", color: "#0E4B43" } }, "✓ সংরক্ষিত")
+          savedFlash === m.recordId && React.createElement("span", { style: { marginLeft: "8px", fontSize: "14px", color: "#0E4B43" } }, "✓ সংরক্ষিত")
         ),
 
         // Google Calendar auto-sync — app বন্ধ থাকলেও ফোনের Calendar reminder দেবে।
@@ -258,17 +258,17 @@ export function MedicationReminders({ familyId, callerMemberId }) {
           React.createElement(
             "button", {
               onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId,
-              style: { padding: "6px 12px", border: "1px solid #4285F4", borderRadius: "6px", background: "#fff", color: "#4285F4", fontSize: "12px", cursor: "pointer", marginRight: "8px" },
+              style: { padding: "6px 12px", border: "1px solid #4285F4", borderRadius: "6px", background: "#fff", color: "#4285F4", fontSize: "14px", cursor: "pointer", marginRight: "8px" },
             }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট করুন" : "📅 সেভ করে Google Calendar-এ যোগ করুন")
           ),
           m.calendarEventIds.length > 0 && React.createElement(
             "button", {
               onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId,
-              style: { padding: "6px 12px", border: "1px solid #C0392B", borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "12px", cursor: "pointer" },
+              style: { padding: "6px 12px", border: "1px solid #C0392B", borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "14px", cursor: "pointer" },
             }, "Calendar থেকে সরান"
           ),
-          m.calendarEventIds.length > 0 && React.createElement("div", { style: { fontSize: "11px", color: "#0E4B43", marginTop: "4px" } }, "📅 Calendar-এ যুক্ত আছে — সময়/তারিখ বদলালে \"Calendar আপডেট করুন\" চাপুন।"),
-          calMsg && calMsg.recordId === m.recordId && React.createElement("div", { style: { fontSize: "12px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text)
+          m.calendarEventIds.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "4px" } }, "📅 Calendar-এ যুক্ত আছে — সময়/তারিখ বদলালে \"Calendar আপডেট করুন\" চাপুন।"),
+          calMsg && calMsg.recordId === m.recordId && React.createElement("div", { style: { fontSize: "14px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text)
         )
       );
     })

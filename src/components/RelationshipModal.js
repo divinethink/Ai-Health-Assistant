@@ -80,21 +80,21 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
         React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43" } },
           targetMember.name + "-এর সম্পর্ক ও অভিভাবকত্ব"),
 
-        React.createElement("label", { style: { fontSize: "12px", color: "#555", marginTop: "10px", display: "block" } }, "সম্পর্ক"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555", marginTop: "10px", display: "block" } }, "সম্পর্ক"),
         React.createElement(
           "select", {
             value: label, onChange: (e) => setLabel(e.target.value),
-            style: { width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", marginTop: "4px", fontSize: "13px" },
+            style: { width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #CBD5E1", marginTop: "4px", fontSize: "14px" },
           },
           RELATIONSHIP_OPTIONS.map(([v, l]) => React.createElement("option", { key: v, value: v }, l))
         ),
 
-        React.createElement("label", { style: { fontSize: "12px", color: "#555", marginTop: "14px", display: "block" } }, "অভিভাবক (guardian)"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555", marginTop: "14px", display: "block" } }, "অভিভাবক (guardian)"),
         React.createElement(
           "div", { style: { marginTop: "4px", maxHeight: "180px", overflowY: "auto" } },
           allMembers.filter((m) => m.id !== targetMember.id).map((m) =>
             React.createElement(
-              "label", { key: m.id, style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", padding: "4px 0" } },
+              "label", { key: m.id, style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", padding: "4px 0" } },
               React.createElement("input", {
                 type: "checkbox", checked: guardians.has(m.id),
                 onChange: () => toggleGuardian(m.id),
@@ -113,14 +113,14 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
             style: {
               flex: 1, padding: "10px", borderRadius: "6px", border: "none",
               background: "#0E4B43", color: "#fff", cursor: busy ? "default" : "pointer",
-              opacity: busy ? 0.6 : 1, fontSize: "13px",
+              opacity: busy ? 0.6 : 1, fontSize: "14px",
             },
           }, busy ? "সংরক্ষণ হচ্ছে..." : "Save"),
           React.createElement("button", {
             onClick: onClose, disabled: busy,
             style: {
               flex: 1, padding: "10px", borderRadius: "6px", border: "1px solid #CBD5E1",
-              background: "#fff", cursor: "pointer", fontSize: "13px",
+              background: "#fff", cursor: "pointer", fontSize: "14px",
             },
           }, "Cancel")
         )

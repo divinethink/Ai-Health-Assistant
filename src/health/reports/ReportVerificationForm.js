@@ -105,7 +105,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
 
   if (!candidates || candidates.length === 0) {
     return React.createElement(
-      "div", { style: { marginTop: "14px", fontSize: "13px", color: "#888" } },
+      "div", { style: { marginTop: "14px", fontSize: "14px", color: "#888" } },
       "রিপোর্ট থেকে কোনো পরিচিত টেস্ট-মান শনাক্ত করা যায়নি। প্রয়োজনে ম্যানুয়ালি Health Record যোগ করুন।"
     );
   }
@@ -113,7 +113,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "রিপোর্টের মান যাচাই করুন"),
-    React.createElement("div", { style: { fontSize: "12px", color: "#666", margin: "4px 0 10px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#666", margin: "4px 0 10px" } },
       "OCR/extraction থেকে পাওয়া মান — Save করার আগে প্রতিটা যাচাই করে নিন। ভুল মনে হলে আনচেক করুন বা সংশোধন করুন।"
     ),
     ...rows.map((r, idx) => React.createElement(
@@ -125,12 +125,12 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
           background: r.status === "ok" ? "#fff" : "#FFF9EC",
         },
       },
-      React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, color: "#0E4B43" } },
+      React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600, color: "#0E4B43" } },
         React.createElement("input", { type: "checkbox", checked: r.include, onChange: (e) => updateRow(idx, { include: e.target.checked }) }),
         r.canonicalNameEn
       ),
       r.referenceRange
-        ? React.createElement("div", { style: { fontSize: "11px", color: "#888", margin: "2px 0 6px" } },
+        ? React.createElement("div", { style: { fontSize: "14px", color: "#888", margin: "2px 0 6px" } },
             "স্বাভাবিক রেঞ্জ: " + r.referenceRange.low + "–" + r.referenceRange.high + (r.unit ? " " + r.unit : ""))
         : null,
       TextField("মান", r.value, (v) => updateRow(idx, { value: v })),
@@ -138,7 +138,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
       DateField("রিপোর্টের তারিখ (ঐচ্ছিক)", r.date, (v) => updateRow(idx, { date: v })),
       r.flags.length > 0
         ? React.createElement(
-            "div", { style: { marginTop: "6px", fontSize: "12px", color: "#8A5A00" } },
+            "div", { style: { marginTop: "6px", fontSize: "14px", color: "#8A5A00" } },
             ...r.flags.map((f) => React.createElement("div", { key: f }, "⚠️ " + (FLAG_LABELS[f] || f)))
           )
         : null

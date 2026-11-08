@@ -96,7 +96,7 @@ export function RiskBasedTreatmentModes({
     { style: { marginTop: "10px" } },
     React.createElement(
       "div",
-      { style: { fontSize: "12px", color: "#8A6100", marginBottom: "8px" } },
+      { style: { fontSize: "14px", color: "#8A6100", marginBottom: "8px" } },
       "⚠ শিশু/গর্ভাবস্থা/গুরুতর বা দীর্ঘমেয়াদি অবস্থায় Medical Science-ই প্রধান পরামর্শ — Herbal/Homeopathy শুধু সম্পূরক তথ্য হিসেবে (evidence-level ও disclaimer-সহ) দেখানো হচ্ছে।"
     ),
     medicalCard,

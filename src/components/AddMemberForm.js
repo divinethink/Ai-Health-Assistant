@@ -49,7 +49,7 @@ export function AddMemberForm({ familyId, onAdded }) {
     TextField("নাম", name, setName, "সদস্যের নাম"),
     React.createElement(
       "div", { style: { marginTop: "10px" } },
-      React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "জন্ম-তারিখ"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "জন্ম-তারিখ"),
       React.createElement("input", {
         type: "date", min: "1960-01-01", max: todayISO, value: dob,
         onChange: (e) => setDob(e.target.value),
@@ -58,7 +58,7 @@ export function AddMemberForm({ familyId, onAdded }) {
     ),
     React.createElement(
       "div", { style: { marginTop: "10px" } },
-      React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "লিঙ্গ"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "লিঙ্গ"),
       React.createElement(
         "select", { value: sex, onChange: (e) => setSex(e.target.value),
           style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" } },
@@ -68,7 +68,7 @@ export function AddMemberForm({ familyId, onAdded }) {
     ),
     TextField("ইমেইল (ঐচ্ছিক)", email, setEmail, "সদস্য নিজে পরে claim করতে চাইলে"),
     React.createElement(
-      "div", { style: { fontSize: "11px", color: "#777", marginTop: "4px" } },
+      "div", { style: { fontSize: "14px", color: "#777", marginTop: "4px" } },
       "এই সদস্যের নিজস্ব, স্বতন্ত্র email হতে হবে (আপনার email দেওয়া যাবে না)। খালি রাখলে এই সদস্য শুধু Admin/অভিভাবক দিয়েই পরিচালিত হবেন।"
     ),
     err && ErrorBox(err),
@@ -77,8 +77,8 @@ export function AddMemberForm({ familyId, onAdded }) {
         React.Fragment, null,
         React.createElement("div", null, React.createElement("b", null, result.name), " যোগ হয়েছে।"),
         result.email
-          ? React.createElement("div", { style: { fontSize: "12px", marginTop: "4px" } }, `এই সদস্য "${result.email}" দিয়ে Google Sign-in করলে স্বয়ংক্রিয়ভাবে এই প্রোফাইল claim হয়ে যাবে।`)
-          : React.createElement("div", { style: { fontSize: "12px", marginTop: "4px" } }, "এই সদস্যের কোনো account নেই — Admin/অভিভাবক এই প্রোফাইল পরিচালনা করবেন।")
+          ? React.createElement("div", { style: { fontSize: "14px", marginTop: "4px" } }, `এই সদস্য "${result.email}" দিয়ে Google Sign-in করলে স্বয়ংক্রিয়ভাবে এই প্রোফাইল claim হয়ে যাবে।`)
+          : React.createElement("div", { style: { fontSize: "14px", marginTop: "4px" } }, "এই সদস্যের কোনো account নেই — Admin/অভিভাবক এই প্রোফাইল পরিচালনা করবেন।")
       )
     ),
     PrimaryButton("সদস্য তৈরি করুন", submit, busy),

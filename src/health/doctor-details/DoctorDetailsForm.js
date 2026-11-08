@@ -59,14 +59,14 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
     TextField("ফোন/যোগাযোগ (ঐচ্ছিক)", phone, setPhone, "যেমন: 01XXXXXXXXX"),
     !isEdit && React.createElement(
       "div", { style: { marginTop: "8px" } },
-      React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "ভিজিটিং কার্ডের ছবি (ঐচ্ছিক)"),
+      React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "ভিজিটিং কার্ডের ছবি (ঐচ্ছিক)"),
       React.createElement("input", {
         ref: fileInputRef, type: "file", accept: "image/*", onChange: onFileChange,
-        style: { fontSize: "13px" },
+        style: { fontSize: "14px" },
       })
     ),
     isEdit && React.createElement(
-      "p", { style: { fontSize: "11px", color: "#888", marginTop: "8px" } },
+      "p", { style: { fontSize: "14px", color: "#888", marginTop: "8px" } },
       "ভিজিটিং কার্ডের ছবি বদলাতে চাইলে এই এন্ট্রি ডিলিট করে নতুন করে যোগ করুন।"
     ),
     err && ErrorBox(err),

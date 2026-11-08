@@ -85,7 +85,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #CBD5E1", borderRadius: "8px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "উচ্চতা, ওজন ও BMI"),
     latest && (latest.heightCm || latest.weightKg) && React.createElement(
-      "div", { style: { fontSize: "13px", color: "#333", margin: "8px 0" } },
+      "div", { style: { fontSize: "14px", color: "#333", margin: "8px 0" } },
       "সর্বশেষ: " +
         (latest.heightCm ? latest.heightCm + " cm" : "উচ্চতা নেই") + " · " +
         (latest.weightKg ? latest.weightKg + " kg" : "ওজন নেই") +
@@ -95,17 +95,17 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
       "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" } },
       React.createElement(
         "div", null,
-        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "উচ্চতা (cm)"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555" } }, "উচ্চতা (cm)"),
         React.createElement("input", {
           type: "number", value: heightInput, onChange: (e) => setHeightInput(e.target.value),
           disabled: !!(feetInput.trim() || inchInput.trim()),
           style: { display: "block", padding: "6px", border: "1px solid #CBD5E1", borderRadius: "6px", width: "100px" },
         })
       ),
-      React.createElement("div", { style: { fontSize: "11px", color: "#999", alignSelf: "center" } }, "অথবা"),
+      React.createElement("div", { style: { fontSize: "14px", color: "#999", alignSelf: "center" } }, "অথবা"),
       React.createElement(
         "div", null,
-        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "ফুট"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555" } }, "ফুট"),
         React.createElement("input", {
           type: "number", value: feetInput, onChange: (e) => setFeetInput(e.target.value),
           disabled: !!heightInput.trim(),
@@ -114,7 +114,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
       ),
       React.createElement(
         "div", null,
-        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "ইঞ্চি"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555" } }, "ইঞ্চি"),
         React.createElement("input", {
           type: "number", value: inchInput, onChange: (e) => setInchInput(e.target.value),
           disabled: !!heightInput.trim(),
@@ -123,7 +123,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
       ),
       React.createElement(
         "div", null,
-        React.createElement("label", { style: { fontSize: "12px", color: "#555" } }, "ওজন (kg)"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#555" } }, "ওজন (kg)"),
         React.createElement("input", {
           type: "number", value: weightInput, onChange: (e) => setWeightInput(e.target.value),
           style: { display: "block", padding: "6px", border: "1px solid #CBD5E1", borderRadius: "6px", width: "100px" },

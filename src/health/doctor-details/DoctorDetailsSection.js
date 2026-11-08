@@ -24,7 +24,7 @@ function AddDoctorButton({ onClick }) {
   return React.createElement(
     "button", {
       onClick,
-      style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
+      style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
     },
     "+ নতুন ডাক্তার যোগ করুন"
   );
@@ -37,14 +37,14 @@ function DoctorCategorySidebar({ category, onSelect }) {
   const items = [["all", "সব"], ...DOCTOR_CATEGORIES];
   return React.createElement(
     "div", { style: { width: "100%", height: "100%", background: "#F5F5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
-    React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", padding: "4px 8px", marginBottom: "4px" } }, "বিভাগ"),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", padding: "4px 8px", marginBottom: "4px" } }, "বিভাগ"),
     items.map(([catId, label]) => {
       const active = category === catId;
       return React.createElement(
         "div", {
           key: catId, onClick: () => onSelect(catId),
           style: {
-            padding: "8px 10px", borderRadius: "6px", fontSize: "13px", cursor: "pointer", marginBottom: "2px",
+            padding: "8px 10px", borderRadius: "6px", fontSize: "14px", cursor: "pointer", marginBottom: "2px",
             background: active ? "#0E4B43" : "transparent", color: active ? "#fff" : "#333",
           },
         },
@@ -110,7 +110,7 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
     React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px" } }, "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"),
     !showForm && !editingDoctor && React.createElement("button", {
       onClick: () => { setEditingDoctor(null); setShowForm(true); },
-      style: { fontSize: "12px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
+      style: { fontSize: "14px", padding: "6px 10px", borderRadius: "6px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
     }, "+ যুক্ত করুন")
   );
 
@@ -149,7 +149,7 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
       "div", { style: { padding: "8px 14px", background: "#F5F5F0", borderTop: "1px solid #E2E8F0", textAlign: "right" } },
       React.createElement("button", {
         onClick: onExit,
-        style: { background: "none", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "12px", padding: "5px 12px", borderRadius: "6px", cursor: "pointer" },
+        style: { background: "none", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "14px", padding: "5px 12px", borderRadius: "6px", cursor: "pointer" },
       }, "← ফিরে যান")
     )
   );

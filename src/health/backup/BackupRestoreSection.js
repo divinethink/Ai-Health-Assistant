@@ -126,18 +126,18 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডেটা ব্যাকআপ / রিস্টোর"),
-    React.createElement("p", { style: { fontSize: "12px", color: "#888" } },
+    React.createElement("p", { style: { fontSize: "14px", color: "#888" } },
       "সম্পূর্ণ manual, plaintext JSON (কোনো auto-backup না, encryption ছাড়া — roadmap §13)।"),
 
     // --- Backup ---
     React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "8px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "13px", marginBottom: "6px" } }, "ব্যাকআপ রাখুন"),
+      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ রাখুন"),
       isAdmin && React.createElement(
         "div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-        React.createElement("label", { style: { fontSize: "13px" } },
+        React.createElement("label", { style: { fontSize: "14px" } },
           React.createElement("input", { type: "radio", checked: scope === "personal", onChange: () => setScope("personal") }),
           " আমার ডেটা"),
-        React.createElement("label", { style: { fontSize: "13px" } },
+        React.createElement("label", { style: { fontSize: "14px" } },
           React.createElement("input", { type: "radio", checked: scope === "family", onChange: () => setScope("family") }),
           " পরিবারের ডেটা")
       ),
@@ -145,32 +145,32 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
       driveConfigured
         ? React.createElement("div", { style: { marginTop: "6px" } },
             SecondaryButton(driveBackupBusy ? "Drive-এ পাঠানো হচ্ছে..." : "Google Drive-এ ব্যাকআপ রাখুন", handleDriveBackup, backupBusy || driveBackupBusy))
-        : React.createElement("p", { style: { fontSize: "11px", color: "#aaa", marginTop: "6px" } }, "Google Drive ব্যাকআপ এখনো সেটআপ করা হয়নি।"),
+        : React.createElement("p", { style: { fontSize: "14px", color: "#aaa", marginTop: "6px" } }, "Google Drive ব্যাকআপ এখনো সেটআপ করা হয়নি।"),
       backupMsg && SuccessBox(backupMsg),
       backupErr && ErrorBox(backupErr)
     ),
 
     // --- Restore ---
     React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "13px", marginBottom: "6px" } }, "ব্যাকআপ থেকে রিস্টোর করুন"),
+      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "6px" } }, "ব্যাকআপ থেকে রিস্টোর করুন"),
       !plan && React.createElement("input", { type: "file", accept: "application/json,.json", onChange: handleFileChosen, disabled: restoreBusyAny }),
       driveConfigured && !plan && React.createElement(
         "div", { style: { marginTop: "8px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" } },
         isAdmin && React.createElement(
           "select", { value: driveRestoreScope, onChange: (e) => setDriveRestoreScope(e.target.value), disabled: restoreBusyAny,
-            style: { fontSize: "12px", padding: "4px" } },
+            style: { fontSize: "14px", padding: "4px" } },
           React.createElement("option", { value: "personal" }, "আমার ডেটা"),
           React.createElement("option", { value: "family" }, "পরিবারের ডেটা")
         ),
         SecondaryButton(driveRestoreBusy ? "Drive থেকে আনা হচ্ছে..." : "Google Drive থেকে যাচাই করুন", handleDriveRestore, restoreBusyAny)
       ),
-      restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "12px", color: "#888" } }, "যাচাই করা হচ্ছে..."),
+      restoreBusyAny && !plan && React.createElement("p", { style: { fontSize: "14px", color: "#888" } }, "যাচাই করা হচ্ছে..."),
       restoreErr && ErrorBox(restoreErr),
       previewSummary && React.createElement(
         "div", { style: { marginTop: "8px" } },
-        React.createElement("p", { style: { fontSize: "13px" } },
+        React.createElement("p", { style: { fontSize: "14px" } },
           "ফাইল: ", React.createElement("b", null, restoreFile)),
-        React.createElement("p", { style: { fontSize: "13px" } },
+        React.createElement("p", { style: { fontSize: "14px" } },
           previewSummary.added + " টা নতুন যোগ হবে, " + previewSummary.updated + " টা আপডেট হবে, " + previewSummary.skipped + " টা অপরিবর্তিত থাকবে।"),
         React.createElement(
           "div", { style: { display: "flex", gap: "8px" } },

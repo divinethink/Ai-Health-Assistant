@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // Family Health Calendar (owner-request, ২০২৬-০৯-১২, item ৫) — shared
 // healthCalendarEvents collection (family-wide open-read, firestore.rules দ্রষ্টব্য),
 // vaccination entry (item ৪) থেকেও autopopulate হয় (eventType filter দিয়ে merged view)।
@@ -125,8 +126,8 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #E0E4E2" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "📅 Family Health Calendar"),
-    React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "8px" } }, "পরিবারের সবাই এই ক্যালেন্ডার দেখতে পারবেন — শুধু নিজে তৈরি করা event বা Admin এডিট/ডিলিট করতে পারবেন।"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, t("h.calendar")),
+    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "8px" } }, "পরিবারের সবাই এই ক্যালেন্ডার দেখতে পারবেন — শুধু নিজে তৈরি করা event বা Admin এডিট/ডিলিট করতে পারবেন।"),
 
     // ---- month-grid view ----
     React.createElement(
@@ -137,14 +138,14 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
           onClick: () => { const m = viewMonth - 1; if (m < 0) { setViewMonth(11); setViewYear((y) => y - 1); } else setViewMonth(m); },
           style: { border: "none", background: "none", color: "#0E4B43", fontSize: "16px", cursor: "pointer", padding: "2px 8px" },
         }, "‹"),
-        React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#0E4B43" } }, viewYear + " - " + pad2(viewMonth + 1)),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43" } }, viewYear + " - " + pad2(viewMonth + 1)),
         React.createElement("button", {
           onClick: () => { const m = viewMonth + 1; if (m > 11) { setViewMonth(0); setViewYear((y) => y + 1); } else setViewMonth(m); },
           style: { border: "none", background: "none", color: "#0E4B43", fontSize: "16px", cursor: "pointer", padding: "2px 8px" },
         }, "›")
       ),
       React.createElement(
-        "div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px", fontSize: "10px", color: "#888", textAlign: "center", marginBottom: "2px" } },
+        "div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px", fontSize: "14px", color: "#888", textAlign: "center", marginBottom: "2px" } },
         ["র", "সো", "ম", "বু", "বৃ", "শু", "শ"].map((d, i) => React.createElement("div", { key: i }, d))
       ),
       React.createElement(
@@ -162,7 +163,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
               style: {
                 aspectRatio: "1", border: isSelected ? "2px solid #0E4B43" : isToday ? "1px solid #0E4B43" : "1px solid #E0E4E2",
                 borderRadius: "6px", background: isSelected ? "#0E4B43" : hasEvent ? "#EAF6F0" : "#fff",
-                color: isSelected ? "#fff" : "#333", fontSize: "11px", cursor: "pointer", position: "relative",
+                color: isSelected ? "#fff" : "#333", fontSize: "14px", cursor: "pointer", position: "relative",
               },
             },
             d,
@@ -173,7 +174,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
       selectedDate && React.createElement(
         "button", {
           onClick: () => setSelectedDate(null),
-          style: { marginTop: "6px", fontSize: "11px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0 },
+          style: { marginTop: "6px", fontSize: "14px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0 },
         }, "✕ " + selectedDate + " ফিল্টার সরান, সব দেখুন"
       )
     ),
@@ -182,12 +183,12 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     React.createElement("input", {
       type: "text", value: form.title, placeholder: "শিরোনাম (যেমন: দাঁতের ডাক্তার দেখানো)",
       onChange: (e) => setForm((f) => ({ ...f, title: e.target.value })),
-      style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginTop: "6px" },
+      style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", marginTop: "6px" },
     }),
     React.createElement(
       "select", {
         value: form.eventType, onChange: (e) => setForm((f) => ({ ...f, eventType: e.target.value })),
-        style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginTop: "6px" },
+        style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", marginTop: "6px" },
       },
       React.createElement("option", { value: "appointment" }, "অ্যাপয়েন্টমেন্ট"),
       React.createElement("option", { value: "checkup" }, "চেকআপ"),
@@ -196,19 +197,19 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     React.createElement(
       "select", {
         value: form.memberId, onChange: (e) => setForm((f) => ({ ...f, memberId: e.target.value })),
-        style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginTop: "6px" },
+        style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", marginTop: "6px" },
       },
       React.createElement("option", { value: "" }, "(কোনো নির্দিষ্ট সদস্য না — পারিবারিক)"),
       members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
     ),
     React.createElement("input", {
       type: "date", value: form.date, onChange: (e) => setForm((f) => ({ ...f, date: e.target.value })),
-      style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginTop: "6px" },
+      style: { width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px", marginTop: "6px" },
     }),
     React.createElement(
       "button", {
         onClick: handleAdd, disabled: saving,
-        style: { marginTop: "8px", padding: "8px 14px", border: "none", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "13px", cursor: "pointer" },
+        style: { marginTop: "8px", padding: "8px 14px", border: "none", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
       }, saving ? "..." : "+ যোগ করুন"
     ),
 
@@ -217,39 +218,39 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
       const shown = selectedDate ? events.filter((e) => e.date === selectedDate) : events;
       return React.createElement(
         React.Fragment, null,
-        shown.length === 0 && React.createElement("p", { style: { color: "#888", fontSize: "13px", marginTop: "12px" } }, selectedDate ? "এই তারিখে কোনো event নেই।" : "এখনো কোনো event নেই।"),
+        shown.length === 0 && React.createElement("p", { style: { color: "#888", fontSize: "14px", marginTop: "12px" } }, selectedDate ? "এই তারিখে কোনো event নেই।" : "এখনো কোনো event নেই।"),
         shown.map((e) => React.createElement(
           "div", {
             key: e.id,
             style: { marginTop: "10px", padding: "10px", borderRadius: "8px", background: e.status === "done" ? "#EAF6F0" : "#F7FAF9", border: "1px solid #E0E4E2" },
           },
-          React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#333" } },
+          React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#333" } },
             e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : "")),
-          React.createElement("div", { style: { fontSize: "11px", color: "#666" } },
+          React.createElement("div", { style: { fontSize: "14px", color: "#666" } },
             (TYPE_LABELS[e.eventType] || e.eventType) + " — " + e.date + (e.status === "done" ? " — ✓ সম্পন্ন" : "")),
           e.status !== "done" && React.createElement(
             "button", {
               onClick: () => handleDone(e.id),
-              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#fff", color: "#0E4B43", fontSize: "11px", cursor: "pointer" },
+              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#fff", color: "#0E4B43", fontSize: "14px", cursor: "pointer" },
             }, "সম্পন্ন চিহ্নিত করুন"
           ),
           e.status !== "done" && React.createElement(
             "button", {
               onClick: () => handleAutoAdd(e), disabled: calBusy === e.id || isSynced(e.id),
-              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#4285F4", color: "#fff", fontSize: "11px", cursor: "pointer", opacity: isSynced(e.id) ? 0.6 : 1 },
+              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#4285F4", color: "#fff", fontSize: "14px", cursor: "pointer", opacity: isSynced(e.id) ? 0.6 : 1 },
             }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 Calendar-এ যুক্ত ✓" : "📅 অটো যোগ করুন")
           ),
           React.createElement(
             "a", {
               href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer",
-              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#fff", color: "#4285F4", fontSize: "11px", cursor: "pointer", textDecoration: "none", display: "inline-block" },
+              style: { marginTop: "4px", marginRight: "8px", padding: "4px 8px", border: "1px solid #4285F4", borderRadius: "6px", background: "#fff", color: "#4285F4", fontSize: "14px", cursor: "pointer", textDecoration: "none", display: "inline-block" },
             }, "📅 Google Calendar-এ যোগ করুন"
           ),
-          calMsg && calMsg.id === e.id && React.createElement("div", { style: { fontSize: "11px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text),
+          calMsg && calMsg.id === e.id && React.createElement("div", { style: { fontSize: "14px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text),
           React.createElement(
             "button", {
               onClick: () => handleDelete(e.id),
-              style: { marginTop: "4px", padding: "4px 8px", border: "1px solid #C0392B", borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "11px", cursor: "pointer" },
+              style: { marginTop: "4px", padding: "4px 8px", border: "1px solid #C0392B", borderRadius: "6px", background: "#fff", color: "#C0392B", fontSize: "14px", cursor: "pointer" },
             }, "মুছুন"
           )
         ))

@@ -52,7 +52,7 @@ export function TrendChart({ unit, referenceRange, points }) {
       }, String(p.value)))
     ),
     referenceRange
-      ? React.createElement("div", { style: { fontSize: "11px", color: "#666", marginTop: "4px" } },
+      ? React.createElement("div", { style: { fontSize: "14px", color: "#666", marginTop: "4px" } },
           "হালকা রঙের অংশ = স্বাভাবিক রেঞ্জ (" + referenceRange.low + "–" + referenceRange.high + (unit ? " " + unit : "") + ")")
       : null
   );

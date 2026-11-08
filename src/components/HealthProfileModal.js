@@ -60,7 +60,7 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
 
         React.createElement(
           "div", { style: { marginTop: "10px" } },
-          React.createElement("label", { style: { fontSize: "13px", color: "#333", display: "block", marginBottom: "4px" } }, "নাম"),
+          React.createElement("label", { style: { fontSize: "14px", color: "#333", display: "block", marginBottom: "4px" } }, "নাম"),
           React.createElement("input", {
             type: "text", value: name, onChange: (e) => setName(e.target.value),
             style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "14px" },
@@ -71,7 +71,7 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
         SelectField("রক্তের গ্রুপ", bloodGroup, setBloodGroup, BLOOD_GROUP_OPTIONS),
 
         React.createElement(
-          "p", { style: { color: "#888", fontSize: "12px", marginTop: "10px" } },
+          "p", { style: { color: "#888", fontSize: "14px", marginTop: "10px" } },
           "উচ্চতা/ওজন এখানে নেই — সেগুলো নিচের Health Records-এ Observation হিসেবে যোগ করুন (সময়ের সাথে বদলায় বলে trend হিসেবে রাখা হয়)।"
         ),
 
@@ -84,14 +84,14 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
             style: {
               flex: 1, padding: "10px", borderRadius: "6px", border: "none",
               background: "#0E4B43", color: "#fff", cursor: busy ? "default" : "pointer",
-              opacity: busy ? 0.6 : 1, fontSize: "13px",
+              opacity: busy ? 0.6 : 1, fontSize: "14px",
             },
           }, busy ? "সংরক্ষণ হচ্ছে..." : "Save"),
           React.createElement("button", {
             onClick: onClose, disabled: busy,
             style: {
               flex: 1, padding: "10px", borderRadius: "6px", border: "1px solid #CBD5E1",
-              background: "#fff", cursor: "pointer", fontSize: "13px",
+              background: "#fff", cursor: "pointer", fontSize: "14px",
             },
           }, "Cancel")
         )

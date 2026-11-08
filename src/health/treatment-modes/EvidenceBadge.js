@@ -93,11 +93,11 @@ export function EvidenceBadge({ evidenceTier, disclaimerRequired, disclaimerText
   return React.createElement(
     "div", { style: { display: "inline-flex", flexDirection: "column", gap: "4px" } },
     badge,
-    React.createElement("span", { style: { fontSize: "11px", color: "#666" } }, cfg.subLabel),
+    React.createElement("span", { style: { fontSize: "14px", color: "#666" } }, cfg.subLabel),
     disclaimerRequired && disclaimerText
       ? React.createElement(
           "span",
-          { style: { fontSize: "11px", color: "#7A1F14", fontStyle: "italic", maxWidth: "260px" } },
+          { style: { fontSize: "14px", color: "#7A1F14", fontStyle: "italic", maxWidth: "260px" } },
           disclaimerText
         )
       : null

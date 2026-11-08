@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // Health Timeline UI। Checklist P2-এর শেষ আইটেম।
 //
 // member-selector unification (owner-request): নিজস্ব member-fetch/dropdown
@@ -25,17 +26,17 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
   }, [familyId, targetMemberId]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Health Timeline"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.timeline")),
 
     entriesErr && ErrorBox(entriesErr),
-    !entriesErr && !entries && React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে..."),
+    !entriesErr && !entries && React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে..."),
     !entriesErr && entries && entries.length === 0 &&
-      React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।"),
+      React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।"),
 
     !entriesErr && entries && entries.length > 0 && React.createElement(
       "div", { style: { marginTop: "12px", borderLeft: "2px solid #CBD5E1", paddingLeft: "14px" } },
@@ -48,13 +49,13 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
               borderRadius: "50%", background: "#0E4B43", border: "2px solid #F5F7F5",
             },
           }),
-          React.createElement("div", { style: { fontSize: "12px", color: "#888" } }, e.displayDate || "তারিখ অজানা"),
-          React.createElement("div", { style: { fontSize: "13px", marginTop: "2px" } },
+          React.createElement("div", { style: { fontSize: "14px", color: "#888" } }, e.displayDate || "তারিখ অজানা"),
+          React.createElement("div", { style: { fontSize: "14px", marginTop: "2px" } },
             e.icon + " ", React.createElement("b", null, e.label)),
-          React.createElement("div", { style: { fontSize: "13px", color: "#333", marginTop: "1px" } }, e.description),
+          React.createElement("div", { style: { fontSize: "14px", color: "#333", marginTop: "1px" } }, e.description),
           e.url && React.createElement("a", {
             href: e.url, target: "_blank", rel: "noopener noreferrer",
-            style: { fontSize: "12px", color: "#0E4B43" },
+            style: { fontSize: "14px", color: "#0E4B43" },
           }, "👁 দেখুন")
         )
       )

@@ -115,7 +115,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
   }, [inviteFamilyId, inviteToken, familyCode, name, dob, sex, onSuccess]);
 
   if (stage === "checking") {
-    return Card(React.createElement("div", { style: { fontSize: "13px", color: "#555" } }, "চেক করা হচ্ছে..."));
+    return Card(React.createElement("div", { style: { fontSize: "14px", color: "#555" } }, "চেক করা হচ্ছে..."));
   }
 
   if (stage === "new-user-form" || stage === "submitting") {
@@ -124,7 +124,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
         React.Fragment, null,
         React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } },
           inviteFamilyId ? "এই পরিবারে যোগ দিন" : "নতুন পরিবার তৈরি করুন"),
-        React.createElement("p", { style: { color: "#555", fontSize: "13px" } },
+        React.createElement("p", { style: { color: "#555", fontSize: "14px" } },
           currentGoogleEmail()
             ? `${currentGoogleEmail()} — এই মেইল দিয়ে আগে কোনো প্রোফাইল পাওয়া যায়নি। নিচের তথ্য দিন।`
             : "নিচের তথ্য দিন।"
@@ -146,7 +146,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
     React.createElement(
       React.Fragment, null,
       React.createElement("h1", { style: { color: "#0E4B43", fontSize: "20px" } }, "Health Assistant"),
-      React.createElement("p", { style: { color: "#555", fontSize: "13px", marginTop: "10px" } },
+      React.createElement("p", { style: { color: "#555", fontSize: "14px", marginTop: "10px" } },
         "শুরু করতে Google দিয়ে সাইন-ইন করুন।"),
       errorMsg && ErrorBox(errorMsg),
       PrimaryButton("🔵 Google দিয়ে সাইন-ইন করুন", handleSignInClick, false)

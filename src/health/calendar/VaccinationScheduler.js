@@ -65,12 +65,12 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
   const today = new Date().toISOString().slice(0, 10);
 
   return React.createElement(CollapsibleSection, { title: "💉 Vaccination Scheduler (EPI)" },
-    React.createElement("div", { style: { fontSize: "12px", color: "#666", marginBottom: "8px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#666", marginBottom: "8px" } },
       "বাংলাদেশ সরকারের EPI স্ট্যান্ডার্ড শিডিউল অনুযায়ী — জন্ম-তারিখ থেকে হিসাব করা প্রত্যাশিত তারিখ, প্রকৃত টিকাদান-তথ্যের জন্য টিকা-কার্ড/স্বাস্থ্যকর্মীর সাথে মিলিয়ে নিন।"
     ),
 
     !targetMember || !targetMember.dob
-      ? React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "এই সদস্যের জন্ম-তারিখ profile-এ নেই — vaccination-schedule হিসাব করা সম্ভব না।")
+      ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "এই সদস্যের জন্ম-তারিখ profile-এ নেই — vaccination-schedule হিসাব করা সম্ভব না।")
       : schedule.map((d) => {
           const doneKey = targetMemberId + "_" + d.doseId;
           const isDone = doneDoseIds.includes(doneKey);
@@ -84,13 +84,13 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
             },
             React.createElement(
               "div", null,
-              React.createElement("div", { style: { fontSize: "13px", fontWeight: 600, color: "#333" } }, d.name),
-              React.createElement("div", { style: { fontSize: "11px", color: "#666" } }, "প্রত্যাশিত তারিখ: " + d.dueDate + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
+              React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#333" } }, d.name),
+              React.createElement("div", { style: { fontSize: "14px", color: "#666" } }, "প্রত্যাশিত তারিখ: " + d.dueDate + (isDone ? " — ✓ সম্পন্ন" : isOverdue ? " — ⚠️ মেয়াদ পার" : ""))
             ),
             !isDone && React.createElement(
               "button", {
                 onClick: () => markDone(d.doseId, d.name), disabled: busy === d.doseId,
-                style: { padding: "6px 10px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "12px", cursor: "pointer" },
+                style: { padding: "6px 10px", border: "1px solid #0E4B43", borderRadius: "6px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
               }, busy === d.doseId ? "..." : "সম্পন্ন করুন"
             )
           );

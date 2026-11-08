@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // হেলথ রেকর্ড (হোম) — Full-page wrapper, P11 mockup §৩ অনুযায়ী ৫টা sub-tab
 // pill দিয়ে reorganized (ধাপ ২)। প্রতিটা sub-tab-এর ভেতরের existing
 // component অপরিবর্তিত (HealthRecordsSection-এ শুধু নতুন `section` prop
@@ -43,11 +44,11 @@ import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js
 const { useState } = React;
 
 const TABS = [
-  { id: "profile", label: "প্রোফাইল" },
-  { id: "records", label: "স্বাস্থ্য তথ্য" },
-  { id: "diet", label: "খাদ্য নির্দেশিকা" },
-  { id: "medication", label: "ঔষধ ও রিমাইন্ডার" },
-  { id: "timeline", label: "টাইমলাইন ও ক্যালেন্ডার" },
+  { id: "profile", label: "tab.profile" },
+  { id: "records", label: "tab.records" },
+  { id: "diet", label: "tab.diet" },
+  { id: "medication", label: "tab.medication" },
+  { id: "timeline", label: "tab.timeline" },
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, onExit }) {
@@ -57,29 +58,21 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
   return React.createElement(
     "div", { style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
-      "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#0E4B43", color: "#fff", flexShrink: 0 } },
-      React.createElement("span", { style: { fontWeight: 700, fontSize: "15px" } }, "🏠 হেলথ রেকর্ড"),
-      React.createElement("button", {
-        onClick: onExit,
-        style: { background: "none", border: "1px solid #fff", color: "#fff", fontSize: "11px", padding: "3px 10px", borderRadius: "6px", cursor: "pointer" },
-      }, "← ফিরে যান")
-    ),
-    React.createElement(
       "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "8px 10px", background: "#fff", borderBottom: "1px solid #ddd", flexShrink: 0 } },
-      TABS.map((t) => React.createElement(
+      TABS.map((tb) => React.createElement(
         "button", {
-          key: t.id,
-          onClick: () => setActiveTab(t.id),
+          key: tb.id,
+          onClick: () => setActiveTab(tb.id),
           style: {
-            flexShrink: 0, padding: "7px 12px", borderRadius: "16px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
-            border: activeTab === t.id ? "1px solid #0E4B43" : "1px solid #ccc",
-            background: activeTab === t.id ? "#0E4B43" : "#fff",
-            color: activeTab === t.id ? "#fff" : "#333",
+            flexShrink: 0, padding: "7px 12px", borderRadius: "16px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
+            border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #ccc",
+            background: activeTab === tb.id ? "#0E4B43" : "#fff",
+            color: activeTab === tb.id ? "#fff" : "#333",
           },
-        }, t.label)
+        }, t(tb.label))
       )),
     !selectedMemberId
-      ? React.createElement("p", { style: { color: "#888", fontSize: "13px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+      ? React.createElement("p", { style: { color: "#888", fontSize: "14px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),

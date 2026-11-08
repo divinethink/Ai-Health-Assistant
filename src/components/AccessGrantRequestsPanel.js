@@ -56,28 +56,28 @@ export function AccessGrantRequestsPanel({ familyId, myMemberId, myName }) {
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "আপনার প্রোফাইলে Access-অনুরোধ"),
     pending.map((g) =>
       React.createElement(
-        "div", { key: g.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+        "div", { key: g.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
         React.createElement("span", null, (names[g.granteeId] || g.granteeId.slice(0, 8) + "…") + " — pending"),
         React.createElement(
           "div", { style: { display: "flex", gap: "6px" } },
           React.createElement("button", {
             onClick: () => decide(g.granteeId, "approved"), disabled: busyId === g.granteeId,
-            style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer" },
+            style: { fontSize: "14px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer" },
           }, "Accept"),
           React.createElement("button", {
             onClick: () => decide(g.granteeId, "denied"), disabled: busyId === g.granteeId,
-            style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+            style: { fontSize: "14px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
           }, "Deny")
         )
       )
     ),
     approved.map((g) =>
       React.createElement(
-        "div", { key: g.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+        "div", { key: g.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
         React.createElement("span", null, (names[g.granteeId] || g.granteeId.slice(0, 8) + "…") + " — access দেওয়া আছে"),
         React.createElement("button", {
           onClick: () => cancelApproved(g.granteeId), disabled: busyId === g.granteeId,
-          style: { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "5px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
         }, "Cancel Access")
       )
     )

@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n.js";
 // Structured Trigger Layer UI (roadmap §10.3 স্তর-১) — member select + বয়স-গ্রুপ
 // অনুযায়ী red-flag checklist, সরাসরি deterministic triageEngine.js-এ input (free-text
 // নয়, skip-অযোগ্য নয়)। HealthTimeline.js/HealthRecordsSection.js-এর member-picker
@@ -37,7 +38,7 @@ function estimateTokens(text) {
 
 function checkboxLine(label, checked, onChange) {
   return React.createElement(
-    "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "6px 0", cursor: "pointer" } },
+    "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", padding: "6px 0", cursor: "pointer" } },
     React.createElement("input", { type: "checkbox", checked, onChange }),
     label
   );
@@ -307,7 +308,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
 
   if (loadErr) return ErrorBox(loadErr);
   if (!members || !targetMemberId) {
-    return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
+    return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...");
   }
 
   // Chat-Length Soft-Nudge check (§9) — শুধু conversationTurns + aiResponse-এর
@@ -318,26 +319,26 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Symptom Check / Triage"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.triage")),
 
     !ageGroup && targetMember && React.createElement(
-      "div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "6px" } },
+      "div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "6px" } },
       "এই সদস্যের জন্ম-তারিখ সেট করা নেই — Health Profile-এ জন্ম-তারিখ যোগ করুন, তারপর triage checklist দেখানো যাবে।"
     ),
     ageGroup && React.createElement(
-      "div", { style: { fontSize: "12px", color: "#666", marginTop: "6px" } },
+      "div", { style: { fontSize: "14px", color: "#666", marginTop: "6px" } },
       "বয়স-গ্রুপ: " + (AGE_GROUP_LABELS[ageGroup] || ageGroup)
     ),
 
     checklistItems.length > 0 && React.createElement(
       "div", { style: { marginTop: "12px", background: "#FFF7E6", padding: "12px", borderRadius: "8px", border: "1px solid #E8C46B" } },
       React.createElement(
-        "div", { style: { fontSize: "13px", fontWeight: 600, color: "#7A5B00", marginBottom: "8px" } },
+        "div", { style: { fontSize: "14px", fontWeight: 600, color: "#7A5B00", marginBottom: "8px" } },
         "নিচের কোনোটা এখন প্রযোজ্য কিনা মিলিয়ে দেখুন (জরুরি সতর্কতা-চেকলিস্ট):"
       ),
       checklistItems.map((it) =>
         React.createElement(
-          "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: "6px 0", cursor: "pointer" } },
+          "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", padding: "6px 0", cursor: "pointer" } },
           React.createElement("input", { type: "checkbox", checked: !!checklist[it.id], onChange: () => toggleItem(it.id) }),
           it.label
         )
@@ -349,7 +350,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     checklist.chestPain && React.createElement(
       "div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #E8C46B" } },
       React.createElement(
-        "div", { style: { fontSize: "12px", fontWeight: 600, color: "#7A5B00", marginBottom: "6px" } },
+        "div", { style: { fontSize: "14px", fontWeight: 600, color: "#7A5B00", marginBottom: "6px" } },
         "বুকে ব্যথা সংক্রান্ত অতিরিক্ত প্রশ্ন (bystander-aspirin বিবেচনার জন্য):"
       ),
       CARDIAC_BYSTANDER_QUESTIONS.map((q) =>
@@ -392,15 +393,15 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     result && React.createElement(TriageResultView, { result }),
     result && aspirinCheck && React.createElement(BystanderAspirinCard, { check: aspirinCheck }),
 
-    contextErr && React.createElement("div", { style: { fontSize: "11px", color: "#C0392B", marginTop: "8px" } }, "Health Context তৈরি করা যায়নি: " + contextErr),
+    contextErr && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "8px" } }, "Health Context তৈরি করা যায়নি: " + contextErr),
     healthContext && React.createElement(
-      "details", { style: { marginTop: "10px", fontSize: "11px", color: "#666" } },
+      "details", { style: { marginTop: "10px", fontSize: "14px", color: "#666" } },
       React.createElement("summary", null, "Health Context (dev-preview)"),
       React.createElement("pre", { style: { whiteSpace: "pre-wrap", background: "#F5F5F0", padding: "8px", borderRadius: "6px" } }, JSON.stringify(healthContext, null, 2))
     ),
 
     episodeSaveErr && React.createElement(
-      "div", { style: { fontSize: "11px", color: "#C0392B", marginTop: "6px" } },
+      "div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "6px" } },
       "Episode/conversation history সংরক্ষণ করা যায়নি (triage/AI ফলাফল অপ্রভাবিত): " + episodeSaveErr
     ),
 
@@ -408,7 +409,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     // transparency নোটিস (existing details/summary pattern reuse, healthContext dev-
     // preview block-এর মতোই)।
     healthContext && React.createElement(
-      "details", { style: { marginTop: "12px", fontSize: "11px", color: "#555", background: "#F3F6F5", padding: "8px 10px", borderRadius: "6px", border: "1px solid #D8E3E0" } },
+      "details", { style: { marginTop: "12px", fontSize: "14px", color: "#555", background: "#F3F6F5", padding: "8px 10px", borderRadius: "6px", border: "1px solid #D8E3E0" } },
       React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "#0E4B43" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
       React.createElement(
         "div", { style: { marginTop: "6px", lineHeight: "1.5" } },
@@ -419,11 +420,11 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     healthContext && React.createElement(
       "div", { style: { marginTop: "12px" } },
       PrimaryButton("AI-কে জিজ্ঞাসা করুন", handleAskAI, aiLoading),
-      aiRetryNote && React.createElement("div", { style: { fontSize: "11px", color: "#7A5B00", marginTop: "4px" } }, aiRetryNote)
+      aiRetryNote && React.createElement("div", { style: { fontSize: "14px", color: "#7A5B00", marginTop: "4px" } }, aiRetryNote)
     ),
 
     aiErr && React.createElement(
-      "div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "8px" } },
+      "div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "8px" } },
       "AI response পাওয়া যায়নি: " + aiErr
     ),
 
@@ -442,16 +443,16 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       chronicManagement: hasChronicCondition,
       medicalScienceNode: React.createElement(
         "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "8px", border: "1px solid #A9D8C4" } },
-        React.createElement("div", { style: { fontSize: "10px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-        React.createElement("div", { style: { fontSize: "12px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
-        React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
+        React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#333" } }, aiResponse)
       ),
       herbalNode: React.createElement(
-        "div", { style: { fontSize: "12px", color: "#555" } },
+        "div", { style: { fontSize: "14px", color: "#555" } },
         "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified herbal remedy দেখুন।"
       ),
       homeopathyNode: React.createElement(
-        "div", { style: { fontSize: "12px", color: "#555" } },
+        "div", { style: { fontSize: "14px", color: "#555" } },
         "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified homeopathy remedy দেখুন।"
       ),
     }),
@@ -465,7 +466,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
           "div", {
             key: i,
             style: {
-              marginTop: "6px", fontSize: "13px", whiteSpace: "pre-wrap",
+              marginTop: "6px", fontSize: "14px", whiteSpace: "pre-wrap",
               background: m.role === "user" ? "#F0F0EA" : "#EAF6F0",
               padding: "8px", borderRadius: "6px",
             },
@@ -478,7 +479,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       // non-bypassable থাকার নীতি, Process Rule ৫)। existing handleArchiveAndStartNew
       // reuse — নতুন logic/state নেই।
       React.createElement(
-        "div", { style: { fontSize: "11px", color: "#7A5B00", marginBottom: "8px" } },
+        "div", { style: { fontSize: "14px", color: "#7A5B00", marginBottom: "8px" } },
         "⚠️ নতুন বা ভিন্ন উপসর্গ দেখা দিলে, দয়া করে আলোচনা চালিয়ে যাওয়ার বদলে নতুন Symptom Check চালান।",
         React.createElement(
           "div", { style: { marginTop: "6px" } },
@@ -487,12 +488,12 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       ),
       TextField("আরও জিজ্ঞাসা করুন (ঐচ্ছিক)", followUpText, setFollowUpText, "যেমন: এটার সাথে কি কিছু খাওয়া নিরাপদ?"),
       PrimaryButton("পাঠান", handleSendFollowUp, followUpLoading),
-      followUpRetryNote && React.createElement("div", { style: { fontSize: "11px", color: "#7A5B00", marginTop: "4px" } }, followUpRetryNote),
-      followUpErr && React.createElement("div", { style: { fontSize: "12px", color: "#C0392B", marginTop: "6px" } }, "পাঠানো যায়নি: " + followUpErr)
+      followUpRetryNote && React.createElement("div", { style: { fontSize: "14px", color: "#7A5B00", marginTop: "4px" } }, followUpRetryNote),
+      followUpErr && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "6px" } }, "পাঠানো যায়নি: " + followUpErr)
     ),
 
     showLengthNudge && React.createElement(
-      "div", { style: { marginTop: "14px", background: "#FFF7E6", padding: "10px", borderRadius: "8px", border: "1px solid #E8C46B", fontSize: "12px", color: "#7A5B00" } },
+      "div", { style: { marginTop: "14px", background: "#FFF7E6", padding: "10px", borderRadius: "8px", border: "1px solid #E8C46B", fontSize: "14px", color: "#7A5B00" } },
       "এই আলোচনা বেশ দীর্ঘ হয়ে গেছে — নতুন সমস্যায় নতুন Health Episode শুরু করা ভালো।",
       React.createElement("div", { style: { marginTop: "8px" } }, PrimaryButton("সংরক্ষণ করে নতুন Episode শুরু করুন", handleArchiveAndStartNew))
     )

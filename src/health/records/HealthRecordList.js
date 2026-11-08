@@ -39,38 +39,38 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!records) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "লোড হচ্ছে...");
-  if (records.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "কোনো record নেই।");
+  if (!records) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (records.length === 0) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "কোনো record নেই।");
 
   return React.createElement(
     "div", { style: { marginTop: "10px" } },
     records.map((r) =>
       React.createElement(
-        "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "13px" } },
+        "div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEE", fontSize: "14px" } },
         React.createElement("div", null, React.createElement("b", null, RESOURCE_TYPE_LABELS[r.resourceType] || r.resourceType)),
         React.createElement("div", { style: { color: "#555" } }, describeHealthRecord(r)),
         React.createElement(
           "div", { style: { display: "flex", gap: "10px", marginTop: "4px" } },
           React.createElement("button", {
             onClick: () => onEdit && onEdit(r),
-            style: { fontSize: "12px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0 },
+            style: { fontSize: "14px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0 },
           }, "✎ Edit"),
           confirmId === r.id
             ? React.createElement(
                 React.Fragment, null,
-                React.createElement("span", { style: { fontSize: "12px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
+                React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
                 React.createElement("button", {
                   onClick: () => doDelete(r), disabled: busyId === r.id,
-                  style: { fontSize: "12px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
                 }, busyId === r.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
                 React.createElement("button", {
                   onClick: () => setConfirmId(null),
-                  style: { fontSize: "12px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
+                  style: { fontSize: "14px", border: "none", background: "none", color: "#888", cursor: "pointer", padding: 0 },
                 }, "না")
               )
             : React.createElement("button", {
                 onClick: () => setConfirmId(r.id),
-                style: { fontSize: "12px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
+                style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
               }, "🗑 Delete")
         )
       )

@@ -21,7 +21,7 @@ function actionButton(label, onClick, disabled, primary) {
   return React.createElement("button", {
     onClick, disabled,
     style: {
-      padding: "9px 14px", borderRadius: "8px", fontWeight: 600, fontSize: "13px", marginRight: "8px", marginTop: "6px",
+      padding: "9px 14px", borderRadius: "8px", fontWeight: 600, fontSize: "14px", marginRight: "8px", marginTop: "6px",
       border: primary ? "none" : "1px solid #0E4B43",
       background: primary ? "#0E4B43" : "#fff",
       color: primary ? "#fff" : "#0E4B43",
@@ -83,22 +83,22 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   }
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#888", fontSize: "13px" } }, "সদস্য নির্বাচন করুন।");
+  if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "ডাক্তার দেখানোর ডকুমেন্ট"),
 
     React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "13px", marginBottom: "4px" } }, "Health Profile (factual, কোনো AI মতামত নেই)"),
+      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "4px" } }, "Health Profile (factual, কোনো AI মতামত নেই)"),
       actionButton(profileBusy === "pdf" ? "তৈরি হচ্ছে..." : "PDF (প্রিন্ট/প্রিভিউ)", () => handleHealthProfile("pdf"), !!profileBusy || !targetMemberId, true),
       actionButton(profileBusy === "docx" ? "তৈরি হচ্ছে..." : "DOCX ডাউনলোড", () => handleHealthProfile("docx"), !!profileBusy || !targetMemberId),
       profileErr && ErrorBox(profileErr)
     ),
 
     React.createElement("div", { style: { border: "1px solid #E2E8F0", borderRadius: "8px", padding: "12px", marginTop: "10px" } },
-      React.createElement("div", { style: { fontWeight: 600, fontSize: "13px", marginBottom: "4px" } }, "AI Health Summary — Not a Medical Prescription"),
-      React.createElement("p", { style: { fontSize: "11px", color: "#888", marginTop: 0 } }, "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance session থেকে।"),
+      React.createElement("div", { style: { fontWeight: 600, fontSize: "14px", marginBottom: "4px" } }, "AI Health Summary — Not a Medical Prescription"),
+      React.createElement("p", { style: { fontSize: "14px", color: "#888", marginTop: 0 } }, "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance session থেকে।"),
       actionButton(summaryBusy === "pdf" ? "তৈরি হচ্ছে..." : "PDF (প্রিন্ট/প্রিভিউ)", () => handleAiSummary("pdf"), !!summaryBusy || !targetMemberId, true),
       actionButton(summaryBusy === "docx" ? "তৈরি হচ্ছে..." : "DOCX ডাউনলোড", () => handleAiSummary("docx"), !!summaryBusy || !targetMemberId),
       summaryErr && ErrorBox(summaryErr)

@@ -40,7 +40,7 @@ export function NotificationsPanel({ familyId, uid }) {
           key: n.id,
           onClick: () => onClick(n),
           style: {
-            padding: "8px", borderBottom: "1px solid #EEE", fontSize: "13px", cursor: "pointer",
+            padding: "8px", borderBottom: "1px solid #EEE", fontSize: "14px", cursor: "pointer",
             background: n.read ? "#fff" : "#F5F5F0",
             display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px",
           },
@@ -49,7 +49,7 @@ export function NotificationsPanel({ familyId, uid }) {
         React.createElement("button", {
           onClick: (e) => onDelete(n.id, e),
           title: "ডিলিট করুন",
-          style: { fontSize: "11px", color: "#888", background: "none", border: "none", cursor: "pointer" },
+          style: { fontSize: "14px", color: "#888", background: "none", border: "none", cursor: "pointer" },
         }, "✕")
       )
     )

@@ -2,13 +2,13 @@
 // Plan §11.1)। State/logic-এর মালিক caller component (MemberList) — এটা শুধু
 // props/callback দিয়ে কাজ করে (Process ফাইল Rule ১১, presentational)।
 
-const btnBase = { fontSize: "12px", padding: "4px 8px", borderRadius: "5px", cursor: "pointer" };
+const btnBase = { fontSize: "14px", padding: "4px 8px", borderRadius: "5px", cursor: "pointer" };
 
 export function AccessGrantButton({ status, busy, onRequest, onCancelPending, onCancelApproved }) {
   if (status === "approved") {
     return React.createElement(
       "div", { style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" } },
-      React.createElement("span", { style: { fontSize: "12px", color: "#0E4B43" } }, "Access Granted ✓"),
+      React.createElement("span", { style: { fontSize: "14px", color: "#0E4B43" } }, "Access Granted ✓"),
       React.createElement("button", {
         onClick: onCancelApproved, disabled: busy,
         style: { ...btnBase, border: "1px solid #C0392B", background: "#fff", color: "#C0392B" },

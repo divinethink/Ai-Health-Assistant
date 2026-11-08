@@ -17,11 +17,11 @@ export function TriageResultView({ result }) {
     { style: { marginTop: "14px", padding: "12px", borderRadius: "8px", background: style.bg, border: "1px solid " + style.border } },
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: style.color } }, style.label),
     result.triggeredRules.length > 0 && React.createElement(
-      "div", { style: { fontSize: "13px", marginTop: "6px", color: style.color } },
+      "div", { style: { fontSize: "14px", marginTop: "6px", color: style.color } },
       "কারণ: " + result.triggeredRules.map((r) => r.description).join("; ")
     ),
     React.createElement(
-      "div", { style: { fontSize: "13px", marginTop: "6px", color: "#333" } },
+      "div", { style: { fontSize: "14px", marginTop: "6px", color: "#333" } },
       "পরামর্শ: " + result.recommendedAction.timeframe
     ),
     result.recommendedAction.emergencyContact && React.createElement(
@@ -36,7 +36,7 @@ export function TriageResultView({ result }) {
       "☎ এখনই কল করুন — " + result.recommendedAction.emergencyContact.number
     ),
     result.uncertaintyLevel === "high" && result.missingInformation.length > 0 && React.createElement(
-      "div", { style: { fontSize: "11px", color: "#888", marginTop: "8px" } },
+      "div", { style: { fontSize: "14px", color: "#888", marginTop: "8px" } },
       result.missingInformation.join(" ")
     )
   );
