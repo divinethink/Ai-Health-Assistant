@@ -50,7 +50,7 @@ const DICT = {
     "top.role": "ভূমিকা", "top.familyCode": "পরিবারের কোড", "top.generalChat": "🌐 সাধারণ চ্যাট",
     "top.logout": "🚪 লগ-আউট", "top.member": "সদস্য",
 
-    "menu.prefs": "⚙️ পছন্দ — থিম", "menu.language": "🌐 ভাষা", "menu.family": "👨‍👩‍👧‍👦 পরিবার",
+    "menu.prefs": "⚙️ পছন্দ — থিম", "menu.settings": "⚙️ সেটিংস (ভাষা ও থিম)", "menu.adminTools": "🛠 Admin টুলস (আমন্ত্রণ ও নতুন সদস্য)", "menu.emergencyShort": "📞 জরুরি সেবা", "menu.language": "🌐 ভাষা", "menu.family": "👨‍👩‍👧‍👦 পরিবার",
     "menu.nav": "🧭 নেভিগেশন", "menu.doctor": "🩺 ডাক্তারের তথ্য ও ভিজিটিং কার্ড",
     "menu.care": "📞 জরুরি সেবা — যাচাই করা তালিকা", "menu.data": "💾 ডেটা — ব্যাকআপ/রিস্টোর",
     "theme.light": "☀️ হালকা", "theme.sepia": "📜 সেপিয়া", "theme.dark": "🌙 গাঢ়",
@@ -92,7 +92,7 @@ const DICT = {
     "top.role": "Role", "top.familyCode": "Family code", "top.generalChat": "🌐 General Chat",
     "top.logout": "🚪 Log out", "top.member": "Member",
 
-    "menu.prefs": "⚙️ Preferences — Theme", "menu.language": "🌐 Language", "menu.family": "👨‍👩‍👧‍👦 Family",
+    "menu.prefs": "⚙️ Preferences — Theme", "menu.settings": "⚙️ Settings (Language & Theme)", "menu.adminTools": "🛠 Admin Tools (Invite & New Member)", "menu.emergencyShort": "📞 Emergency", "menu.language": "🌐 Language", "menu.family": "👨‍👩‍👧‍👦 Family",
     "menu.nav": "🧭 Navigation", "menu.doctor": "🩺 Doctor Details & Visiting Cards",
     "menu.care": "📞 Emergency Care — Verified Directory", "menu.data": "💾 Data — Backup/Restore",
     "theme.light": "☀️ Light", "theme.sepia": "📜 Sepia", "theme.dark": "🌙 Dark",

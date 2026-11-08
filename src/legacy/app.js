@@ -305,44 +305,61 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 }
 
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenDoctorDetails }) {
+  // মেনু-reorg (owner-approved, ২০২৬-১১-০৮): দ্রুত-কার্ড (ডাক্তার/জরুরি) উপরে, পরিবার
+  // (সদস্য-তালিকা আগে, Admin-টুল ভাঁজে), ডেটা, সবশেষে ভাষা+থিম একটাই "সেটিংস" ভাঁজে।
+  // শুধু সাজানো — কোনো component/permission/data বদলায়নি।
+  const [showCare, setShowCare] = useState(false);
+  const quickBtn = (label, onClick, primary) => React.createElement("button", {
+    onClick,
+    style: {
+      flex: 1, minHeight: "52px", padding: "10px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
+      border: "1px solid var(--hs-primary)",
+      background: primary ? "var(--hs-primary)" : "var(--hs-surface, #fff)",
+      color: primary ? "var(--hs-primary-contrast)" : "var(--hs-primary)",
+    },
+  }, label);
   return React.createElement(
     "div", { style: { paddingTop: "56px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" } },
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.language"), defaultOpen: true,
-      children: React.createElement(LanguageSwitcher),
-    }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.prefs"), defaultOpen: false,
-      children: React.createElement(ThemeSwitcher),
-    }),
+    React.createElement(
+      "div", { style: { display: "flex", gap: "10px", marginBottom: "14px" } },
+      quickBtn(t("menu.doctor"), onOpenDoctorDetails, true),
+      quickBtn(showCare ? "✕ " + t("menu.emergencyShort") : t("menu.emergencyShort"), () => setShowCare((v) => !v), false)
+    ),
+    showCare && React.createElement(
+      "div", { style: { marginBottom: "14px" } },
+      React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
+      React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
+    ),
     React.createElement(CollapsibleSection, {
       title: t("menu.family"), defaultOpen: true,
       children: React.createElement(
         React.Fragment, null,
-        isAdmin && React.createElement(InviteLinkPanel, { familyId, familyDoc, isAdmin }),
-        isAdmin && React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) }),
-        React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId })
+        React.createElement(MemberList, { key: "ml" + refreshTick, familyId, isAdmin, myMemberId: memberId }),
+        isAdmin && React.createElement(CollapsibleSection, {
+          title: t("menu.adminTools"), defaultOpen: false,
+          children: React.createElement(
+            React.Fragment, null,
+            React.createElement(InviteLinkPanel, { familyId, familyDoc, isAdmin }),
+            React.createElement(AddMemberForm, { familyId, onAdded: () => setRefreshTick((t) => t + 1) })
+          ),
+        })
       ),
-    }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.nav"), defaultOpen: false,
-      children: React.createElement(
-        "button", {
-          onClick: onOpenDoctorDetails,
-          style: { width: "100%", padding: "10px", border: "1px solid var(--hs-primary)", borderRadius: "14px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
-        },
-        t("menu.doctor")
-      ),
-    }),
-    React.createElement(CollapsibleSection, {
-      title: t("menu.care"), defaultOpen: false,
-      children: React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick }),
     }),
     React.createElement(CollapsibleSection, {
       title: t("menu.data"), defaultOpen: false,
       children: React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin }),
+    }),
+    React.createElement(CollapsibleSection, {
+      title: t("menu.settings"), defaultOpen: false,
+      children: React.createElement(
+        React.Fragment, null,
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", marginBottom: "6px" } }, t("menu.language")),
+        React.createElement(LanguageSwitcher),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", margin: "14px 0 6px" } }, t("menu.prefs")),
+        React.createElement(ThemeSwitcher)
+      ),
     })
   );
 }
