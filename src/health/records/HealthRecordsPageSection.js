@@ -56,18 +56,19 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
   const topPx = (topOffsetPx || 44) + "px";
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
-      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "8px 10px", background: "#fff", borderBottom: "1px solid #ddd", flexShrink: 0 } },
+      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "10px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0 } },
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,
           onClick: () => setActiveTab(tb.id),
           style: {
-            flexShrink: 0, padding: "7px 12px", borderRadius: "16px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
-            border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #ccc",
-            background: activeTab === tb.id ? "#0E4B43" : "#fff",
-            color: activeTab === tb.id ? "#fff" : "#333",
+            flexShrink: 0, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
+            border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
+            background: activeTab === tb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff",
+            color: activeTab === tb.id ? "#fff" : "#2B3A36",
+            boxShadow: activeTab === tb.id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
         }, t(tb.label))
       )),

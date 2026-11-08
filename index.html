@@ -46,14 +46,14 @@
      রং-এই থাকে (আলাদা, বড় retrofit — এখানে scope করা হয়নি)। */
   :root, html[data-theme="light"] {
     --theme-primary: #0E4B43;
-    --hs-bg: #F4F7F1;
+    --hs-bg: #F1F6F2;
     --hs-surface: #FFFFFF;
     --hs-text: #1B2430;
-    --hs-muted: #8A9A96;
+    --hs-muted: #5F716C;
     --hs-primary: #0E4B43;
     --hs-primary-contrast: #FFFFFF;
-    --hs-border: #E2E8F0;
-    --hs-chip-bg: #F5F5F0;
+    --hs-border: #D9E5DE;
+    --hs-chip-bg: #E4F0E9;
   }
   html[data-theme="sepia"] {
     --theme-primary: #6B4A2B;
@@ -78,6 +78,30 @@
     --hs-chip-bg: #22303A;
   }
   html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
+  html, body { color: var(--hs-text); -webkit-font-smoothing: antialiased; }
+
+  /* ডিজাইন-পলিশ: ফর্ম-ঘর, বোতাম ও ফোকাস — বয়স্কদের জন্য বড় ছোঁয়ার জায়গা (≥44px), স্পষ্ট বর্ডার */
+  input, select, textarea {
+    font-family: inherit; font-size: 14px !important; min-height: 46px; box-sizing: border-box;
+    border: 1.5px solid #C3D2CA !important; border-radius: 12px !important; padding: 10px 12px !important;
+    background: #fff; color: #1B2430; transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { min-height: 96px; line-height: 1.5; }
+  input[type="checkbox"], input[type="radio"] { min-height: 0; width: 22px; height: 22px; padding: 0 !important; accent-color: #0E4B43; flex-shrink: 0; }
+  input[type="file"] { min-height: 0; padding: 8px !important; background: #F7FAF8; }
+  input[type="file"]::file-selector-button {
+    font-family: inherit; font-size: 14px; font-weight: 600; margin-right: 10px; padding: 8px 14px;
+    border: none; border-radius: 999px; background: #0E4B43; color: #fff; cursor: pointer;
+  }
+  select.hs-compact { min-height: 36px; padding: 4px 8px !important; border-radius: 10px !important; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #0E4B43 !important; box-shadow: 0 0 0 3px rgba(14, 75, 67, .2); }
+  input::placeholder, textarea::placeholder { color: #8A9A96; }
+  button { font-family: inherit; min-height: 44px; -webkit-tap-highlight-color: transparent; transition: transform .08s, box-shadow .15s, background .15s; }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:disabled { opacity: .65; }
+  button:focus-visible { outline: 3px solid rgba(14, 75, 67, .45); outline-offset: 2px; }
+  @keyframes hsFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .hs-page { animation: hsFade .25s ease; }
   .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
 </style>

@@ -36,7 +36,7 @@ export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberI
   const topPx = (topOffsetPx || 44) + "px";
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F5F5F0", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
       TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab),

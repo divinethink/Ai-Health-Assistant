@@ -76,7 +76,7 @@ function BottomNav({ active, onChange }) {
       style: {
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45,
         display: "flex", background: "var(--hs-surface)", borderTop: "1px solid var(--hs-border)",
-        height: BOTTOM_NAV_HEIGHT + "px", boxShadow: "0 -2px 8px rgba(0,0,0,0.08)",
+        height: BOTTOM_NAV_HEIGHT + "px", boxShadow: "0 -4px 14px rgba(14,75,67,0.10)",
       },
     },
     NAV_TABS.map(([id, icon, label]) => {
@@ -86,12 +86,12 @@ function BottomNav({ active, onChange }) {
           key: id, onClick: () => onChange(id),
           style: {
             flex: 1, maxWidth: "160px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", gap: "2px", border: "none", background: "none",
+            justifyContent: "center", gap: "2px", border: "none", background: "none", minHeight: 0,
             cursor: "pointer", color: isActive ? "var(--hs-primary)" : "var(--hs-muted)",
             fontWeight: isActive ? 700 : 500, padding: 0,
           },
         },
-        React.createElement("span", { style: { fontSize: "18px", lineHeight: 1 } }, icon),
+        React.createElement("span", { style: { fontSize: "20px", lineHeight: 1, padding: "4px 18px", borderRadius: "999px", background: isActive ? "var(--hs-chip-bg)" : "transparent", transition: "background .2s" } }, icon),
         React.createElement("span", { style: { fontSize: "14px", lineHeight: 1 } }, t(label))
       );
     })
@@ -105,15 +105,16 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
       style: {
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 46, height: "44px",
         display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "0 14px", background: "var(--hs-surface)",
-        borderBottom: "1px solid var(--hs-border)",
+        justifyContent: "space-between", padding: "0 14px", background: "var(--hs-primary)",
+        backgroundImage: "linear-gradient(135deg, var(--hs-primary), color-mix(in srgb, var(--hs-primary) 68%, #000))",
+        color: "var(--hs-primary-contrast)", boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
       },
     },
-    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, t(title)),
+    React.createElement("span", { style: { fontWeight: 700, color: "var(--hs-primary-contrast)", fontSize: "16px", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, t(title)),
     members && members.length > 1 && React.createElement(
       "select", {
-        value: selectedMemberId || "", onChange: (e) => onChangeMember(e.target.value), "aria-label": t("top.member"),
-        style: { maxWidth: "110px", margin: "0 6px", padding: "5px 6px", border: "1px solid var(--hs-border)", borderRadius: "8px", fontSize: "14px", background: "var(--hs-surface)", color: "var(--hs-text)" },
+        className: "hs-compact", value: selectedMemberId || "", onChange: (e) => onChangeMember(e.target.value), "aria-label": t("top.member"),
+        style: { maxWidth: "110px", margin: "0 6px", fontSize: "14px", background: "#fff", color: "#1B2430" },
       },
       members.map((m) => React.createElement("option", { key: m.id, value: m.id }, m.name))
     ),
@@ -123,9 +124,9 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
         "button", {
           onClick: () => setOpen((o) => !o),
           style: {
-            display: "flex", alignItems: "center", gap: "4px", border: "1px solid var(--hs-border)",
-            borderRadius: "999px", padding: "5px 10px", background: "var(--hs-chip-bg)", cursor: "pointer",
-            fontSize: "14px", color: "var(--hs-primary)", fontWeight: 600,
+            display: "flex", alignItems: "center", gap: "4px", border: "1px solid rgba(255,255,255,0.45)", minHeight: "36px",
+            borderRadius: "999px", padding: "4px 12px", background: "rgba(255,255,255,0.18)", cursor: "pointer",
+            fontSize: "14px", color: "var(--hs-primary-contrast)", fontWeight: 600,
             maxWidth: "110px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           },
         },
@@ -134,9 +135,9 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
       open && React.createElement(
         "div", {
           style: {
-            position: "absolute", right: 0, top: "36px", zIndex: 50, background: "var(--hs-surface)",
-            border: "1px solid var(--hs-border)", borderRadius: "8px", minWidth: "210px",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.12)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
+            position: "absolute", right: 0, top: "42px", zIndex: 50, background: "var(--hs-surface)",
+            border: "1px solid var(--hs-border)", borderRadius: "14px", minWidth: "220px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
           },
         },
         React.createElement("div", { style: { color: "var(--hs-muted)" } }, t("top.role") + ": ", React.createElement("b", null, isAdmin ? "Admin" : memberDoc.role)),
@@ -170,7 +171,7 @@ function TopBar({ title, memberDoc, familyDoc, isAdmin, onOpenGeneralChat, membe
 
 function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
   return React.createElement(
-    "div", { style: { border: "1px solid var(--hs-border)", borderRadius: "8px", padding: "12px", marginBottom: "12px", background: "var(--hs-surface)" } },
+    "div", { style: { border: "1px solid var(--hs-border)", borderRadius: "16px", padding: "16px", marginBottom: "14px", background: "var(--hs-surface)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)" } },
     React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-primary)", fontSize: "15px" } }, "👤 " + memberDoc.name),
     React.createElement(
       "div", { style: { fontSize: "14px", color: "var(--hs-muted)", marginTop: "4px" } },
