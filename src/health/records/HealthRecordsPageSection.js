@@ -79,7 +79,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
       activeTab === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
       activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
-      activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId }),
+      activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
       activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),

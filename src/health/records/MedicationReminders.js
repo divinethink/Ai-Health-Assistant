@@ -11,100 +11,144 @@
 
 import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { listHealthRecords, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
+import { listHealthRecords, createHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
 import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendarEventsByIds } from "../../legacy/googleCalendar.js";
 
+// UI পুনর্গঠন (owner-request, ২০২৬-০৯-১৭): কমপ্যাক্ট তালিকা (ট্যাপে খোলে), এই ট্যাবেই নতুন
+// ওষুধ যোগ (নাম-সাজেশনসহ), "আজকের ওষুধ" + খেয়েছি-চিহ্ন (শুধু এই ডিভাইসের localStorage —
+// কোনো নতুন schema/rules নেই), মেয়াদের হিসাব। ডেটা-ফাংশন/Calendar-sync অপরিবর্তিত।
+
 const { useState, useEffect, useRef } = React;
+const h = React.createElement;
 
-// লোকাল তারিখ (UTC না) — বাংলাদেশে রাত ১২টা–ভোর ৬টায় UTC-তারিখ আগের দিন দেখাত।
-function todayStr() {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-}
+const GREEN = "#0E4B43";
+const F = "14px";
+const TAKEN_KEY = "hs-med-taken";
 
-// সংরক্ষণ সবসময় 24-ঘণ্টা "HH:MM" (আগের data/notification-check অপরিবর্তিত); UI-তে ১২-ঘণ্টা।
-function to12(hhmm) {
-  const [h, m] = hhmm.split(":").map(Number);
-  return { h: h % 12 === 0 ? 12 : h % 12, m, ap: h < 12 ? "AM" : "PM" };
+function bn(n) { return String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]); }
+function dateStr(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function todayStr() { return dateStr(new Date()); }
+function addDays(ymd, n) { const d = new Date(ymd + "T00:00:00"); d.setDate(d.getDate() + n); return dateStr(d); }
+function daysLeft(endDate) {
+  if (!endDate) return null;
+  const a = new Date(todayStr() + "T00:00:00"), b = new Date(endDate + "T00:00:00");
+  return Math.round((b - a) / 86400000);
 }
-function to24({ h, m, ap }) {
-  const hh = (h % 12) + (ap === "PM" ? 12 : 0);
-  return String(hh).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+// "08:00" → "সকাল ৮:০০" (বয়স্কদের জন্য বাংলায় পড়া সহজ)
+function bnTime(hhmm) {
+  const [hh, mm] = hhmm.split(":").map(Number);
+  const per = hh < 4 ? "রাত" : hh < 12 ? "সকাল" : hh < 16 ? "দুপুর" : hh < 18 ? "বিকাল" : hh < 20 ? "সন্ধ্যা" : "রাত";
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return per + " " + bn(h12) + ":" + bn(String(mm).padStart(2, "0"));
 }
-function label12(hhmm) {
-  const t = to12(hhmm);
-  return t.h + ":" + String(t.m).padStart(2, "0") + " " + t.ap;
-}
-
-const DEFAULT_SLOTS = ["08:00", "14:00", "20:00", "11:00", "17:00", "23:00"];
 const MEAL_LABELS = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
+const SLOT_DEFAULTS = { 1: ["08:00"], 2: ["08:00", "20:00"], 3: ["08:00", "14:00", "20:00"], 4: ["08:00", "13:00", "18:00", "22:00"] };
+const DAY_OPTIONS = [3, 5, 7, 10, 14, 30];
 
-// endDate না থাকলে শুরুর তারিখ + কতদিন থেকে হিসাব (দুটোই থাকলে)।
+// endDate না থাকলে শুরুর তারিখ + কতদিন থেকে হিসাব।
 function fallbackEndDate(startDate, durationDays) {
   if (!startDate || !durationDays) return "";
-  const d = new Date(startDate + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return "";
-  d.setDate(d.getDate() + Number(durationDays) - 1);
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  return addDays(startDate, Number(durationDays) - 1);
 }
 
-function sel(value, onChange, options, width) {
-  return React.createElement("select", {
-    value, onChange: (e) => onChange(e.target.value),
-    style: { padding: "7px 4px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px", background: "#fff", width: width || "auto" },
-  }, options.map(([v, l]) => React.createElement("option", { key: v, value: v }, l)));
+// সাধারণ ওষুধের নাম (শুধু নামের সাজেশন, কোনো ডোজ/তথ্য নয়)।
+const COMMON_MEDS = ["Paracetamol", "Ibuprofen", "Naproxen", "Diclofenac", "Mefenamic Acid", "Aspirin", "Esomeprazole", "Omeprazole", "Pantoprazole", "Rabeprazole", "Domperidone", "Ondansetron", "Metoclopramide", "Antacid", "Cetirizine", "Levocetirizine", "Fexofenadine", "Bilastine", "Loratadine", "Chlorpheniramine", "Montelukast", "Salbutamol", "Ambroxol", "Azithromycin", "Amoxicillin", "Amoxicillin + Clavulanic Acid", "Cefixime", "Cefuroxime", "Cephalexin", "Ciprofloxacin", "Levofloxacin", "Metronidazole", "Doxycycline", "Fluconazole", "Prednisolone", "Vitamin D3", "Calcium", "Iron + Folic Acid", "Vitamin B Complex", "Vitamin C", "Zinc Sulfate", "ORS", "Metformin", "Gliclazide", "Glimepiride", "Insulin", "Amlodipine", "Losartan", "Telmisartan", "Atenolol", "Bisoprolol", "Atorvastatin", "Rosuvastatin", "Clopidogrel", "Levothyroxine", "Thyrox", "Clonazepam", "Lactulose", "Bisacodyl", "Isabgol (Psyllium Husk)", "Loperamide", "Itopride"];
+
+function loadTaken() {
+  try {
+    const v = JSON.parse(localStorage.getItem(TAKEN_KEY) || "null");
+    if (v && v.date === todayStr() && v.taken) return v.taken;
+  } catch (e) { /* ignore */ }
+  return {};
+}
+function saveTaken(taken) {
+  try { localStorage.setItem(TAKEN_KEY, JSON.stringify({ date: todayStr(), taken })); } catch (e) { /* ignore */ }
 }
 
-export function MedicationReminders({ familyId, callerMemberId }) {
+function chip(active, label, onClick, key) {
+  return h("button", {
+    key: key || label, type: "button", onClick,
+    style: { padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: active ? "1px solid " + GREEN : "1px solid #C3D2CA", background: active ? GREEN : "#fff", color: active ? "#fff" : "#2B3A36" },
+  }, label);
+}
+function lblEl(text) { return h("div", { style: { fontSize: F, color: "#3E4E49", fontWeight: 600, margin: "12px 0 6px" } }, text); }
+function timeInputs(slots, onChange) {
+  return h("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
+    slots.map((slot, i) => h("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px" } },
+      h("span", { style: { fontSize: F, color: "#3E4E49", minWidth: "72px" } }, bnTime(slot).split(" ")[0]),
+      h("input", { type: "time", value: slot, onChange: (e) => e.target.value && onChange(slots.map((x, j) => (j === i ? e.target.value : x))),
+        style: { padding: "8px 10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: F, background: "#fff" } }),
+      h("span", { style: { fontSize: F, color: GREEN } }, bnTime(slot)))));
+}
+
+export function MedicationReminders({ familyId, callerMemberId, selectedMemberId }) {
   const [meds, setMeds] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [knownNames, setKnownNames] = useState([]);
   const [loadErr, setLoadErr] = useState(null);
   const [editValues, setEditValues] = useState({});
+  const [openId, setOpenId] = useState(null);
+  const [filter, setFilter] = useState("all");
   const [savedFlash, setSavedFlash] = useState(null);
-  const [calBusy, setCalBusy] = useState(null); // recordId
-  const [calMsg, setCalMsg] = useState(null); // { recordId, ok, text }
+  const [calBusy, setCalBusy] = useState(null);
+  const [calMsg, setCalMsg] = useState(null);
   const [permission, setPermission] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
-  const notifiedRef = useRef({}); // { "recordId_HH:MM": "YYYY-MM-DD" } — একই দিনে দ্বিতীয়বার notify এড়াতে
+  const [taken, setTaken] = useState(loadTaken);
+  const [tick, setTick] = useState(0);
+  const [todayOpen, setTodayOpen] = useState(true);
+  const notifiedRef = useRef({});
+
+  // নতুন ওষুধ যোগের ফর্ম
+  const [addOpen, setAddOpen] = useState(false);
+  const [aName, setAName] = useState("");
+  const [aMember, setAMember] = useState(selectedMemberId || callerMemberId);
+  const [aCount, setACount] = useState(3);
+  const [aSlots, setASlots] = useState(SLOT_DEFAULTS[3]);
+  const [aMeal, setAMeal] = useState("after");
+  const [aDays, setADays] = useState(7);
+  const [aBusy, setABusy] = useState(false);
+  const [aErr, setAErr] = useState(null);
+  const [suggOpen, setSuggOpen] = useState(false);
 
   async function loadMeds() {
     setLoadErr(null);
     try {
-      const members = await listMembers(familyId);
-      const perMember = await Promise.all(
-        members.map((m) => listHealthRecords(familyId, m.id).then((records) => ({ member: m, records })))
-      );
-      const flat = [];
+      const ms = await listMembers(familyId);
+      setMembers(ms);
+      const perMember = await Promise.all(ms.map((m) => listHealthRecords(familyId, m.id).then((records) => ({ member: m, records }))));
+      const flat = []; const names = [];
       perMember.forEach(({ member, records }) => {
-        records
-          .filter((r) => r.resourceType === "medicationStatement" && r.status === "active")
-          .forEach((r) => flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [] }));
+        records.filter((r) => r.resourceType === "medicationStatement").forEach((r) => {
+          if (r.genericName) names.push(r.genericName);
+          if (r.status !== "active") return;
+          flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [] });
+        });
       });
       setMeds(flat);
+      setKnownNames([...new Set(names)]);
       const ev = {};
       flat.forEach((m) => { ev[m.recordId] = { slots: [...m.reminderTimes], endDate: m.endDate || fallbackEndDate(m.startDate, m.durationDays), mealTiming: m.mealTiming || "any" }; });
       setEditValues(ev);
-    } catch (e) {
-      setLoadErr(e.message || String(e));
-    }
+    } catch (e) { setLoadErr(e.message || String(e)); }
   }
-
   useEffect(() => { loadMeds(); }, [familyId]);
+  useEffect(() => { if (selectedMemberId) setAMember(selectedMemberId); }, [selectedMemberId]);
 
-  // প্রতি ৬০ সেকেন্ডে current time-এর সাথে মিলিয়ে দেখা — client-side, কোনো
-  // backend/Cloud Function লাগে না, উপরের সীমাবদ্ধতা-নোট প্রযোজ্য।
+  // প্রতি ৬০ সেকেন্ডে: tick (UI refresh) + notification — app খোলা অবস্থায় (backend push নেই)।
   useEffect(() => {
-    if (!meds || permission !== "granted") return;
+    if (!meds) return;
     const interval = setInterval(() => {
+      setTick((x) => x + 1);
+      if (permission !== "granted") return;
       const nowHHMM = new Date().toTimeString().slice(0, 5);
       const today = todayStr();
       meds.forEach((m) => {
         if (!m.reminderTimes.includes(nowHHMM)) return;
-        if (m.endDate && today > m.endDate) return; // মেয়াদ শেষ — আর notify নয়
+        if (m.endDate && today > m.endDate) return;
         const key = m.recordId + "_" + nowHHMM;
         if (notifiedRef.current[key] === today) return;
         notifiedRef.current[key] = today;
-        try {
-          new Notification("ওষুধ সেবনের সময়", { body: m.memberName + " — " + m.genericName + (m.mealTiming && m.mealTiming !== "any" ? " (" + MEAL_LABELS[m.mealTiming] + ")" : "") });
-        } catch (e) { /* notification ব্যর্থ হলে চুপচাপ ignore, app আটকাবে না */ }
+        try { new Notification("ওষুধ সেবনের সময়", { body: m.memberName + " — " + m.genericName + (m.mealTiming && m.mealTiming !== "any" ? " (" + MEAL_LABELS[m.mealTiming] + ")" : "") }); } catch (e) { /* ignore */ }
       });
     }, 60000);
     return () => clearInterval(interval);
@@ -114,19 +158,11 @@ export function MedicationReminders({ familyId, callerMemberId }) {
     if (typeof Notification === "undefined") return;
     Notification.requestPermission().then((p) => setPermission(p));
   }
-
-  function setEdit(recordId, patch) {
-    setEditValues((prev) => ({ ...prev, [recordId]: { ...prev[recordId], ...patch } }));
+  function setEdit(recordId, patch) { setEditValues((prev) => ({ ...prev, [recordId]: { ...prev[recordId], ...patch } })); }
+  function toggleTaken(key) {
+    setTaken((prev) => { const n = { ...prev }; if (n[key]) delete n[key]; else n[key] = true; saveTaken(n); return n; });
   }
 
-  function setSlotCount(recordId, n) {
-    const cur = (editValues[recordId] && editValues[recordId].slots) || [];
-    const next = cur.slice(0, n);
-    while (next.length < n) next.push(DEFAULT_SLOTS[next.length] || "08:00");
-    setEdit(recordId, { slots: next });
-  }
-
-  // সেভ করে { times, endDate, mealTiming } ফেরত দেয়; ব্যর্থ হলে null।
   async function saveSchedule(recordId) {
     setSavedFlash(null);
     const ev = editValues[recordId] || { slots: [], endDate: "", mealTiming: "any" };
@@ -138,19 +174,11 @@ export function MedicationReminders({ familyId, callerMemberId }) {
       setEdit(recordId, { slots: times });
       setSavedFlash(recordId);
       return { times, endDate, mealTiming: ev.mealTiming };
-    } catch (e) {
-      setLoadErr(e.message || String(e));
-      return null;
-    }
+    } catch (e) { setLoadErr(e.message || String(e)); return null; }
   }
 
-  async function handleSave(recordId) { await saveSchedule(recordId); }
-
-  // Google Calendar-এ যোগ/আপডেট: (১) সম্মতি (user-gesture-এর মধ্যেই, আগে) (২) সেভ
-  // (৩) পুরনো event সরানো (৪) নতুন recurring event তৈরি (৫) event-ID সংরক্ষণ।
   async function handleCalendarSync(m) {
-    setCalMsg(null);
-    setCalBusy(m.recordId);
+    setCalMsg(null); setCalBusy(m.recordId);
     try {
       await authorizeGoogleCalendar();
       const saved = await saveSchedule(m.recordId);
@@ -163,114 +191,156 @@ export function MedicationReminders({ familyId, callerMemberId }) {
       });
       await setMedicationCalendarEvents(familyId, m.recordId, callerMemberId, ids);
       setMeds((prev) => prev.map((x) => (x.recordId === m.recordId ? { ...x, calendarEventIds: ids } : x)));
-      setCalMsg({ recordId: m.recordId, ok: true, text: "✓ Google Calendar-এ যুক্ত হয়েছে (" + ids.length + "টি বেলা, প্রতিদিন)" });
-    } catch (e) {
-      setCalMsg({ recordId: m.recordId, ok: false, text: e.message || String(e) });
-    } finally {
-      setCalBusy(null);
-    }
+      setCalMsg({ recordId: m.recordId, ok: true, text: "✓ Google Calendar-এ যুক্ত হয়েছে (" + bn(ids.length) + "টি বেলা, প্রতিদিন)" });
+    } catch (e) { setCalMsg({ recordId: m.recordId, ok: false, text: e.message || String(e) }); }
+    finally { setCalBusy(null); }
   }
-
   async function handleCalendarRemove(m) {
-    setCalMsg(null);
-    setCalBusy(m.recordId);
+    setCalMsg(null); setCalBusy(m.recordId);
     try {
       await authorizeGoogleCalendar();
       await deleteCalendarEventsByIds(m.calendarEventIds);
       await setMedicationCalendarEvents(familyId, m.recordId, callerMemberId, []);
       setMeds((prev) => prev.map((x) => (x.recordId === m.recordId ? { ...x, calendarEventIds: [] } : x)));
       setCalMsg({ recordId: m.recordId, ok: true, text: "✓ Google Calendar থেকে সরানো হয়েছে" });
-    } catch (e) {
-      setCalMsg({ recordId: m.recordId, ok: false, text: e.message || String(e) });
-    } finally {
-      setCalBusy(null);
-    }
+    } catch (e) { setCalMsg({ recordId: m.recordId, ok: false, text: e.message || String(e) }); }
+    finally { setCalBusy(null); }
   }
 
-  if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, ErrorBox(loadErr));
-  if (!meds) return null;
+  function pickCount(n) { setACount(n); setASlots(SLOT_DEFAULTS[n]); }
 
-  return React.createElement(
-    "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, "💊 ওষুধ সেবনের রিমাইন্ডার"),
-    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px" } },
-      "কয় বেলা খাবেন, প্রতি বেলার সময় (১২-ঘণ্টা), খাবারের আগে/পরে এবং কত তারিখ পর্যন্ত খাবেন — বেছে নিয়ে সেভ করুন। ⚠️ app-এর নিজস্ব reminder শুধু app খোলা/ব্যাকগ্রাউন্ড ট্যাব অবস্থায় কাজ করে (কোনো backend push-server নেই) — app বন্ধ থাকলেও পেতে \"Google Calendar-এ যোগ করুন\" ব্যবহার করুন।"
-    ),
-    permission !== "granted" && permission !== "unsupported" && React.createElement(
-      "button", {
-        onClick: requestPermission,
-        style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid #0E4B43", borderRadius: "10px", background: "#fff", color: "#0E4B43", fontSize: "14px", cursor: "pointer" },
-      }, "🔔 নোটিফিকেশন অনুমতি দিন (রিমাইন্ডার সক্রিয় করতে প্রয়োজন)"
-    ),
-    permission === "unsupported" && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজার/ডিভাইসে Notification সাপোর্ট নেই।"),
+  async function handleAdd() {
+    setAErr(null);
+    const name = aName.trim();
+    if (!name) { setAErr("ওষুধের নাম লিখুন।"); return; }
+    if (!aMember) { setAErr("সদস্য বাছুন।"); return; }
+    if (meds.some((m) => m.memberId === aMember && m.genericName.trim().toLowerCase() === name.toLowerCase())) { setAErr("এই ওষুধ এই সদস্যের তালিকায় আগেই আছে।"); return; }
+    const times = [...new Set(aSlots)].sort();
+    const start = todayStr();
+    const endDate = aDays ? addDays(start, aDays - 1) : null;
+    const freq = "দিনে " + bn(times.length) + " বার" + (aMeal !== "any" ? ", " + MEAL_LABELS[aMeal] : "");
+    setABusy(true);
+    try {
+      const id = await createHealthRecord(familyId, aMember, callerMemberId, "medicationStatement", { name, tier: "requires-consult", status: "active", date: start, frequency: freq, durationDays: aDays || "" });
+      await setMedicationReminderTimes(familyId, id, callerMemberId, times, { endDate, mealTiming: aMeal });
+      if (permission === "default") requestPermission();
+      setAName(""); setAddOpen(false); setSuggOpen(false);
+      await loadMeds();
+    } catch (e) { setAErr(e.message || String(e)); }
+    finally { setABusy(false); }
+  }
 
-    meds.length === 0 && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কোনো active ওষুধ (medicationStatement) পাওয়া যায়নি।"),
+  if (loadErr) return h("div", { style: { marginTop: "6px" } }, ErrorBox(loadErr));
+  if (!meds) return h("p", { style: { color: "#5F716C", fontSize: F } }, "লোড হচ্ছে...");
 
-    meds.map((m) => {
+  const today = todayStr();
+  const nowHHMM = new Date().toTimeString().slice(0, 5);
+  const isExpired = (m) => m.endDate && today > m.endDate;
+  const shown = meds.filter((m) => filter === "all" || m.memberId === filter)
+    .sort((a, b) => (isExpired(a) ? 1 : 0) - (isExpired(b) ? 1 : 0) || ((a.reminderTimes[0] || "99") < (b.reminderTimes[0] || "99") ? -1 : 1));
+
+  // আজকের ডোজ-তালিকা
+  const doses = [];
+  shown.forEach((m) => {
+    if (isExpired(m) || (m.startDate && m.startDate > today)) return;
+    m.reminderTimes.forEach((t) => doses.push({ key: m.recordId + "_" + t, time: t, m }));
+  });
+  doses.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+  const takenCount = doses.filter((d) => taken[d.key]).length;
+
+  // নাম-সাজেশন
+  const q = aName.trim().toLowerCase();
+  const pool = [...knownNames, ...COMMON_MEDS].filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
+  const suggestions = (q
+    ? [...pool.filter((n) => n.toLowerCase().startsWith(q)), ...pool.filter((n) => !n.toLowerCase().startsWith(q) && n.toLowerCase().includes(q))]
+    : knownNames).filter((n) => n.toLowerCase() !== q).slice(0, 6);
+
+  const card = { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+
+  return h("div", null,
+    h("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px", lineHeight: 1.5 } },
+      "🔔 অ্যাপ খোলা থাকলে রিমাইন্ডার বাজবে। অ্যাপ বন্ধ থাকলেও পেতে ওষুধ খুলে \"📅 Calendar\" বাটন চাপুন।"),
+    permission !== "granted" && permission !== "unsupported" && h("button", { onClick: requestPermission, style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid " + GREEN, borderRadius: "10px", background: "#fff", color: GREEN, fontSize: F, cursor: "pointer" } }, "🔔 নোটিফিকেশন চালু করুন"),
+    permission === "unsupported" && h("div", { style: { fontSize: F, color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজারে Notification সাপোর্ট নেই।"),
+
+    members.length > 1 && h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
+      [chip(filter === "all", "সবাই", () => setFilter("all"), "all"), ...members.map((mm) => chip(filter === mm.id, mm.name, () => setFilter(mm.id), mm.id))]),
+
+    // আজকের ওষুধ
+    doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
+      h("button", { onClick: () => setTodayOpen((o) => !o), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer" } },
+        h("span", null, "📋 আজকের ওষুধ — " + bn(takenCount) + "/" + bn(doses.length) + " খাওয়া হয়েছে"), h("span", null, todayOpen ? "▲" : "▼")),
+      todayOpen && h("div", { style: { marginTop: "8px" } }, doses.map((d) => {
+        const done = !!taken[d.key];
+        const late = !done && d.time < nowHHMM;
+        return h("div", { key: d.key, style: { display: "flex", alignItems: "center", gap: "8px", padding: "7px 8px", marginBottom: "5px", borderRadius: "10px", background: done ? "#E2F3E9" : late ? "#FFF3DC" : "#fff", border: "1px solid " + (late ? "#F0D9A8" : "#D3E0D9") } },
+          h("div", { style: { flex: 1, minWidth: 0 } },
+            h("div", { style: { fontSize: F, fontWeight: 600, color: "#1F2D2A", textDecoration: done ? "line-through" : "none" } }, d.m.genericName),
+            h("div", { style: { fontSize: "12px", color: "#5F716C" } }, bnTime(d.time) + (members.length > 1 ? " · " + d.m.memberName : "") + (d.m.mealTiming && d.m.mealTiming !== "any" ? " · " + MEAL_LABELS[d.m.mealTiming] : "") + (late ? " · ⏰ সময় পার" : ""))),
+          h("button", { onClick: () => toggleTaken(d.key), style: { padding: "7px 12px", minHeight: "36px", borderRadius: "10px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid " + GREEN, background: done ? GREEN : "#fff", color: done ? "#fff" : GREEN, flexShrink: 0 } }, done ? "✔ খেয়েছি" : "খেয়েছি?"));
+      })),
+      todayOpen && h("div", { style: { fontSize: "12px", color: "#6B7B76", marginTop: "2px" } }, "(এই চিহ্ন শুধু এই ফোনে থাকে)")),
+
+    // নতুন ওষুধ যোগ
+    !addOpen && h("button", { onClick: () => setAddOpen(true), style: { width: "100%", padding: "12px", marginBottom: "10px", borderRadius: "14px", border: "1px dashed " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "➕ নতুন ওষুধ যোগ করুন"),
+    addOpen && h("div", { style: card },
+      h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
+      members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
+      lblEl("ওষুধের নাম"),
+      h("div", { style: { position: "relative" } },
+        h("input", { type: "text", value: aName, placeholder: "প্রথম অক্ষর লিখলেই নাম আসবে", autoComplete: "off",
+          onChange: (e) => { setAName(e.target.value); setSuggOpen(true); }, onFocus: () => setSuggOpen(true), onBlur: () => setTimeout(() => setSuggOpen(false), 150),
+          style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #C3D2CA", borderRadius: "10px", fontSize: F } }),
+        suggOpen && suggestions.length > 0 && h("div", { style: { position: "absolute", left: 0, right: 0, top: "100%", zIndex: 5, marginTop: "2px", background: "#fff", border: "1px solid #C3D2CA", borderRadius: "10px", boxShadow: "0 6px 16px rgba(0,0,0,0.12)", overflow: "hidden" } },
+          suggestions.map((n) => h("div", { key: n, onMouseDown: (e) => { e.preventDefault(); setAName(n); setSuggOpen(false); }, onTouchStart: () => { setAName(n); setSuggOpen(false); },
+            style: { padding: "10px 12px", fontSize: F, borderBottom: "1px solid #EEF3F0", cursor: "pointer", color: "#1F2D2A" } }, (knownNames.includes(n) ? "🕘 " : "") + n)))),
+      lblEl("কয় বেলা"),
+      h("div", { style: { display: "flex", gap: "6px" } }, [1, 2, 3, 4].map((n) => chip(aCount === n, bn(n) + " বেলা", () => pickCount(n), "c" + n))),
+      lblEl("সময়"), timeInputs(aSlots, setASlots),
+      lblEl("খাবারের"),
+      h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip(aMeal === k, MEAL_LABELS[k], () => setAMeal(k), k))),
+      lblEl("কতদিন খাবেন"),
+      h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")]),
+      aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr),
+      h("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
+        h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, padding: "11px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সেভ হচ্ছে..." : "সেভ করুন"),
+        h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল"))),
+
+    // ওষুধের তালিকা
+    shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: F } }, "কোনো সক্রিয় ওষুধ নেই। উপরের বাটনে চেপে যোগ করুন।"),
+    shown.map((m) => {
       const ev = editValues[m.recordId] || { slots: [], endDate: "", mealTiming: "any" };
-      const expired = m.endDate && todayStr() > m.endDate;
-      const lbl = { fontSize: "14px", color: "#3E4E49", margin: "8px 0 3px" };
-      return React.createElement(
-        "div", { key: m.recordId, style: { marginTop: "10px", padding: "10px", background: "#F7FAF9", borderRadius: "14px", border: "1px solid #D3E0D9" } },
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A" } }, m.memberName + " — " + m.genericName),
-        (m.frequency || m.durationDays) && React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57" } }, (m.frequency || "") + (m.durationDays ? " · " + m.durationDays + " দিন" : "")),
-        m.reminderTimes.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "2px" } },
-          "⏰ " + m.reminderTimes.map(label12).join(", ") + (m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "") + (m.endDate ? " · " + m.endDate + " পর্যন্ত" : "")),
-        expired && React.createElement("div", { style: { fontSize: "14px", color: "#B3261E", marginTop: "2px" } }, "⏹ মেয়াদ শেষ — রিমাইন্ডার আর আসবে না"),
+      const expired = isExpired(m);
+      const left = daysLeft(m.endDate);
+      const open = openId === m.recordId;
+      const badge = expired ? ["মেয়াদ শেষ", "#6B7B76", "#ECEFEE"] : left === 0 ? ["আজ শেষ দিন", "#8A5A00", "#FFF3DC"] : left !== null && left <= 3 ? ["আর " + bn(left) + " দিন", "#8A5A00", "#FFF3DC"] : left !== null ? ["আর " + bn(left) + " দিন", GREEN, "#EAF6F0"] : ["নিয়মিত", GREEN, "#EAF6F0"];
+      return h("div", { key: m.recordId, style: { ...card, padding: 0, overflow: "hidden", opacity: expired ? 0.7 : 1 } },
+        h("div", { onClick: () => setOpenId(open ? null : m.recordId), style: { padding: "11px 12px", cursor: "pointer", display: "flex", gap: "8px", alignItems: "flex-start" } },
+          h("div", { style: { flex: 1, minWidth: 0 } },
+            h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "💊 " + m.genericName, members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
+            h("div", { style: { fontSize: "13px", color: "#4B5C57", marginTop: "3px", lineHeight: 1.5 } },
+              m.reminderTimes.length > 0 ? "⏰ " + m.reminderTimes.map(bnTime).join(", ") : "⏰ সময় সেট করা হয়নি",
+              m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "",
+              m.calendarEventIds.length > 0 ? " · 📅" : "")),
+          h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 } },
+            h("span", { style: { fontSize: "12px", fontWeight: 600, padding: "3px 9px", borderRadius: "999px", color: badge[1], background: badge[2] } }, badge[0]),
+            h("span", { style: { color: "#6B7B76", fontSize: "12px" } }, open ? "▲" : "▼"))),
 
-        React.createElement("div", { style: lbl }, "কয় বেলা"),
-        sel(String(ev.slots.length), (v) => setSlotCount(m.recordId, Number(v)), [["0", "রিমাইন্ডার নেই"], ["1", "১ বেলা"], ["2", "২ বেলা"], ["3", "৩ বেলা"], ["4", "৪ বেলা"], ["5", "৫ বেলা"], ["6", "৬ বেলা"]]),
-
-        ev.slots.map((slot, i) => {
-          const t = to12(slot);
-          const upd = (patch) => setEdit(m.recordId, { slots: ev.slots.map((x, j) => (j === i ? to24({ ...t, ...patch }) : x)) });
-          return React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" } },
-            React.createElement("span", { style: { fontSize: "14px", color: "#3E4E49", minWidth: "48px" } }, (i + 1) + "ম বেলা"),
-            sel(String(t.h), (v) => upd({ h: Number(v) }), Array.from({ length: 12 }, (_, k) => [String(k + 1), String(k + 1)]), "56px"),
-            React.createElement("span", null, ":"),
-            sel(String(t.m), (v) => upd({ m: Number(v) }), Array.from({ length: 60 }, (_, k) => [String(k), String(k).padStart(2, "0")]), "60px"),
-            sel(t.ap, (v) => upd({ ap: v }), [["AM", "AM"], ["PM", "PM"]], "64px")
-          );
-        }),
-
-        React.createElement("div", { style: lbl }, "খাবারের আগে না পরে"),
-        sel(ev.mealTiming || "any", (v) => setEdit(m.recordId, { mealTiming: v }), [["before", MEAL_LABELS.before], ["after", MEAL_LABELS.after], ["any", MEAL_LABELS.any]]),
-
-        React.createElement("div", { style: lbl }, "কত তারিখ পর্যন্ত খাবেন" + (!m.endDate && ev.endDate ? " (শুরুর তারিখ + দিন থেকে হিসাব, বদলানো যাবে)" : "")),
-        React.createElement("input", {
-          type: "date", value: ev.endDate || "",
-          onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }),
-          style: { padding: "7px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px" },
-        }),
-
-        React.createElement("div", null,
-          React.createElement(
-            "button", {
-              onClick: () => handleSave(m.recordId),
-              style: { marginTop: "10px", padding: "6px 12px", border: "1px solid #0E4B43", borderRadius: "10px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
-            }, "সেভ করুন"
-          ),
-          savedFlash === m.recordId && React.createElement("span", { style: { marginLeft: "8px", fontSize: "14px", color: "#0E4B43" } }, "✓ সংরক্ষিত")
-        ),
-
-        // Google Calendar auto-sync — app বন্ধ থাকলেও ফোনের Calendar reminder দেবে।
-        React.createElement("div", { style: { marginTop: "8px" } },
-          React.createElement(
-            "button", {
-              onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId,
-              style: { padding: "6px 12px", border: "1px solid #4285F4", borderRadius: "10px", background: "#fff", color: "#4285F4", fontSize: "14px", cursor: "pointer", marginRight: "8px" },
-            }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট করুন" : "📅 সেভ করে Google Calendar-এ যোগ করুন")
-          ),
-          m.calendarEventIds.length > 0 && React.createElement(
-            "button", {
-              onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId,
-              style: { padding: "6px 12px", border: "1px solid #C0392B", borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px", cursor: "pointer" },
-            }, "Calendar থেকে সরান"
-          ),
-          m.calendarEventIds.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "4px" } }, "📅 Calendar-এ যুক্ত আছে — সময়/তারিখ বদলালে \"Calendar আপডেট করুন\" চাপুন।"),
-          calMsg && calMsg.recordId === m.recordId && React.createElement("div", { style: { fontSize: "14px", marginTop: "4px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text)
-        )
-      );
+        open && h("div", { style: { padding: "0 12px 14px", borderTop: "1px solid #EEF3F0", background: "#F7FAF9" } },
+          lblEl("কয় বেলা"),
+          h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+            [chip(ev.slots.length === 0, "রিমাইন্ডার নেই", () => setEdit(m.recordId, { slots: [] }), "n0"), ...[1, 2, 3, 4].map((n) => chip(ev.slots.length === n, bn(n) + " বেলা", () => setEdit(m.recordId, { slots: ev.slots.length === n ? ev.slots : SLOT_DEFAULTS[n] }), "n" + n))]),
+          ev.slots.length > 0 && h(React.Fragment, null, lblEl("সময়"), timeInputs(ev.slots, (v) => setEdit(m.recordId, { slots: v }))),
+          lblEl("খাবারের"),
+          h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip((ev.mealTiming || "any") === k, MEAL_LABELS[k], () => setEdit(m.recordId, { mealTiming: k }), k))),
+          lblEl("কত তারিখ পর্যন্ত খাবেন"),
+          h("input", { type: "date", value: ev.endDate || "", onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }), style: { padding: "9px 10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: F, background: "#fff" } }),
+          h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "14px", alignItems: "center" } },
+            h("button", { onClick: () => saveSchedule(m.recordId), style: { padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, "সেভ করুন"),
+            h("button", { onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #4285F4", background: "#fff", color: "#4285F4", fontSize: F, cursor: "pointer" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সেভ করে Calendar-এ যোগ")),
+            m.calendarEventIds.length > 0 && h("button", { onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", fontSize: F, cursor: "pointer" } }, "Calendar থেকে সরান"),
+            savedFlash === m.recordId && h("span", { style: { fontSize: F, color: GREEN } }, "✓ সংরক্ষিত")),
+          calMsg && calMsg.recordId === m.recordId && h("div", { style: { fontSize: F, marginTop: "8px", color: calMsg.ok ? GREEN : "#B3261E" } }, calMsg.text)));
     })
   );
 }
