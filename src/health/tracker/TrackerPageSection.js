@@ -15,6 +15,8 @@ import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
+import { PlanWhyCard } from "./PlanWhyCard.js";
+import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
   sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, detectFlagsFromConditions,
@@ -64,11 +66,11 @@ function TodayTab({ info }) {
     gate.blocked && React.createElement(Notice, null,
       React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason,
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে। ওজন নিয়ে চিন্তা থাকলে ডাক্তারের পরামর্শ নিন।"),
-    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য’ ট্যাবে যান।"),
+    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ যান।"),
     calc && React.createElement(Stat, {
       title: "ক্যালরি", line: "লক্ষ্য: " + bnNum(calc.calorieTarget) + " কিলোক্যালরি/দিন (" + GOAL_LABELS[goal.goalType] + ")",
       pct: (((d.caloriesIn || 0) / calc.calorieTarget) * 100), color: "#E0A100",
-      extra: "খাওয়া হয়েছে: " + bnNum(d.caloriesIn || 0) + " · খাওয়া যাবে আরও " + bnNum(Math.max(0, calc.calorieTarget - (d.caloriesIn || 0))) + " (মিল ট্যাবে টিক দিলে যোগ হয়)",
+      extra: "খাওয়া হয়েছে: " + bnNum(d.caloriesIn || 0) + " · খাওয়া যাবে আরও " + bnNum(Math.max(0, calc.calorieTarget - (d.caloriesIn || 0))) + " (প্ল্যান → মিলে টিক দিলে যোগ হয়)",
     }),
     React.createElement(Stat, {
       title: "ব্যায়াম", line: bnNum(d.exerciseMin || 0) + " / " + bnNum(exTarget) + " মিনিট" + (stTarget ? " · স্টেপ " + bnNum(d.steps || 0) + " / " + bnNum(stTarget) : ""),
@@ -109,8 +111,8 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [err, setErr] = useState(null);
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
 
-  if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড ‘খাওয়া যাবে না’ ট্যাবে দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
-  if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য’ ট্যাবে ক্যালরির টার্গেট ঠিক করুন।");
+  if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথিপত্র → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
+  if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।");
 
   const plan = buildMealPlan(calc.calorieTarget, allergyTags);
   const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
@@ -230,11 +232,33 @@ function TrendTab({ info, familyId, memberId }) {
     React.createElement(Notice, null, "এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়। অস্বাভাবিক ওজন বা শরীর খারাপ হলে ডাক্তার দেখান।"));
 }
 
-// ---------- খাওয়া যাবে না (বিদ্যমান খাদ্য-নির্দেশিকা reuse) ----------
-function AvoidTab({ familyId, memberId }) {
+// ---------- প্ল্যান (মিল | ব্যায়াম) — ধাপ A১/A২/A৩ ----------
+// "কেন এই প্ল্যান?" + মিলের নিচে "আজ এড়িয়ে চলুন" (বিদ্যমান খাদ্য-নির্দেশিকা, compact; পূর্ণ তালিকা নথিপত্রে)।
+function PlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+  const [sub, setSub] = useState("meal");
+  const { goal, age, weightKg, heightCm, allergyTags, gate } = info;
+  const common = { info, familyId, callerMemberId, memberId, onSaved };
   return React.createElement("div", null,
-    React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
-    React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId }));
+    TabPills([["meal", "🍽 মিল"], ["exercise", "🏃 ব্যায়াম"]], sub, setSub),
+    sub === "meal" && React.createElement(React.Fragment, null,
+      !gate.blocked && React.createElement(PlanWhyCard, { lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
+      React.createElement(MealTab, common),
+      React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
+      React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
+      React.createElement("p", { style: { fontSize: "12px", color: "#5F716C" } }, "পূর্ণ তালিকা: নথিপত্র → খাদ্য নির্দেশিকা।")),
+    sub === "exercise" && React.createElement(React.Fragment, null,
+      React.createElement(PlanWhyCard, { lines: explainExercise({ plan: exercisePlan(age, goal ? goal.goalType : null), age, goalType: goal ? goal.goalType : null }) }),
+      React.createElement(ExerciseTab, common)));
+}
+
+// ---------- লক্ষ্য ও ইনপুট (লক্ষ্য | দৈনিক ইনপুট) — ধাপ A১ ----------
+function SetupTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+  const [sub, setSub] = useState(info.goal ? "input" : "goal");
+  const common = { info, familyId, callerMemberId, memberId, onSaved };
+  return React.createElement("div", null,
+    TabPills([["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]], sub, setSub),
+    sub === "input" && React.createElement(InputTab, common),
+    sub === "goal" && React.createElement(GoalTab, common));
 }
 
 // ---------- দৈনিক ইনপুট ----------
@@ -435,7 +459,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["today", "আজকের অবস্থা"], ["meal", "মিল"], ["exercise", "ব্যায়াম"], ["avoid", "খাওয়া যাবে না"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"], ["input", "দৈনিক ইনপুট"], ["goal", "লক্ষ্য"]];
+  const tabs = [["today", "আজ"], ["plan", "প্ল্যান"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"], ["setup", "লক্ষ্য ও ইনপুট"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, TabPills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
@@ -444,13 +468,10 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       selectedMemberId && !data && !err && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
       data && tab === "today" && React.createElement(TodayTab, { info: data }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
-      data && tab === "meal" && React.createElement(MealTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && tab === "exercise" && React.createElement(ExerciseTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && tab === "plan" && React.createElement(PlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
       data && tab === "reminder" && React.createElement(ReminderSettings, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, callerMemberId, onSaved: load }),
       data && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId }),
-      data && tab === "avoid" && React.createElement(AvoidTab, { key: selectedMemberId, familyId, memberId: selectedMemberId }),
-      data && tab === "input" && React.createElement(InputTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
+      data && tab === "setup" && React.createElement(SetupTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
     )
   );
 }

@@ -6,6 +6,7 @@
 // পুরো হোম-পেজে একবার সদস্য বাছলেই এই sub-tab-এও persist থাকে।
 
 import { ErrorBox } from "../../shared/ui.js";
+import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
 
@@ -30,7 +31,9 @@ function deriveBmiTag(records) {
   return "obese";
 }
 
-export function DietGuidanceSection({ familyId, selectedMemberId }) {
+// compact (ঐচ্ছিক, ডিফল্ট false): শুধু প্রথম ৩টি "এড়িয়ে চলুন" — ট্র্যাকারের মিল-পাতার জন্য।
+// বিদ্যমান ব্যবহার (compact ছাড়া) অপরিবর্তিত।
+export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
   const [loadErr, setLoadErr] = useState(null);
   const [result, setResult] = useState(null); // { avoidFoods, includeFoods, matchedTags }
   const [openTag, setOpenTag] = useState(null);
@@ -63,6 +66,16 @@ export function DietGuidanceSection({ familyId, selectedMemberId }) {
   const box = (title, items, color, bg, sources) => React.createElement("div", { style: { background: bg, borderRadius: "14px", padding: "12px", marginTop: "10px", border: "1px solid " + color + "33" } },
     React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color, marginBottom: "8px" } }, title),
     items.length ? bullets(items, sources) : React.createElement("div", { style: { fontSize: F, color: "#5F716C" } }, "নির্দিষ্ট কিছু নেই"));
+
+  if (compact) {
+    const top = result ? result.avoidFoods.slice(0, 3) : [];
+    const more = result ? result.avoidFoods.length - top.length : 0;
+    return React.createElement("div", null,
+      !result && React.createElement("div", { style: { color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
+      result && top.length === 0 && React.createElement("div", { style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } }, "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"),
+      result && top.length > 0 && box("❌ আজ এড়িয়ে চলুন", top, "#B3261E", "#FDF0EE", result.avoidSources),
+      more > 0 && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px" } }, "আরও " + bnNum(more) + "টি আছে — পূর্ণ তালিকায় দেখুন।"));
+  }
 
   return React.createElement(
     "div", { style: { marginTop: "0" } },
