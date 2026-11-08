@@ -24,6 +24,7 @@ import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
+import { activeMedNames } from "./medFoodNotes.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
@@ -143,7 +144,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     }),
     sheetSlot && React.createElement(MealEditSheet, {
       key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags,
-      isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, recentFoods: recentExtraFoods(info.recent), busy, err,
+      isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, recentFoods: recentExtraFoods(info.recent), activeMeds: info.activeMeds, busy, err,
       onSavePerm: (draft) => savePrefs(setSlotPref(goal.planPrefs, sheet, draft)),
       onReset: () => savePrefs(clearSlotPref(goal.planPrefs, sheet)),
       onAddExtra: (name, kcal) => writeExtras([...extras, { name, kcal, slot: sheet }]),
@@ -529,7 +530,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ weekMin, recent, allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ weekMin, recent, activeMeds: activeMedNames(recs), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));

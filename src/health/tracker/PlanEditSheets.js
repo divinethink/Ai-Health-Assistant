@@ -6,6 +6,7 @@
 import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText } from "./mealPlanData.js";
+import { medFoodNotes } from "./medFoodNotes.js";
 import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, tagsOf, posTagsOf } from "./foodCatalog.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
@@ -99,14 +100,15 @@ const MODES = [["perm", "প্রতিদিনের জন্য"], ["today"
 
 // ---------- মিল: একটি বেলা ----------
 // props: slot (কার্যকর প্ল্যানের বেলা), planTotal, target, sex, allergyTags, isCustom, extras [{name,kcal,idx}] (এই বেলার আজকের নিজের খাবার),
-// extraCount (আজকের মোট নিজের-খাবার), recentFoods [{name,kcal,count}] (গত ৭ দিনের সেরা, ঐচ্ছিক), busy, err, onSavePerm(draft), onReset(), onAddExtra(name,kcal), onRemoveExtra(idx), onClose
-export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCustom, extras, extraCount, recentFoods, busy, err, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
+// extraCount (আজকের মোট নিজের-খাবার), recentFoods [{name,kcal,count}] (গত ৭ দিনের সেরা, ঐচ্ছিক), activeMeds [নাম] (সক্রিয় ওষুধ, ঐচ্ছিক), busy, err, onSavePerm(draft), onReset(), onAddExtra(name,kcal), onRemoveExtra(idx), onClose
+export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCustom, extras, extraCount, recentFoods, activeMeds, busy, err, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
   const [mode, setMode] = useState("perm");
   const [draft, setDraft] = useState(() => draftFromSlotItems(slot.items));
   const [name, setName] = useState("");
   const [kcal, setKcal] = useState("");
   const [formErr, setFormErr] = useState(null);
   const [pickQty, setPickQty] = useState(1);
+  const [pickedKey, setPickedKey] = useState(null); // "আজ শুধু"-তে তালিকা থেকে বাছা খাবার (ওষুধ-নোটের জন্য)
   const newSlot = draftKcal(draft);
   const newTotal = planTotal - slot.kcal + newSlot;
   const warnings = mealWarnings(newTotal, { sex, target });
@@ -116,7 +118,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
     setFormErr(e);
     if (e) return;
     onAddExtra(name.replace(/\s+/g, " ").trim(), Number(kcal));
-    setName(""); setKcal("");
+    setName(""); setKcal(""); setPickedKey(null);
   };
 
   const addRecent = (r) => {
@@ -133,7 +135,8 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       draft.map((r, i) => React.createElement("div", { key: r.food, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, itemText(r.food, r.qty),
           React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(FOODS[r.food].k * r.qty)) + " কিলোক্যালরি"),
-          tagsOf(FOODS[r.food]).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1]))),
+          tagsOf(FOODS[r.food]).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1])),
+          medFoodNotes(activeMeds, r.food).map((n) => React.createElement("div", { key: n.rule + n.med, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px", fontWeight: 600 } }, "💊 " + n.text))),
         Stepper(qtyText(r.qty), () => setDraft(changeDraftQty(draft, i, -0.5)), () => setDraft(changeDraftQty(draft, i, 0.5)), r.qty <= 0.5, r.qty >= MAX_QTY, FOODS[r.food].n),
         React.createElement("button", { onClick: () => setDraft(removeDraftAt(draft, i)), "aria-label": FOODS[r.food].n + " বাদ দিন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 6px" } }, "খাবার যোগ করুন"),
@@ -165,9 +168,10 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
         React.createElement("span", { style: { fontSize: "13px", color: MUTED } }, "পরিমাণ"),
         Stepper(qtyText(pickQty), () => setPickQty(Math.max(0.5, pickQty - 0.5)), () => setPickQty(Math.min(MAX_QTY, pickQty + 0.5)), pickQty <= 0.5, pickQty >= MAX_QTY, "পরিমাণ")),
-      React.createElement(FoodPicker, { allergyTags, onPick: (key) => { setName(itemText(key, pickQty)); setKcal(String(Math.round(FOODS[key].k * pickQty))); setFormErr(null); } }),
+      React.createElement(FoodPicker, { allergyTags, onPick: (key) => { setName(itemText(key, pickQty)); setKcal(String(Math.round(FOODS[key].k * pickQty))); setFormErr(null); setPickedKey(key); } }),
+      pickedKey && medFoodNotes(activeMeds, pickedKey).map((n) => React.createElement("div", { key: n.rule + n.med, style: { fontSize: "12px", color: "#7A5200", marginTop: "6px", fontWeight: 600 } }, "💊 " + n.text)),
       React.createElement("label", { style: { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "12px 0 4px" } }, "খাবারের নাম"),
-      React.createElement("input", { type: "text", maxLength: 40, value: name, onChange: (e) => setName(e.target.value), style: INPUT }),
+      React.createElement("input", { type: "text", maxLength: 40, value: name, onChange: (e) => { setName(e.target.value); setPickedKey(null); }, style: INPUT }),
       React.createElement("label", { style: { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "10px 0 4px" } }, "কিলোক্যালরি (আনুমানিক, ০–" + bnNum(MAX_KCAL) + ")"),
       React.createElement("input", { type: "number", inputMode: "numeric", min: 0, max: MAX_KCAL, value: kcal, onChange: (e) => setKcal(e.target.value), style: INPUT }),
       formErr && Msg(formErr, "err"),
