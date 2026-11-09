@@ -11,7 +11,7 @@
 
 import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { listHealthRecords, createHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
+import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
 import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendarEventsByIds } from "../../legacy/googleCalendar.js";
 
 // UI পুনর্গঠন (owner-request, ২০২৬-০৯-১৭): কমপ্যাক্ট তালিকা (ট্যাপে খোলে), এই ট্যাবেই নতুন
@@ -89,6 +89,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [loadErr, setLoadErr] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [openId, setOpenId] = useState(null);
+  const [delConfirm, setDelConfirm] = useState(null); // ২-ধাপ মোছা
+  const [delBusy, setDelBusy] = useState(false);
   const [filter, setFilter] = useState("all");
   const [savedFlash, setSavedFlash] = useState(null);
   const [calBusy, setCalBusy] = useState(null);
@@ -191,6 +193,13 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   function requestPermission() {
     if (typeof Notification === "undefined") return;
     Notification.requestPermission().then((p) => setPermission(p));
+  }
+  // ওষুধ মোছা (রেকর্ড-তালিকা থেকে ওষুধ সরায় এখানে এসেছে) — ২-ধাপ confirm; অন্যের রেকর্ড হলে deleteHealthRecord owner-কে notification পাঠায়।
+  async function handleDelete(m) {
+    setDelBusy(true);
+    try { await deleteHealthRecord(familyId, m.recordId, m.memberId, callerMemberId); setDelConfirm(null); setOpenId(null); await loadMeds(); }
+    catch (e) { setCalMsg({ recordId: m.recordId, ok: false, text: e.code === "permission-denied" ? "এই ওষুধ মোছার অনুমতি আপনার নেই।" : (e.message || String(e)) }); }
+    finally { setDelBusy(false); }
   }
   function setEdit(recordId, patch) { setEditValues((prev) => ({ ...prev, [recordId]: { ...prev[recordId], ...patch } })); }
   function toggleTaken(key) {
@@ -387,6 +396,13 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             h("button", { onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #4285F4", background: "#fff", color: "#4285F4", fontSize: F, cursor: "pointer" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সেভ করে Calendar-এ যোগ")),
             m.calendarEventIds.length > 0 && h("button", { onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", fontSize: F, cursor: "pointer" } }, "Calendar থেকে সরান"),
             savedFlash === m.recordId && h("span", { style: { fontSize: F, color: GREEN } }, "✓ সংরক্ষিত")),
+          delConfirm === m.recordId
+            ? h("div", { style: { marginTop: "12px" } },
+                h("div", { style: { fontSize: F, color: "#B3261E", marginBottom: "6px" } }, "নিশ্চিত মুছবেন? রিমাইন্ডারও বন্ধ হবে।"),
+                h("div", { style: { display: "flex", gap: "8px" } },
+                  h("button", { onClick: () => handleDelete(m), disabled: delBusy, style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#FDF0EE", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, delBusy ? "মুছছে..." : "হ্যাঁ, মুছুন"),
+                  h("button", { onClick: () => setDelConfirm(null), style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: F, cursor: "pointer" } }, "না")))
+            : h("button", { onClick: () => setDelConfirm(m.recordId), style: { marginTop: "12px", width: "100%", minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#fff", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, "🗑 ওষুধ মুছুন"),
           calMsg && calMsg.recordId === m.recordId && h("div", { style: { fontSize: F, marginTop: "8px", color: calMsg.ok ? GREEN : "#B3261E" } }, calMsg.text)));
     })
   );

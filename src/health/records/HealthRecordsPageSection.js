@@ -43,6 +43,12 @@ import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js
 
 const { useState } = React;
 
+// স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
+const RECORD_SUBS = [
+  { id: "records", label: "📋 রেকর্ড" },
+  { id: "meds", label: "💊 " },
+];
+
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
 const TIMELINE_SUBS = [
   { id: "calendar", label: "📅 ক্যালেন্ডার" },
@@ -54,13 +60,13 @@ const TABS = [
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
   { id: "diet", label: "tab.diet" },
-  { id: "medication", label: "tab.medication" },
   { id: "timeline", label: "tab.timeline" },
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
   const [activeTab, setActiveTab] = useState("profile");
   const [timelineSub, setTimelineSub] = useState("calendar");
+  const [recordSub, setRecordSub] = useState("records");
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
   return React.createElement(
@@ -86,9 +92,19 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
-      activeTab === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
+      activeTab === "records" && React.createElement(React.Fragment, null,
+        React.createElement("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
+          RECORD_SUBS.map((sb) => React.createElement("button", {
+            key: sb.id, onClick: () => setRecordSub(sb.id), "aria-pressed": recordSub === sb.id,
+            style: {
+              flex: 1, minHeight: "44px", padding: "6px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
+              border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
+              background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
+            },
+          }, sb.id === "meds" ? sb.label + t("tab.medication") : sb.label))),
+        recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
+        recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId })),
       activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
-      activeTab === "medication" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
       activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(

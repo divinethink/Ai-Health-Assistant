@@ -1,5 +1,6 @@
 // একজন সদস্যের Health Record — কার্ড-ভিত্তিক তালিকা (ধাপ ২)।
 // অসুস্থতা: ১ কলাম কার্ড, ডাক্তার · হাসপাতাল · চেম্বার এক লাইনে। এলার্জি: ২ কলাম।
+// ঔষধ এখানে নেই — "ঔষধ ও রিমাইন্ডার" সাব-পিলে (ধাপ ৩)।
 // পরিমাপ (Observation): ধরন অনুযায়ী একটা কার্ড — সর্বশেষ মান, তারিখ, ↑↓ তীর; ট্যাপে পুরনো ইতিহাস।
 // Edit/Delete সারিতে নেই — কার্ড ট্যাপ করলে খোলে; মোছার আগে আগের মতোই ২-ধাপ confirm
 // (deleteHealthRecord নিজেই Admin-override হলে owner-কে notification পাঠায়)।
@@ -61,7 +62,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   if (err) return ErrorBox(err);
   if (!records) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "লোড হচ্ছে...");
-  if (records.length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো record নেই।");
+  if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো record নেই।");
 
   const toggle = (k) => { setOpenKey((cur) => (cur === k ? null : k)); setConfirmId(null); };
   const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid " + color, background: bg || "#fff", color, fontSize: "14px", fontWeight: 600, cursor: "pointer" });
@@ -86,7 +87,6 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   const conditions = records.filter((r) => r.resourceType === "condition");
   const allergies = records.filter((r) => r.resourceType === "allergy");
-  const meds = records.filter((r) => r.resourceType === "medicationStatement");
   const obsGroups = groupObservations(records);
 
   const conditionCard = (r) => {
@@ -116,19 +116,6 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
         line("তীব্রতা", r.severity ? t("sev." + r.severity) : null), actions(r)));
   };
 
-  const medCard = (r) => {
-    const open = openKey === r.id;
-    const sub = [r.frequency, r.durationDays ? r.durationDays + " দিন" : null].filter(Boolean).join(" · ");
-    return React.createElement("div", { key: r.id, style: { ...cardBase, marginBottom: "8px", padding: 0 } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" } },
-          React.createElement("b", { style: { fontSize: "16px" } }, r.genericName),
-          badge(t("st." + (r.status || "active")), r.status === "active" ? G : MUTED, r.status === "active" ? "#E4F0E9" : "#EEF1EF")),
-        sub && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "4px" } }, sub)),
-      open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
-        line("শুরু", r.startDate ? bnDate(r.startDate) : null), actions(r)));
-  };
-
   const obsCard = (g) => {
     const k = "obs:" + g.key, open = openKey === k;
     const latest = g.items[0], tr = obsTrend(g.items);
@@ -151,6 +138,5 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   return React.createElement("div", { style: { marginTop: "4px" } },
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), conditions.map(conditionCard)),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "এলার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-    meds.length > 0 && React.createElement(React.Fragment, null, title("💊", "ঔষধ", meds.length + "টি"), meds.map(medCard)),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid2 }, obsGroups.map(obsCard))));
 }

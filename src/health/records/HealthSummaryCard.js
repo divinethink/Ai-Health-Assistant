@@ -151,7 +151,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "কোনো সক্রিয় ঔষধ নেই।")
       : activeMeds.map((m) => React.createElement("div", { key: m.id, style: { fontSize: "14px", color: "#1F2D2A", marginTop: "2px" } },
           "• " + m.genericName + (m.frequency ? " — " + m.frequency : "") + (m.durationDays ? " (" + m.durationDays + " দিন)" : "") + (m.mealTiming === "before" ? " · খাবারের আগে" : m.mealTiming === "after" ? " · খাবারের পরে" : ""))),
-    activeMeds.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "রিমাইন্ডার-সময় সেট করতে \"ঔষধ ও রিমাইন্ডার\" ট্যাবে যান।"),
+    activeMeds.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "রিমাইন্ডার-সময় সেট করতে \"স্বাস্থ্য তথ্য → ঔষধ ও রিমাইন্ডার\"-এ যান।"),
 
     vaccination && React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px" } },
       "💉 টিকা: " + vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),

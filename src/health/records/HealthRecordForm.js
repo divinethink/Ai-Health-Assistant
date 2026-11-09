@@ -150,7 +150,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
       : SelectField(t("f.type"), resourceType, changeResourceType, [
           ["condition", t("type.condition")], ["observation", t("type.observation")],
-          ["medicationStatement", t("type.medicationStatement")], ["allergy", t("type.allergy")],
+          ["allergy", t("type.allergy")], // ঔষধ যোগ হয় "ঔষধ ও রিমাইন্ডার" সাব-পিল থেকে (ধাপ ৩)
         ]),
     ...typeFields,
     err && ErrorBox(err),
