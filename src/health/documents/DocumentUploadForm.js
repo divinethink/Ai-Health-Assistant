@@ -3,6 +3,7 @@
 // parent-কে জানায়, Process Rule ১১)।
 
 import { SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
+import { localISO } from "../../shared/dates.js";
 import { uploadDocument, DOC_TYPE_LABELS, validateFile } from "./documentsData.js";
 
 const { useState, useCallback, useRef } = React;
@@ -12,7 +13,7 @@ const { useState, useCallback, useRef } = React;
 // (আপলোড ব্যর্থ হলে বিশ্লেষণ শুরু হয় না, ফাইলও হারায় না)।
 export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded, onAnalyze, onManual }) {
   const [docType, setDocType] = useState("prescription");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localISO());
   const [source, setSource] = useState("");
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);

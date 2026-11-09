@@ -10,6 +10,8 @@
 import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
+import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
+import { foodColumns } from "../nutrition-fitness/FoodColumns.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "../nutrition-fitness/dietGuidanceData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
@@ -49,20 +51,8 @@ function nextAppointmentOf(memberId, events, today) {
   return events.find((e) => e.memberId === memberId && (e.eventType === "appointment" || e.eventType === "checkup") && e.status !== "done" && (e.date || "") >= today) || null;
 }
 
-// খাদ্য তালিকা — বুলেটে সাজানো (লম্বা কমা-লাইনের বদলে), ৫টার বেশি হলে বাকিগুলো "আরও দেখুন"-এ।
-function dietList(title, items, color, bg) {
-  const clean = items.map((x) => String(x).trim()).filter(Boolean);
-  const mk = (x, i) => React.createElement("li", { key: i, style: { marginBottom: "3px" } }, x);
-  const first = clean.slice(0, 5), rest = clean.slice(5);
-  return React.createElement("div", { style: { background: bg, borderRadius: "10px", padding: "8px 10px", marginTop: "8px" } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color, marginBottom: "4px" } }, title),
-    React.createElement("ul", { style: { margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#1F2D2A", lineHeight: 1.5 } }, first.map(mk)),
-    rest.length > 0 && React.createElement("details", { style: { marginTop: "4px" } },
-      React.createElement("summary", { style: { fontSize: "13px", color, cursor: "pointer" } }, "আরও " + rest.length + "টি দেখুন"),
-      React.createElement("ul", { style: { margin: "4px 0 0", paddingLeft: "18px", fontSize: "13px", color: "#1F2D2A", lineHeight: 1.5 } }, rest.map(mk))));
-}
-
-export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
+export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, refreshTick, onVitalsSaved }) {
+  const [editing, setEditing] = useState(false); // ✎ চাপলে উচ্চতা/ওজন ফর্ম নিচে খোলে
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [data, setData] = useState(null);
@@ -120,7 +110,17 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
   return React.createElement(
     "div", { style: { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "16px", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", padding: "14px", marginBottom: "14px" } },
 
-    React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: "0 0 8px" } }, "🧑 " + (member ? member.name : "সদস্য")),
+    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" } },
+      React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: 0 } }, "🧑 " + (member ? member.name : "সদস্য")),
+      React.createElement("button", {
+        onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
+        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: editing ? "#E4F0E9" : "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" },
+      }, editing ? "✕" : "✎")),
+
+    editing && React.createElement(HealthVitalsWidget, {
+      familyId, targetMemberId: selectedMemberId, callerMemberId, refreshTick, embedded: true,
+      onSaved: () => { setEditing(false); onVitalsSaved && onVitalsSaved(); },
+    }),
 
     React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginBottom: "4px" } },
       birthYear ? "জন্মসাল: " + birthYear + (ageYears != null ? " (আনুমানিক বয়স " + Math.floor(ageYears) + " বছর)" : "") : "জন্মতারিখ যোগ করা হয়নি"
@@ -133,7 +133,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
     adviceLine && React.createElement("div", {
       style: { fontSize: "14px", color: bmiCategory === "normal" ? "#0E4B43" : "#8A5A00", background: bmiCategory === "normal" ? "#EAF6F0" : "#FFF6E5", padding: "8px 10px", borderRadius: "10px", marginBottom: "10px" },
     }, adviceLine),
-    (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginBottom: "10px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (নিচের ফর্ম ব্যবহার করুন)।"),
+    (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginBottom: "10px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#B3261E", marginTop: "6px" } }, "⚠️ এলার্জি"),
     allergies.length === 0
@@ -161,9 +161,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, refreshTick }) {
     (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0) && React.createElement(
       React.Fragment, null,
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🍽️ খাদ্য নির্দেশিকা (সংক্ষিপ্ত)"),
-      dietResult.avoidFoods.length > 0 && dietList("❌ এড়িয়ে চলুন", dietResult.avoidFoods, "#B3261E", "#FDF0EE"),
-      dietResult.includeFoods.length > 0 && dietList("✅ খাবেন", dietResult.includeFoods, "#0E4B43", "#EAF6F0"),
-      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
+      foodColumns({ avoid: dietResult.avoidFoods, include: dietResult.includeFoods, limit: 4 }),
+      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
     )
   );
 }

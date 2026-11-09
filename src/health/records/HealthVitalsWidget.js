@@ -8,6 +8,7 @@
 // schema/rules লাগে না।
 
 import { ErrorBox, PrimaryButton } from "../../shared/ui.js";
+import { localISO } from "../../shared/dates.js";
 import { createHealthRecord, listHealthRecords } from "./healthRecordsData.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -21,7 +22,7 @@ function isWeightType(t) {
   return s === "weight" || s === "ওজন";
 }
 
-export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, refreshTick, onSaved }) {
+export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, refreshTick, onSaved, embedded }) {
   const [latest, setLatest] = useState(null); // { heightCm, weightKg, bmi }
   const [heightInput, setHeightInput] = useState("");
   const [feetInput, setFeetInput] = useState("");
@@ -60,7 +61,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
     if (weightInput.trim() && (isNaN(w) || w <= 0)) { setErr("ওজন সঠিক সংখ্যা হতে হবে (kg)।"); return; }
     setBusy(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localISO();
       if (heightInput.trim() || hasFtIn) {
         await createHealthRecord(familyId, targetMemberId, callerMemberId, "observation", {
           type: "height", value: String(Math.round(h * 10) / 10), unit: "cm", date: today,
@@ -82,7 +83,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
   }, [familyId, targetMemberId, callerMemberId, heightInput, feetInput, inchInput, weightInput, load, onSaved]);
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+    "div", { style: { marginTop: embedded ? "0" : "14px", marginBottom: embedded ? "10px" : 0, padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "উচ্চতা, ওজন ও BMI"),
     latest && (latest.heightCm || latest.weightKg) && React.createElement(
       "div", { style: { fontSize: "14px", color: "#1F2D2A", margin: "8px 0" } },

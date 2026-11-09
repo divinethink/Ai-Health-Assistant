@@ -1,6 +1,8 @@
 // ---- ছোট UI primitives (app.js থেকে split, Component-Split — অংশ A) ----
 // কোনো functional পরিবর্তন নেই, শুধু নিজস্ব ফাইলে সরানো হয়েছে।
 
+import { localISO } from "./dates.js";
+
 export function ErrorBox(msg) {
   return React.createElement("div", {
     style: { marginTop: "12px", padding: "12px 14px", borderRadius: "12px", background: "#FDECEA", border: "1px solid #E5A29A", color: "#7A1F14", fontSize: "14px", lineHeight: 1.5 },
@@ -108,7 +110,7 @@ export function CollapsibleSection({ title, defaultOpen, children }) {
 }
 
 export function DateField(label, value, onChange) {
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = localISO();
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
     React.createElement("label", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", display: "block", marginBottom: "6px" } }, label),

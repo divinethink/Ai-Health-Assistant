@@ -8,7 +8,6 @@ import { t } from "../../shared/i18n.js";
 // (Component-Split — অংশ A), কোনো functional পরিবর্তন নেই।
 
 import { HealthRecordForm } from "./HealthRecordForm.js";
-import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
@@ -42,14 +41,10 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     "div", { style: { marginTop: "0" } },
     (section === "all" || section === "profile") && React.createElement(HealthSummaryCard, {
       key: "summary-" + targetMemberId,
-      familyId, selectedMemberId: targetMemberId, refreshTick,
+      familyId, selectedMemberId: targetMemberId, callerMemberId, refreshTick,
+      onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.records")),
-    (section === "all" || section === "profile") && React.createElement(HealthVitalsWidget, {
-      key: "vitals-" + targetMemberId,
-      familyId, targetMemberId, callerMemberId, refreshTick,
-      onSaved: () => setRefreshTick((t) => t + 1),
-    }),
+    (section === "all" || section === "records") && React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.records")),
     (section === "all" || section === "records") && React.createElement(HealthRecordForm, {
       key: "form-" + targetMemberId,
       familyId, targetMemberId, callerMemberId,
