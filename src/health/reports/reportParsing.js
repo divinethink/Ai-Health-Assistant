@@ -26,7 +26,8 @@ const NUMBER_PATTERN = /([0-9০-৯]+(?:[.,][0-9০-৯]+)?)/;
 const UNIT_TOKEN_PATTERN = /^\s*([a-zA-Zµ%³][a-zA-Zµ%³0-9\/.]{0,15})/;
 
 function normalizeUnit(u) {
-  return String(u || "").toLowerCase().replace(/[^a-z0-9µ]/g, "");
+  const n = String(u || "").toLowerCase().replace(/μ/g, "µ").replace(/[^a-z0-9µ]/g, "");
+  return n === "µiuml" || n === "uiuml" ? "miul" : n; // µIU/mL ≡ mIU/L (TSH-র দুই প্রচলিত একক)
 }
 
 /**

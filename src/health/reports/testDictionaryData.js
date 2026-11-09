@@ -7,6 +7,7 @@
 // তাই client সরাসরি সব entry পড়তে পারে।
 
 import { db } from "../../legacy/firebaseConfig.js";
+import { withExtraSynonyms } from "./testSynonyms.js";
 
 let cachedEntries = null;
 
@@ -16,6 +17,6 @@ let cachedEntries = null;
 export async function fetchTestNameDictionary({ forceRefresh = false } = {}) {
   if (cachedEntries && !forceRefresh) return cachedEntries;
   const snap = await db.collection("testNameDictionary").get();
-  cachedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  cachedEntries = withExtraSynonyms(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   return cachedEntries;
 }
