@@ -12,6 +12,7 @@ import { t } from "../../shared/i18n.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
+import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 
 const { useState, useCallback } = React;
 
@@ -23,13 +24,14 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
   const startAnalyze = useCallback((file) => setPanel({ mode: "analyze", file, key: Date.now() }), []);
+  const startPrescription = useCallback((file) => setPanel({ mode: "prescription", file, key: Date.now() }), []);
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
 
   if (!targetMemberId) {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
   }
 
-  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট" })[panel.mode];
+  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট", prescription: "💊 প্রেসক্রিপশন থেকে ঔষধ" })[panel.mode];
 
   return React.createElement(
     "div", { style: { marginTop: "12px" } },
@@ -54,11 +56,15 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
       panel.mode === "add" && React.createElement(DocumentUploadForm, {
         key: "upload-" + targetMemberId,
         familyId, targetMemberId, callerMemberId,
-        onUploaded: refresh, onAnalyze: startAnalyze, onManual: startManual,
+        onUploaded: refresh, onAnalyze: startAnalyze, onManual: startManual, onPrescription: startPrescription,
       }),
       panel.mode === "analyze" && React.createElement(ReportAnalysisPanel, {
         key: "analyze-" + targetMemberId + "-" + panel.key,
         familyId, targetMemberId, callerMemberId, presetFile: panel.file,
+      }),
+      panel.mode === "prescription" && React.createElement(PrescriptionPanel, {
+        key: "rx-" + targetMemberId + "-" + panel.key,
+        familyId, targetMemberId, callerMemberId, file: panel.file,
       }),
       panel.mode === "manual" && React.createElement(ReportAnalysisPanel, {
         key: "manual-" + targetMemberId + "-" + panel.key,

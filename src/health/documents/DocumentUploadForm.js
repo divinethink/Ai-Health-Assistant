@@ -11,7 +11,7 @@ const { useState, useCallback, useRef } = React;
 // একীভূত ফ্লো: ফাইল একবারই বাছা হয়। "সংরক্ষণ" = শুধু vault; "সংরক্ষণ + বিশ্লেষণ"
 // = আগে vault-এ আপলোড, সফল হলে `onAnalyze(file)` দিয়ে parent বিশ্লেষণ-ধাপ খোলে
 // (আপলোড ব্যর্থ হলে বিশ্লেষণ শুরু হয় না, ফাইলও হারায় না)।
-export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded, onAnalyze, onManual }) {
+export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded, onAnalyze, onManual, onPrescription }) {
   const [docType, setDocType] = useState("prescription");
   const [date, setDate] = useState(() => localISO());
   const [source, setSource] = useState("");
@@ -41,7 +41,8 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
       setSource("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       onUploaded && onUploaded();
-      if (andAnalyze && onAnalyze) onAnalyze(uploadedFile);
+      if (andAnalyze === "rx" && onPrescription) onPrescription(uploadedFile);
+      else if (andAnalyze && onAnalyze) onAnalyze(uploadedFile);
     } catch (e) {
       setErr(e.code === "permission-denied"
         ? "এই সদস্যের জন্য Document আপলোড করার অনুমতি আপনার নেই।"
@@ -49,7 +50,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, file, docType, date, source, onUploaded, onAnalyze]);
+  }, [familyId, targetMemberId, callerMemberId, file, docType, date, source, onUploaded, onAnalyze, onPrescription]);
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
@@ -74,7 +75,11 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     ),
     file && React.createElement("div", { style: { marginTop: "8px", fontSize: "14px", color: "#0E4B43", fontWeight: 600 } }, "📄 " + file.name),
     err && ErrorBox(err),
-    docType === "lab-report" && onAnalyze
+    docType === "prescription" && onPrescription
+      ? React.createElement(React.Fragment, null,
+          PrimaryButton("সংরক্ষণ + ঔষধ শনাক্ত", () => submit("rx"), busy),
+          SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy))
+    : docType === "lab-report" && onAnalyze
       ? React.createElement(React.Fragment, null,
           PrimaryButton("সংরক্ষণ + AI/OCR বিশ্লেষণ", () => submit(true), busy),
           SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy))

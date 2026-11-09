@@ -10,6 +10,8 @@
 // বন্ধ থাকলে notification আসবে না। এটাই honest সীমা, UI-তে স্পষ্ট করে বলা আছে।
 
 import { ErrorBox } from "../../shared/ui.js";
+import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
+import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
 import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendarEventsByIds } from "../../legacy/googleCalendar.js";
@@ -103,6 +105,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
 
   // নতুন ওষুধ যোগের ফর্ম
   const [addOpen, setAddOpen] = useState(false);
+  const [rxOpen, setRxOpen] = useState(false); // "📷 প্রেসক্রিপশন থেকে" (ধাপ ৬)
+  const [rxFile, setRxFile] = useState(null);
   const [aName, setAName] = useState("");
   const [aMember, setAMember] = useState(selectedMemberId || callerMemberId);
   const [aCount, setACount] = useState(3);
@@ -338,7 +342,15 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
-    !addOpen && h("button", { onClick: () => setAddOpen(true), style: { width: "100%", padding: "12px", marginBottom: "10px", borderRadius: "14px", border: "1px dashed " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "➕ নতুন ওষুধ যোগ করুন"),
+    !addOpen && !rxOpen && h("div", { style: { display: "flex", gap: "8px", marginBottom: "10px" } },
+      h("button", { onClick: () => setAddOpen(true), style: { flex: 1, minHeight: "48px", padding: "12px", borderRadius: "14px", border: "1px dashed " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "➕ নতুন ওষুধ"),
+      h("button", { onClick: () => { setRxFile(null); setRxOpen(true); }, style: { flex: 1, minHeight: "48px", padding: "12px", borderRadius: "14px", border: "1px solid " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "📷 প্রেসক্রিপশন থেকে")),
+    rxOpen && h("div", { style: card },
+      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+        h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ঔষধ"),
+        h("button", { onClick: () => { setRxOpen(false); setRxFile(null); }, "aria-label": "বন্ধ করুন", style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C", minWidth: "44px", minHeight: "44px" } }, "✕")),
+      !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f) => setRxFile(f) }),
+      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, onDone: () => loadMeds() })),
     addOpen && h("div", { style: card },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
