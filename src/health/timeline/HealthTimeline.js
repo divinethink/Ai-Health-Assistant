@@ -107,7 +107,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
     buildTimeline(familyId, targetMemberId)
       .then(setEntries)
       .catch((e) => setEntriesErr(e.code === "permission-denied"
-        ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই (Take-Access grant ছাড়া অন্য সদস্যের data দেখা যায় না)।"
+        ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
         : (e.message || String(e))));
   }, [familyId, targetMemberId]);
 

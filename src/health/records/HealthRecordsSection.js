@@ -12,7 +12,7 @@ import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // section: "all" (ডিফল্ট, পুরনো callers-এর জন্য অপরিবর্তিত) | "profile"
 // (শুধু vitals) | "records" (form+list+trend) — P11 mockup §৩-এর হোম-পেজ
@@ -26,12 +26,16 @@ const { useState, useEffect } = React;
 export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all" }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
+  const formRef = useRef(null);
   const targetMemberId = selectedMemberId;
 
   // সদস্য বদলালে আগের সদস্যের edit-in-progress record ভুলবশত অন্য সদস্যের
   // ফর্মে খোলা না থাকে তা নিশ্চিত করতে reset (আগে dropdown-change handler-এ
   // ইনলাইন ছিল, এখন selectedMemberId parent থেকে আসায় effect দিয়ে)।
-  useEffect(() => { setEditingRecord(null); }, [targetMemberId]);
+  useEffect(() => { setEditingRecord(null); setAdding(false); }, [targetMemberId]);
+  // ✎ সম্পাদনা চাপলে ফর্ম খোলে ও দৃশ্যে আসে
+  useEffect(() => { if (editingRecord && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [editingRecord]);
 
   if (!targetMemberId) {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
@@ -45,12 +49,21 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
     (section === "all" || section === "records") && React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.records")),
-    (section === "all" || section === "records") && React.createElement(HealthRecordForm, {
-      key: "form-" + targetMemberId,
-      familyId, targetMemberId, callerMemberId,
-      editingRecord, onCancelEdit: () => setEditingRecord(null),
-      onAdded: () => setRefreshTick((t) => t + 1),
-    }),
+    (section === "all" || section === "records") && React.createElement("div", { ref: formRef },
+      !adding && !editingRecord && React.createElement("button", {
+        onClick: () => setAdding(true),
+        style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
+      }, "+ নতুন যোগ করুন"),
+      (adding || editingRecord) && React.createElement(HealthRecordForm, {
+        key: "form-" + targetMemberId,
+        familyId, targetMemberId, callerMemberId,
+        editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); },
+        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); },
+      }),
+      adding && !editingRecord && React.createElement("button", {
+        onClick: () => setAdding(false),
+        style: { width: "100%", minHeight: "44px", marginTop: "8px", borderRadius: "14px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: "14px", cursor: "pointer" },
+      }, "বন্ধ করুন")),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
       onEdit: setEditingRecord,
