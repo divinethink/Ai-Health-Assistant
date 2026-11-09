@@ -173,8 +173,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       tile({
         icon: "🩺", label: "চলমান অসুস্থতা",
         lines: activeConditions.length === 0 ? [{ t: "নেই", muted: true }] : [
-          { t: activeConditions[0].name, strong: true },
-          (activeConditions[0].notes || activeConditions[0].status) && { t: activeConditions[0].notes || t("st." + activeConditions[0].status), muted: true },
+          { t: activeConditions[0].name, strong: true, sub: activeConditions[0].status ? "(" + t("st." + activeConditions[0].status) + ")" : null },
+          activeConditions[0].notes && { t: activeConditions[0].notes, muted: true },
           activeConditions.length > 1 && { t: "আরও " + bn(activeConditions.length - 1) + "টি", muted: true },
         ],
       })),
