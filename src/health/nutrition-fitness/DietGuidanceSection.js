@@ -8,7 +8,7 @@
 import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { foodColumns } from "./FoodColumns.js";
+import { foodColumns, habitTipsBox } from "./FoodColumns.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
 
 const { useState, useEffect } = React;
@@ -91,13 +91,14 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
         result.matchedTags.map((tag) => React.createElement("span", { key: tag, style: { padding: "4px 12px", borderRadius: "999px", background: "#fff", border: "1px solid #C3D2CA", fontSize: F, color: "#0E4B43", fontWeight: 600 } }, tag))),
       foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources }),
+      habitTipsBox(result.habitTips),
       result.matchedTags.length > 1 && React.createElement("button", {
         onClick: () => setOpenTag(openTag ? null : "__all"),
         style: { marginTop: "12px", width: "100%", padding: "10px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#0E4B43", fontSize: F, fontWeight: 600, cursor: "pointer" },
       }, openTag ? "▲ অসুখ-ভিত্তিক বিস্তারিত বন্ধ করুন" : "▼ অসুখ-ভিত্তিক বিস্তারিত দেখুন"),
       openTag && result.byTag.map((b) => React.createElement("div", { key: b.tag, style: { marginTop: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "10px 12px", background: "#fff" } },
         React.createElement("div", { style: { fontSize: F, fontWeight: 700, color: "#0E4B43", marginBottom: "4px" } }, b.tag),
-        foodColumns({ avoid: b.avoid, include: b.include })))
+        foodColumns({ avoid: b.avoid, include: b.include }), habitTipsBox(b.tips)))
     )
   );
 }

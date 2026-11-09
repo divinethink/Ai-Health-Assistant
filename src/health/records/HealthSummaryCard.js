@@ -11,7 +11,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
-import { foodColumns } from "../nutrition-fitness/FoodColumns.js";
+import { foodColumns, habitTipsBox } from "../nutrition-fitness/FoodColumns.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "../nutrition-fitness/dietGuidanceData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
@@ -207,10 +207,11 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     vaccination && React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px" } },
       "💉 টিকা: " + vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
 
-    (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0) && React.createElement(
+    (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0 || dietResult.habitTips.length > 0) && React.createElement(
       React.Fragment, null,
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#0E4B43", marginTop: "16px", marginBottom: "6px" } }, "🍽️ খাদ্য নির্দেশিকা"),
       foodColumns({ avoid: dietResult.avoidFoods, include: dietResult.includeFoods, limit: 4 }),
+      habitTipsBox(dietResult.habitTips, 2),
       React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
     )
   );

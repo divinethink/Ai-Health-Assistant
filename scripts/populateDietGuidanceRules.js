@@ -26,6 +26,7 @@
 //   ড্রাই-রান:  node scripts/populateDietGuidanceRules.js
 //   আসল write: node scripts/populateDietGuidanceRules.js --confirm
 //   এডিট/overwrite: node scripts/populateDietGuidanceRules.js --confirm --force
+//   শুধু খাবার/অভ্যাস-তালিকা আপডেট (status/verified অক্ষত): node scripts/populateDietGuidanceRules.js --confirm --sync-lists
 
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -36,6 +37,7 @@ import path from "path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONFIRM = process.argv.includes("--confirm");
 const FORCE = process.argv.includes("--force");
+const SYNC_LISTS = process.argv.includes("--sync-lists");
 
 const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, "serviceAccountKey.json");
 
@@ -67,7 +69,8 @@ const ENTRIES = [
   {
     linkedTag: { type: "condition", value: "hypertension", aliases: ["high blood pressure", "high bp", "htn", "উচ্চ রক্তচাপ", "হাই প্রেশার", "হাই প্রেসার"] },
     avoidFoods: ["অতিরিক্ত লবণ/আচার", "প্রসেসড/ফাস্ট ফুড", "রেড মিট অতিরিক্ত"],
-    includeFoods: ["পটাশিয়াম-সমৃদ্ধ ফল-সবজি (কলা, পালং শাক)", "কম-লবণযুক্ত রান্না", "মাছ"],
+    includeFoods: ["পটাশিয়াম-সমৃদ্ধ ফল-সবজি (কলা, পালং শাক)", "মাছ"],
+    habitTips: ["রান্নায় লবণ কম দেওয়া"],
     source: ["WHO Healthy Diet", "NHS Eat Well"],
   },
   {
@@ -91,7 +94,8 @@ const ENTRIES = [
   {
     linkedTag: { type: "condition", value: "obesity", aliases: ["স্থূলতা"] },
     avoidFoods: ["উচ্চ-ক্যালরি প্রসেসড/ফাস্ট ফুড", "চিনি-যুক্ত পানীয়"],
-    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "পর্যাপ্ত প্রোটিন", "নিয়ন্ত্রিত অংশ (portion-control)"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "পর্যাপ্ত প্রোটিন",],
+    habitTips: ["প্রতিবার নিয়ন্ত্রিত পরিমাণে খাওয়া (portion-control)"],
     source: ["WHO Healthy Diet"],
   },
   {
@@ -115,7 +119,8 @@ const ENTRIES = [
   {
     linkedTag: { type: "condition", value: "constipation", aliases: ["কোষ্ঠকাঠিন্য"] },
     avoidFoods: ["কম-ফাইবার প্রসেসড খাবার"],
-    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি/ফল", "পর্যাপ্ত পানি", "নিয়মিত হালকা ব্যায়াম (lifestyle সহায়ক)"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি/ফল", "পর্যাপ্ত পানি",],
+    habitTips: ["নিয়মিত হালকা ব্যায়াম"],
     source: ["NHS"],
   },
   {
@@ -126,29 +131,29 @@ const ENTRIES = [
       "অতিরিক্ত ভাজাপোড়া, তেল-চর্বিযুক্ত ও ঝাল-মসলাদার খাবার",
       "অতিরিক্ত চা/কফি ও গ্যাসযুক্ত (কার্বনেটেড) পানীয়",
       "সরবিটল/কৃত্রিম মিষ্টি (সুগার-ফ্রি গাম/ক্যান্ডি) ও অ্যালকোহল",
-      "খাবার বাদ দেওয়া বা অনেকক্ষণ না-খেয়ে থাকা",
       "যে খাবারে উপসর্গ বাড়ে (যেমন বেশি পেঁয়াজ-রসুন, শিম/ডাল, দুধ, বেশি ফল) সেগুলো কমিয়ে দেখুন",
     ],
     includeFoods: [
-      "নিয়মিত সময়ে ছোট-ছোট পরিমাণে ধীরে ধীরে খাওয়া",
       "পর্যাপ্ত পানি (দিনে প্রায় ৮ কাপ)",
       "দ্রবণীয় ফাইবার (ওটস, পাকা কলা, গাজর, আলু)",
       "সহজপাচ্য প্রোটিন (মাছ, মুরগি, ডিম)",
-      "কোন খাবারে উপসর্গ বাড়ে তা খাদ্য-ডায়েরিতে লিখে রাখা (low-FODMAP ডায়েট শুরুর আগে ডাক্তার/পুষ্টিবিদের পরামর্শ নিন)",
     ],
+    habitTips: ["নিয়মিত সময়ে ছোট-ছোট পরিমাণে ধীরে ধীরে খাওয়া", "খাবার বাদ না দেওয়া, অনেকক্ষণ না-খেয়ে না থাকা", "কোন খাবারে উপসর্গ বাড়ে তা খাদ্য-ডায়েরিতে লিখে রাখা (low-FODMAP ডায়েট শুরুর আগে ডাক্তার/পুষ্টিবিদের পরামর্শ নিন)"],
     source: ["NHS", "NICE"],
   },
   // --- সাধারণ রোগ (owner-request, ২০২৬-০৯-২০) — সবই status:"draft", owner review ছাড়া app-এ কার্যকর হবে না ---
   {
     linkedTag: { type: "condition", value: "gastritis", aliases: ["acidity", "gerd", "reflux", "peptic ulcer", "gastric", "এসিডিটি", "গ্যাস্ট্রিক", "গ্যাস্ট্রাইটিস", "আলসার", "বুক জ্বালা"] },
-    avoidFoods: ["ঝাল-মসলাদার ও ভাজাপোড়া খাবার", "অতিরিক্ত চা/কফি ও গ্যাসযুক্ত পানীয়", "টক/অ্যাসিডিক খাবার-পানীয় (উপসর্গ বাড়লে)", "অ্যালকোহল ও ধূমপান", "রাতে দেরিতে বা ভারী খাবার ও দীর্ঘক্ষণ না-খেয়ে থাকা"],
-    includeFoods: ["নিয়মিত সময়ে অল্প অল্প করে ঘন ঘন খাওয়া", "সেদ্ধ/হালকা রান্নার খাবার (ভাত, সেদ্ধ আলু, সবজি)", "পাকা কলা, ওটস", "পর্যাপ্ত পানি", "খাওয়ার পর কিছুক্ষণ সোজা হয়ে বসা/হাঁটা (lifestyle সহায়ক)"],
+    avoidFoods: ["ঝাল-মসলাদার ও ভাজাপোড়া খাবার", "অতিরিক্ত চা/কফি ও গ্যাসযুক্ত পানীয়", "টক/অ্যাসিডিক খাবার-পানীয় (উপসর্গ বাড়লে)", "অ্যালকোহল", "রাতে দেরিতে বা ভারী খাবার"],
+    includeFoods: [ "সেদ্ধ/হালকা রান্নার খাবার (ভাত, সেদ্ধ আলু, সবজি)", "পাকা কলা, ওটস", "পর্যাপ্ত পানি",],
+    habitTips: ["নিয়মিত সময়ে অল্প অল্প করে ঘন ঘন খাওয়া", "দীর্ঘক্ষণ না-খেয়ে না থাকা", "ধূমপান এড়িয়ে চলা", "খাওয়ার পর কিছুক্ষণ সোজা হয়ে বসা বা হাঁটা"],
     source: ["NHS"],
   },
   {
     linkedTag: { type: "condition", value: "fever", aliases: ["জ্বর", "viral"] },
     avoidFoods: ["ভারী তেল-চর্বিযুক্ত, ভাজাপোড়া ও ঝাল-মসলাদার খাবার", "রাস্তার খোলা খাবার/পানীয়", "চিনি-যুক্ত সফট ড্রিংক"],
-    includeFoods: ["প্রচুর তরল (পানি, ORS, ডাবের পানি, স্যুপ, ভাতের মাড়)", "সহজপাচ্য খাবার (নরম ভাত, খিচুড়ি, সেদ্ধ সবজি)", "মৌসুমি ফল (ভিটামিন-সি সমৃদ্ধ)", "ছোট পরিমাণে ঘন ঘন খাওয়া"],
+    includeFoods: ["প্রচুর তরল (পানি, ORS, ডাবের পানি, স্যুপ, ভাতের মাড়)", "সহজপাচ্য খাবার (নরম ভাত, খিচুড়ি, সেদ্ধ সবজি)", "মৌসুমি ফল (ভিটামিন-সি সমৃদ্ধ)",],
+    habitTips: ["ছোট পরিমাণে ঘন ঘন খাওয়া"],
     source: ["WHO", "NHS"],
   },
   {
@@ -160,49 +165,57 @@ const ENTRIES = [
   {
     linkedTag: { type: "condition", value: "dengue", aliases: ["ডেঙ্গু"] },
     avoidFoods: ["ভাজাপোড়া, তেলযুক্ত ও ঝাল-মসলাদার খাবার", "রাস্তার খোলা খাবার"],
-    includeFoods: ["প্রচুর তরল (ORS, ডাবের পানি, ফলের রস, স্যুপ, ভাতের মাড়)", "সহজপাচ্য নরম খাবার (খিচুড়ি, সেদ্ধ সবজি, ডিম)", "ছোট পরিমাণে ঘন ঘন খাওয়া"],
+    includeFoods: ["প্রচুর তরল (ORS, ডাবের পানি, ফলের রস, স্যুপ, ভাতের মাড়)", "সহজপাচ্য নরম খাবার (খিচুড়ি, সেদ্ধ সবজি, ডিম)",],
+    habitTips: ["ছোট পরিমাণে ঘন ঘন খাওয়া"],
     source: ["WHO"],
   },
   {
     linkedTag: { type: "condition", value: "typhoid", aliases: ["টাইফয়েড", "enteric fever"] },
     avoidFoods: ["রাস্তার খোলা খাবার/কাটা ফল/অপরিষ্কার পানি", "ভাজাপোড়া, ঝাল-মসলাদার ও ভারী খাবার", "না-ধোয়া কাঁচা সালাদ"],
-    includeFoods: ["ফোটানো/বিশুদ্ধ পানি ও প্রচুর তরল", "সহজপাচ্য নরম খাবার (খিচুড়ি, সেদ্ধ ভাত, সেদ্ধ সবজি)", "পর্যাপ্ত ক্যালরি — অল্প অল্প করে ঘন ঘন"],
+    includeFoods: ["ফোটানো/বিশুদ্ধ পানি ও প্রচুর তরল", "সহজপাচ্য নরম খাবার (খিচুড়ি, সেদ্ধ ভাত, সেদ্ধ সবজি)",],
+    habitTips: ["পর্যাপ্ত ক্যালরি — অল্প অল্প করে ঘন ঘন খাওয়া"],
     source: ["WHO"],
   },
   {
     linkedTag: { type: "condition", value: "common cold", aliases: ["cough", "flu", "influenza", "সর্দি", "কাশি", "ঠান্ডা লাগা"] },
-    avoidFoods: ["ধূমপান ও ধোঁয়া", "অ্যালকোহল (পানিশূন্যতা বাড়ায়)", "অতিরিক্ত চিনি-যুক্ত পানীয়"],
-    includeFoods: ["প্রচুর কুসুম গরম তরল (পানি, স্যুপ, চা-লেবু)", "মধু (কাশিতে, শুধু ১ বছরের বেশি বয়সীদের জন্য)", "ভিটামিন-সি সমৃদ্ধ ফল", "পর্যাপ্ত বিশ্রাম (lifestyle সহায়ক)"],
+    avoidFoods: [ "অ্যালকোহল (পানিশূন্যতা বাড়ায়)", "অতিরিক্ত চিনি-যুক্ত পানীয়"],
+    includeFoods: ["প্রচুর কুসুম গরম তরল (পানি, স্যুপ, চা-লেবু)", "মধু (কাশিতে, শুধু ১ বছরের বেশি বয়সীদের জন্য)", "ভিটামিন-সি সমৃদ্ধ ফল",],
+    habitTips: ["ধূমপান ও ধোঁয়া এড়িয়ে চলা", "পর্যাপ্ত বিশ্রাম নেওয়া"],
     source: ["NHS"],
   },
   {
     linkedTag: { type: "condition", value: "gout", aliases: ["uric acid", "hyperuricemia", "ইউরিক এসিড", "গাউট"] },
     avoidFoods: ["লাল মাংস ও অর্গান মিট (কলিজা, ব্রেন)", "চিংড়ি/শেলফিশ ও কিছু সামুদ্রিক মাছ", "অ্যালকোহল (বিশেষত বিয়ার) ও চিনি-যুক্ত পানীয়"],
-    includeFoods: ["প্রচুর পানি", "কম-ফ্যাটযুক্ত দুধ/দই", "শাক-সবজি ও ফল", "স্বাস্থ্যকর ওজন বজায় রাখা (lifestyle সহায়ক)"],
+    includeFoods: ["প্রচুর পানি", "কম-ফ্যাটযুক্ত দুধ/দই", "শাক-সবজি ও ফল",],
+    habitTips: ["স্বাস্থ্যকর ওজন বজায় রাখা"],
     source: ["NHS"],
   },
   {
     linkedTag: { type: "condition", value: "fatty liver", aliases: ["nafld", "masld", "ফ্যাটি লিভার", "লিভারে চর্বি"] },
     avoidFoods: ["অ্যালকোহল", "চিনি-যুক্ত পানীয়/মিষ্টি ও ফলের জুস", "ভাজাপোড়া ও ট্রান্স-ফ্যাট", "সাদা ভাত/ময়দা/বেকারি আইটেম বেশি পরিমাণে"],
-    includeFoods: ["শাক-সবজি ও ফল", "লাল চাল/লাল আটা/ওটস", "মাছ (ওমেগা-৩)", "স্বাস্থ্যকর তেল (পরিমিত)", "ওজন কমানো ও নিয়মিত ব্যায়াম (lifestyle সহায়ক)"],
+    includeFoods: ["শাক-সবজি ও ফল", "লাল চাল/লাল আটা/ওটস", "মাছ (ওমেগা-৩)", "স্বাস্থ্যকর তেল (পরিমিত)",],
+    habitTips: ["ওজন কমানো ও নিয়মিত ব্যায়াম"],
     source: ["NHS", "WHO"],
   },
   {
     linkedTag: { type: "condition", value: "jaundice", aliases: ["hepatitis", "জন্ডিস", "হেপাটাইটিস"] },
     avoidFoods: ["অ্যালকোহল (সম্পূর্ণ বাদ)", "ভারী তেল-চর্বিযুক্ত ও ভাজাপোড়া খাবার", "রাস্তার খোলা খাবার ও কাঁচা/আধা-সিদ্ধ শেলফিশ"],
-    includeFoods: ["সহজপাচ্য, হালকা রান্নার খাবার (ভাত, খিচুড়ি, সেদ্ধ সবজি)", "প্রচুর বিশুদ্ধ পানি ও চিনি-ছাড়া ফলের রস", "অল্প অল্প করে ঘন ঘন খাওয়া ও পর্যাপ্ত বিশ্রাম"],
+    includeFoods: ["সহজপাচ্য, হালকা রান্নার খাবার (ভাত, খিচুড়ি, সেদ্ধ সবজি)", "প্রচুর বিশুদ্ধ পানি ও চিনি-ছাড়া ফলের রস",],
+    habitTips: ["অল্প অল্প করে ঘন ঘন খাওয়া", "পর্যাপ্ত বিশ্রাম নেওয়া"],
     source: ["WHO", "NHS"],
   },
   {
     linkedTag: { type: "condition", value: "heart disease", aliases: ["coronary", "cardiac", "heart failure", "হৃদরোগ", "হার্টের রোগ", "হার্ট অ্যাটাক"] },
     avoidFoods: ["অতিরিক্ত লবণ, আচার, শুঁটকি ও প্রসেসড খাবার", "ট্রান্স-ফ্যাট/ভাজাপোড়া এবং অতিরিক্ত ঘি-মাখন", "রেড মিট ও প্রসেসড মাংস (সসেজ/নাগেট) বেশি", "চিনি-যুক্ত পানীয়"],
-    includeFoods: ["শাক-সবজি ও ফল", "ওটস/লাল চাল/ডাল", "মাছ (সপ্তাহে ২ বার মতো)", "বাদাম (পরিমিত)", "কম-লবণযুক্ত রান্না"],
+    includeFoods: ["শাক-সবজি ও ফল", "ওটস/লাল চাল/ডাল", "মাছ (সপ্তাহে ২ বার মতো)", "বাদাম (পরিমিত)",],
+    habitTips: ["রান্নায় লবণ কম দেওয়া"],
     source: ["NHS", "WHO"],
   },
   {
     linkedTag: { type: "condition", value: "urinary tract infection", aliases: ["uti", "urine infection", "প্রস্রাবের সংক্রমণ", "প্রস্রাবে ইনফেকশন"] },
     avoidFoods: ["অতিরিক্ত চা/কফি, অ্যালকোহল ও গ্যাসযুক্ত পানীয়", "অতিরিক্ত ঝাল-মসলাদার খাবার", "চিনি-যুক্ত পানীয়"],
-    includeFoods: ["প্রচুর পানি ও তরল (দিনে বারবার)", "ভিটামিন-সি সমৃদ্ধ ফল", "প্রস্রাব চেপে না রাখা (lifestyle সহায়ক)"],
+    includeFoods: ["প্রচুর পানি ও তরল (দিনে বারবার)", "ভিটামিন-সি সমৃদ্ধ ফল",],
+    habitTips: ["প্রস্রাব চেপে না রাখা"],
     source: ["NHS"],
   },
   {
@@ -214,19 +227,22 @@ const ENTRIES = [
   {
     linkedTag: { type: "condition", value: "pcos", aliases: ["polycystic ovary", "পিসিওএস"] },
     avoidFoods: ["চিনি-যুক্ত পানীয়/মিষ্টি ও প্রসেসড খাবার", "সাদা ভাত/ময়দা বেশি পরিমাণে", "ভাজাপোড়া/ট্রান্স-ফ্যাট"],
-    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "লাল চাল/ওটস/ডাল (কম-glycemic)", "প্রোটিন (মাছ, ডিম, মুরগি)", "নিয়মিত ব্যায়াম ও ওজন নিয়ন্ত্রণ (lifestyle সহায়ক)"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "লাল চাল/ওটস/ডাল (কম-glycemic)", "প্রোটিন (মাছ, ডিম, মুরগি)",],
+    habitTips: ["নিয়মিত ব্যায়াম ও ওজন নিয়ন্ত্রণ"],
     source: ["NHS"],
   },
   {
     linkedTag: { type: "condition", value: "osteoporosis", aliases: ["হাড়ক্ষয়", "হাড় ক্ষয়"] },
-    avoidFoods: ["অতিরিক্ত লবণ", "অতিরিক্ত চা/কফি/কোলা", "অ্যালকোহল ও ধূমপান"],
-    includeFoods: ["ক্যালসিয়াম-সমৃদ্ধ খাবার (দুধ, দই, কাঁটাসহ ছোট মাছ, সবুজ শাক)", "ভিটামিন-ডি (সকালের রোদ, ডিম, মাছ)", "পর্যাপ্ত প্রোটিন", "ওজন-বহনকারী হালকা ব্যায়াম (lifestyle সহায়ক)"],
+    avoidFoods: ["অতিরিক্ত লবণ", "অতিরিক্ত চা/কফি/কোলা", "অ্যালকোহল"],
+    includeFoods: ["ক্যালসিয়াম-সমৃদ্ধ খাবার (দুধ, দই, কাঁটাসহ ছোট মাছ, সবুজ শাক)", "ভিটামিন-ডি (সকালের রোদ, ডিম, মাছ)", "পর্যাপ্ত প্রোটিন",],
+    habitTips: ["ধূমপান এড়িয়ে চলা", "ওজন-বহনকারী হালকা ব্যায়াম"],
     source: ["NHS"],
   },
   {
     linkedTag: { type: "condition", value: "migraine", aliases: ["মাইগ্রেন", "আধকপালি"] },
-    avoidFoods: ["খাবার বাদ দেওয়া/দীর্ঘক্ষণ না-খেয়ে থাকা", "অতিরিক্ত ক্যাফেইন", "অ্যালকোহল", "নিজের ট্রিগার-খাবার (কারো কারো ক্ষেত্রে চকলেট, পুরনো চিজ, প্রসেসড মাংস)"],
-    includeFoods: ["নিয়মিত সময়ে খাওয়া", "পর্যাপ্ত পানি", "কোন খাবারে মাথাব্যথা বাড়ে তা খাদ্য-ডায়েরিতে লিখে রাখা"],
+    avoidFoods: [ "অতিরিক্ত ক্যাফেইন", "অ্যালকোহল", "নিজের ট্রিগার-খাবার (কারো কারো ক্ষেত্রে চকলেট, পুরনো চিজ, প্রসেসড মাংস)"],
+    includeFoods: [ "পর্যাপ্ত পানি",],
+    habitTips: ["নিয়মিত সময়ে খাওয়া, খাবার বাদ না দেওয়া", "কোন খাবারে মাথাব্যথা বাড়ে তা খাদ্য-ডায়েরিতে লিখে রাখা"],
     source: ["NHS"],
   },
 
@@ -267,20 +283,23 @@ const ENTRIES = [
   // এর substring-match logic অপরিবর্তিত (নতুন logic লাগেনি, শুধু নতুন tag-value) ---
   {
     linkedTag: { type: "bmiCategory", value: "underweight" },
-    avoidFoods: ["দীর্ঘ সময় না-খেয়ে থাকা", "কম-ক্যালরি/কম-পুষ্টির স্ন্যাক্স"],
+    avoidFoods: [ "কম-ক্যালরি/কম-পুষ্টির স্ন্যাক্স"],
     includeFoods: ["ঘন ঘন ছোট পরিমাণে উচ্চ-ক্যালরি সুষম খাবার", "প্রোটিন-সমৃদ্ধ খাবার (ডিম, দুধ, ডাল, মাছ-মাংস)", "স্বাস্থ্যকর ফ্যাট (বাদাম, ঘি পরিমিত)"],
+    habitTips: ["দীর্ঘ সময় না-খেয়ে না থাকা"],
     source: ["WHO Healthy Diet", "NHS Eat Well"],
   },
   {
     linkedTag: { type: "bmiCategory", value: "overweight" },
     avoidFoods: ["উচ্চ-ক্যালরি প্রসেসড/ভাজাপোড়া খাবার", "চিনি-যুক্ত পানীয়/মিষ্টি"],
-    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "নিয়ন্ত্রিত অংশ (portion-control)", "নিয়মিত হালকা-মাঝারি ব্যায়াম (lifestyle সহায়ক)"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি",],
+    habitTips: ["প্রতিবার নিয়ন্ত্রিত পরিমাণে খাওয়া (portion-control)", "নিয়মিত হালকা-মাঝারি ব্যায়াম"],
     source: ["WHO Healthy Diet"],
   },
   {
     linkedTag: { type: "bmiCategory", value: "obese" },
     avoidFoods: ["উচ্চ-ক্যালরি প্রসেসড/ফাস্ট ফুড", "চিনি-যুক্ত পানীয়", "অতিরিক্ত ভাজাপোড়া"],
-    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "পর্যাপ্ত প্রোটিন", "নিয়ন্ত্রিত অংশ (portion-control)", "নিয়মিত ব্যায়াম শুরুর আগে ডাক্তার-পরামর্শ (comorbidity থাকলে)"],
+    includeFoods: ["উচ্চ-ফাইবার শাক-সবজি", "পর্যাপ্ত প্রোটিন",],
+    habitTips: ["প্রতিবার নিয়ন্ত্রিত পরিমাণে খাওয়া (portion-control)", "ব্যায়াম শুরুর আগে ডাক্তারের পরামর্শ নিন (অন্য রোগ থাকলে)"],
     source: ["WHO Healthy Diet"],
   },
 ];
@@ -293,6 +312,14 @@ async function run() {
     const id = docIdFor(entry.linkedTag.type, entry.linkedTag.value);
     const ref = db.collection("dietGuidanceRules").doc(id);
     const existingSnap = await ref.get();
+
+    // --sync-lists: বিদ্যমান doc-এর শুধু avoidFoods/includeFoods/habitTips আপডেট; status, verified-তারিখ, aliases অক্ষত।
+    if (existingSnap.exists && SYNC_LISTS) {
+      console.log(`${CONFIRM ? "♻️  lists sync" : "🔍 preview lists sync"}: ${id}`);
+      if (CONFIRM) await ref.update({ avoidFoods: entry.avoidFoods, includeFoods: entry.includeFoods, habitTips: entry.habitTips || [], updatedAt: FieldValue.serverTimestamp() });
+      willAlias++;
+      continue;
+    }
 
     // বিদ্যমান doc-এ শুধু নতুন/বদলানো `aliases` থাকলে ঐ একটা field-ই আপডেট (status/খাদ্য-তালিকা
     // অক্ষত — verified entry "draft"-এ ফিরে যায় না; --force-এর মতো overwrite না)।
@@ -316,6 +343,7 @@ async function run() {
       linkedTag: entry.linkedTag,
       avoidFoods: entry.avoidFoods,
       includeFoods: entry.includeFoods,
+      habitTips: entry.habitTips || [],
       source: entry.source,
       status: "draft",
       lastVerifiedDate: null,

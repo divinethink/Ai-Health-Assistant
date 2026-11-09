@@ -38,3 +38,21 @@ export function foodColumns({ avoid, include, avoidSources, limit }) {
     hasAvoid && column("❌ এড়িয়ে চলুন", avoid, "#B3261E", "#FDF0EE", avoidSources, limit, "✕"),
     hasInclude && column("✅ খাবেন", include, "#0E4B43", "#EAF6F0", null, limit, "✓"));
 }
+
+// 💡 অভ্যাস ও জীবনযাত্রা — খাবার নয় এমন পরামর্শ (ব্যায়াম, খাওয়ার নিয়ম, বিশ্রাম ইত্যাদি)। খাবার-তালিকা থেকে আলাদা।
+export function habitTipsBox(tips, limit) {
+  const clean = (tips || []).map((x) => String(x).trim()).filter(Boolean);
+  if (clean.length === 0) return null;
+  const first = limit ? clean.slice(0, limit) : clean;
+  const rest = limit ? clean.slice(limit) : [];
+  const li = (x, i) => React.createElement("li", { key: i, style: { marginBottom: "5px", listStyle: "none", display: "flex", gap: "6px", alignItems: "flex-start", overflowWrap: "anywhere" } },
+    React.createElement("span", { "aria-hidden": true, style: { color: "#8A5A00", fontWeight: 700, flexShrink: 0 } }, "›"),
+    React.createElement("span", { style: { minWidth: 0 } }, x));
+  const ul = { margin: 0, padding: 0, fontSize: "14px", color: "#1F2D2A", lineHeight: 1.5 };
+  return React.createElement("div", { style: { background: "#FFF9EC", border: "1.5px solid #E6CF9A", borderRadius: "12px", padding: "8px", marginTop: "8px" } },
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#8A5A00", marginBottom: "6px" } }, "💡 অভ্যাস ও জীবনযাত্রা"),
+    React.createElement("ul", { style: ul }, first.map(li)),
+    rest.length > 0 && React.createElement("details", { style: { marginTop: "4px" } },
+      React.createElement("summary", { style: { fontSize: "14px", color: "#8A5A00", cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center" } }, "আরও " + rest.length + "টি ▾"),
+      React.createElement("ul", { style: { ...ul, marginTop: "2px" } }, rest.map((x, i) => li(x, i + first.length)))));
+}
