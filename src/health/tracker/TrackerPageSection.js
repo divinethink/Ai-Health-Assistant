@@ -607,7 +607,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 }
 
 // ---------- মূল পেজ ----------
-export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, chip }) {
+// টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
+export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx }) {
   const [tab, setTab] = useState("today");
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
@@ -650,7 +651,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   const tabs = [["today", "আজ"], ["plan", "প্ল্যান"], ["trend", "ট্রেন্ড ও রিমাইন্ডার"], ["setup", "লক্ষ্য ও ইনপুট"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
-    React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab, chip)),
+    React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
       err && ErrorBox(err),
       !selectedMemberId && React.createElement("p", { style: { color: T.muted, fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে..."),
