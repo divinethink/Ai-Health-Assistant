@@ -11,6 +11,9 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
 import { groupObservations, obsTrend } from "./recordGrouping.js";
+import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
+import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
+import { LabAlertBox } from "../reports/LabAlertBox.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -34,6 +37,9 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const [openKey, setOpenKey] = useState(null);   // খোলা কার্ড (record id বা "obs:<key>")
   const [confirmId, setConfirmId] = useState(null); // ২-ধাপ delete-confirm
   const [busyId, setBusyId] = useState(null);
+  const [dict, setDict] = useState([]);           // ধাপ ৫: রেঞ্জ-ডিকশনারি (না এলে সতর্কতা ছাড়াই চলে)
+
+  useEffect(() => { fetchTestNameDictionary().then(setDict).catch(() => setDict([])); }, []);
 
   useEffect(() => {
     setRecords(null);
@@ -118,14 +124,15 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   const obsCard = (g) => {
     const k = "obs:" + g.key, open = openKey === k;
-    const latest = g.items[0], tr = obsTrend(g.items);
-    return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined } },
+    const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict);
+    return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#E8B4AE" : LINE) } },
       React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { fontSize: "14px", color: MUTED, overflowWrap: "anywhere" } }, g.label),
+        React.createElement("div", { style: { fontSize: "14px", color: MUTED, overflowWrap: "anywhere" } }, g.label,
+          al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4")),
         React.createElement("div", { style: { marginTop: "2px" } },
-          React.createElement("span", { style: { fontSize: "22px", fontWeight: 700, color: G } }, latest.value),
+          React.createElement("span", { style: { fontSize: "22px", fontWeight: 700, color: al ? RED : G } }, latest.value),
           latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + latest.unit),
-          tr && React.createElement("span", { style: { fontSize: "14px", color: MUTED, marginLeft: "6px" } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
+          tr && React.createElement("span", { style: { fontSize: "14px", color: al ? RED : MUTED, marginLeft: "6px" } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
         React.createElement(Spark, { items: g.items }),
         latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px" } }, bnDate(latest.date))),
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
@@ -135,7 +142,11 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
           actions(r)))));
   };
 
+  // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়) — প্রতি টেস্টের সর্বশেষ মানই
+  const labAlerts = buildLabAlerts(obsGroups.map((g) => g.items[0]), dict);
+
   return React.createElement("div", { style: { marginTop: "4px" } },
+    React.createElement(LabAlertBox, { alerts: labAlerts }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), conditions.map(conditionCard)),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "এলার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid2 }, obsGroups.map(obsCard))));

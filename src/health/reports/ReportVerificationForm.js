@@ -18,6 +18,8 @@
 
 import { TextField, DateField, ErrorBox, SuccessBox, PrimaryButton } from "../../shared/ui.js";
 import { createHealthRecord } from "../records/healthRecordsData.js";
+import { fetchTestNameDictionary } from "./testDictionaryData.js";
+import { buildLabAlerts } from "./labAlerts.js";
 
 const { useState, useCallback } = React;
 
@@ -58,7 +60,7 @@ function rowFromCandidate(c) {
  * @param {string} props.callerMemberId
  * @param {Array<object>} props.candidates - reportParsing.parseAndValidateReportText() output
  * @param {"direct-text"|"ocr"} props.extractionMethod
- * @param {(savedCount: number) => void} [props.onSaved]
+ * @param {(savedCount: number, alerts: Array<object>) => void} [props.onSaved] - alerts: সেভ-করা মান থেকে labAlerts.js-এর ফল
  */
 export function ReportVerificationForm({ familyId, targetMemberId, callerMemberId, candidates, extractionMethod, onSaved }) {
   const [rows, setRows] = useState(() => candidates.map(rowFromCandidate));
@@ -76,6 +78,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
     if (toSave.length === 0) { setErr("অন্তত একটা মান নির্বাচন করুন।"); return; }
     setBusy(true);
     let count = 0;
+    const savedObs = [];
     try {
       for (const r of toSave) {
         if (!r.value.trim() || !r.unit.trim()) continue; // ফাঁকা মান/একক নিয়ে save করা হবে না
@@ -90,10 +93,13 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
           originalOcrValue: r.rawValue,
           userVerified: true, // এই ফর্ম-ই verification ধাপ — এখানে পৌঁছানো মানেই ব্যবহারকারী দেখে confirm করেছেন
         });
+        savedObs.push({ type: r.canonicalNameEn, value: r.value, unit: r.unit });
         count++;
       }
       setSavedCount(count);
-      onSaved && onSaved(count);
+      // সতর্কতা শুধু দেখানোর জন্য — dictionary না এলে নীরবে বাদ, সেভ-সফলতা প্রভাবিত নয়
+      const dict = await fetchTestNameDictionary().catch(() => []);
+      onSaved && onSaved(count, buildLabAlerts(savedObs, dict));
     } catch (e) {
       setErr(e.code === "permission-denied"
         ? "এই সদস্যের জন্য Health Record যোগ করার অনুমতি আপনার নেই।"
