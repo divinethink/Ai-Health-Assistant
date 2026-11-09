@@ -2,9 +2,14 @@
 
 const { useState } = React;
 
-export function PlanWhyCard({ lines }) {
+export function PlanWhyCard({ lines, bare }) {
   const [open, setOpen] = useState(false); // ডিফল্টে ভাঁজ করা; ট্যাপে খোলে
   if (!lines || !lines.length) return null;
+  // bare: হেডার ছাড়া শুধু ভেতরের লাইন (ভাঁজ-চিপ বাইরে থেকে নিয়ন্ত্রিত)
+  if (bare) {
+    return React.createElement("div", { style: { background: "#FBF1DF", border: "1px solid #EBD9B4", borderRadius: "14px", padding: "10px 14px", marginBottom: "8px", fontSize: "13px", color: "#4A5A55", lineHeight: 1.65 } },
+      lines.map((l, i) => React.createElement("div", { key: i, style: { marginTop: i ? "4px" : 0 } }, "• " + l)));
+  }
   return React.createElement("div", {
     style: { background: "#FBF1DF", border: "1px solid #EBD9B4", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px" },
   },

@@ -5,7 +5,7 @@
 // (বিদ্যমান DietGuidanceSection reuse — Condition/Allergy/BMI থেকে স্বয়ংক্রিয়)।
 // ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
-import { ErrorBox, PrimaryButton, SelectField, TabPills } from "../../shared/ui.js";
+import { ErrorBox, PrimaryButton, TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
@@ -25,7 +25,7 @@ import { TrendBars } from "./TrendBars.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { activeMedNames } from "./medFoodNotes.js";
-import { gutEntries, gutFoodCount } from "./gutLog.js";
+import { gutEntries, gutFoodCount, entriesOn } from "./gutLog.js";
 import { GutLogCard } from "./GutLogCard.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
@@ -145,7 +145,6 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     plan.total < calc.calorieTarget - 100 && warnings.length === 0 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
     plan.notes.length > 0 && React.createElement(Notice, null, plan.notes.map((n, i) => React.createElement("div", { key: i }, n))),
-    plan.custom.length > 0 && React.createElement(Notice, { tone: "info" }, "আপনার বদলানো বেলা: " + plan.custom.map(slotName).join(", ") + "। ডিফল্টে ফিরতে সেই বেলার ‘বদলান’ → ‘ডিফল্টে ফিরুন’।"),
     err && !sheet && ErrorBox(err),
     plan.slots.map((s) => {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
@@ -356,17 +355,28 @@ function TrendTab({ info, familyId, memberId }) {
 // "কেন এই প্ল্যান?" + মিলের নিচে "আজ এড়িয়ে চলুন" (বিদ্যমান খাদ্য-নির্দেশিকা, compact; পূর্ণ তালিকা নথিপত্রে)।
 function PlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [sub, setSub] = useState("meal");
+  const [panel, setPanel] = useState(null); // "why" | "gut" | null — মিল-ট্যাবের দুই ভাঁজযোগ্য চিপ
   const { goal, age, weightKg, heightCm, allergyTags, gate } = info;
   const common = { info, familyId, callerMemberId, memberId, onSaved };
   // পেটের লক্ষণ-লগ এখন প্ল্যানের আগে (খাবার বাছাইয়ের সুবিধা); গেট বন্ধ থাকলেও দেখায়
   const d = info.daily || {};
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
   const gutFoods = gutFoodCount(calc ? applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags), goal.planPrefs, allergyTags) : null, d.mealsEaten, sanitizeExtraFoods(d.extraFoods));
+  const todayGut = entriesOn(info.gutEntries, todayISO());
+  const latestGut = todayGut.length ? todayGut[todayGut.length - 1] : null;
+  const foldChip = (id, text, badge) => React.createElement("button", { onClick: () => setPanel(panel === id ? null : id), "aria-expanded": panel === id,
+    style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: "6px", padding: "0 12px", borderRadius: "14px", border: "1px solid " + T.sandBorder, background: T.sand, color: T.ink, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+    React.createElement("span", { style: { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, text),
+    badge && React.createElement("span", { style: { flexShrink: 0, minWidth: "20px", padding: "0 6px", borderRadius: "999px", background: "#E4F0E9", color: T.green, fontSize: "12px", textAlign: "center" } }, badge),
+    React.createElement("span", { "aria-hidden": "true", style: { flexShrink: 0, fontSize: "12px", color: T.muted } }, panel === id ? "▲" : "▼"));
   return React.createElement("div", null,
     Pills([["meal", "🍽 মিল"], ["exercise", "🏃 ব্যায়াম"]], sub, setSub),
     sub === "meal" && React.createElement(React.Fragment, null,
-      !gate.blocked && React.createElement(PlanWhyCard, { lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
-      React.createElement(GutLogCard, { info, familyId, callerMemberId, memberId, gutFoods, onSaved }),
+      React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
+        !gate.blocked && foldChip("why", "💡 কেন এই প্ল্যান?"),
+        foldChip("gut", "🩺 পেটের লক্ষণ", latestGut ? bnNum(latestGut.score) : null)),
+      panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
+      panel === "gut" && React.createElement(GutLogCard, { bare: true, info, familyId, callerMemberId, memberId, gutFoods, onSaved }),
       React.createElement(MealTab, common),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
       React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
@@ -569,9 +579,17 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     } finally { setBusy(false); }
   }, [goalType, activity, target, weeks, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
 
-  const check = (label, val, setter, locked) => React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", padding: "2px 0", minHeight: "36px" } },
-    React.createElement("input", { type: "checkbox", checked: val, disabled: locked, onChange: (e) => setter(e.target.checked), style: { width: "20px", height: "20px" } }),
-    label + (locked ? " (প্রোফাইলের রোগ-তালিকা থেকে)" : ""));
+  // টিক-কার্ড: পুরো কার্ড ট্যাপযোগ্য; প্রোফাইল থেকে ধরা পড়লে লক
+  const tile = (label, val, setter, locked) => React.createElement("button", { role: "checkbox", "aria-checked": !!val, disabled: locked, onClick: () => setter(!val),
+    style: { flex: "1 1 120px", minWidth: 0, minHeight: "56px", display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "14px", textAlign: "left", fontFamily: "inherit", cursor: locked ? "default" : "pointer",
+      border: "1px solid " + (val ? "#9CC5B4" : T.border), background: val ? "#E4F0E9" : T.surface, color: T.ink, boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+    React.createElement("span", { "aria-hidden": "true", style: { width: "20px", height: "20px", boxSizing: "border-box", flexShrink: 0, borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700, lineHeight: 1, border: "2px solid " + T.green, background: val ? T.green : "#fff", color: "#fff" } }, val ? "✓" : ""),
+    React.createElement("span", { style: { minWidth: 0, fontSize: "14px", fontWeight: 600, lineHeight: 1.3 } }, label,
+      locked && React.createElement("span", { style: { display: "block", fontSize: "11px", fontWeight: 400, color: T.muted } }, "প্রোফাইল থেকে")));
+  // এক সারির ছোট কার্ড: লেবেল উপরে, ঘর নিচে
+  const mini = (label, control) => React.createElement("div", { style: { ...CARD, flex: 1, minWidth: 0, padding: "8px 10px" } },
+    React.createElement("label", { style: { fontSize: "12px", fontWeight: 600, color: T.ink, display: "block", margin: "0 0 4px" } }, label), control);
+  const MIN = { ...INPUT, padding: "9px 6px", fontSize: "14px", borderRadius: "10px" };
 
   return React.createElement("div", null,
     React.createElement("div", { style: CARD },
@@ -579,22 +597,23 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } },
         (age !== null ? bnNum(age) + " বছর" : "বয়স নেই") + " · " + (heightCm ? "উচ্চতা " + bnNum(heightCm) + " সেমি" : "উচ্চতা নেই") + " · " + (weightKg ? "ওজন " + bnNum(weightKg) + " কেজি" : "ওজন নেই") + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "")),
       (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য হোম → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
-    React.createElement("div", { style: CARD },
-      React.createElement("b", null, "প্রযোজ্য হলে টিক দিন"),
-      showPregnant && check("গর্ভবতী বা বুকের দুধ খাওয়াচ্ছেন", pregnant, setPregnant, false),
-      check("ডায়াবেটিস আছে", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
-      check("কিডনি রোগ আছে", kidney || detected.kidney, setKidney, detected.kidney)),
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink, margin: "4px 2px 6px" } }, "প্রযোজ্য হলে টিক দিন"),
+    React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" } },
+      showPregnant && tile("গর্ভবতী / বুকের দুধ", pregnant, setPregnant, false),
+      tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
+      tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
     gate.blocked
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
-      : React.createElement("div", { style: CARD },
-        React.createElement("label", { style: LABEL }, "লক্ষ্য বেছে নিন"),
-        Pills(Object.entries(GOAL_LABELS), goalType, setGoalType),
-        SelectField("কার্যকলাপ", activity, setActivity, Object.entries(ACTIVITY_LABELS)),
-        needsTarget && React.createElement("div", null,
-          React.createElement("label", { style: LABEL }, "লক্ষ্য ওজন (কেজি)"),
-          React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", value: target, onChange: (e) => setTarget(e.target.value), style: INPUT }),
-          React.createElement("label", { style: LABEL }, "কত সপ্তাহে"),
-          React.createElement("input", { type: "number", inputMode: "numeric", value: weeks, onChange: (e) => setWeeks(e.target.value), style: INPUT }))),
+      : React.createElement("div", null,
+        React.createElement("div", { style: CARD },
+          React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: T.ink, marginBottom: "6px" } }, "লক্ষ্য বেছে নিন"),
+          React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } },
+            Object.entries(GOAL_LABELS).map(([id, lbl]) => { const on = id === goalType; return React.createElement("button", { key: id, onClick: () => setGoalType(id), "aria-pressed": on,
+              style: { minHeight: "42px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); }))),
+        React.createElement("div", { style: { display: "flex", gap: "8px" } },
+          mini("কার্যকলাপ", React.createElement("select", { value: activity, "aria-label": "কার্যকলাপ", onChange: (e) => setActivity(e.target.value), style: MIN }, Object.entries(ACTIVITY_LABELS).map(([v, l]) => React.createElement("option", { key: v, value: v }, l)))),
+          needsTarget && mini("ওজন", React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", placeholder: "কেজি", "aria-label": "লক্ষ্য ওজন (কেজি)", value: target, onChange: (e) => setTarget(e.target.value), style: MIN })),
+          needsTarget && mini("কত সপ্তাহে", React.createElement("input", { type: "number", inputMode: "numeric", "aria-label": "কত সপ্তাহে", value: weeks, onChange: (e) => setWeeks(e.target.value), style: MIN })))),
     React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved }),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),

@@ -11,7 +11,7 @@ import { BRISTOL, entriesOn, checkGutAdd, buildGutRecord, gutWeek } from "./gutL
 
 const { useState } = React;
 
-export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods, onSaved }) {
+export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods, onSaved, bare }) {
   const entries = info.gutEntries || [];
   const today = todayISO();
   const todays = entriesOn(entries, today);
@@ -41,14 +41,16 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
   const latest = todays.length ? todays[todays.length - 1] : null;
   const R = React.createElement;
 
-  return R("div", { style: { ...CARD_STYLE, padding: "2px 12px" } },
+  const isOpen = bare || expanded; // bare: হেডার নেই, বাইরের ভাঁজ-চিপ নিয়ন্ত্রণ করে
+
+  return R("div", { style: { ...CARD_STYLE, padding: bare ? "10px 12px 0" : "2px 12px" } },
     // ভাঁজযোগ্য হেডার: এক লাইনে নাম + আজকের স্কোর-সারাংশ + তীর
-    R("button", { onClick: () => { setErr(null); setExpanded(!expanded); }, "aria-expanded": expanded, style: { display: "flex", alignItems: "center", gap: "8px", width: "100%", minHeight: "44px", padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+    !bare && R("button", { onClick: () => { setErr(null); setExpanded(!expanded); }, "aria-expanded": expanded, style: { display: "flex", alignItems: "center", gap: "8px", width: "100%", minHeight: "44px", padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
       R("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🩺 পেটের লক্ষণ"),
       R("span", { style: { flex: 1, minWidth: 0 } }, latest ? R("span", { style: chip("#E4F0E9", T.green) }, "আজ স্কোর " + bnNum(latest.score)) : R("span", { style: { fontSize: "13px", color: T.muted } }, "আজ এন্ট্রি নেই")),
       R("span", { "aria-hidden": "true", style: { fontSize: "13px", color: T.muted } }, expanded ? "▲" : "▼")),
 
-    expanded && R("div", { style: { paddingBottom: "10px" } },
+    isOpen && R("div", { style: { paddingBottom: "10px" } },
       todays.map((e) => R("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", fontSize: "14px", color: T.ink } },
         R("span", { style: chip("#E4F0E9", T.green) }, "স্কোর " + bnNum(e.score)),
         R("span", { style: { color: T.muted, fontSize: "13px", flex: 1, minWidth: 0 } }, label(e.score)),
