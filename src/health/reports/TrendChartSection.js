@@ -47,7 +47,7 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
   if (typeOptions.length === 0) {
     return React.createElement(
       "div", { style: { marginTop: "20px" } },
-      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Trend Chart"),
+      React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43" } }, "Trend Chart"),
       React.createElement("p", { style: { color: "#888", fontSize: "14px" } },
         "এখনো কোনো verified Observation নেই — রিপোর্ট বিশ্লেষণ/manual-entry করে অন্তত একটা মান save+verify করুন।")
     );
@@ -64,8 +64,8 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "Trend Chart"),
-    SelectField("টেস্ট বাছাই করুন", selectedType, setSelectedType, typeOptions.map((t) => [t, t])),
+    React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43", margin: "0 0 6px" } }, "Trend Chart"),
+    SelectField("", selectedType, setSelectedType, typeOptions.map((t) => { const nm = t.charAt(0).toUpperCase() + t.slice(1); return [t, t === selectedType ? nm + " (Change)" : nm]; })),
     points.length < 2
       ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "Trend দেখানোর জন্য অন্তত ২টা তারিখ-সহ verified মান দরকার।")
       : React.createElement(TrendChart, { unit, referenceRange: dictEntry ? dictEntry.referenceRange : null, points })

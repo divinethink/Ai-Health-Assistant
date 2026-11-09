@@ -89,6 +89,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement("h4", { style: { margin: 0, fontSize: "15px", color: G } }, icon + " " + text),
     React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
+  const shortDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return Number.isNaN(d.getTime()) || d.getFullYear() !== new Date().getFullYear() ? bnDate(iso) : d.toLocaleDateString("bn-BD", { day: "numeric", month: "long" }); };
   const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px" };
   const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" };
 
@@ -101,11 +102,10 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     const sub = [tp.name && "👨‍⚕️ " + tp.name, tp.hospital && "🏥 " + tp.hospital, tp.chamberContact && "📞 " + tp.chamberContact].filter(Boolean).join(" · ");
     const open = openKey === r.id;
     const active = r.status === "active" || r.status === "chronic";
-    return React.createElement("div", { key: r.id, style: { ...cardBase, marginBottom: "8px", padding: 0 } },
+    return React.createElement("div", { key: r.id, style: { ...cardBase, flex: (open || sub) ? "1 1 100%" : "1 1 auto", maxWidth: "100%", boxSizing: "border-box", padding: 0 } },
       React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" } },
-          React.createElement("b", { style: { fontSize: "16px" } }, r.name),
-          badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E4F0E9" : "#EEF1EF")),
+          React.createElement("span", { style: { fontSize: "16px", overflowWrap: "anywhere" } }, React.createElement("b", null, r.name), React.createElement("span", { style: { fontSize: "14px", color: active ? G : MUTED } }, " (" + t("st." + (r.status || "active")) + ")"))),
         sub && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "4px" } }, sub)),
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
         line("Category", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
@@ -135,7 +135,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
           latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + latest.unit),
           tr && React.createElement("div", { style: { fontSize: "13px", color: al ? RED : MUTED } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
         React.createElement(Spark, { items: g.items }),
-        latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } }, bnDate(latest.date))),
+        latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } }, shortDate(latest.date))),
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: G, margin: "8px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
         g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "6px 0", borderBottom: "1px solid #EEF1EF" } },
@@ -148,7 +148,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   return React.createElement("div", { style: { marginTop: "4px" } },
     React.createElement(LabAlertBox, { alerts: labAlerts }),
-    conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), conditions.map(conditionCard)),
+    conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(conditionCard))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "এলার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
 }

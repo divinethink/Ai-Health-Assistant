@@ -16,7 +16,7 @@ function column(title, items, color, bg, sources, limit, icon) {
   const first = limit ? clean.slice(0, limit) : clean;
   const rest = limit ? clean.slice(limit) : [];
   const ulStyle = { margin: 0, padding: 0, fontSize: "14px", color: "#1F2D2A", lineHeight: 1.5 };
-  return React.createElement("div", { style: { background: bg, borderRadius: "12px", padding: "8px", minWidth: 0 } },
+  return React.createElement("div", { style: { background: bg, borderRadius: "12px", padding: "8px", minWidth: 0, border: "1px solid " + (color === "#B3261E" ? "#EBC3BE" : "#BFDDCB") } },
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color, marginBottom: "6px" } }, title),
     clean.length === 0
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "নির্দিষ্ট কিছু নেই")
