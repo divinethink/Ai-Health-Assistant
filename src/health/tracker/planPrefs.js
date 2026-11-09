@@ -122,12 +122,11 @@ export function sanitizeExerciseLog(raw) {
 }
 
 // ---------- বিকল্প তালিকা (UI-র জন্য) ----------
-// এলার্জির ট্যাগ-মেলা খাবার বাদ।
+// সব খাবার থাকে; এলার্জির ট্যাগ-মেলা খাবারে allergy:true (শুধু সতর্কতা, ব্লক নয়)।
 export function mealOptions(allergyTags) {
   const tags = new Set(allergyTags || []);
   return Object.entries(FOODS)
-    .filter(([, f]) => !(f.al && tags.has(f.al)))
-    .map(([key, f]) => ({ key, name: f.n, unit: f.u, kcal: f.k }));
+    .map(([key, f]) => ({ key, name: f.n, unit: f.u, kcal: f.k, allergy: !!(f.al && tags.has(f.al)) }));
 }
 export function exerciseOptions() {
   return Object.entries(EXERCISE_TYPES).map(([type, e]) => ({ type, label: e.label, counted: e.counted }));
@@ -143,11 +142,12 @@ export function applyMealPrefs(plan, prefs, allergyTags) {
   const slots = plan.slots.map((s) => {
     if (!hasOwn(p.meal, s.id)) return s;
     custom.push(s.id);
-    const items = p.meal[s.id].filter((r) => {
+    const items = p.meal[s.id].map((r) => {
       const f = FOODS[r.food];
-      if (f.al && tags.has(f.al)) { notes.push(f.n + " এলার্জির কারণে বাদ দেওয়া হয়েছে।"); return false; }
-      return true;
-    }).map((r) => ({ key: r.food, qty: r.qty, swapped: false, custom: true, text: itemText(r.food, r.qty), kcal: Math.round(kcalOf(r.food, r.qty)) }));
+      const allergy = !!(f.al && tags.has(f.al));
+      if (allergy) notes.push("⚠ " + f.n + " আপনার প্রোফাইলের এলার্জির সাথে মিলতে পারে — সতর্ক থাকুন।");
+      return { key: r.food, qty: r.qty, swapped: false, custom: true, allergy, text: itemText(r.food, r.qty), kcal: Math.round(kcalOf(r.food, r.qty)) };
+    });
     return { ...s, items, kcal: items.reduce((a, i) => a + i.kcal, 0) };
   });
   return { slots, total: slots.reduce((a, s) => a + s.kcal, 0), notes, custom };

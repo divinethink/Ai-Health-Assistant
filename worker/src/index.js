@@ -159,13 +159,10 @@ function checkInteractionFlags(medicineEntry, activeMedicationNames) {
   return flags;
 }
 
-function resolveDoseForMember({ medicineEntry, ageYears, allergySubstances, activeMedicationNames }) {
+function resolveDoseCore({ medicineEntry, ageYears, allergySubstances, activeMedicationNames }) {
   if (!medicineEntry) return { blocked: true, reason: "no-verified-data" };
   if (medicineEntry.tier === "requires-consult") {
     return { blocked: true, reason: "requires-consult", genericName: medicineEntry.genericName, educationalUseNote: medicineEntry.educationalUseNote || null };
-  }
-  if (checkAllergyBlock(medicineEntry.genericName, allergySubstances)) {
-    return { blocked: true, reason: "allergy-contraindication", genericName: medicineEntry.genericName };
   }
   const interactionFlags = checkInteractionFlags(medicineEntry, activeMedicationNames);
   if (interactionFlags.length > 0) {
@@ -187,6 +184,13 @@ function resolveDoseForMember({ medicineEntry, ageYears, allergySubstances, acti
     contraindications: medicineEntry.contraindications || [],
     source: medicineEntry.source || [],
   };
+}
+
+// এলার্জি এখন ব্লক নয় — শুধু allergyWarning ফ্ল্যাগ; বাকি নিয়ম অপরিবর্তিত।
+function resolveDoseForMember(args) {
+  const r = resolveDoseCore(args);
+  const warn = !!(args.medicineEntry && checkAllergyBlock(args.medicineEntry.genericName, args.allergySubstances));
+  return warn ? { ...r, allergyWarning: true } : r;
 }
 
 // Firestore REST value-conversion — medicineDatabase entry-তে nested array/map/
@@ -288,11 +292,18 @@ function detectMentionedMedicine(text) {
 }
 
 function buildDoseFactMessage(resolution) {
+  const msg = buildDoseFactCore(resolution);
+  if (msg && resolution && resolution.allergyWarning) {
+    return msg + " ⚠ সতর্কতা: এই সদস্যের প্রোফাইলে সংশ্লিষ্ট এলার্জি রেকর্ড আছে — উত্তরে এলার্জির সতর্কতা স্পষ্ট জানান এবং ডাক্তার/pharmacist-এর সাথে যোগাযোগের পরামর্শ দিন।";
+  }
+  return msg;
+}
+
+function buildDoseFactCore(resolution) {
   if (!resolution) return null;
   const REASON_TEXT = {
     "no-verified-data": "এই ওষুধের কোনো verified তথ্য এখনো app database-এ নেই",
     "requires-consult": "এই ওষুধ শুধুমাত্র ডাক্তারের পরামর্শে ব্যবহারযোগ্য (Tier 2/requires-consult)",
-    "allergy-contraindication": "এই সদস্যের প্রোফাইলে সংশ্লিষ্ট এলার্জি রেকর্ড আছে",
     "interaction-flag": "এই সদস্যের চলমান অন্য ওষুধের সাথে সম্ভাব্য interaction আছে",
     "high-risk-flag": "এই ওষুধ high-risk (dependency/narrow-therapeutic-index) ক্যাটাগরির",
     "no-matching-age-rule": "এই বয়সের জন্য কোনো নির্দিষ্ট dosing-নিয়ম verified database-এ নেই",

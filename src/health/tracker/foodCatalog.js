@@ -169,16 +169,15 @@ export const CATALOG_FOODS = {
   mintGingerWater: { n: "আদা-পুদিনা পানি", u: "গ্লাস", k: 5, g: "drink" },
 };
 
-// foods: FOODS-এর মতো অবজেক্ট। ফল: [{ key, f }] — এলার্জি-মেলা বাদ, নাম-সার্চ ও গ্রুপ-ফিল্টার, সীমা limit।
+// foods: FOODS-এর মতো অবজেক্ট। ফল: [{ key, f }] — এলার্জি-মেলা বাদ নয় (allergy:true চিহ্ন, শুধু সতর্কতা), নাম-সার্চ ও গ্রুপ-ফিল্টার, সীমা limit।
 export function searchFoods(foods, { query = "", group = "", allergyTags = [], limit = 40 } = {}) {
   const q = String(query).trim().toLowerCase();
   const tags = new Set(allergyTags);
   const out = [];
   for (const [key, f] of Object.entries(foods)) {
-    if (f.al && tags.has(f.al)) continue;
     if (group && f.g !== group) continue;
     if (q && !foodMatches(key, f, q)) continue;
-    out.push({ key, f });
+    out.push({ key, f, allergy: !!(f.al && tags.has(f.al)) });
     if (out.length >= limit) break;
   }
   return out;

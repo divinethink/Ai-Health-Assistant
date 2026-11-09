@@ -24,6 +24,7 @@ const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
 const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
 const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "11px", fontWeight: 700 };
+const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#B3261E", border: "1px solid #B3261E", color: "#fff", fontSize: "11px", fontWeight: 700 };
 const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "11px", fontWeight: 700 };
 const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
@@ -76,7 +77,7 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
   style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN, opacity: busy || disabled ? 0.5 : 1 },
 }, label);
 
-// খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবার তালিকায় আসে না। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
+// খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
 function FoodPicker({ allergyTags, onPick }) {
   const [q, setQ] = useState("");
@@ -87,10 +88,11 @@ function FoodPicker({ allergyTags, onPick }) {
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-      found.map(({ key, f }) => React.createElement("button", {
+      found.map(({ key, f, allergy }) => React.createElement("button", {
         key, onClick: () => onPick(key),
-        style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A" },
-      }, "+ " + foodEnglish(key, f) + " · " + bnNum(f.k), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+        style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: allergy ? "1px solid #E3A59E" : "1px solid #C3D2CA", background: allergy ? "#FDECEA" : "#F1F6F2", color: allergy ? "#7A1F14" : "#1F2D2A" },
+      }, "+ " + foodEnglish(key, f) + " · " + bnNum(f.k), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ এলার্জি"), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+    found.some(({ allergy }) => allergy) && React.createElement("div", { style: { fontSize: "12px", color: "#7A1F14", marginTop: "6px" } }, "লাল = প্রোফাইলের এলার্জির সাথে মিলতে পারে (শুধু সতর্কতা, বাছতে বাধা নেই); ডাক্তারের পরামর্শ প্রাধান্য পায়।"),
     found.some(({ key }) => posTagsOf(key).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সবুজ চিপ = প্রোটিন/আঁশের সাধারণ উৎস (শুধু তথ্য)।"),
     found.some(({ f }) => tagsOf(f).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "হলুদ চিপ = সাধারণ সতর্কতা (ব্লক নয়); ডাক্তার/ডায়েটিশিয়ানের নির্দেশ প্রাধান্য পায়।"),
     found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বাছুন।"),
@@ -136,6 +138,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       draft.map((r, i) => React.createElement("div", { key: r.food, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, itemText(r.food, r.qty),
           React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(FOODS[r.food].k * r.qty)) + " কিলোক্যালরি"),
+          FOODS[r.food].al && (allergyTags || []).includes(FOODS[r.food].al) && React.createElement("div", { style: { fontSize: "12px", color: "#B3261E", marginTop: "2px", fontWeight: 600 } }, "⚠ প্রোফাইলের এলার্জির সাথে মিলতে পারে — সতর্ক থাকুন"),
           tagsOf(FOODS[r.food]).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1])),
           medFoodNotes(activeMeds, r.food).map((n) => React.createElement("div", { key: n.rule + n.med, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px", fontWeight: 600 } }, "💊 " + n.text))),
         Stepper(qtyText(r.qty), () => setDraft(changeDraftQty(draft, i, -0.5)), () => setDraft(changeDraftQty(draft, i, 0.5)), r.qty <= 0.5, r.qty >= MAX_QTY, FOODS[r.food].n),

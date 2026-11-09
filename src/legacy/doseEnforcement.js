@@ -22,7 +22,7 @@ export function findDosingRuleForAge(dosingRules, ageYears) {
 }
 
 // Allergy cross-check — profile-এর AllergyIntolerance.substance-এর সাথে
-// genericName মিল থাকলে block। Substring-ভিত্তিক (case-insensitive) —
+// genericName মিল থাকলে সতর্কতা (আর block নয়)। Substring-ভিত্তিক (case-insensitive) —
 // exact-match না মিললেও conservative side-এ থাকা ভালো (false-negative miss করার
 // চেয়ে false-positive block করা নিরাপদ, §5.4.1.1 safe-default নীতির সাথে সংগতিপূর্ণ)।
 export function checkAllergyBlock(genericName, allergySubstances = []) {
@@ -56,7 +56,7 @@ export function checkInteractionFlags(medicineEntry, activeMedicationNames = [])
 // fallback message (§6.4.1 highRiskFlag suppression, §12.1 Tier-2 flag, ইত্যাদি)।
 //
 // কোনো ধাপেই "অজানা/অনিশ্চিত হলে দেখিয়ে দাও" নেই — safe-default সবসময় block।
-export function resolveDoseForMember({
+function resolveDoseCore({
   medicineEntry,
   ageYears,
   allergySubstances = [],
@@ -76,10 +76,6 @@ export function resolveDoseForMember({
       highRiskFlag: !!medicineEntry.highRiskFlag,
       riskNote: medicineEntry.riskNote || null,
     };
-  }
-
-  if (checkAllergyBlock(medicineEntry.genericName, allergySubstances)) {
-    return { blocked: true, reason: "allergy-contraindication", genericName: medicineEntry.genericName };
   }
 
   const interactionFlags = checkInteractionFlags(medicineEntry, activeMedicationNames);
@@ -124,4 +120,11 @@ export function resolveDoseForMember({
     source: medicineEntry.source || [],
     tier: medicineEntry.tier,
   };
+}
+
+// এলার্জি এখন ব্লক নয় — শুধু সতর্কতা-ফ্ল্যাগ (allergyWarning) যোগ হয়; বাকি সব নিয়ম (Tier2/interaction/highRisk/বয়স) অপরিবর্তিত।
+export function resolveDoseForMember(args) {
+  const r = resolveDoseCore(args);
+  const warn = !!(args && args.medicineEntry && checkAllergyBlock(args.medicineEntry.genericName, args.allergySubstances || []));
+  return warn ? { ...r, allergyWarning: true } : r;
 }

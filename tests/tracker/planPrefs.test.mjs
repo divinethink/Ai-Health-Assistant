@@ -46,10 +46,11 @@ test("sanitizeExtraFoods: নাম পরিষ্কার, kcal ০–৩০�
 test("sanitizeExerciseLog: ধরন বৈধ, মিনিট ১–৩০০", () => {
   assert.deepEqual(sanitizeExerciseLog([{ type: "swim", min: 45 }, { type: "bogus", min: 5 }, { type: "walk", min: 0 }, { type: "walk", min: 301 }]), [{ type: "swim", min: 45 }]);
 });
-test("mealOptions: এলার্জির খাবার বাদ; exerciseOptions: সব ধরন", () => {
+test("mealOptions: এলার্জির খাবার থাকে (allergy চিহ্ন); exerciseOptions: সব ধরন", () => {
   const keys = (t) => mealOptions(t).map((o) => o.key);
   assert.ok(keys([]).includes("egg") && keys([]).includes("fish"));
-  assert.ok(!keys(["egg"]).includes("egg") && !keys(["fish"]).includes("fish") && !keys(["wheat"]).includes("roti"));
+  assert.ok(keys(["egg"]).includes("egg") && keys(["fish"]).includes("fish") && keys(["wheat"]).includes("roti"));
+  assert.equal(mealOptions(["egg"]).find((o) => o.key === "egg").allergy, true);
   assert.ok(exerciseOptions().some((o) => o.type === "stretch" && o.counted === false));
 });
 test("applyMealPrefs: prefs না থাকলে প্ল্যান হুবহু একই; স্লট বদলালে মোট পুনর্হিসাব; [] = বেলা বাদ", () => {
@@ -65,11 +66,12 @@ test("applyMealPrefs: prefs না থাকলে প্ল্যান হু�
   assert.equal(r.total, r.slots.reduce((a, s) => a + s.kcal, 0));
   assert.equal(plan.slots.find((s) => s.id === "lunch").items.length > 2, true, "মূল প্ল্যান mutate হয়নি");
 });
-test("applyMealPrefs: এলার্জির খাবার prefs-এ থাকলেও বাদ + নোট", () => {
+test("applyMealPrefs: এলার্জির খাবার prefs-এ থাকলে থাকে + সতর্কতা-নোট", () => {
   const plan = buildMealPlan(2000, ["egg"]);
   const r = applyMealPrefs(plan, { meal: { breakfast: [{ food: "egg", qty: 1 }, { food: "roti", qty: 2 }] } }, ["egg"]);
   const b = r.slots.find((s) => s.id === "breakfast");
-  assert.deepEqual(b.items.map((i) => i.key), ["roti"]);
+  assert.deepEqual(b.items.map((i) => i.key), ["egg", "roti"]);
+  assert.equal(b.items[0].allergy, true);
   assert.ok(r.notes.some((n) => n.includes("এলার্জি")));
 });
 test("caloriesForDay: টিক-করা বেলা + extraFoods; অবৈধ extra ধরা হয় না", () => {
