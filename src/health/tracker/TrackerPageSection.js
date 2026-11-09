@@ -28,6 +28,8 @@ import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries, gutFoodCount, entriesOn } from "./gutLog.js";
 import { GutLogCard } from "./GutLogCard.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
+import { AvoidCard } from "./AvoidCard.js";
+import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
@@ -177,6 +179,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       onRemoveExtra: (idx) => writeExtras(extras.filter((_, i) => i !== idx)),
       onClose: closeSheet,
     }),
+    React.createElement(AvoidCard, { domain: "food", age: info.age, flags: info.flags, condKeys: info.condKeys }),
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের এলার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 
@@ -309,6 +312,7 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     sheet && sheet.kind === "log" && React.createElement(ExerciseLogSheet, {
       key: "log", initialType: sheet.type, entries: log, busy, err, onAdd: addLog, onRemove: removeLog, onClose: closeSheet,
     }),
+    React.createElement(AvoidCard, { domain: "exercise", age: info.age, flags: info.flags, condKeys: info.condKeys }),
     React.createElement(Notice, null, "বুকে ব্যথা, মাথা ঘোরা বা শ্বাসকষ্ট হলে থামুন ও ডাক্তার দেখান।"),
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। WHO-ভিত্তিক সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
@@ -667,7 +671,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ condKeys: conditionKeysOf(recs), weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
