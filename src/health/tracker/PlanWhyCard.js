@@ -3,7 +3,7 @@
 const { useState } = React;
 
 export function PlanWhyCard({ lines }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false); // ডিফল্টে ভাঁজ করা; ট্যাপে খোলে
   if (!lines || !lines.length) return null;
   return React.createElement("div", {
     style: { background: "#FBF1DF", border: "1px solid #EBD9B4", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px" },

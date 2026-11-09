@@ -8,10 +8,6 @@ import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
-import { buildMealPlan } from "./mealPlanData.js";
-import { applyMealPrefs, sanitizeExtraFoods } from "./planPrefs.js";
-import { gutFoodCount } from "./gutLog.js";
-import { GutLogCard } from "./GutLogCard.js";
 
 const { useState } = React;
 
@@ -70,7 +66,6 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
 
   const glasses = d.waterGlasses || 0;
   const eaten = d.caloriesIn || 0;
-  const gutFoods = gutFoodCount(calc ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags), goal.planPrefs, info.allergyTags) : null, d.mealsEaten, sanitizeExtraFoods(d.extraFoods));
   const left = calc ? calc.calorieTarget - eaten : 0;
 
   return React.createElement(React.Fragment, null,
@@ -118,8 +113,6 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       err && ErrorBox(err)),
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
-
-    React.createElement(GutLogCard, { info, familyId, callerMemberId, memberId, gutFoods, onSaved }),
 
     // সাপ্তাহিক সারাংশ
     React.createElement("div", { style: { ...CARD_STYLE, background: T.sand, borderColor: T.sandBorder } },
