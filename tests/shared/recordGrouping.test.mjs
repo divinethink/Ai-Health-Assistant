@@ -22,3 +22,8 @@ test("ট্রেন্ড: নিচে/উপরে/সমান/অসংখ
   assert.equal(obsTrend([o("a", "w", "Bristol 6", "2"), o("b", "w", "5", "1")]), null);
   assert.equal(obsTrend([o("a", "w", "66", "2")]), null);
 });
+test("উচ্চতায় তীর নেই; stool-bristol বাংলা নাম পায়", () => {
+  assert.equal(obsTrend([o("a", "height", "160", "2", "cm"), o("b", "height", "162.6", "1", "cm")]), null);
+  assert.equal(obsTrend([o("a", "উচ্চতা", "160", "2", "cm"), o("b", "height", "162.6", "1", "cm")]), null);
+  assert.equal(groupObservations([o("s", "stool-bristol", "6", "2026-11-09", "Bristol")])[0].label, "পেটের লক্ষণ (Bristol)");
+});

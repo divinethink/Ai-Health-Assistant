@@ -104,11 +104,16 @@ function parseFrequency(t) {
   return { pattern: null, patternRaw: null, perDay: null, prn: false };
 }
 
+// নাম শেষে ফর্ম-শব্দ ("4. Neosten cream") — Tab./Cap. প্রিফিক্স না থাকলেও এটা ওষুধের প্রমাণ
+const TRAILING_FORM_RE = new RegExp("\\b(" + FORM_ALT + ")\\.?\\s*$", "i");
+
 const suspiciousName = (n) => !n || n.length < 3 || /[A-Za-z][0-9][A-Za-z]|[|{}\\^~_=<>]/.test(n);
 
 function buildItem(b) {
   const raw = b.lines.join(" ");
   const nameCore = cutName(toEn(b.rest), PATTERN_RE, DAYS_RE, WEEKS_RE, MONTHS_RE, MEAL_BEFORE_RE, MEAL_AFTER_RE, PRN_RE, TIMES_RE, /দিনে/);
+  const tail = !b.form && nameCore.match(TRAILING_FORM_RE);
+  const form = b.form || (tail ? FORMS[tail[1].toLowerCase()] : null);
   const name = cleanName((b.form && !b.form.oral ? b.form.label + " " : "") + nameCore);
   const st = toEn(raw).match(STRENGTH_RE);
   const freq = parseFrequency(raw);
@@ -122,9 +127,9 @@ function buildItem(b) {
   if (confusions.length > 0) flags.push("ocr-confusable");
   if (suspiciousName(nameCore)) flags.push("name-suspicious");
   return {
-    name, form: b.form ? b.form.label : null, strength: st ? st[1] + " " + st[2].toLowerCase() : null,
+    name, form: form ? form.label : null, strength: st ? st[1] + " " + st[2].toLowerCase() : null,
     ...freq, days, meal, raw, confusions, flags, clear: flags.length === 0,
-    needsEvidence: !b.strong,
+    needsEvidence: !b.strong && !tail,
   };
 }
 

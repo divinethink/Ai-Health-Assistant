@@ -15,6 +15,11 @@ import { foodColumns } from "../nutrition-fitness/FoodColumns.js";
 import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "../nutrition-fitness/dietGuidanceData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
+import { t } from "../../shared/i18n.js";
+import { bnDate } from "../../shared/dates.js";
+import { groupObservations } from "./recordGrouping.js";
+import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
+import { buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
 import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "../calendar/epiSchedule.js";
 
 const { useState, useEffect } = React;
@@ -51,6 +56,21 @@ function nextAppointmentOf(memberId, events, today) {
   return events.find((e) => e.memberId === memberId && (e.eventType === "appointment" || e.eventType === "checkup") && e.status !== "done" && (e.date || "") >= today) || null;
 }
 
+const bn = (n) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+
+// এক-নজর টাইল। tone "red" = সতর্কতা; big+unit = সংখ্যা-টাইল; lines = লেখা-টাইল; inline = প্রতি লাইনে নাম + পাশে ছোট বিবরণ
+function tile({ icon, label, big, unit, lines, tone, inline }) {
+  const red = tone === "red";
+  const box = { background: red ? "#FFF7F6" : "#F4F8F5", border: "1px solid " + (red ? "#E8B4AE" : "#D3E0D9"), borderRadius: "14px", padding: "10px 12px", minHeight: "44px", boxSizing: "border-box", minWidth: 0 };
+  return React.createElement("div", { style: box },
+    React.createElement("div", { style: { fontSize: "13px", color: "#5F716C" } }, (icon ? icon + " " : "") + label),
+    big != null && React.createElement("div", { style: { marginTop: "2px", whiteSpace: "nowrap" } },
+      React.createElement("span", { style: { fontSize: "22px", fontWeight: 700, color: "#0E4B43" } }, big),
+      unit && React.createElement("span", { style: { fontSize: "14px", color: "#5F716C" } }, " " + unit)),
+    (lines || []).filter(Boolean).map((l, i) => React.createElement("div", { key: i, style: { marginTop: i === 0 ? "4px" : "2px", fontSize: l.strong ? "16px" : "14px", fontWeight: l.strong ? 700 : 400, color: l.color || (l.muted ? "#5F716C" : "#1F2D2A"), overflowWrap: "anywhere" } },
+      l.t, l.sub && React.createElement("span", { style: { fontSize: "14px", fontWeight: 400, color: "#5F716C" } }, (inline ? "  ·  " : " ") + l.sub))));
+}
+
 export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, refreshTick, onVitalsSaved }) {
   const [editing, setEditing] = useState(false); // ✎ চাপলে উচ্চতা/ওজন ফর্ম নিচে খোলে
   const [loading, setLoading] = useState(true);
@@ -67,8 +87,9 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       listVerifiedDietGuidanceRules(),
       // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
       listCalendarEvents(familyId).catch(() => null),
+      fetchTestNameDictionary().catch(() => []), // ল্যাব সতর্কতা — না এলে শুধু ঐ টাইল বাদ
     ])
-      .then(([members, records, allRules, calEvents]) => {
+      .then(([members, records, allRules, calEvents, dict]) => {
         const member = members.find((m) => m.id === selectedMemberId) || null;
 
         const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -92,7 +113,10 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         const vaccination = calEvents ? vaccinationSummaryOf(member, ageForVax, calEvents, today) : null;
         const nextAppt = calEvents ? nextAppointmentOf(selectedMemberId, calEvents, today) : null;
 
-        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt });
+        // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়)
+        const labAlerts = buildLabAlerts(groupObservations(records).map((g) => g.items[0]), dict);
+
+        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt, labAlerts });
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
@@ -102,7 +126,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   if (err) return ErrorBox(err);
   if (loading || !data) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt, labAlerts } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
@@ -122,45 +146,70 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       onSaved: () => { setEditing(false); onVitalsSaved && onVitalsSaved(); },
     }),
 
-    React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginBottom: "4px" } },
+    React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "10px" } },
       birthYear ? "জন্মসাল: " + birthYear + (ageYears != null ? " (আনুমানিক বয়স " + Math.floor(ageYears) + " বছর)" : "") : "জন্মতারিখ যোগ করা হয়নি"
     ),
-    React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginBottom: "8px" } },
-      "উচ্চতা: " + (heightCm ? Math.round(heightCm * 10) / 10 + " cm" : "—") +
-      " · ওজন: " + (weightKg ? weightKg + " kg" : "—") +
-      " · BMI: " + (bmi ? bmi.toFixed(1) : "—")
-    ),
+
+    // উচ্চতা / ওজন / BMI — ৩ টাইল
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } },
+      tile({ label: "উচ্চতা", big: heightCm ? String(Math.round(heightCm * 10) / 10) : "—", unit: heightCm ? "cm" : "" }),
+      tile({ label: "ওজন", big: weightKg ? String(weightKg) : "—", unit: weightKg ? "kg" : "" }),
+      tile({ label: "BMI", big: bmi ? bmi.toFixed(1) : "—" })),
     adviceLine && React.createElement("div", {
-      style: { fontSize: "14px", color: bmiCategory === "normal" ? "#0E4B43" : "#8A5A00", background: bmiCategory === "normal" ? "#EAF6F0" : "#FFF6E5", padding: "8px 10px", borderRadius: "10px", marginBottom: "10px" },
+      style: { fontSize: "14px", color: bmiCategory === "normal" ? "#0E4B43" : "#8A5A00", background: bmiCategory === "normal" ? "#EAF6F0" : "#FFF6E5", padding: "8px 10px", borderRadius: "10px", marginTop: "10px" },
     }, adviceLine),
-    (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginBottom: "10px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
+    (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "10px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#B3261E", marginTop: "6px" } }, "⚠️ এলার্জি"),
-    allergies.length === 0
-      ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "কোনো এলার্জি রেকর্ড করা নেই।")
-      : allergies.map((a) => React.createElement("div", { key: a.id, style: { fontSize: "14px", color: "#1F2D2A", marginTop: "2px" } },
-          "• " + a.substance + (a.reaction ? " — " + a.reaction : "") + (a.severity ? " (" + a.severity + ")" : ""))),
+    // এলার্জি | অসুস্থতা
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "10px" } },
+      tile({
+        icon: "⚠️", label: "এলার্জি", tone: allergies.length ? "red" : null,
+        lines: allergies.length === 0 ? [{ t: "নেই", muted: true }] : [
+          { t: allergies[0].substance, strong: true, color: "#B3261E" },
+          (allergies[0].reaction || allergies[0].severity) && { t: allergies[0].reaction || t("sev." + allergies[0].severity), muted: true },
+          allergies.length > 1 && { t: "আরও " + bn(allergies.length - 1) + "টি", muted: true },
+        ],
+      }),
+      tile({
+        icon: "🩺", label: "চলমান অসুস্থতা",
+        lines: activeConditions.length === 0 ? [{ t: "নেই", muted: true }] : [
+          { t: activeConditions[0].name, strong: true },
+          (activeConditions[0].notes || activeConditions[0].status) && { t: activeConditions[0].notes || t("st." + activeConditions[0].status), muted: true },
+          activeConditions.length > 1 && { t: "আরও " + bn(activeConditions.length - 1) + "টি", muted: true },
+        ],
+      })),
 
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🩺 চলমান অসুস্থতা"),
-    activeConditions.length === 0
-      ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "কোনো সক্রিয় অসুস্থতা নেই।")
-      : activeConditions.map((c) => React.createElement("div", { key: c.id, style: { fontSize: "14px", color: "#1F2D2A", marginTop: "2px" } }, "• " + c.name + (c.notes ? " — " + c.notes : ""))),
+    // চলমান ঔষধ (পুরো প্রস্থ)
+    React.createElement("div", { style: { marginTop: "8px" } },
+      tile({
+        icon: "💊", label: "চলমান ঔষধ" + (activeMeds.length ? " (" + bn(activeMeds.length) + ")" : ""),
+        lines: activeMeds.length === 0 ? [{ t: "নেই", muted: true }] : [
+          ...activeMeds.slice(0, 3).map((m) => ({ t: m.genericName, strong: true, sub: (m.frequency || null) })),
+          activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → ঔষধ ও রিমাইন্ডার", muted: true },
+        ],
+        inline: true,
+      })),
 
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "💊 চলমান ঔষধ"),
-    activeMeds.length === 0
-      ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "কোনো সক্রিয় ঔষধ নেই।")
-      : activeMeds.map((m) => React.createElement("div", { key: m.id, style: { fontSize: "14px", color: "#1F2D2A", marginTop: "2px" } },
-          "• " + m.genericName + (m.frequency ? " — " + m.frequency : "") + (m.durationDays ? " (" + m.durationDays + " দিন)" : "") + (m.mealTiming === "before" ? " · খাবারের আগে" : m.mealTiming === "after" ? " · খাবারের পরে" : ""))),
-    activeMeds.length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "4px" } }, "রিমাইন্ডার-সময় সেট করতে \"স্বাস্থ্য তথ্য → ঔষধ ও রিমাইন্ডার\"-এ যান।"),
+    // পরবর্তী অ্যাপয়েন্টমেন্ট | ল্যাব সতর্কতা (যেটা আছে শুধু সেটা; একটা হলে পুরো প্রস্থ)
+    (nextAppt || labAlerts.length > 0) && React.createElement("div", { style: { display: "grid", gridTemplateColumns: nextAppt && labAlerts.length > 0 ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: "8px", marginTop: "8px" } },
+      nextAppt && tile({
+        icon: "📅", label: "পরবর্তী",
+        lines: [{ t: nextAppt.title, strong: true }, { t: bnDate(nextAppt.date) + (nextAppt.time ? " · " + nextAppt.time : ""), muted: true }],
+      }),
+      labAlerts.length > 0 && tile({
+        icon: "🔴", label: "ল্যাব সতর্কতা", tone: "red",
+        lines: [
+          ...labAlerts.slice(0, 2).map((a) => ({ t: a.name + (LEVEL_WORD[a.level] ? " " + LEVEL_WORD[a.level] : a.value ? " " + a.value : ""), strong: true, color: "#B3261E" })),
+          labAlerts.length > 2 && { t: "আরও " + bn(labAlerts.length - 2) + "টি", muted: true },
+        ],
+      })),
 
     vaccination && React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px" } },
       "💉 টিকা: " + vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
-    nextAppt && React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "6px" } },
-      "📅 পরবর্তী অ্যাপয়েন্টমেন্ট: " + nextAppt.title + " — " + nextAppt.date + (nextAppt.time ? " " + nextAppt.time : "")),
 
     (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0) && React.createElement(
       React.Fragment, null,
-      React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginTop: "10px" } }, "🍽️ খাদ্য নির্দেশিকা (সংক্ষিপ্ত)"),
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#0E4B43", marginTop: "16px", marginBottom: "6px" } }, "🍽️ খাদ্য নির্দেশিকা"),
       foodColumns({ avoid: dietResult.avoidFoods, include: dietResult.includeFoods, limit: 4 }),
       React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
     )

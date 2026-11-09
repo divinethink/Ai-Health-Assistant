@@ -7,7 +7,10 @@ function obsGroupKey(r) {
   if (s === "ওজন") return "weight";
   return s;
 }
+// অ্যাপ-তৈরি type-এর বাংলা নাম (কাঁচা slug দেখানো হয় না)
+const OBS_LABELS_BN = { "stool-bristol": "পেটের লক্ষণ (Bristol)" };
 function obsLabel(key, sample) {
+  if (OBS_LABELS_BN[key]) return OBS_LABELS_BN[key];
   if (key === "height") return "উচ্চতা";
   if (key === "weight") return "ওজন";
   return (sample.type || "").trim();
@@ -28,8 +31,10 @@ export function groupObservations(records) {
 }
 
 // সর্বশেষ বনাম আগের মান — দুটোই সংখ্যা ও আলাদা হলে { dir: "up"|"down", diff }, নইলে null
+// উচ্চতা বড়দের ক্ষেত্রে বদলায় না — ভুল-এন্ট্রি সংশোধনে ↑↓ বিভ্রান্তিকর, তাই কোনো তীর নয়
 export function obsTrend(items) {
   if (items.length < 2) return null;
+  if (obsGroupKey(items[0]) === "height") return null;
   const a = parseFloat(items[0].value), b = parseFloat(items[1].value);
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   const diff = Math.round((a - b) * 10) / 10;

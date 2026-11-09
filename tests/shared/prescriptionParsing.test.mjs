@@ -82,3 +82,12 @@ test("parsePatternInput (ব্যবহারকারীর সম্পাদ
   assert.equal(parsePatternInput("BD").perDay, 2);
   assert.equal(parsePatternInput("কিছু একটা"), null);
 });
+test("নম্বর-তালিকায় নামের শেষে ফর্ম-শব্দ (Neosten cream) ধরা পড়ে; ফর্ম-শব্দহীন নম্বর-লাইন নয়", () => {
+  const r = parsePrescriptionText("1. Tab. Alcet\n0+0+১ ---- ১৪দিন\n4. Neosten cream\nআক্রান্ত জায়গায় দিনে ৩ বার\n৭দিন\n5. Seborrhoic dermatitis");
+  assert.equal(r.length, 2);
+  const c = r[1];
+  assert.equal(c.name, "Neosten cream");
+  assert.equal(c.form, "Cream");
+  assert.equal(c.perDay, 3);
+  assert.equal(c.days, 7);
+});
