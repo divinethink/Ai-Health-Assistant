@@ -11,7 +11,7 @@ const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px", bo
 const rowStyle = { display: "flex", gap: "8px", marginTop: "10px", alignItems: "stretch" };
 const cell = { flex: 1, minWidth: 0 };
 
-export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardClick, cardLabel, showCategory = true }) {
+export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardClick, cardLabel, showCategory = true, showAddress = true, allowEmptyCategory = false }) {
   const [open, setOpen] = useState(false);
   const v = value || {};
   const set = (k) => (e) => onChange({ [k]: e.target.value });
@@ -30,7 +30,8 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
       onCardClick && React.createElement("button", { type: "button", onClick: onCardClick, "aria-label": "ভিজিটিং কার্ড", style: { minWidth: "48px", minHeight: "44px", border: "1.5px solid #C3D2CA", borderRadius: "12px", background: "#F9FBFA", fontSize: "18px", cursor: "pointer" } }, cardLabel || "📇")),
     // সারি ২
     React.createElement("div", { style: rowStyle },
-      showCategory && React.createElement("select", { value: v.specialtyCategory || DOCTOR_CATEGORIES[0][0], onChange: set("specialtyCategory"), "aria-label": "বিশেষত্ব", style: { ...inputStyle, ...cell } },
+      showCategory && React.createElement("select", { value: v.specialtyCategory || (allowEmptyCategory ? "" : DOCTOR_CATEGORIES[0][0]), onChange: set("specialtyCategory"), "aria-label": "বিশেষত্ব", style: { ...inputStyle, ...cell } },
+        allowEmptyCategory && React.createElement("option", { key: "", value: "" }, "বিশেষত্ব (ঐচ্ছিক)"),
         DOCTOR_CATEGORIES.map(([k, l]) => React.createElement("option", { key: k, value: k }, l))),
       React.createElement("input", { type: "text", value: v.area || "", placeholder: "এলাকা", "aria-label": "এলাকা", onChange: set("area"), style: { ...inputStyle, ...cell } })),
     // সারি ৩
@@ -38,7 +39,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
       React.createElement("input", { type: "text", value: v.hospital || "", placeholder: "প্রতিষ্ঠান/চেম্বার", "aria-label": "প্রতিষ্ঠান", onChange: set("hospital"), style: { ...inputStyle, ...cell } }),
       React.createElement("input", { type: "tel", value: v.phone || "", placeholder: "ফোন", "aria-label": "ফোন", onChange: set("phone"), style: { ...inputStyle, ...cell } })),
     // ভাঁজ
-    React.createElement("details", { style: { marginTop: "10px" }, open: !!v.chamberAddress },
+    showAddress && React.createElement("details", { style: { marginTop: "10px" }, open: !!v.chamberAddress },
       React.createElement("summary", { style: { fontSize: "14px", color: "#0E4B43", cursor: "pointer", minHeight: "32px" } }, "আরও (ঠিকানা/সময়)"),
       React.createElement("input", { type: "text", value: v.chamberAddress || "", placeholder: "চেম্বারের ঠিকানা/সময়সূচি", "aria-label": "চেম্বার-ঠিকানা", onChange: set("chamberAddress"), style: { ...inputStyle, marginTop: "6px" } }))
   );

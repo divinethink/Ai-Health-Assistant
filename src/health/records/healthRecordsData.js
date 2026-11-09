@@ -11,6 +11,8 @@
 
 import { db } from "../../legacy/firebaseConfig.js";
 import { notifyMember } from "../../legacy/accessGrants.js";
+import { listDoctors, createDoctor } from "../doctor-details/doctorDetailsData.js";
+import { isDuplicate } from "../doctor-details/doctorSuggest.js";
 
 export const RESOURCE_TYPE_LABELS = {
   condition: "Condition (রোগ/সমস্যা)",
@@ -30,8 +32,14 @@ export function buildHealthRecordFields(resourceType, fields) {
     const physName = (fields.physicianName || "").trim();
     const physContact = (fields.physicianContact || "").trim();
     const physHospital = (fields.physicianHospital || "").trim();
+    // doctorId/specialtyCategory/area — additive ঐচ্ছিক; খালি হলে key-ই থাকে না
+    // (পুরনো রেকর্ডের আকার অপরিবর্তিত)।
+    const physExtra = {};
+    if (fields.physicianDoctorId) physExtra.doctorId = fields.physicianDoctorId;
+    if (fields.physicianCategory) physExtra.specialtyCategory = fields.physicianCategory;
+    if ((fields.physicianArea || "").trim()) physExtra.area = fields.physicianArea.trim();
     const treatingPhysician = (physName || physContact || physHospital)
-      ? { name: physName || null, chamberContact: physContact || null, hospital: physHospital || null }
+      ? { name: physName || null, chamberContact: physContact || null, hospital: physHospital || null, ...physExtra }
       : null;
     return { name: fields.name.trim(), category: fields.category, status: fields.status, chronicManagement: fields.chronicManagement === true, onsetDate: fields.date || null, treatingPhysician, notes: (fields.conditionNotes || "").trim() || null };
   }
@@ -87,6 +95,18 @@ export async function updateHealthRecord(familyId, recordId, resourceType, calle
     lastEditedByMemberId: callerMemberId,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+}
+
+// "ডিরেক্টরিতে রাখুন": idempotent — একই নাম+ফোনের ডাক্তার আগে থেকে থাকলে নতুন
+// বানায় না, তার id ফেরায়। ব্যর্থ হলে throw (ফর্ম রেকর্ড সেভ করার আগেই থামে, কিছু হারায় না)।
+export async function ensureDoctorInDirectory(familyId, callerMemberId, p) {
+  const existing = await listDoctors(familyId);
+  const dup = existing.find((d) => isDuplicate(d, p));
+  if (dup) return dup.id;
+  return createDoctor(familyId, callerMemberId, {
+    name: p.name, specialtyCategory: p.specialtyCategory || "others",
+    area: p.area, hospital: p.hospital, chamberAddress: "", phone: p.phone,
+  }, null);
 }
 
 // roadmap §3.4 Admin delete-override safeguard (ক): নিজের record না হলে (অর্থাৎ

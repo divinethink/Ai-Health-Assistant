@@ -6,9 +6,14 @@ import { t } from "../../shared/i18n.js";
 // functional পরিবর্তন নেই।
 
 import { TextField, SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
-import { createHealthRecord, updateHealthRecord } from "./healthRecordsData.js";
+import { createHealthRecord, updateHealthRecord, listHealthRecords, ensureDoctorInDirectory } from "./healthRecordsData.js";
+import { listDoctors } from "../doctor-details/doctorDetailsData.js";
+import { DoctorFieldsRow } from "../doctor-details/DoctorFieldsRow.js";
+import { buildCandidates, suggestDoctors, pickPatch, isDuplicate } from "../doctor-details/doctorSuggest.js";
 
-const { useState, useCallback, useEffect } = React;
+const { useState, useCallback, useEffect, useMemo, useRef } = React;
+
+const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
 // না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
@@ -30,9 +35,11 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [severity, setSeverity] = useState("mild");
   const [date, setDate] = useState("");
   // Treating Physician Contact — শুধু condition-এর জন্য (roadmap §12.5)
-  const [physicianName, setPhysicianName] = useState("");
-  const [physicianContact, setPhysicianContact] = useState("");
-  const [physicianHospital, setPhysicianHospital] = useState("");
+  const [phys, setPhys] = useState(EMPTY_PHYS);
+  const [keepInDirectory, setKeepInDirectory] = useState(false);
+  const [directory, setDirectory] = useState([]);
+  const [pastRecords, setPastRecords] = useState([]);
+  const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [more, setMore] = useState(!!editingRecord); // "আরও যোগ করুন" ভাঁজ — নতুন রেকর্ডে বন্ধ, edit-এ খোলা
@@ -62,15 +69,14 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setSeverity(r.severity || "mild");
     setDate(r.onsetDate || r.date || r.startDate || "");
     const tp = r.treatingPhysician || {};
-    setPhysicianName(tp.name || "");
-    setPhysicianContact(tp.chamberContact || "");
-    setPhysicianHospital(tp.hospital || "");
+    setPhys({ name: tp.name || "", specialtyCategory: tp.specialtyCategory || "", area: tp.area || "", hospital: tp.hospital || "", phone: tp.chamberContact || "", doctorId: tp.doctorId || "" });
+    setKeepInDirectory(false);
     setErr(null);
   }, [editingRecord]);
 
   const resetFields = useCallback(() => {
     setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
-    setPhysicianName(""); setPhysicianContact(""); setPhysicianHospital(""); setChronicManagement(false);
+    setPhys(EMPTY_PHYS); setKeepInDirectory(false); setChronicManagement(false);
     setFrequency(""); setDurationDays(""); setConditionNotes("");
   }, []);
 
@@ -80,13 +86,20 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   const submit = useCallback(async () => {
     setErr(null);
+    if (submitting.current) return; // double-tap রোধ
     if (resourceType === "condition" && !name.trim()) { setErr(t("err.condition")); return; }
     if (resourceType === "observation" && (!obsType.trim() || !value.trim())) { setErr(t("err.observation")); return; }
     if (resourceType === "medicationStatement" && !name.trim()) { setErr(t("err.medicine")); return; }
     if (resourceType === "allergy" && !name.trim()) { setErr(t("err.allergy")); return; }
+    submitting.current = true;
     setBusy(true);
     try {
-      const fields = { name, category, status, chronicManagement, conditionNotes, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital };
+      let doctorId = phys.doctorId;
+      // ডিরেক্টরি আগে: ব্যর্থ হলে রেকর্ড সেভ হয় না (আংশিক অবস্থা নেই), ফর্মের লেখা থাকে।
+      if (resourceType === "condition" && keepInDirectory && phys.name.trim() && !doctorId) {
+        doctorId = await ensureDoctorInDirectory(familyId, callerMemberId, phys);
+      }
+      const fields = { name, category, status, chronicManagement, conditionNotes, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName: phys.name, physicianContact: phys.phone, physicianHospital: phys.hospital, physicianArea: phys.area, physicianCategory: phys.specialtyCategory, physicianDoctorId: doctorId };
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -101,9 +114,22 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
         ? t("err.denied")
         : (e.message || String(e)));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, phys, keepInDirectory, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+
+  // সাজেশন-উৎস: ডিরেক্টরি + এই সদস্যের আগের রেকর্ড (ব্যর্থ হলে সাজেশন ছাড়াই চলে)।
+  useEffect(() => {
+    if (resourceType !== "condition") return undefined;
+    let alive = true;
+    listDoctors(familyId).then((d) => alive && setDirectory(d)).catch(() => {});
+    listHealthRecords(familyId, targetMemberId).then((r) => alive && setPastRecords(r)).catch(() => {});
+    return () => { alive = false; };
+  }, [familyId, targetMemberId, resourceType]);
+  const candidates = useMemo(() => buildCandidates(directory, pastRecords), [directory, pastRecords]);
+  const suggestions = useMemo(() => suggestDoctors(candidates, { query: phys.name, category: phys.specialtyCategory }), [candidates, phys.name, phys.specialtyCategory]);
+  const canKeep = !!phys.name.trim() && !phys.doctorId && !directory.some((d) => isDuplicate(d, { name: phys.name, phone: phys.phone }));
 
   // typeFields = সবসময় দৃশ্যমান (ধরন + নাম/প্রয়োজনীয়); moreFields = "আরও যোগ করুন"-এর ভেতরে
   const typeFields = [];
@@ -129,9 +155,16 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       t("f.chronic")
     ));
     moreFields.push(React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "8px 0 2px" } }, t("f.physician")));
-    moreFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
-    moreFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));
-    moreFields.push(TextField("হাসপাতাল/চেম্বার", physicianHospital, setPhysicianHospital, "যেমন: হাসপাতালের নাম"));
+    moreFields.push(React.createElement(DoctorFieldsRow, {
+      key: "phys", value: phys, suggestions, allowEmptyCategory: true, showAddress: false,
+      onChange: (patch) => setPhys((p) => ({ ...p, ...patch, ...(patch.name !== undefined ? { doctorId: "" } : {}) })),
+      onPick: (c) => setPhys((p) => ({ ...p, ...pickPatch(c) })),
+    }));
+    if (canKeep) {
+      moreFields.push(React.createElement("label", { key: "keep", style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", margin: "8px 0", cursor: "pointer", minHeight: "44px" } },
+        React.createElement("input", { type: "checkbox", checked: keepInDirectory, onChange: (e) => setKeepInDirectory(e.target.checked) }),
+        "ডিরেক্টরিতে রাখুন (পরিবারের সবাই দেখবে)"));
+    }
   } else if (resourceType === "observation") {
     typeFields.push(TextField(t("f.obsType"), obsType, setObsType, "যেমন: Blood Sugar"));
     typeFields.push(TextField(t("f.value"), value, setValue, "যেমন: 110"));
