@@ -1,4 +1,3 @@
-import { t } from "../../shared/i18n.js";
 // Member-picker + form + list — কোন সদস্যের record দেখা/যোগ করা হচ্ছে তা বেছে
 // নেওয়া যায় (open roster থেকে, §3.1 অনুযায়ী)। Permission actual enforcement
 // সবসময় server-side rules করে — এই picker শুধু UI-convenience, security
@@ -48,22 +47,18 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       familyId, selectedMemberId: targetMemberId, callerMemberId, refreshTick,
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
-    (section === "all" || section === "records") && React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.records")),
     (section === "all" || section === "records") && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),
         style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
-      }, "+ নতুন যোগ করুন"),
+      }, "+ বর্তমান স্বাস্থ্যের অবস্থা যুক্ত করুন"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId,
         familyId, targetMemberId, callerMemberId,
         editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); },
         onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); },
       }),
-      adding && !editingRecord && React.createElement("button", {
-        onClick: () => setAdding(false),
-        style: { width: "100%", minHeight: "44px", marginTop: "8px", borderRadius: "14px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: "14px", cursor: "pointer" },
-      }, "বন্ধ করুন")),
+      ),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
       onEdit: setEditingRecord,

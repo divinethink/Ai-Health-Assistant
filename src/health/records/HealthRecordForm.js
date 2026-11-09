@@ -105,10 +105,15 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   const typeFields = [];
   if (resourceType === "condition") {
-    typeFields.push(TextField(t("f.name"), name, setName, "যেমন: জ্বর"));
-    typeFields.push(SelectField(t("f.category"), category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]]));
-    typeFields.push(SelectField(t("f.status"), status, setStatus, [["active", t("st.active")], ["resolved", t("st.resolved")], ["chronic", t("st.chronic")]]));
-    typeFields.push(DateField(t("f.onset"), date, setDate));
+    const row = (cols) => ({ display: "grid", gridTemplateColumns: cols, gap: "8px" });
+    const card = { border: "1px solid #D3E0D9", borderRadius: "12px", background: "#F6FAF7", padding: "0 10px 10px", minWidth: 0 };
+    // ১ম লাইন: অসুখের নাম + শুরুর তারিখ; ২য় লাইন: বিভাগ | অবস্থা (আলাদা কার্ডে)
+    typeFields.push(React.createElement("div", { style: row("minmax(0, 1.3fr) minmax(0, 1fr)") },
+      TextField("অসুখের নাম", name, setName, "যেমন: জ্বর"),
+      DateField(t("f.onset"), date, setDate)));
+    typeFields.push(React.createElement("div", { style: { ...row("minmax(0, 1fr) minmax(0, 1fr)"), marginTop: "4px" } },
+      React.createElement("div", { style: card }, SelectField(t("f.category"), category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]])),
+      React.createElement("div", { style: card }, SelectField(t("f.status"), status, setStatus, [["active", t("st.active")], ["resolved", t("st.resolved")], ["chronic", t("st.chronic")]]))));
     typeFields.push(TextField(t("f.notes"), conditionNotes, setConditionNotes, "যেমন: নিয়ন্ত্রণে আছে, নিয়মিত মেডিসিন চলছে"));
     // roadmap §12.4 Category B bright-line rule (dose-suggestion না) actual data-এর
     // উপর নির্ভর করার জন্য এই checkbox দরকার — আগে RiskBasedTreatmentModes.js-এ
@@ -145,7 +150,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
+    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
+      React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
+      React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
+        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" } }, "✕")),
     isEdit
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
       : SelectField(t("f.type"), resourceType, changeResourceType, [
