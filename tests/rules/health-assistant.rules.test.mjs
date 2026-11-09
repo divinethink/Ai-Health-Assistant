@@ -776,6 +776,14 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(setDoc(famDoc(db, 'healthTracker', 'y9'), tr('mA', 'mA', { exerciseLog: big })));
     });
 
+    it('12f2. planPrefs.foods (খাবার-ওভাররাইড): ≤৪০ map চলে; ৪১টি বা map নয় reject', async () => {
+      const db = dbAs('uidA');
+      const mk = (n) => Object.fromEntries(Array.from({ length: n }, (_, i) => ['f' + i, { k: 100, note: 'x' }]));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goalDoc({ planPrefs: { ...prefs, foods: mk(40) } })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'z1'), goalDoc({ planPrefs: { ...prefs, foods: mk(41) } })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'z2'), goalDoc({ planPrefs: { ...prefs, foods: [] } })));
+    });
+
     it('12g. অন্য সদস্য (grant ছাড়া) planPrefs/extraFoods লিখতে পারে না; update-পথেও একই নিয়ম', async () => {
       await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goalDoc()); });
       await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { planPrefs: prefs, lastEditedByMemberId: 'mB' }, { merge: true }));

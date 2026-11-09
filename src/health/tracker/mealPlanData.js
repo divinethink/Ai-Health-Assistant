@@ -32,6 +32,35 @@ const CORE_FOODS = {
 
 export const FOODS = { ...CORE_FOODS, ...CATALOG_FOODS };
 
+// ---------- সদস্য-ওয়াইজ খাবার-ওভাররাইড (ধাপ ৩) ----------
+// goal.planPrefs.foods = { খাবারের-key: { k: এক ইউনিটের কিলোক্যালরি, note: নিজের লেখা গুণাগুণ } } — মূল ক্যাটালগ অপরিবর্তিত।
+// buildMealPlan()/applyMealPrefs() প্রতিবার prefs থেকে এটা সেট করে (একটাই জায়গা), তাই সদস্য বদলালে পুরনো মান থাকে না।
+export const MAX_FOOD_OVERRIDES = 40;
+export const MAX_FOOD_KCAL = 1500;
+export const MAX_FOOD_NOTE = 120;
+export function cleanFoodOverrides(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const key of Object.keys(raw)) {
+    if (!Object.prototype.hasOwnProperty.call(FOODS, key)) continue;
+    if (Object.keys(out).length >= MAX_FOOD_OVERRIDES) break;
+    const r = raw[key];
+    if (!r || typeof r !== "object" || Array.isArray(r)) continue;
+    const e = {};
+    const k = Number(r.k);
+    if (r.k !== undefined && r.k !== null && r.k !== "" && Number.isFinite(k) && k >= 0 && k <= MAX_FOOD_KCAL) e.k = Math.round(k);
+    const note = typeof r.note === "string" ? r.note.replace(/\s+/g, " ").trim().slice(0, MAX_FOOD_NOTE) : "";
+    if (note) e.note = note;
+    if (Object.keys(e).length) out[key] = e;
+  }
+  return out;
+}
+let OV = {};
+export const setFoodOverrides = (raw) => { OV = cleanFoodOverrides(raw); };
+export const hasFoodOverride = (key) => Object.prototype.hasOwnProperty.call(OV, key);
+export const foodK = (key) => (hasFoodOverride(key) && OV[key].k !== undefined ? OV[key].k : FOODS[key].k);
+export const foodNote = (key) => (hasFoodOverride(key) && OV[key].note ? OV[key].note : "");
+
 // এলার্জি-ট্যাগ ← প্রোফাইলের এলার্জি-লেখার কী-ওয়ার্ড (ছোট হাতের)
 const ALLERGY_KEYWORDS = {
   egg: ["egg", "ডিম"],
@@ -65,7 +94,7 @@ const KNOBS = [
   ["snack2", "muri", 1, 1, 2],
 ];
 
-export const kcalOf = (key, qty) => FOODS[key].k * qty;
+export const kcalOf = (key, qty) => foodK(key) * qty;
 const totalOf = (rows) => rows.reduce((s, r) => s + kcalOf(r[1], r[2]), 0);
 
 export function qtyText(qty) {
@@ -81,8 +110,9 @@ export function itemText(key, qty) {
   return qtyText(qty) + (f.u === "টি" ? "" : " ") + f.u + " " + f.n;
 }
 
-// calorieTarget → { slots, total, notes }। allergyTags: allergyTagsOf() এর ফল।
-export function buildMealPlan(calorieTarget, allergyTags) {
+// calorieTarget → { slots, total, notes }। allergyTags: allergyTagsOf() এর ফল; prefs (ঐচ্ছিক): goal.planPrefs — শুধু `foods` ওভাররাইড পড়ে।
+export function buildMealPlan(calorieTarget, allergyTags, prefs) {
+  setFoodOverrides(prefs && prefs.foods);
   const tags = new Set(allergyTags || []);
   const rows = BASE.map((r) => [...r]);
 
@@ -94,7 +124,7 @@ export function buildMealPlan(calorieTarget, allergyTags) {
     for (const [slot, key, step, min, max] of KNOBS) {
       const row = rows.find((r) => r[0] === slot && r[1] === key);
       const diff = calorieTarget - totalOf(rows);
-      const stepKcal = FOODS[key].k * step;
+      const stepKcal = foodK(key) * step;
       if (diff >= stepKcal / 2 && row[2] + step <= max) { row[2] += step; moved = true; }
       else if (diff <= -stepKcal / 2 && row[2] - step >= min) { row[2] -= step; moved = true; }
     }

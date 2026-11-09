@@ -92,7 +92,8 @@ service cloud.firestore {
     // extraFoods/exerciseLog শুধু daily-ডকে; ধরন ও আকার-সীমা (গভীর যাচাই client-এর lib/planPrefs.js-এ)।
     function trackerPlanFieldsOk(d) {
       let planOk = !('planPrefs' in d) || (d.type == 'goal' && d.planPrefs is map
-        && d.planPrefs.keys().hasOnly(['v', 'meal', 'exercise'])
+        && d.planPrefs.keys().hasOnly(['v', 'meal', 'exercise', 'foods'])
+        && (!('foods' in d.planPrefs) || (d.planPrefs.foods is map && d.planPrefs.foods.size() <= 40))
         && (!('meal' in d.planPrefs) || (d.planPrefs.meal is map && d.planPrefs.meal.size() <= 5))
         && (!('exercise' in d.planPrefs) || (d.planPrefs.exercise is map && d.planPrefs.exercise.size() <= 7)));
       let foodsOk = !('extraFoods' in d) || (d.type == 'daily' && d.extraFoods is list && d.extraFoods.size() <= 20);

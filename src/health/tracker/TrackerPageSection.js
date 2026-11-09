@@ -16,7 +16,7 @@ import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
 import {
   EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog, recentExtraFoods,
-  setSlotPref, clearSlotPref, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog,
+  setSlotPref, clearSlotPref, setFoodOverride, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog,
 } from "./planPrefs.js";
 import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
 import { ReminderSettings } from "./ReminderSettings.js";
@@ -103,7 +103,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথিপত্র → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
   if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।");
 
-  const base = buildMealPlan(calc.calorieTarget, allergyTags);
+  const base = buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs);
   const plan = applyMealPrefs(base, goal.planPrefs, allergyTags);
   const extras = sanitizeExtraFoods(d.extraFoods);
   const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
@@ -128,9 +128,17 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // "প্রতিদিনের জন্য": প্ল্যান বদলালে আজকের caloriesIn নতুন প্ল্যান থেকে আবার হিসাব (শুধু মান বদলালে লেখা হয়)।
   const savePrefs = (prefs) => run(async () => {
     await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
-    const cal = caloriesForDay(applyMealPrefs(base, prefs, allergyTags), eaten, extras);
+    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs), prefs, allergyTags), eaten, extras);
     if (cal !== (d.caloriesIn || 0)) await saveDaily(familyId, memberId, callerMemberId, todayISO(), { caloriesIn: cal }, daily);
   }, true);
+
+  // ধাপ ৩: খাবারের ✎ এডিট — শিট খোলা থাকে (closeAfter=false); entry=null মানে মূল মানে ফেরা
+  const saveFood = (key, entry) => run(async () => {
+    const prefs = setFoodOverride(goal.planPrefs, key, entry);
+    await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
+    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs), prefs, allergyTags), eaten, extras);
+    if (cal !== (d.caloriesIn || 0)) await saveDaily(familyId, memberId, callerMemberId, todayISO(), { caloriesIn: cal }, daily);
+  }, false);
 
   const writeExtras = (next) => run(() => saveDaily(familyId, memberId, callerMemberId, todayISO(), { extraFoods: next, caloriesIn: caloriesForDay(plan, eaten, next) }, daily), false);
 
@@ -162,6 +170,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     sheetSlot && React.createElement(MealEditSheet, {
       key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags,
       isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, recentFoods: recentExtraFoods(info.recent), activeMeds: info.activeMeds, busy, err,
+      onFoodSave: saveFood,
       onSavePerm: (draft) => savePrefs(setSlotPref(goal.planPrefs, sheet, draft)),
       onReset: () => savePrefs(clearSlotPref(goal.planPrefs, sheet)),
       onAddExtra: (name, kcal) => writeExtras([...extras, { name, kcal, slot: sheet }]),
@@ -361,7 +370,7 @@ function PlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // পেটের লক্ষণ-লগ এখন প্ল্যানের আগে (খাবার বাছাইয়ের সুবিধা); গেট বন্ধ থাকলেও দেখায়
   const d = info.daily || {};
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
-  const gutFoods = gutFoodCount(calc ? applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags), goal.planPrefs, allergyTags) : null, d.mealsEaten, sanitizeExtraFoods(d.extraFoods));
+  const gutFoods = gutFoodCount(calc ? applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs), goal.planPrefs, allergyTags) : null, d.mealsEaten, sanitizeExtraFoods(d.extraFoods));
   const todayGut = entriesOn(info.gutEntries, todayISO());
   const latestGut = todayGut.length ? todayGut[todayGut.length - 1] : null;
   const foldChip = (id, text, badge) => React.createElement("button", { onClick: () => setPanel(panel === id ? null : id), "aria-expanded": panel === id,

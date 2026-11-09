@@ -5,7 +5,7 @@
 // সব ফিল্ড ঐচ্ছিক — না থাকলে বিদ্যমান ডিফল্ট প্ল্যান অপরিবর্তিত।
 
 import { bnNum } from "../../shared/dates.js";
-import { MEAL_SLOTS, FOODS, kcalOf, itemText, caloriesForEaten } from "./mealPlanData.js";
+import { MEAL_SLOTS, FOODS, kcalOf, foodK, itemText, caloriesForEaten, cleanFoodOverrides, setFoodOverrides, MAX_FOOD_OVERRIDES } from "./mealPlanData.js";
 import { MIN_KCAL } from "./trackerCalc.js";
 
 export const PLAN_PREFS_VERSION = 1;
@@ -70,6 +70,8 @@ export function sanitizePlanPrefs(raw) {
       }).filter(Boolean);
     }
   }
+  const foods = cleanFoodOverrides(raw.foods);
+  if (Object.keys(foods).length) out.foods = foods; // খালি হলে ফিল্ডই থাকে না (rules deploy-এর আগেও বাকি সংরক্ষণ চলে)
   return out;
 }
 
@@ -126,7 +128,7 @@ export function sanitizeExerciseLog(raw) {
 export function mealOptions(allergyTags) {
   const tags = new Set(allergyTags || []);
   return Object.entries(FOODS)
-    .map(([key, f]) => ({ key, name: f.n, unit: f.u, kcal: f.k, allergy: !!(f.al && tags.has(f.al)) }));
+    .map(([key, f]) => ({ key, name: f.n, unit: f.u, kcal: foodK(key), allergy: !!(f.al && tags.has(f.al)) }));
 }
 export function exerciseOptions() {
   return Object.entries(EXERCISE_TYPES).map(([type, e]) => ({ type, label: e.label, counted: e.counted }));
@@ -136,6 +138,7 @@ export function exerciseOptions() {
 // plan: buildMealPlan() এর ফল। prefs.meal[slot] থাকলে ওই বেলার আইটেম পুরো বদলে যায় ([] = বেলা বাদ)।
 export function applyMealPrefs(plan, prefs, allergyTags) {
   const p = sanitizePlanPrefs(prefs);
+  setFoodOverrides(p.foods);
   const tags = new Set(allergyTags || []);
   const notes = [...plan.notes];
   const custom = [];
@@ -228,6 +231,26 @@ export function clearDayPref(prefs, dayIdx) {
   const exercise = { ...p.exercise };
   delete exercise[String(dayIdx)];
   return { ...p, exercise };
+}
+
+// একটি খাবারের ওভাররাইড বসান/সরান (entry = { k, note } বা null = মূল মানে ফেরা); k মূল মানের সমান হলে জমা হয় না।
+export function setFoodOverride(prefs, food, entry) {
+  const p = sanitizePlanPrefs(prefs);
+  if (!hasOwn(FOODS, food)) return p;
+  const foods = { ...(p.foods || {}) };
+  delete foods[food];
+  if (entry) {
+    const c = cleanFoodOverrides({ [food]: entry })[food];
+    if (c) {
+      if (c.k === FOODS[food].k) delete c.k;
+      if (Object.keys(c).length) {
+        if (Object.keys(foods).length >= MAX_FOOD_OVERRIDES) return p;
+        foods[food] = c;
+      }
+    }
+  }
+  const { foods: _old, ...rest } = p;
+  return sanitizePlanPrefs(Object.keys(foods).length ? { ...rest, foods } : rest);
 }
 
 // বেলার বর্তমান আইটেম (buildMealPlan/applyMealPrefs-এর slot.items) → এডিটের খসড়া [{food, qty}]
