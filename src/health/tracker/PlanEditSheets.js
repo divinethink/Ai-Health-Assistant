@@ -7,6 +7,7 @@ import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText } from "./mealPlanData.js";
 import { medFoodNotes } from "./medFoodNotes.js";
+import { foodEnglish } from "../../shared/searchAliases.js";
 import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, tagsOf, posTagsOf } from "./foodCatalog.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
@@ -82,14 +83,14 @@ function FoodPicker({ allergyTags, onPick }) {
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
   return React.createElement("div", null,
-    React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন (যেমন: ইলিশ, আম)", "aria-label": "খাবার খুঁজুন", style: INPUT }),
+    React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", style: INPUT }),
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
       found.map(({ key, f }) => React.createElement("button", {
         key, onClick: () => onPick(key),
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#1F2D2A" },
-      }, "+ " + f.n + " · " + bnNum(f.k), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
+      }, "+ " + foodEnglish(key, f) + " · " + bnNum(f.k), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))))),
     found.some(({ key }) => posTagsOf(key).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সবুজ চিপ = প্রোটিন/আঁশের সাধারণ উৎস (শুধু তথ্য)।"),
     found.some(({ f }) => tagsOf(f).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "হলুদ চিপ = সাধারণ সতর্কতা (ব্লক নয়); ডাক্তার/ডায়েটিশিয়ানের নির্দেশ প্রাধান্য পায়।"),
     found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বাছুন।"),

@@ -4,6 +4,8 @@
 // tg = ঐচ্ছিক সতর্কতা-ট্যাগ (নিচের TAGS) — শুধু তথ্য-চিপ, কিছু ব্লক করে না; ব্লক শুধু al (এলার্জি)।
 // swap নেই — এই খাবারগুলো বেস-প্ল্যানে নেই, শুধু "আমার প্ল্যান"/"আজ শুধু"-তে বাছা যায়; এলার্জি মিললে বাদ পড়ে।
 
+import { foodMatches } from "../../shared/searchAliases.js";
+
 export const FOOD_GROUPS = [
   ["rice", "ভাত-রুটি"], ["curry", "তরকারি-ডাল"], ["protein", "মাছ-মাংস-ডিম"],
   ["fruit", "ফল"], ["snack", "নাস্তা-মিষ্টি"], ["drink", "পানীয়"],
@@ -175,7 +177,7 @@ export function searchFoods(foods, { query = "", group = "", allergyTags = [], l
   for (const [key, f] of Object.entries(foods)) {
     if (f.al && tags.has(f.al)) continue;
     if (group && f.g !== group) continue;
-    if (q && !f.n.toLowerCase().includes(q)) continue;
+    if (q && !foodMatches(key, f, q)) continue;
     out.push({ key, f });
     if (out.length >= limit) break;
   }

@@ -10,6 +10,7 @@
 // বন্ধ থাকলে notification আসবে না। এটাই honest সীমা, UI-তে স্পষ্ট করে বলা আছে।
 
 import { ErrorBox } from "../../shared/ui.js";
+import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
@@ -301,9 +302,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   // নাম-সাজেশন
   const q = aName.trim().toLowerCase();
   const pool = [...knownNames, ...COMMON_MEDS].filter((v, i, arr) => arr.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
-  const suggestions = (q
-    ? [...pool.filter((n) => n.toLowerCase().startsWith(q)), ...pool.filter((n) => !n.toLowerCase().startsWith(q) && n.toLowerCase().includes(q))]
-    : knownNames).filter((n) => n.toLowerCase() !== q).slice(0, 6);
+  const suggestions = q
+    ? suggestMedicines(pool, q, 6)
+    : knownNames.filter((n) => n.toLowerCase() !== q).slice(0, 6).map((n) => ({ label: n, value: n }));
 
   const card = { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
@@ -356,12 +357,12 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
       lblEl("ওষুধের নাম"),
       h("div", { style: { position: "relative" } },
-        h("input", { type: "text", value: aName, placeholder: "প্রথম অক্ষর লিখলেই নাম আসবে", autoComplete: "off",
+        h("input", { type: "text", value: aName, placeholder: "বাংলা/English/ব্র্যান্ড (নাপা, Napa)", autoComplete: "off",
           onChange: (e) => { setAName(e.target.value); setSuggOpen(true); }, onFocus: () => setSuggOpen(true), onBlur: () => setTimeout(() => setSuggOpen(false), 150),
           style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #C3D2CA", borderRadius: "10px", fontSize: F } }),
         suggOpen && suggestions.length > 0 && h("div", { style: { position: "absolute", left: 0, right: 0, top: "100%", zIndex: 5, marginTop: "2px", background: "#fff", border: "1px solid #C3D2CA", borderRadius: "10px", boxShadow: "0 6px 16px rgba(0,0,0,0.12)", overflow: "hidden" } },
-          suggestions.map((n) => h("div", { key: n, onMouseDown: (e) => { e.preventDefault(); setAName(n); setSuggOpen(false); }, onTouchStart: () => { setAName(n); setSuggOpen(false); },
-            style: { padding: "10px 12px", fontSize: F, borderBottom: "1px solid #EEF3F0", cursor: "pointer", color: "#1F2D2A" } }, (knownNames.includes(n) ? "🕘 " : "") + n)))),
+          suggestions.map(({ label, value: n }) => h("div", { key: n, onMouseDown: (e) => { e.preventDefault(); setAName(n); setSuggOpen(false); }, onTouchStart: () => { setAName(n); setSuggOpen(false); },
+            style: { padding: "10px 12px", fontSize: F, borderBottom: "1px solid #EEF3F0", cursor: "pointer", color: "#1F2D2A" } }, (knownNames.includes(n) ? "🕘 " : "") + label)))),
       lblEl("কয় বেলা"),
       h("div", { style: { display: "flex", gap: "6px" } }, [1, 2, 3, 4].map((n) => chip(aCount === n, bn(n) + " বেলা", () => pickCount(n), "c" + n))),
       lblEl("সময়"), timeInputs(aSlots, setASlots),
