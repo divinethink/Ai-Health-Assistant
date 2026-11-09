@@ -2,19 +2,21 @@
 // প্রোফাইল-কার্ড (HealthSummaryCard) ও খাদ্য নির্দেশিকা (DietGuidanceSection) একই UI ব্যবহার করে।
 // শুধু display; কোনো data/schema বদল নেই।
 
-function bulletList(items, color, sources) {
-  const mk = (x, i) => React.createElement("li", { key: i, style: { marginBottom: "4px", overflowWrap: "anywhere" } }, x,
-    sources && sources[x] && sources[x].length > 1 && React.createElement("span", { style: { color: "#6B7B76", fontSize: "12px" } }, " (" + sources[x].join(", ") + ")"));
+function bulletList(items, color, sources, icon) {
+  const mk = (x, i) => React.createElement("li", { key: i, style: { marginBottom: "5px", overflowWrap: "anywhere", listStyle: "none", display: "flex", gap: "5px", alignItems: "flex-start" } },
+    React.createElement("span", { "aria-hidden": true, style: { color, fontWeight: 700, flexShrink: 0 } }, icon),
+    React.createElement("span", { style: { minWidth: 0 } }, x,
+      sources && sources[x] && sources[x].length > 1 && React.createElement("span", { style: { color: "#6B7B76", fontSize: "12px" } }, " (" + sources[x].join(", ") + ")")));
   return { mk, color };
 }
 
-function column(title, items, color, bg, sources, limit) {
+function column(title, items, color, bg, sources, limit, icon) {
   const clean = items.map((x) => String(x).trim()).filter(Boolean);
-  const { mk } = bulletList(clean, color, sources);
+  const { mk } = bulletList(clean, color, sources, icon);
   const first = limit ? clean.slice(0, limit) : clean;
   const rest = limit ? clean.slice(limit) : [];
-  const ulStyle = { margin: 0, paddingLeft: "18px", fontSize: "14px", color: "#1F2D2A", lineHeight: 1.5 };
-  return React.createElement("div", { style: { background: bg, borderRadius: "12px", padding: "10px", minWidth: 0 } },
+  const ulStyle = { margin: 0, padding: 0, fontSize: "14px", color: "#1F2D2A", lineHeight: 1.5 };
+  return React.createElement("div", { style: { background: bg, borderRadius: "12px", padding: "8px", minWidth: 0 } },
     React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color, marginBottom: "6px" } }, title),
     clean.length === 0
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "নির্দিষ্ট কিছু নেই")
@@ -31,8 +33,8 @@ export function foodColumns({ avoid, include, avoidSources, limit }) {
   if (!hasAvoid && !hasInclude) return null;
   const both = hasAvoid && hasInclude;
   return React.createElement("div", {
-    style: { display: "grid", gridTemplateColumns: both ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)", gap: "8px", marginTop: "8px" },
+    style: { display: "grid", gridTemplateColumns: both ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)", gap: "6px", marginTop: "8px" },
   },
-    hasAvoid && column("❌ এড়িয়ে চলুন", avoid, "#B3261E", "#FDF0EE", avoidSources, limit),
-    hasInclude && column("✅ খাবেন", include, "#0E4B43", "#EAF6F0", null, limit));
+    hasAvoid && column("❌ এড়িয়ে চলুন", avoid, "#B3261E", "#FDF0EE", avoidSources, limit, "✕"),
+    hasInclude && column("✅ খাবেন", include, "#0E4B43", "#EAF6F0", null, limit, "✓"));
 }

@@ -46,7 +46,7 @@ const { useState } = React;
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
   { id: "records", label: "📋 রেকর্ড" },
-  { id: "meds", label: "💊 " },
+  { id: "meds", label: "💊 প্রেসক্রিপশন/রিপোর্ট" },
 ];
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
@@ -101,7 +101,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
               border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
               background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
             },
-          }, sb.id === "meds" ? sb.label + t("tab.medication") : sb.label))),
+          }, sb.label))),
         recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId })),
       activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),

@@ -134,8 +134,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   return React.createElement(
     "div", { style: { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "16px", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", padding: "14px", marginBottom: "14px" } },
 
-    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" } },
-      React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: 0 } }, "🧑 " + (member ? member.name : "সদস্য")),
+    React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "0" } },
+      React.createElement("h3", { style: { fontSize: "20px", fontWeight: 800, color: "#0E4B43", margin: 0, overflowWrap: "anywhere" } }, member ? member.name : "সদস্য"),
       React.createElement("button", {
         onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
         style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: editing ? "#E4F0E9" : "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" },
@@ -146,8 +146,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       onSaved: () => { setEditing(false); onVitalsSaved && onVitalsSaved(); },
     }),
 
-    React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "10px" } },
-      birthYear ? "জন্মসাল: " + birthYear + (ageYears != null ? " (আনুমানিক বয়স " + Math.floor(ageYears) + " বছর)" : "") : "জন্মতারিখ যোগ করা হয়নি"
+    React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "-4px", marginBottom: "10px" } },
+      birthYear ? "জন্ম " + bn(birthYear) + (ageYears != null ? " · বয়স " + bn(Math.floor(ageYears)) + " বছর" : "") : "জন্মতারিখ যোগ করা হয়নি"
     ),
 
     // উচ্চতা / ওজন / BMI — ৩ টাইল
@@ -185,7 +185,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         icon: "💊", label: "চলমান ঔষধ" + (activeMeds.length ? " (" + bn(activeMeds.length) + ")" : ""),
         lines: activeMeds.length === 0 ? [{ t: "নেই", muted: true }] : [
           ...activeMeds.slice(0, 3).map((m) => ({ t: m.genericName, strong: true, sub: (m.frequency || null) })),
-          activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → ঔষধ ও রিমাইন্ডার", muted: true },
+          activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট", muted: true },
         ],
         inline: true,
       })),

@@ -89,6 +89,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement("h4", { style: { margin: 0, fontSize: "15px", color: G } }, icon + " " + text),
     React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
+  const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px" };
   const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" };
 
   const conditions = records.filter((r) => r.resourceType === "condition");
@@ -126,15 +127,15 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     const k = "obs:" + g.key, open = openKey === k;
     const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict);
     return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#E8B4AE" : LINE) } },
-      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { fontSize: "14px", color: MUTED, overflowWrap: "anywhere" } }, g.label,
+      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "10px 8px", cursor: "pointer", minHeight: "44px" } },
+        React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } }, g.label,
           al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4")),
         React.createElement("div", { style: { marginTop: "2px" } },
-          React.createElement("span", { style: { fontSize: "22px", fontWeight: 700, color: al ? RED : G } }, latest.value),
+          React.createElement("span", { style: { fontSize: "19px", fontWeight: 700, color: al ? RED : G } }, latest.value),
           latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + latest.unit),
-          tr && React.createElement("span", { style: { fontSize: "14px", color: al ? RED : MUTED, marginLeft: "6px" } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
+          tr && React.createElement("div", { style: { fontSize: "13px", color: al ? RED : MUTED } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
         React.createElement(Spark, { items: g.items }),
-        latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px" } }, bnDate(latest.date))),
+        latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } }, bnDate(latest.date))),
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: G, margin: "8px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
         g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "6px 0", borderBottom: "1px solid #EEF1EF" } },
@@ -149,5 +150,5 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement(LabAlertBox, { alerts: labAlerts }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), conditions.map(conditionCard)),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "এলার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid2 }, obsGroups.map(obsCard))));
+    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
 }

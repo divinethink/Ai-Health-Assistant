@@ -112,13 +112,13 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members
       "button", {
         onClick: () => setOpen((o) => !o), "aria-label": memberDoc.name,
         style: {
-          flexShrink: 0, display: "flex", alignItems: "center", gap: "4px", minHeight: "42px", maxWidth: "96px",
+          flexShrink: 0, display: "flex", alignItems: "center", gap: "4px", minHeight: "42px", maxWidth: "130px",
           border: "1px solid var(--hs-primary)", borderRadius: "999px", padding: "4px 10px", cursor: "pointer",
-          background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "14px", fontWeight: 600,
+          background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "16px", fontWeight: 700,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         },
       },
-      "👤 " + first + " ▾"
+      first + " ▾"
     ),
     open && React.createElement("div", { onClick: () => setOpen(false), style: { position: "fixed", inset: 0, zIndex: 59, background: "rgba(0,0,0,0.15)" } }),
     open && React.createElement(
