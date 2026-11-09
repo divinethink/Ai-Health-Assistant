@@ -38,8 +38,8 @@ const WORKER_URL = import.meta.env.VITE_MEDIA_WORKER_URL;
 
 export function validateCardImage(file) {
   if (!file) return null; // ঐচ্ছিক — না দিলে ভ্যালিড
-  if (!file.type.startsWith("image/")) return "ভিজিটিং কার্ডের জন্য শুধু ছবি (jpg/png) আপলোড করা যাবে।";
-  if (file.size > MAX_CARD_IMAGE_BYTES) return "ছবির সাইজ 10MB-এর বেশি হতে পারবে না।";
+  if (!file.type.startsWith("image/") && file.type !== "application/pdf") return "ভিজিটিং কার্ডের জন্য শুধু ছবি (jpg/png) বা PDF আপলোড করা যাবে।";
+  if (file.size > MAX_CARD_IMAGE_BYTES) return "ফাইলের সাইজ 10MB-এর বেশি হতে পারবে না।";
   return null;
 }
 

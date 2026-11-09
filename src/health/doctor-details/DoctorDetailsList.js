@@ -47,7 +47,8 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
       return React.createElement(
         "div", { key: d.id, style: { display: "flex", gap: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
         d.visitingCardImageUrl && React.createElement("img", {
-          src: d.visitingCardImageUrl,
+          src: String(d.visitingCardImageUrl).replace(/\.pdf$/i, ".jpg"),
+          onError: (e) => { e.target.style.display = "none"; },
           style: { width: "64px", height: "64px", objectFit: "cover", borderRadius: "10px", flexShrink: 0 },
         }),
         React.createElement(
