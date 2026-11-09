@@ -72,7 +72,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     gate.blocked && React.createElement(Notice, null,
       React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason,
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে। ওজন নিয়ে চিন্তা থাকলে ডাক্তারের পরামর্শ নিন।"),
-    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও ইনপুট’ ট্যাবের ‘লক্ষ্য’-এ যান।"),
+    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘লক্ষ্য সেট করুন’-এ যান।"),
 
     // উপবাস-দিন (পার্ট ১০): ক্যালরি-টার্গেট স্থগিত; স্ট্রিক ভাঙে না
     onFast && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },

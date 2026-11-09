@@ -32,6 +32,7 @@ test("explainExercise: null প্ল্যানে null; প্রাপ্ত
   assert.equal(explainExercise({ plan: null }), null);
   const fit = explainExercise({ plan: exercisePlan(34, "fit"), age: 34, goalType: "fit" }).join("\n");
   assert.ok(fit.includes("WHO") && fit.includes("প্রাপ্তবয়স্ক") && fit.includes("২ দিন"));
+  assert.equal(fit.includes("উপরের সারাংশে"), false);
   const mus = explainExercise({ plan: exercisePlan(34, "muscle"), age: 34, goalType: "muscle" }).join("\n");
   assert.ok(mus.includes("৩ দিন"));
 });

@@ -33,7 +33,8 @@ export function explainMeal({ goal, age, weightKg, heightCm, allergyTags }) {
 // plan: exercisePlan() এর ফল।
 export function explainExercise({ plan, age, goalType }) {
   if (!plan) return null;
-  const lines = ["ভিত্তি: WHO-র শারীরিক-সক্রিয়তা গাইডলাইন; বয়স-ব্যান্ড অনুযায়ী লক্ষ্য ঠিক হয়েছে (বিস্তারিত উপরের সারাংশে)।"];
+  // আলাদা সারাংশ-বাক্য এখানেই (WHO-ভিত্তিক বাক্য plan.summary-তে)
+  const lines = [plan.summary || "বয়স-ব্যান্ড অনুযায়ী সাপ্তাহিক লক্ষ্য ঠিক হয়েছে।"];
   if (BAND_LABELS[plan.band]) lines.push("আপনার বয়স-ব্যান্ড" + (age !== null && age !== undefined ? " (" + bnNum(age) + " বছর)" : "") + ": " + BAND_LABELS[plan.band]);
   if (plan.routine && (plan.band === "adult" || plan.band === "senior")) {
     lines.push(goalType === "muscle"
