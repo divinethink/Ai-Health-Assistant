@@ -335,7 +335,7 @@ function PlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement(MealTab, common),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
       React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
-      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: নথিপত্র → খাদ্য নির্দেশিকা।")),
+      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: হোম → খাদ্যাভ্যাস ও টাইমলাইন।")),
     sub === "exercise" && React.createElement(React.Fragment, null,
       React.createElement(PlanWhyCard, { lines: explainExercise({ plan: exercisePlan(age, goal ? goal.goalType : null), age, goalType: goal ? goal.goalType : null }) }),
       React.createElement(ExerciseTab, common)));

@@ -45,12 +45,13 @@ const { useState } = React;
 
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
-  { id: "records", label: "📋 রেকর্ড" },
+  { id: "records", label: "📋 স্বাস্থ্য রেকর্ড" },
   { id: "meds", label: "💊 প্রেসক্রিপশন/রিপোর্ট" },
 ];
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
 const TIMELINE_SUBS = [
+  { id: "diet", label: "🍽️ খাদ্য" },
   { id: "calendar", label: "📅 ক্যালেন্ডার" },
   { id: "vaccine", label: "💉 টিকা" },
   { id: "timeline", label: "🕘 টাইমলাইন" },
@@ -59,13 +60,12 @@ const TIMELINE_SUBS = [
 const TABS = [
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
-  { id: "diet", label: "tab.diet" },
   { id: "timeline", label: "tab.timeline" },
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
   const [activeTab, setActiveTab] = useState("profile");
-  const [timelineSub, setTimelineSub] = useState("calendar");
+  const [timelineSub, setTimelineSub] = useState("diet");
   const [recordSub, setRecordSub] = useState("records");
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
@@ -104,20 +104,20 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
           }, sb.label))),
         recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId })),
-      activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
       activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
-          "div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
+          "div", { style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           TIMELINE_SUBS.map((sb) => React.createElement("button", {
             key: sb.id, onClick: () => setTimelineSub(sb.id), "aria-pressed": timelineSub === sb.id,
             style: {
-              flex: 1, minHeight: "40px", padding: "6px 8px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
+              flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
               border: timelineSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
               background: timelineSub === sb.id ? "#0E4B43" : "#fff", color: timelineSub === sb.id ? "#fff" : "#2B3A36",
             },
           }, sb.label))
         ),
+        timelineSub === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
         timelineSub === "calendar" && React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
         timelineSub === "vaccine" && React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId, inline: true }),
         timelineSub === "timeline" && React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })

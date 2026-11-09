@@ -43,7 +43,7 @@ const DICT = {
     "title.docs": "📁 নথিপত্র", "title.menu": "☰ মেনু",
 
     "tab.profile": "প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
-    "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "টাইমলাইন ও ক্যালেন্ডার",
+    "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "খাদ্যাভ্যাস ও টাইমলাইন",
     "tab.symptom": "🩺 লক্ষণ যাচাই", "tab.medsci": "⚕️ আধুনিক চিকিৎসা", "tab.herbal": "🌿 ভেষজ", "tab.homeo": "💧 হোমিওপ্যাথি",
     "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তারের জন্য",
 
@@ -85,7 +85,7 @@ const DICT = {
     "title.docs": "📁 Documents", "title.menu": "☰ Menu",
 
     "tab.profile": "Profile", "tab.records": "Health Info", "tab.diet": "Diet Guide",
-    "tab.medication": "Medicines & Reminders", "tab.timeline": "Timeline & Calendar",
+    "tab.medication": "Medicines & Reminders", "tab.timeline": "Diet & Timeline",
     "tab.symptom": "🩺 Symptom Check", "tab.medsci": "⚕️ Medical Science", "tab.herbal": "🌿 Herbal", "tab.homeo": "💧 Homeopathy",
     "tab.nutrition": "🥗 Nutrition", "tab.fitness": "🏃 Fitness", "tab.upload": "📁 My Documents", "tab.export": "🩺 For Doctor",
 

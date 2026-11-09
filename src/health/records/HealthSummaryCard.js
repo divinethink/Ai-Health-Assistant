@@ -212,7 +212,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#0E4B43", marginTop: "16px", marginBottom: "6px" } }, "🍽️ খাদ্য নির্দেশিকা"),
       foodColumns({ avoid: dietResult.avoidFoods, include: dietResult.includeFoods, limit: 4 }),
       habitTipsBox(dietResult.habitTips, 2),
-      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্য নির্দেশিকা\" ট্যাবে যান।")
+      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্যাভ্যাস ও টাইমলাইন\" ট্যাবে যান।")
     )
   );
 }
