@@ -80,7 +80,7 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
-function FoodPicker({ allergyTags, onPick, onEdit }) {
+function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
@@ -89,7 +89,7 @@ function FoodPicker({ allergyTags, onPick, onEdit }) {
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-      found.map(({ key, f, allergy }) => { const st = foodStatus(key, f, { allergyTags }); const sc = STATUS_COLORS[st.level]; return React.createElement("span", { key, style: { display: "inline-flex", alignItems: "center" } }, React.createElement("button", {
+      found.map(({ key, f, allergy }) => { const st = foodStatus(key, f, { allergyTags, ctx: avoidCtx }); const sc = STATUS_COLORS[st.level]; return React.createElement("span", { key, style: { display: "inline-flex", alignItems: "center" } }, React.createElement("button", {
         onClick: () => onPick(key),
         title: st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : ""),
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid " + sc.border, background: sc.bg, color: st.level === "green" ? "#1F2D2A" : sc.text },
@@ -132,7 +132,7 @@ const MODES = [["perm", "প্রতিদিনের জন্য"], ["today"
 // ---------- মিল: একটি বেলা ----------
 // props: slot (কার্যকর প্ল্যানের বেলা), planTotal, target, sex, allergyTags, isCustom, extras [{name,kcal,idx}] (এই বেলার আজকের নিজের খাবার),
 // extraCount (আজকের মোট নিজের-খাবার), recentFoods [{name,kcal,count}] (গত ৭ দিনের সেরা, ঐচ্ছিক), activeMeds [নাম] (সক্রিয় ওষুধ, ঐচ্ছিক), busy, err, onSavePerm(draft), onReset(), onAddExtra(name,kcal), onRemoveExtra(idx), onClose
-export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCustom, extras, extraCount, recentFoods, activeMeds, busy, err, onFoodSave, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
+export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, avoidCtx, isCustom, extras, extraCount, recentFoods, activeMeds, busy, err, onFoodSave, onSavePerm, onReset, onAddExtra, onRemoveExtra, onClose }) {
   const [mode, setMode] = useState("perm");
   const [editKey, setEditKey] = useState(null); // ✎ এডিটের খাবার
   const [draft, setDraft] = useState(() => draftFromSlotItems(slot.items));
@@ -165,7 +165,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
     mode === "perm" && React.createElement("div", null,
       draft.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "এই বেলায় কোনো খাবার নেই (বেলা বাদ)। নিচ থেকে খাবার যোগ করুন।"),
       draft.map((r, i) => React.createElement("div", { key: r.food, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
-        React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, foodStatus(r.food, FOODS[r.food], { allergyTags }).icon + " " + itemText(r.food, r.qty),
+        React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, foodStatus(r.food, FOODS[r.food], { allergyTags, ctx: avoidCtx }).icon + " " + itemText(r.food, r.qty),
           React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(foodK(r.food) * r.qty)) + " কিলোক্যালরি"),
           foodNote(r.food) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "2px" } }, "📝 " + foodNote(r.food)),
           FOODS[r.food].al && (allergyTags || []).includes(FOODS[r.food].al) && React.createElement("div", { style: { fontSize: "12px", color: "#B3261E", marginTop: "2px", fontWeight: 600 } }, "⚠ প্রোফাইলের এলার্জির সাথে মিলতে পারে — সতর্ক থাকুন"),
@@ -175,7 +175,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
         onFoodSave && React.createElement("button", { onClick: () => setEditKey(r.food), "aria-label": FOODS[r.food].n + " এডিট করুন", style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN } }, "✎"),
         React.createElement("button", { onClick: () => setDraft(removeDraftAt(draft, i)), "aria-label": FOODS[r.food].n + " বাদ দিন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕"))),
       React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 6px" } }, "খাবার যোগ করুন"),
-      React.createElement(FoodPicker, { allergyTags, onEdit: onFoodSave ? setEditKey : null, onPick: (key) => setDraft(addDraftFood(draft, key)) }),
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onEdit: onFoodSave ? setEditKey : null, onPick: (key) => setDraft(addDraftFood(draft, key)) }),
       React.createElement("div", { style: { marginTop: "12px", padding: "10px 12px", borderRadius: "12px", background: "#E4F0E9", fontSize: "14px", color: GREEN, display: "flex", justifyContent: "space-between", gap: "8px" } },
         React.createElement("span", null, "নতুন মোট (" + slot.label + ")"),
         React.createElement("b", null, bnNum(slot.kcal) + " → " + bnNum(newSlot) + " কিলোক্যালরি")),
@@ -203,7 +203,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, isCus
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" } },
         React.createElement("span", { style: { fontSize: "13px", color: MUTED } }, "পরিমাণ"),
         Stepper(qtyText(pickQty), () => setPickQty(Math.max(0.5, pickQty - 0.5)), () => setPickQty(Math.min(MAX_QTY, pickQty + 0.5)), pickQty <= 0.5, pickQty >= MAX_QTY, "পরিমাণ")),
-      React.createElement(FoodPicker, { allergyTags, onEdit: onFoodSave ? setEditKey : null, onPick: (key) => { setName(itemText(key, pickQty)); setKcal(String(Math.round(foodK(key) * pickQty))); setFormErr(null); setPickedKey(key); } }),
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onEdit: onFoodSave ? setEditKey : null, onPick: (key) => { setName(itemText(key, pickQty)); setKcal(String(Math.round(foodK(key) * pickQty))); setFormErr(null); setPickedKey(key); } }),
       pickedKey && medFoodNotes(activeMeds, pickedKey).map((n) => React.createElement("div", { key: n.rule + n.med, style: { fontSize: "12px", color: "#7A5200", marginTop: "6px", fontWeight: 600 } }, "💊 " + n.text)),
       React.createElement("label", { style: { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "12px 0 4px" } }, "খাবারের নাম"),
       React.createElement("input", { type: "text", maxLength: 40, value: name, onChange: (e) => { setName(e.target.value); setPickedKey(null); }, style: INPUT }),

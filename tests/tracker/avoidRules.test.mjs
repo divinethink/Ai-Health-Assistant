@@ -41,3 +41,35 @@ test("প্রতিটি নিয়মে সূত্র ও আইটে�
 test("গর্ভাবস্থা flag", () => {
   assert.deepEqual(ids("exercise", { age: 28, flags: { pregnant: true } }), ["pregnant-ex"]);
 });
+
+import { tagAvoidReason } from "../../src/health/tracker/avoidRules.js";
+import { foodStatus } from "../../src/health/tracker/foodStatus.js";
+
+test("IBS/গ্যাস্ট্রিক condition → gut key", () => {
+  assert.deepEqual(conditionKeysOf([{ resourceType: "condition", name: "IBS", status: "chronic" }]), ["gut"]);
+  assert.deepEqual(conditionKeysOf([{ resourceType: "condition", name: "গ্যাস্ট্রিক আলসার", status: "active" }]), ["gut"]);
+  assert.deepEqual(conditionKeysOf([{ resourceType: "condition", name: "Hobbies", status: "active" }]), []);
+});
+test("gut নিয়ম খাবার+ব্যায়াম দুটোতেই", () => {
+  assert.ok(ids("food", { condKeys: ["gut"] }).includes("gut-food"));
+  assert.ok(ids("exercise", { condKeys: ["gut"] }).includes("gut-ex"));
+});
+test("শিশু ও কিডনি/গর্ভাবস্থা নিয়ম আসে", () => {
+  assert.ok(ids("food", { age: 8 }).includes("child-food"));
+  assert.ok(ids("food", { age: 30, flags: { kidney: true } }).includes("kidney-food"));
+  assert.ok(ids("food", { age: 30, flags: { pregnant: true } }).includes("pregnant-food"));
+});
+test("gut-ট্যাগ খাবার: IBS থাকলে লাল, নইলে হলুদ", () => {
+  const f = { tg: ["gut"] };
+  assert.equal(foodStatus("samosa", f, { ctx: { condKeys: ["gut"] } }).level, "red");
+  assert.equal(foodStatus("samosa", f, { ctx: { condKeys: [] } }).level, "yellow");
+  assert.equal(foodStatus("samosa", f).level, "yellow");
+});
+test("tagAvoidReason: sugar/diabetes, choke/শিশু, caffeine/শিশু", () => {
+  assert.ok(tagAvoidReason("sugar", { flags: { diabetes: true } }));
+  assert.equal(tagAvoidReason("sugar", { flags: {} }), null);
+  assert.ok(tagAvoidReason("choke", { age: 3 }));
+  assert.equal(tagAvoidReason("choke", { age: 9 }), null);
+  assert.ok(tagAvoidReason("caffeine", { age: 10 }));
+  assert.equal(tagAvoidReason("medgap", { condKeys: ["gut"] }), null);
+});

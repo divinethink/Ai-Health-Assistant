@@ -9,6 +9,8 @@ const COND_PATTERNS = {
   heart: /heart|cardiac|coronary|হার্ট|হৃদ|হৃৎ/i,
   asthma: /asthma|হাঁপানি|এজমা/i,
   cholesterol: /cholesterol|lipid|কোলেস্টেরল/i,
+  // পেটের সমস্যা: IBS, গ্যাস্ট্রিক/অম্বল/আলসার, GERD, কোষ্ঠকাঠিন্য, ডায়রিয়া, কোলাইটিস
+  gut: /\bibs\b|irritable|আইবিএস|gastr|gerd|reflux|ulcer|colitis|bowel|constipat|diarrh|dyspep|গ্যাস|অম্বল|বুকজ্বালা|আলসার|কোষ্ঠ|ডায়রিয়া|পাতলা পায়খানা|পেটের/i,
 };
 
 // records: healthRecords; ফল: ["hypertension", ...] (diabetes/kidney/pregnant flags আলাদা — trackerCalc থেকে আসে)
@@ -43,6 +45,11 @@ export const RULES = [
   { id: "young-food", domain: "food", title: "৫ বছরের কম বয়স", when: { ageMax: 4.999 }, src: [SRC.nhs],
     items: ["গোটা বাদাম, শক্ত/গোল খাবার গলায় আটকাতে পারে — গুঁড়া বা ছোট করে দিন", "চিনিযুক্ত পানীয় ও চা-কফি এড়ান"] },
 
+  { id: "gut-food", domain: "food", title: "পেটের সমস্যা (IBS/গ্যাস্ট্রিক ইত্যাদি)", when: { cond: "gut" }, src: [SRC.nhs],
+    items: ["ভাজাপোড়া, বেশি তেল-ঝাল-মসলা ও ফাস্টফুড সীমিত রাখুন", "চা-কফি, কার্বনেটেড/চিনিযুক্ত পানীয় সীমিত রাখুন", "যে খাবারে আপনার উপসর্গ বাড়ে তা লিখে রাখুন ও এড়ান; ডাক্তার/ডায়েটিশিয়ানের সাথে আলোচনা করুন"] },
+  { id: "child-food", domain: "food", title: "১৩ বছরের কম বয়স", when: { ageMax: 12.999 }, src: [SRC.nhs, SRC.who],
+    items: ["চিনিযুক্ত পানীয়, এনার্জি ড্রিংক ও চা-কফি এড়ান", "প্যাকেটজাত স্ন্যাকস ও মিষ্টি সীমিত রাখুন"] },
+
   { id: "diabetes-ex", domain: "exercise", title: "ডায়াবেটিস", when: { flag: "diabetes" }, src: [SRC.ada],
     items: ["ঘাম, কাঁপুনি বা ঝিমুনি শুরু হলে সাথে সাথে থামুন", "ওষুধ/ইনসুলিন চললে ব্যায়ামের সময়-পরিকল্পনা ডাক্তারের সাথে ঠিক করুন"] },
   { id: "hypertension-ex", domain: "exercise", title: "উচ্চ রক্তচাপ", when: { cond: "hypertension" }, src: [SRC.aha, SRC.who],
@@ -51,6 +58,8 @@ export const RULES = [
     items: ["তীব্র ব্যায়ামের আগে ডাক্তারের অনুমতি নিন", "বুকে চাপ/ব্যথা বা শ্বাসকষ্টে সাথে সাথে থামুন"] },
   { id: "asthma-ex", domain: "exercise", title: "হাঁপানি", when: { cond: "asthma" }, src: [SRC.who],
     items: ["ধুলো, ধোঁয়া বা খুব ঠান্ডা বাতাসে তীব্র ব্যায়াম এড়ান", "শ্বাসকষ্ট শুরু হলে থামুন"] },
+  { id: "gut-ex", domain: "exercise", title: "পেটের সমস্যা (IBS/গ্যাস্ট্রিক ইত্যাদি)", when: { cond: "gut" }, src: [SRC.nhs],
+    items: ["খাওয়ার ঠিক পরে তীব্র ব্যায়াম এড়ান", "হাঁটা/স্ট্রেচিংয়ের মতো হালকা-মাঝারি ব্যায়াম বেছে নিন; পেটে চাপ পড়া ব্যায়ামে অস্বস্তি হলে থামুন"] },
   { id: "kidney-ex", domain: "exercise", title: "কিডনি রোগ", when: { flag: "kidney" }, src: [SRC.kdigo],
     items: ["তীব্র বা দীর্ঘ ব্যায়ামের আগে ডাক্তারের পরামর্শ নিন"] },
   { id: "pregnant-ex", domain: "exercise", title: "গর্ভাবস্থা", when: { flag: "pregnant" }, src: [SRC.acog, SRC.who],
@@ -75,4 +84,15 @@ function matches(when, { age, flags, condKeys }) {
 export function avoidFor(domain, { age = null, flags = {}, condKeys = [] } = {}) {
   return RULES.filter((r) => r.domain === domain && matches(r.when, { age, flags, condKeys }))
     .map((r) => ({ id: r.id, title: r.title, items: r.items, src: r.src.join(" / ") }));
+}
+
+// ধাপ ৬ — খাবারের সতর্কতা-ট্যাগ (foodCatalog TAGS) রোগ/বয়স মিললে "লাল" (কারণসহ); না মিললে ট্যাগ হলুদই থাকে।
+// ctx: { age, flags, condKeys }। কিছু ব্লক করে না — শুধু রঙ/কারণ।
+export function tagAvoidReason(tag, ctx = {}) {
+  const { age = null, flags = {}, condKeys = [] } = ctx;
+  if (tag === "gut" && condKeys.includes("gut")) return "পেটের সমস্যায় (IBS/গ্যাস্ট্রিক) এড়িয়ে চলুন";
+  if (tag === "sugar" && flags.diabetes) return "ডায়াবেটিসে চিনি-জাতীয় খাবার এড়িয়ে চলুন";
+  if (tag === "choke" && typeof age === "number" && age <= 4) return "৫ বছরের কম বয়সে গলায় আটকাতে পারে";
+  if (tag === "caffeine" && typeof age === "number" && age <= 12) return "শিশুদের জন্য ক্যাফেইন এড়িয়ে চলুন";
+  return null;
 }

@@ -170,7 +170,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           React.createElement(Tick, { on: eaten.includes(s.id), onClick: () => toggle(s.id), busy, label: s.label + " খেয়েছি" })));
     }),
     sheetSlot && React.createElement(MealEditSheet, {
-      key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags,
+      key: sheet, slot: sheetSlot, planTotal: plan.total, target: calc.calorieTarget, sex: member && member.sex, allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys },
       isCustom: plan.custom.includes(sheet), extras: extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sheet), extraCount: extras.length, recentFoods: recentExtraFoods(info.recent), activeMeds: info.activeMeds, busy, err,
       onFoodSave: saveFood,
       onSavePerm: (draft) => savePrefs(setSlotPref(goal.planPrefs, sheet, draft)),

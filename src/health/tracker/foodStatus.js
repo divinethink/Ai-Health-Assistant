@@ -4,6 +4,7 @@
 // আইকন+লেবেল সবসময় (রঙ-নির্ভর নয়)।
 
 import { TAGS } from "./foodCatalog.js";
+import { tagAvoidReason } from "./avoidRules.js";
 
 export const STATUS_META = {
   green: { icon: "✓", label: "ঠিক আছে" },
@@ -11,13 +12,14 @@ export const STATUS_META = {
   red: { icon: "✕", label: "এড়িয়ে চলুন" },
 };
 
-// f: ক্যাটালগ খাবার {al, tg}; opts: { allergyTags: [], avoidMap: { key: "কারণ" } }
+// f: ক্যাটালগ খাবার {al, tg}; opts: { allergyTags: [], avoidMap: { key: "কারণ" }, ctx: { age, flags, condKeys } }
 export function foodStatus(key, f, opts = {}) {
   const tags = new Set(opts.allergyTags || []);
   const avoid = (opts.avoidMap && opts.avoidMap[key]) || null;
   const red = [];
   if (f && f.al && tags.has(f.al)) red.push("প্রোফাইলের এলার্জির সাথে মিলতে পারে");
   if (avoid) red.push(String(avoid));
+  ((f && f.tg) || []).filter((t) => TAGS[t]).forEach((t) => { const r = tagAvoidReason(t, opts.ctx || {}); if (r && !red.includes(r)) red.push(r); });
   if (red.length) return { level: "red", ...STATUS_META.red, reasons: red };
   const yellow = ((f && f.tg) || []).filter((t) => TAGS[t]).map((t) => TAGS[t][1]);
   if (yellow.length) return { level: "yellow", ...STATUS_META.yellow, reasons: yellow };
