@@ -1,0 +1,51 @@
+name: populate-diet-rules
+
+# খাদ্য নির্দেশিকা তালিকা (dietGuidanceRules) Firestore-এ আপডেট — পিসি ছাড়াই।
+# Actions → populate-diet-rules → Run workflow।
+#  ১) প্রথমে mode = dry-run (কিছু লেখে না, শুধু preview) — লগ দেখে নিন।
+#  ২) ঠিক থাকলে mode = sync-lists এবং confirm ঘরে SYNC লিখুন।
+# sync-lists: শুধু avoidFoods/includeFoods/habitTips বদলায়; status (verified) অক্ষত থাকে।
+# Secret: FIREBASE_SERVICE_ACCOUNT (deploy-rules-এর একই secret)।
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry-run (preview) অথবা sync-lists (আসল আপডেট)'
+        type: choice
+        required: true
+        default: dry-run
+        options:
+          - dry-run
+          - sync-lists
+      confirm:
+        description: 'sync-lists হলে SYNC লিখুন (dry-run-এ ফাঁকা রাখুন)'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  populate:
+    if: ${{ inputs.mode == 'dry-run' || inputs.confirm == 'SYNC' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      - name: Service account
+        run: printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Dry-run (কিছু লেখা হবে না)
+        if: ${{ inputs.mode == 'dry-run' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateDietGuidanceRules.js --sync-lists
+      - name: Sync lists (আসল write)
+        if: ${{ inputs.mode == 'sync-lists' && inputs.confirm == 'SYNC' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateDietGuidanceRules.js --confirm --sync-lists
