@@ -7,7 +7,7 @@
 // শুধু presentation — কোনো schema/rules বদল নেই।
 
 import { t } from "../../shared/i18n.js";
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, Skeleton } from "../../shared/ui.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
 import { groupObservations, obsTrend } from "./recordGrouping.js";
@@ -67,7 +67,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
   if (err) return ErrorBox(err);
-  if (!records) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (!records) return Skeleton(3, 64);
   if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো record নেই।");
 
   const toggle = (k) => { setOpenKey((cur) => (cur === k ? null : k)); setConfirmId(null); };

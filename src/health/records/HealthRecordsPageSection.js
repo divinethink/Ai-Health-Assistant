@@ -40,6 +40,7 @@ import { VaccinationScheduler } from "../calendar/VaccinationScheduler.js";
 import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
+import { Skeleton } from "../../shared/ui.js";
 
 const { useState } = React;
 
@@ -88,7 +89,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
         }, t(tb.label))
       )),
     !selectedMemberId
-      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", padding: "12px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
+      ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),

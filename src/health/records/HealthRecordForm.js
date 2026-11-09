@@ -35,15 +35,17 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [physicianHospital, setPhysicianHospital] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [more, setMore] = useState(!!editingRecord); // "আরও যোগ করুন" ভাঁজ — নতুন রেকর্ডে বন্ধ, edit-এ খোলা
 
   // edit-mode শুরু হলে (বা edit-target বদলালে) existing record-এর ভ্যালু দিয়ে fields prefill
   useEffect(() => {
     if (!editingRecord) {
       // edit বাতিল/সম্পন্ন হয়ে create-mode-এ ফিরলে আগের edit-value থেকে যাওয়া ঠেকাতে reset
-      setResourceType("condition"); resetFields(); setErr(null);
+      setResourceType("condition"); resetFields(); setErr(null); setMore(false);
       return;
     }
     const r = editingRecord;
+    setMore(true);
     setResourceType(r.resourceType);
     setName(r.name || r.genericName || r.substance || "");
     setCategory(r.category || "A");
@@ -73,7 +75,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }, []);
 
   const changeResourceType = useCallback((v) => {
-    setResourceType(v); resetFields(); setErr(null);
+    setResourceType(v); resetFields(); setErr(null); setMore(false);
   }, [resetFields]);
 
   const submit = useCallback(async () => {
@@ -91,7 +93,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
         onCancelEdit && onCancelEdit();
       } else {
         await createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, fields);
-        resetFields();
+        resetFields(); setMore(false);
         onAdded();
       }
     } catch (e) {
@@ -103,22 +105,22 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     }
   }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName, physicianContact, physicianHospital, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
 
+  // typeFields = সবসময় দৃশ্যমান (ধরন + নাম/প্রয়োজনীয়); moreFields = "আরও যোগ করুন"-এর ভেতরে
   const typeFields = [];
+  const moreFields = [];
   if (resourceType === "condition") {
     const row = (cols) => ({ display: "grid", gridTemplateColumns: cols, gap: "8px" });
     const card = { border: "1px solid #D3E0D9", borderRadius: "12px", background: "#F6FAF7", padding: "0 10px 10px", minWidth: 0 };
-    // ১ম লাইন: অসুখের নাম + শুরুর তারিখ; ২য় লাইন: বিভাগ | অবস্থা (আলাদা কার্ডে)
-    typeFields.push(React.createElement("div", { style: row("minmax(0, 1.3fr) minmax(0, 1fr)") },
-      TextField("অসুখের নাম", name, setName, "যেমন: জ্বর"),
-      DateField(t("f.onset"), date, setDate)));
-    typeFields.push(React.createElement("div", { style: { ...row("minmax(0, 1fr) minmax(0, 1fr)"), marginTop: "4px" } },
+    typeFields.push(TextField("অসুখের নাম", name, setName, "যেমন: জ্বর"));
+    moreFields.push(DateField(t("f.onset"), date, setDate));
+    moreFields.push(React.createElement("div", { style: { ...row("minmax(0, 1fr) minmax(0, 1fr)"), marginTop: "4px" } },
       React.createElement("div", { style: card }, SelectField(t("f.category"), category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]])),
       React.createElement("div", { style: card }, SelectField(t("f.status"), status, setStatus, [["active", t("st.active")], ["resolved", t("st.resolved")], ["chronic", t("st.chronic")]]))));
-    typeFields.push(TextField(t("f.notes"), conditionNotes, setConditionNotes, "যেমন: নিয়ন্ত্রণে আছে, নিয়মিত মেডিসিন চলছে"));
+    moreFields.push(TextField(t("f.notes"), conditionNotes, setConditionNotes, "যেমন: নিয়ন্ত্রণে আছে, নিয়মিত মেডিসিন চলছে"));
     // roadmap §12.4 Category B bright-line rule (dose-suggestion না) actual data-এর
     // উপর নির্ভর করার জন্য এই checkbox দরকার — আগে RiskBasedTreatmentModes.js-এ
     // hardcode false ছিল (checklist §৭ known-gap), এখন এই field সেই gap পূরণ করে।
-    typeFields.push(React.createElement(
+    moreFields.push(React.createElement(
       "label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", margin: "6px 0", cursor: "pointer" } },
       React.createElement("input", {
         type: "checkbox", checked: chronicManagement,
@@ -126,27 +128,31 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       }),
       t("f.chronic")
     ));
-    typeFields.push(React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "8px 0 2px" } }, t("f.physician")));
-    typeFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
-    typeFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));
-    typeFields.push(TextField("হাসপাতাল/চেম্বার", physicianHospital, setPhysicianHospital, "যেমন: হাসপাতালের নাম"));
+    moreFields.push(React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "8px 0 2px" } }, t("f.physician")));
+    moreFields.push(TextField("ডাক্তারের নাম", physicianName, setPhysicianName, "যেমন: ডা. রহিম"));
+    moreFields.push(TextField("চেম্বার যোগাযোগ", physicianContact, setPhysicianContact, "যেমন: ফোন/চেম্বার নম্বর"));
+    moreFields.push(TextField("হাসপাতাল/চেম্বার", physicianHospital, setPhysicianHospital, "যেমন: হাসপাতালের নাম"));
   } else if (resourceType === "observation") {
     typeFields.push(TextField(t("f.obsType"), obsType, setObsType, "যেমন: Blood Sugar"));
     typeFields.push(TextField(t("f.value"), value, setValue, "যেমন: 110"));
-    typeFields.push(TextField(t("f.unit"), unit, setUnit, "যেমন: mg/dL"));
-    typeFields.push(DateField(t("f.date"), date, setDate));
+    moreFields.push(TextField(t("f.unit"), unit, setUnit, "যেমন: mg/dL"));
+    moreFields.push(DateField(t("f.date"), date, setDate));
   } else if (resourceType === "medicationStatement") {
     typeFields.push(TextField(t("f.medName"), name, setName, "যেমন: Paracetamol"));
-    typeFields.push(TextField(t("f.freq"), frequency, setFrequency, "যেমন: দিনে ৩ বার, খাবারের পর"));
-    typeFields.push(TextField(t("f.days"), durationDays, setDurationDays, "যেমন: 5"));
-    typeFields.push(SelectField(t("f.tier"), tier, setTier, [["otc-self-care", t("tier.otc-self-care")], ["requires-consult", t("tier.requires-consult")]]));
-    typeFields.push(SelectField(t("f.status"), status, setStatus, [["active", t("st.active")], ["stopped", t("st.stopped")]]));
-    typeFields.push(DateField(t("f.startDate"), date, setDate));
+    moreFields.push(TextField(t("f.freq"), frequency, setFrequency, "যেমন: দিনে ৩ বার, খাবারের পর"));
+    moreFields.push(TextField(t("f.days"), durationDays, setDurationDays, "যেমন: 5"));
+    moreFields.push(SelectField(t("f.tier"), tier, setTier, [["otc-self-care", t("tier.otc-self-care")], ["requires-consult", t("tier.requires-consult")]]));
+    moreFields.push(SelectField(t("f.status"), status, setStatus, [["active", t("st.active")], ["stopped", t("st.stopped")]]));
+    moreFields.push(DateField(t("f.startDate"), date, setDate));
   } else if (resourceType === "allergy") {
     typeFields.push(TextField(t("f.substance"), name, setName, "যেমন: Penicillin"));
-    typeFields.push(TextField(t("f.reaction"), reaction, setReaction, "যেমন: র‍্যাশ"));
-    typeFields.push(SelectField(t("f.severity"), severity, setSeverity, [["mild", t("sev.mild")], ["moderate", t("sev.moderate")], ["severe", t("sev.severe")]]));
+    moreFields.push(TextField(t("f.reaction"), reaction, setReaction, "যেমন: র‍্যাশ"));
+    moreFields.push(SelectField(t("f.severity"), severity, setSeverity, [["mild", t("sev.mild")], ["moderate", t("sev.moderate")], ["severe", t("sev.severe")]]));
   }
+  const moreToggle = moreFields.length ? React.createElement("button", {
+    key: "more", onClick: () => setMore((m) => !m), "aria-expanded": more,
+    style: { width: "100%", minHeight: "44px", margin: "8px 0 4px", borderRadius: "12px", border: "1px dashed #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+  }, (more ? "কম দেখান ▲" : "আরও যোগ করুন ▼")) : null;
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
@@ -161,6 +167,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
           ["allergy", t("type.allergy")], // ঔষধ যোগ হয় "ঔষধ ও রিমাইন্ডার" সাব-পিল থেকে (ধাপ ৩)
         ]),
     ...typeFields,
+    moreToggle,
+    ...(more ? moreFields : []),
     err && ErrorBox(err),
     PrimaryButton(isEdit ? t("btn.update") : t("btn.save"), submit, busy),
     isEdit && SecondaryButton(t("btn.cancel"), onCancelEdit, busy)

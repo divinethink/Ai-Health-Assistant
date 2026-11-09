@@ -48,6 +48,15 @@ export function Card(children) {
   );
 }
 
+// লোডিং skeleton — "লোড হচ্ছে…" লেখার বদলে ধূসর শিমার-কার্ড (reduced-motion হলে অ্যানিমেশন নেই)
+const SKEL_CSS = "@keyframes hs-skel{0%{background-position:200% 0}100%{background-position:-200% 0}}.hs-skel{background:linear-gradient(90deg,#E4ECE7 25%,#F1F6F2 50%,#E4ECE7 75%);background-size:200% 100%;animation:hs-skel 1.4s linear infinite}@media (prefers-reduced-motion:reduce){.hs-skel{animation:none}}";
+export function Skeleton(rows, height) {
+  const n = rows || 3, h = (height || 56) + "px";
+  return React.createElement("div", { role: "status", "aria-busy": "true", "aria-label": "লোড হচ্ছে" },
+    React.createElement("style", null, SKEL_CSS),
+    Array.from({ length: n }, (_, i) => React.createElement("div", { key: "sk" + i, className: "hs-skel", style: { height: h, borderRadius: "14px", marginBottom: "8px", width: i === n - 1 && n > 1 ? "70%" : "100%" } })));
+}
+
 // dropdown ও date-picker — Health Record ফর্মে বারবার লাগে।
 export function SelectField(label, value, onChange, options) {
   return React.createElement(
