@@ -104,18 +104,18 @@ test("রিমাইন্ডার-তালিকা", () => {
   assert.equal(k.find((r) => r.id === "exercise"), undefined);
   assert.equal(k.find((r) => r.id === "meal_lunch").body, "");
 });
-test("রিমাইন্ডার-ctx: গেট বন্ধ হলে মিল-প্ল্যান নেই, কিডনি-ফ্ল্যাগ ধরে", () => {
+test("রিমাইন্ডার-ctx: গেট এখন শুধু সতর্কতা — মিল-প্ল্যান থাকে, কিডনি-ফ্ল্যাগ ধরে", () => {
   const goal = { goalType: "fit", calc: { calorieTarget: 1650 } };
   const adult = { dob: "1995-01-01" };
   const c1 = buildReminderContext({ goal, records: [], member: adult, now: new Date(2026, 10, 8) });
   assert.ok(c1.mealPlan && c1.exerciseToday && c1.sleepRange[0] === 7);
   const c2 = buildReminderContext({ goal, records: [{ resourceType: "condition", name: "কিডনি রোগ", status: "active" }], member: adult, now: new Date(2026, 10, 8) });
-  assert.equal(c2.mealPlan, null); assert.equal(c2.kidney, true);
+  assert.ok(c2.mealPlan); assert.equal(c2.kidney, true);
   const c3 = buildReminderContext({ goal: null, records: [], member: null });
   assert.equal(c3.mealPlan, null); assert.equal(c3.sleepRange, null);
 });
 
-test("রিমাইন্ডার-ctx: planPrefs থাকলে কার্যকর প্ল্যান পড়ে; গেট বন্ধ হলে prefs উপেক্ষিত", () => {
+test("রিমাইন্ডার-ctx: planPrefs থাকলে কার্যকর প্ল্যান পড়ে; গেট-সতর্কতায়ও prefs চলে", () => {
   const adult = { dob: "1992-01-01" };
   const now = new Date(2026, 10, 8); // রবিবার → day-index ১
   const prefs = { v: 1, meal: { lunch: [{ food: "dal", qty: 1 }] }, exercise: { 1: [{ type: "yoga", min: 20 }] } };
@@ -126,6 +126,6 @@ test("রিমাইন্ডার-ctx: planPrefs থাকলে কার্
   const plain = buildReminderContext({ goal: { ...goal, planPrefs: undefined }, records: [], member: adult, now });
   assert.ok(plain.mealPlan.slots.find((s) => s.id === "lunch").items.length > 1);
   const blocked = buildReminderContext({ goal, records: [{ resourceType: "condition", name: "ডায়াবেটিস", status: "active" }], member: adult, now });
-  assert.equal(blocked.mealPlan, null);
-  assert.notDeepEqual(blocked.exerciseToday.map((i) => i.label), ["যোগব্যায়াম"]);
+  assert.ok(blocked.mealPlan);
+  assert.deepEqual(blocked.exerciseToday.map((i) => i.label), ["যোগব্যায়াম"]);
 });

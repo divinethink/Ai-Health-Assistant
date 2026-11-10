@@ -24,16 +24,18 @@ export function bmiOf(weightKg, heightCm) {
   return weightKg / Math.pow(heightCm / 100, 2);
 }
 
-// নিরাপত্তা-গেট: শিশু/কিশোর (<১৮), গর্ভবতী/দুগ্ধদানকারী, ৬৫+, ডায়াবেটিস, কিডনি রোগ
-// → কোনো ক্যালরি-টার্গেট দেওয়া হবে না; শুধু সাধারণ গাইড + ডাক্তারের পরামর্শ।
+// নিরাপত্তা-গেট — Approved Deviation (১০ নভেম্বর ২০২৬, owner): কিছুই বন্ধ নয়, শুধু ⚠ সতর্কতা।
+// শিশু/কিশোর (<১৮), গর্ভবতী/দুগ্ধদানকারী, ৬৫+, ডায়াবেটিস, কিডনি রোগে blocked:false, warn:true + reason।
+// একমাত্র blocked:true = বয়স অজানা (হিসাবের তথ্যই নেই — নিষেধ নয়, জন্মতারিখ দিলেই খুলবে)।
 export function safetyGate({ age, flags }) {
   const f = flags || {};
-  if (age === null || age === undefined) return { blocked: true, reason: "বয়স জানা নেই — প্রোফাইলে জন্মতারিখ দিন।" };
-  if (age < 18) return { blocked: true, reason: "শিশু/কিশোরদের জন্য অ্যাপ ক্যালরি কমানোর বা বাড়ানোর টার্গেট দেয় না।" };
-  if (f.pregnant) return { blocked: true, reason: "গর্ভাবস্থা/দুগ্ধদানকালে ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।" };
-  if (f.diabetes || f.kidney) return { blocked: true, reason: "ডায়াবেটিস/কিডনি রোগে খাদ্য ও ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।" };
-  if (age >= 65) return { blocked: true, reason: "৬৫+ বয়সে ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।" };
-  return { blocked: false, reason: null };
+  if (age === null || age === undefined) return { blocked: true, warn: false, reason: "বয়স জানা নেই — প্রোফাইলে জন্মতারিখ দিন।" };
+  const warn = (reason) => ({ blocked: false, warn: true, reason });
+  if (age < 18) return warn("⚠ শিশু/কিশোরদের ক্ষেত্রে ক্যালরি-টার্গেট শুধু আনুমানিক। ডাক্তারের পরামর্শ নিন।");
+  if (f.pregnant) return warn("⚠ গর্ভাবস্থা/দুগ্ধদানকালে ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।");
+  if (f.diabetes || f.kidney) return warn("⚠ ডায়াবেটিস/কিডনি রোগে খাদ্য ও ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।");
+  if (age >= 65) return warn("⚠ ৬৫+ বয়সে ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।");
+  return { blocked: false, warn: false, reason: null };
 }
 
 export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, targetWeightKg, weeks, flags }) {
@@ -47,7 +49,7 @@ export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, 
 
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === "male" ? 5 : -161);
   const tdee = bmr * ACTIVITY_FACTOR[activity];
-  const notes = [];
+  const notes = gate.warn ? [gate.reason] : [];
   let weeklyRateKg = 0;
   let target = tdee;
 
@@ -57,9 +59,9 @@ export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, 
     if (!tw || tw <= 0 || !wk || wk <= 0) return { error: "লক্ষ্য ওজন ও সময় (সপ্তাহ) দিন।" };
     if (goalType === "lose") {
       const bmiNow = bmiOf(weightKg, heightCm);
-      if (bmiNow < 18.5) return { blocked: true, reason: "আপনার ওজন ইতিমধ্যে কম। ওজন কমানোর টার্গেট দেওয়া হবে না।" };
       if (tw >= weightKg) return { error: "লক্ষ্য ওজন বর্তমান ওজনের চেয়ে কম হতে হবে।" };
-      if (bmiOf(tw, heightCm) < 18.5) return { error: "লক্ষ্য ওজন কম-ওজনের সীমায় পড়ে। একটু বেশি ওজন দিন।" };
+      if (bmiNow < 18.5) notes.push("⚠ আপনার ওজন ইতিমধ্যে কম (BMI ১৮.৫-এর নিচে)। ওজন কমানোর আগে ডাক্তারের পরামর্শ নিন।");
+      else if (bmiOf(tw, heightCm) < 18.5) notes.push("⚠ লক্ষ্য ওজন কম-ওজনের সীমায় পড়ে (BMI ১৮.৫-এর নিচে)। লক্ষ্য একটু বাড়ানোর কথা ভাবুন।");
       const cap = Math.min(MAX_LOSS_KG_WEEK, weightKg * 0.01);
       const wanted = (weightKg - tw) / wk;
       weeklyRateKg = Math.min(wanted, cap);
@@ -143,7 +145,7 @@ export function sanitizeFastDays(raw) {
 }
 export function fastModeGate({ age, flags }) {
   const g = safetyGate({ age, flags });
-  return g.blocked ? { blocked: false, warn: true, reason: FAST_WARN_REASON } : { blocked: false, warn: false, reason: null };
+  return g.blocked || g.warn ? { blocked: false, warn: true, reason: FAST_WARN_REASON } : { blocked: false, warn: false, reason: null };
 }
 // পড়ার পথ: গেট ব্লক হলে সংরক্ষিত মান থাকলেও [] (পরে ডায়াবেটিস/বয়স ইত্যাদি বদলালে আপনা-আপনি বন্ধ)
 export function activeFastDays(goal, { age, flags }) {

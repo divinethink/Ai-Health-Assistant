@@ -44,9 +44,10 @@ test("সারির বিন্যাস", () => {
   assert.equal(r["লগ-করা দিন"], "2/7");
   assert.equal(r["ওজন-পরিবর্তন"], "+1.2 kg (70 → 71.2)");
 });
-test("লক্ষ্য-ctx: ব্লকড (শিশু/ডায়াবেটিস) হলে ক্যালরি-টার্গেট নেই; কিডনি = পানি নেই", () => {
-  assert.equal(targetCtxFor({ age: 10, flags: {}, goal: { calc: { calorieTarget: 1800 } } }).calorieTarget, null);
-  assert.equal(targetCtxFor({ age: 30, flags: { diabetes: true }, goal: { calc: { calorieTarget: 1800 } } }).calorieTarget, null);
+test("লক্ষ্য-ctx: শিশু/ডায়াবেটিসে এখন শুধু সতর্কতা — ক্যালরি-টার্গেট থাকে; বয়স অজানা = নেই; কিডনি = পানি নেই", () => {
+  assert.equal(targetCtxFor({ age: 10, flags: {}, goal: { calc: { calorieTarget: 1800 } } }).calorieTarget, 1800);
+  assert.equal(targetCtxFor({ age: 30, flags: { diabetes: true }, goal: { calc: { calorieTarget: 1800 } } }).calorieTarget, 1800);
+  assert.equal(targetCtxFor({ age: null, flags: {}, goal: { calc: { calorieTarget: 1800 } } }).calorieTarget, null);
   assert.equal(targetCtxFor({ age: 30, flags: { kidney: true }, goal: null }).waterTarget, null);
   assert.equal(targetCtxFor({ age: 30, flags: {}, goal: null }).calorieTarget, null);
   assert.equal(targetCtxFor({ age: 10, flags: {}, goal: null }).exTarget, 60);

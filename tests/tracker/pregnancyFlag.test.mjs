@@ -21,6 +21,6 @@ test("effectivePregnant: রেকর্ড-সত্য, নইলে পুর
 });
 
 test("সেফটি-গেট: গর্ভবতী হলে ক্যালরি-টার্গেট বন্ধ", () => {
-  assert.equal(safetyGate({ age: 30, flags: { pregnant: effectivePregnant(null, [cond(PREGNANCY_CONDITION_NAME)]) } }).blocked, true);
-  assert.equal(safetyGate({ age: 30, flags: { pregnant: effectivePregnant(null, [cond(PREGNANCY_CONDITION_NAME, "resolved")]) } }).blocked, false);
+  assert.equal(safetyGate({ age: 30, flags: { pregnant: effectivePregnant(null, [cond(PREGNANCY_CONDITION_NAME)]) } }).warn, true);
+  assert.equal(safetyGate({ age: 30, flags: { pregnant: effectivePregnant(null, [cond(PREGNANCY_CONDITION_NAME, "resolved")]) } }).warn, false);
 });
