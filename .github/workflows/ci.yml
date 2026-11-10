@@ -26,10 +26,11 @@ jobs:
           node-version: 22
       # package-lock.json repo-তে থাকলে npm ci, না থাকলে npm install
       - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
-      # প্রথম রানে lint ব্লক করবে না (বাস্তব কোডে যাচাই হয়নি) — সবুজ হলে continue-on-error লাইনটি মুছুন
+      # lint ফেল করলে CI ফেল (আগে continue-on-error ছিল; এখন ০ error যাচাই হয়েছে)
       - run: npm run lint
-        continue-on-error: true
       - run: npm run build
+      # pure-logic test (হিসাব/পার্সিং/নিয়ম) — package.json বদলানো ছাড়াই
+      - run: node --test tests/tracker/*.test.mjs tests/shared/*.test.mjs tests/doctor/*.test.mjs
 
   # Firestore Rules emulator test। আলাদা job — ব্যর্থ হলে build/lint ফল ঢাকা পড়ে না।
   rules:
