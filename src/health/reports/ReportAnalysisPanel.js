@@ -28,6 +28,7 @@ import { parseAndValidateReportText } from "./reportParsing.js";
 import { ReportVerificationForm } from "./ReportVerificationForm.js";
 import { ManualReportEntryForm } from "./ManualReportEntryForm.js";
 import { LabAlertBox } from "./LabAlertBox.js";
+import { ReportNextSteps } from "../nextstep/NextStepCard.js";
 
 const { useState, useCallback, useRef, useEffect } = React;
 
@@ -177,6 +178,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
         })
       : null,
     savedCount > 0 ? SuccessBox(savedCount + "টা মান সংরক্ষণ করা হয়েছে।") : null,
-    savedAlerts.length > 0 ? React.createElement(LabAlertBox, { alerts: savedAlerts }) : null
+    savedAlerts.length > 0 ? React.createElement(LabAlertBox, { alerts: savedAlerts }) : null,
+    savedAlerts.length > 0 ? React.createElement(ReportNextSteps, { familyId, targetMemberId, callerMemberId, alerts: savedAlerts }) : null
   );
 }

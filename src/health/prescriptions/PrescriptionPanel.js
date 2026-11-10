@@ -12,6 +12,9 @@ import { assessOcr, QUALITY_MESSAGES } from "../reports/ocrQuality.js";
 import { parsePrescriptionText } from "./prescriptionParsing.js";
 import { loadPrescriptionContext } from "./prescriptionData.js";
 import { PrescriptionReviewForm } from "./PrescriptionReviewForm.js";
+import { PrescriptionNextSteps } from "../nextstep/NextStepCard.js";
+import { extractFollowUpDate } from "../nextstep/nextStepCalc.js";
+import { localISO } from "../../shared/dates.js";
 
 const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
@@ -21,10 +24,11 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
   const [stage, setStage] = useState("extracting"); // extracting | ocr | parsing | done | error
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
-  const [res, setRes] = useState(null); // { items, ctx, notes, ocrPercent, text }
+  const [res, setRes] = useState(null); // { items, ctx, notes, ocrPercent, text, followUp }
+  const [saved, setSaved] = useState(null); // সেভের পর { res, finals } — "এরপর কী?" কার্ডের জন্য
 
   const run = useCallback(async () => {
-    setErr(null); setRes(null); setStage("extracting"); setProgress(0);
+    setErr(null); setRes(null); setSaved(null); setStage("extracting"); setProgress(0);
     try {
       let text = "", ocr = null;
       if (file.type === "application/pdf") {
@@ -44,7 +48,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
           notes.push(["#FFF6E5", "#8A5A00", "✍️ এটা হাতে-লেখা হতে পারে — মেশিন ঠিকভাবে পড়তে পারে না। নিচের মান নিজে মিলিয়ে ঠিক করুন, বা স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট-এ হাতে লিখে যোগ করুন।"]);
         }
       }
-      setRes({ items, ctx, notes, ocrPercent: ocr ? Math.round(ocr.confidence) : null, text });
+      setRes({ items, ctx, notes, ocrPercent: ocr ? Math.round(ocr.confidence) : null, text, followUp: extractFollowUpDate(text, localISO()) });
       setStage("done");
     } catch (e) { setErr(e.message || String(e)); setStage("error"); }
   }, [file, familyId, targetMemberId]);
@@ -62,5 +66,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
       ? h("div", null,
           note("#FFF6E5", "#8A5A00", "কোনো ওষুধ শনাক্ত করা যায়নি। স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট-এ হাতে যোগ করুন।"),
           res.text.trim() && h("details", { style: { marginTop: "8px", fontSize: "13px", color: "#5F716C" } }, h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer" } }, "মেশিন যা পড়েছে দেখুন"), h("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" } }, res.text)))
-      : h(PrescriptionReviewForm, { familyId, targetMemberId, callerMemberId, items: res.items, allergies: res.ctx.allergies, records: res.ctx.records, ocrPercent: res.ocrPercent, onDone }));
+      : h("div", null,
+          h(PrescriptionReviewForm, { familyId, targetMemberId, callerMemberId, items: res.items, allergies: res.ctx.allergies, records: res.ctx.records, ocrPercent: res.ocrPercent, onDone, onSaved: setSaved }),
+          saved && h(PrescriptionNextSteps, { familyId, targetMemberId, callerMemberId, saved, followUp: res.followUp })));
 }

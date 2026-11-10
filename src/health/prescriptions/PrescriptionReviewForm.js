@@ -75,8 +75,9 @@ function card(r, idx, update) {
  * @param {Array<object>} props.allergies - এই সদস্যের allergy রেকর্ড
  * @param {Array<object>} props.records - এই সদস্যের সব রেকর্ড (ডুপ্লিকেট-চেকের জন্য)
  * @param {number|null} [props.ocrPercent]
+ * @param {(s: {res: object, finals: Array<object>}) => void} [props.onSaved] - সেভের পর (প্রস্তাব-কার্ডের জন্য)
  */
-export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberId, items, allergies, records, ocrPercent, onDone }) {
+export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberId, items, allergies, records, ocrPercent, onDone, onSaved }) {
   const [rows, setRows] = useState(() => items.map((it) => rowFrom(it, allergies, records, localISO())));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -97,6 +98,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
       const res = await saveApprovedMedications(familyId, targetMemberId, callerMemberId, finals);
       setResult(res);
       onDone && onDone(res);
+      onSaved && onSaved({ res, finals }); // ধাপ ১০: "এরপর কী?" প্রস্তাবের জন্য
     } catch (e) {
       setErr(e.code === "permission-denied" ? "এই সদস্যের ওষুধ যোগ করার অনুমতি আপনার নেই।" : (e.message || String(e)));
     } finally { setBusy(false); }

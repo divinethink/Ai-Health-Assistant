@@ -19,6 +19,21 @@ export async function createCalendarEvent(familyId, callerMemberId, { memberId =
   return ref.id;
 }
 
+// ধাপ ১০ — নির্দিষ্ট doc-ID (idempotent): আগে থেকে থাকলে কিছু বদলায় না (status/সম্পাদনা অক্ষত), নতুন হলে তৈরি।
+// ফেরত: true = নতুন তৈরি, false = আগেই ছিল। rules অপরিবর্তিত (create-এ doc-ID বাধা নেই)।
+export async function createCalendarEventOnce(familyId, callerMemberId, eventId, { memberId = null, title, eventType, date, time = null, notes = "", status = "upcoming", doseId = null }) {
+  const ref = eventsCol(familyId).doc(eventId);
+  const snap = await ref.get();
+  if (snap.exists) return false;
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  await ref.set({
+    memberId, title, eventType, date, time, notes, status, doseId,
+    lastEditedByMemberId: callerMemberId,
+    createdAt: now, updatedAt: now,
+  });
+  return true;
+}
+
 // শুধু equality-filter না (memberId==null-ও থাকতে পারে) — পুরো family-এর event
 // সংখ্যা ছোট থাকবে ধরে নিয়ে client-side sort (§3.4.5-এর মতোই composite-index এড়ানো)।
 export async function listCalendarEvents(familyId) {
