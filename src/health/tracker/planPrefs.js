@@ -162,6 +162,28 @@ export function sanitizeExerciseLog(raw) {
   }).filter(Boolean);
 }
 
+// গত `days` দিনের ব্যায়াম-লগ থেকে ১-ট্যাপ চিপ: ধরন অনুযায়ী এক (সবচেয়ে বেশি ব্যবহৃত, সমান হলে নতুন আগে);
+// মিনিট = ওই ধরনের সবচেয়ে সাম্প্রতিক এন্ট্রির মান। pure; নতুন read/schema নেই (বিদ্যমান ৩০-দিনের ডক)।
+export function recentExerciseEntries(dailyDocs, { now = new Date(), days = 14, limit = 5 } = {}) {
+  const p2 = (n) => String(n).padStart(2, "0");
+  const dates = new Set(Array.from({ length: days }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+  }));
+  const seen = new Map();
+  (Array.isArray(dailyDocs) ? dailyDocs : []).forEach((doc) => {
+    if (!isObj(doc) || !dates.has(doc.date)) return;
+    sanitizeExerciseLog(doc.exerciseLog).forEach((x) => {
+      const cur = seen.get(x.type);
+      if (!cur) seen.set(x.type, { type: x.type, min: x.min, count: 1, last: doc.date });
+      else { cur.count++; if (doc.date >= cur.last) { cur.last = doc.date; cur.min = x.min; } }
+    });
+  });
+  return [...seen.values()]
+    .sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || a.type.localeCompare(b.type))
+    .slice(0, Math.max(0, limit)).map(({ type, min }) => ({ type, min }));
+}
+
 // ---------- বিকল্প তালিকা (UI-র জন্য) ----------
 // সব খাবার থাকে; এলার্জির ট্যাগ-মেলা খাবারে allergy:true (শুধু সতর্কতা, ব্লক নয়)।
 export function mealOptions(allergyTags) {

@@ -5,7 +5,7 @@
 import { nutritionOf } from "./foodNutrition.js";
 import { extraMeasuresFor } from "./foodMeasures.js";
 import { bnNum } from "../../shared/dates.js";
-import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods } from "./planPrefs.js";
+import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods, checkExtraFood } from "./planPrefs.js";
 import { FOODS, MEAL_SLOTS, foodK, hasFoodOverride } from "./mealPlanData.js";
 
 export const MIN_GRAMS = 1;
@@ -167,4 +167,29 @@ export function entryAmountText(e) {
   // পুরনো/ইউনিট-মোড এন্ট্রিতেও গ্রাম দেখানো: ইউনিটের নামে মাপ মিললে (এবং নিজের-মান override না থাকলে) আনুমানিক গ্রাম।
   const m = hasFoodOverride(e.key) ? null : measuresOf(e.key).find((x) => x.label === u);
   return bnNum(e.qty) + " " + u + (m ? " ≈ " + bnNum(Math.round(m.g * e.qty * 10) / 10) + " গ্রাম" : "");
+}
+
+// "নিজে যোগ করুন" (খাবার ডেটায় নেই): নাম + কিলোক্যালরি (বাধ্যতামূলক), ম্যাক্রো/গ্রাম ঐচ্ছিক।
+// ম্যাক্রোর যেকোনো একটি দিলে ফাঁকা ঘর ০ ধরা হয় (যোগফলে ধরার জন্য); সব ফাঁকা হলে ম্যাক্রো থাকে না।
+// ফল: { entry } অথবা { error } — entry sanitizeExtraFoods-সঙ্গত (নতুন schema/ফিল্ড নেই)।
+export function buildOwnFoodEntry(slot, f, currentCount) {
+  const name = String((f && f.name) || "").replace(/\s+/g, " ").trim();
+  const err = checkExtraFood(name, f && f.kcal, currentCount);
+  if (err) return { error: err };
+  const raw = { name, kcal: Number(f.kcal), slot };
+  const filled = ["p", "c", "f", "fib"].filter((k) => f[k] !== undefined && f[k] !== null && String(f[k]).trim() !== "");
+  if (filled.length) {
+    for (const k of ["p", "c", "f", "fib"]) {
+      const v = filled.includes(k) ? Number(f[k]) : 0;
+      if (!Number.isFinite(v) || v < 0 || v > MAX_MACRO) return { error: "ম্যাক্রো ০–" + bnNum(MAX_MACRO) + " গ্রামের মধ্যে দিন।" };
+      raw[k] = v;
+    }
+  }
+  if (f.grams !== undefined && String(f.grams).trim() !== "") {
+    const g = validGrams(f.grams);
+    if (g === null) return { error: "গ্রাম " + bnNum(MIN_GRAMS) + "–" + bnNum(MAX_GRAMS) + "-এর মধ্যে দিন।" };
+    raw.grams = g;
+  }
+  const out = sanitizeExtraFoods([raw])[0];
+  return out ? { entry: out } : { error: "খাবারের তথ্য সঠিক নয়।" };
 }

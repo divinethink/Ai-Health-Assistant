@@ -9,7 +9,7 @@ import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, wa
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
-import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, EXERCISE_TYPES } from "./planPrefs.js";
+import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
 import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
@@ -182,7 +182,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       })),
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
-      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
+      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং
@@ -212,7 +212,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
 
-    inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", initialType: "walk", entries: exLog, busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
+    inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", initialType: "walk", entries: exLog, recent: recentExerciseEntries(info.recent), busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
     (inKind === "sleep" || inKind === "steps" || inKind === "weight") && React.createElement(DailyInputSheet, {
       key: inKind, kind: inKind, daily, latestWeight: info.latestWeight, stepsTarget: stTarget, busy, err: inErr,
       onSave: (fields) => writeIn(fields, true), onClose: closeIn,

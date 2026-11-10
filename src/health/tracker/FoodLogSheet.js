@@ -10,7 +10,7 @@ import { medFoodNotes } from "./medFoodNotes.js";
 import { foodStatus, STATUS_COLORS } from "./foodStatus.js";
 import { MAX_QTY, MAX_LIST } from "./planPrefs.js";
 import { nutritionOf } from "./foodNutrition.js";
-import { per100Of, measuresOf, buildFoodEntry, slotForNow, fmtMacro, entryAmountText, MAX_MEASURE_QTY } from "./foodCalc.js";
+import { per100Of, measuresOf, buildFoodEntry, buildOwnFoodEntry, slotForNow, fmtMacro, entryAmountText, MAX_MEASURE_QTY } from "./foodCalc.js";
 import { Sheet, FoodPicker, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets.js";
 
 const { useState } = React;
@@ -28,6 +28,8 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
   const [qty, setQty] = useState(1);
   const [gramsText, setGramsText] = useState("");
   const [notice, setNotice] = useState(null);
+  const [own, setOwn] = useState(null); // null = বন্ধ; অবজেক্ট = "নিজে যোগ করুন" ফর্ম
+  const [ownErr, setOwnErr] = useState(null);
   const slotLabel = (MEAL_SLOTS.find((s) => s.id === slot) || {}).label;
   const full = count >= MAX_LIST;
   const budget = slotBudgets && slotBudgets[slot];
@@ -51,6 +53,34 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
     if (ok) setNotice("✓ " + e.name + " যোগ হয়েছে (" + slotLabel + ")");
   };
 
+  // ---------- নিজে যোগ করুন (খাবার ডেটায় না পেলে) ----------
+  if (!key && own) {
+    const setF = (k) => (e) => setOwn({ ...own, [k]: e.target.value });
+    const field = (label, k, ph, mode) => React.createElement("div", { style: { flex: 1, minWidth: "40%" } },
+      React.createElement("label", { style: { display: "block", fontSize: "13px", color: MUTED, margin: "8px 0 4px" } }, label),
+      React.createElement("input", { type: mode === "text" ? "text" : "number", inputMode: mode === "text" ? "text" : "decimal", min: 0, step: "any", value: own[k], onChange: setF(k), placeholder: ph, "aria-label": label, style: INPUT }));
+    const saveOwn = async () => {
+      const r = buildOwnFoodEntry(slot, own, count);
+      if (r.error) { setOwnErr(r.error); return; }
+      setOwnErr(null);
+      const ok = await onAdd(r.entry);
+      if (ok) { setNotice("✓ " + r.entry.name + " যোগ হয়েছে (" + slotLabel + ") — পরে ‘সাম্প্রতিক’-এ ১ ট্যাপে পাবেন"); setOwn(null); }
+    };
+    return React.createElement(Sheet, { title: "নিজে যোগ করুন", subtitle: slotLabel + " · আপনার দেওয়া আনুমানিক মান", onClose },
+      React.createElement("button", { onClick: () => { setOwn(null); setOwnErr(null); }, style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN, marginBottom: "6px" } }, "← খাবার খুঁজুন"),
+      field("খাবারের নাম (যেমন: মায়ের হাতের খিচুড়ি)", "name", "নাম", "text"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
+        field("কিলোক্যালরি (বাধ্যতামূলক)", "kcal", "০–৩০০০"), field("গ্রাম (ঐচ্ছিক)", "grams", "যেমন ২৫০")),
+      React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginTop: "12px" } }, "ম্যাক্রো, গ্রামে (ঐচ্ছিক)"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
+        field("প্রোটিন", "p", "০"), field("কার্ব", "c", "০"), field("ফ্যাট", "f", "০"), field("ফাইবার", "fib", "০")),
+      React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "8px", lineHeight: 1.5 } }, "ম্যাক্রোর কোনো একটি দিলে ফাঁকা ঘর ০ ধরা হবে। না জানলে খালি রাখুন — শুধু কিলোক্যালরি ধরা হবে।"),
+      (ownErr || err) && Msg(ownErr || err, "err"),
+      full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। আগের কোনোটি মুছুন।", "warn"),
+      React.createElement("div", { style: { position: "sticky", bottom: 0, display: "flex", gap: "8px", marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff" } },
+        primaryBtn("যোগ করুন (" + slotLabel + ")", saveOwn, busy, full)));
+  }
+
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
@@ -64,6 +94,9 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
           quick.map((e) => React.createElement("button", { key: e.name, onClick: () => quickAdd(e), disabled: busy || full, "aria-label": e.name + " " + slotLabel + "-এ যোগ করুন", style: { ...chip(false), opacity: busy || full ? 0.5 : 1 } },
             "＋ " + e.name + (entryAmountText(e) ? " (" + entryAmountText(e) + ")" : "") + " · " + bnNum(e.kcal))))),
       React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
+      React.createElement("button", { onClick: () => { setNotice(null); setOwn({ name: "", kcal: "", grams: "", p: "", c: "", f: "", fib: "" }); }, disabled: full,
+        style: { ...BTN, width: "100%", marginTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 14px", border: "none", background: "#E4F0E9", color: GREEN, opacity: full ? 0.5 : 1 } },
+        React.createElement("span", { style: { fontWeight: 500, color: MUTED } }, "খুঁজে পাচ্ছেন না?"), React.createElement("span", null, "নিজে যোগ করুন →")),
       React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
         React.createElement("button", { onClick: onClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));
   }

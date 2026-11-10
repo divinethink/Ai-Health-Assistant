@@ -200,3 +200,23 @@ test("exerciseOptions: ডিফল্টে আগের ৯টি; all=true �
   assert.equal(searchExercises("").length, eo(true).length);
   assert.deepEqual(sx([{ type: "lunges", min: 10 }, { type: "nope", min: 5 }]), [{ type: "lunges", min: 10 }]);
 });
+
+test("recentExerciseEntries: ধরন-ভিত্তিক, ১৪ দিন, সর্বশেষ মিনিট; buildOwnFoodEntry: যাচাই + ম্যাক্রো-নিয়ম", async () => {
+  const { recentExerciseEntries } = await import("../../src/health/tracker/planPrefs.js");
+  const { buildOwnFoodEntry } = await import("../../src/health/tracker/foodCalc.js");
+  const now = new Date(2026, 10, 10);
+  const docs = [
+    { date: "2026-11-09", exerciseLog: [{ type: "squat", min: 10 }, { type: "walk", min: 30 }] },
+    { date: "2026-11-08", exerciseLog: [{ type: "squat", min: 15 }] },
+    { date: "2026-09-01", exerciseLog: [{ type: "yoga", min: 20 }] },
+  ];
+  assert.deepEqual(recentExerciseEntries(docs, { now }), [{ type: "squat", min: 10 }, { type: "walk", min: 30 }]);
+  assert.deepEqual(recentExerciseEntries(null, { now }), []);
+  assert.ok(buildOwnFoodEntry("lunch", { name: " খিচুড়ি ", kcal: "320" }, 0).entry.p === undefined);
+  const m = buildOwnFoodEntry("lunch", { name: "খিচুড়ি", kcal: "320", p: "10", grams: "250" }, 0).entry;
+  assert.deepEqual([m.p, m.c, m.f, m.fib, m.grams], [10, 0, 0, 0, 250]);
+  assert.ok(buildOwnFoodEntry("lunch", { name: "", kcal: "5" }, 0).error);
+  assert.ok(buildOwnFoodEntry("lunch", { name: "x", kcal: "9999" }, 0).error);
+  assert.ok(buildOwnFoodEntry("lunch", { name: "x", kcal: "5", c: "900" }, 0).error);
+  assert.ok(buildOwnFoodEntry("lunch", { name: "x", kcal: "5" }, 20).error);
+});

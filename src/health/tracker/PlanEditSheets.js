@@ -92,6 +92,11 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout }) {
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
   return React.createElement("div", null,
+    Array.isArray(recent) && recent.length > 0 && React.createElement("div", { style: { marginBottom: "10px" } },
+      React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · ১ ট্যাপে যোগ"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+        recent.filter((r) => EXERCISE_TYPES[r.type]).map((r) => React.createElement("button", { key: r.type, onClick: () => onAdd(r.type, r.min), disabled: busy, "aria-label": EXERCISE_TYPES[r.type].label + " " + r.min + " মিনিট যোগ করুন",
+          style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid #9CC5B4", background: "#E4F0E9", color: GREEN, opacity: busy ? 0.5 : 1 } }, "＋ " + (EX_ICON[r.type] || "") + " " + EXERCISE_TYPES[r.type].label + " · " + bnNum(r.min) + " মি.")))),
     React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", style: INPUT }),
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
@@ -267,7 +272,7 @@ export function ExerciseEditSheet({ dayLabel, items, isCustom, busy, err, onSave
 
 // ---------- ব্যায়াম: "আজ আসলে কী করলেন?" ----------
 // props: initialType, entries (আজকের exerciseLog), busy, err, onAdd(type, min), onRemove(i), onClose
-export function ExerciseLogSheet({ initialType, entries, busy, err, onAdd, onRemove, onClose }) {
+export function ExerciseLogSheet({ initialType, entries, recent, busy, err, onAdd, onRemove, onClose }) {
   const [type, setType] = useState(initialType || "other");
   const [min, setMin] = useState(30);
   const [q, setQ] = useState("");
