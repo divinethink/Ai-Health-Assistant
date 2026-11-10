@@ -8,6 +8,10 @@ import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
+import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
+import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods } from "./planPrefs.js";
+import { entryAmountText, fmtMacro } from "./foodCalc.js";
+import { FoodLogSheet } from "./FoodLogSheet.js";
 
 const { useState } = React;
 
@@ -53,6 +57,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
   const week = weekSummary(recent, weekDatesISO(), today, ctx);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [foodOpen, setFoodOpen] = useState(false);
+  const [foodErr, setFoodErr] = useState(null);
   const fmtH = (m) => bnNum(Math.floor(m / 60)) + " ঘ. " + bnNum(m % 60) + " মি.";
 
   // পানি: আজকের লোড-করা মান থেকে absolute হিসাব → set; রিফ্রেশ শেষ না হওয়া পর্যন্ত বাটন বন্ধ (double-tap নিরাপদ)।
@@ -63,6 +69,20 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     catch (x) { setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
     finally { setBusy(false); }
   };
+
+  // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লক/উপবাস-দিনে নয়)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
+  const extras = sanitizeExtraFoods(d.extraFoods);
+  const canLog = !onFast && !!calc;
+  const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
+  const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
+  const writeExtras = async (next) => {
+    if (busy || !plan) return false;
+    setFoodErr(null); setBusy(true);
+    try { await saveDaily(familyId, memberId, callerMemberId, today, { extraFoods: next, caloriesIn: caloriesForDay(plan, eatenIds, next) }, daily); await onSaved(); return true; }
+    catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
+    finally { setBusy(false); }
+  };
+  const openFood = () => { setFoodErr(null); setFoodOpen(true); };
 
   const glasses = d.waterGlasses || 0;
   const eaten = d.caloriesIn || 0;
@@ -83,7 +103,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
         streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক — আজ ভাঙবে না" : "🔥 স্ট্রিক আজ ভাঙবে না")),
 
     // ক্যালরি হিরো-কার্ড + স্ট্রিক
-    !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px" } },
+    !onFast && calc && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "খাবার যোগ করুন", onClick: openFood, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFood(); } },
+      style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", cursor: "pointer" } },
       React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 96, stroke: 11, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
         React.createElement("span", { style: { fontSize: "20px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
         React.createElement("span", { style: { fontSize: "11px", color: T.onDarkSoft } }, "কিলোক্যালরি")),
@@ -91,8 +112,36 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
         React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজকের টার্গেট"),
         React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.15 } }, bnNum(calc.calorieTarget)),
         React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]),
-        React.createElement("div", { style: { display: "inline-block", marginTop: "6px", padding: "4px 10px", borderRadius: "999px", background: "rgba(255,255,255,0.16)", fontSize: "13px", fontWeight: 600 } },
-          streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক" : "🔥 আজ থেকে স্ট্রিক শুরু করুন"))),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" } },
+          React.createElement("span", { style: { padding: "4px 10px", borderRadius: "999px", background: "rgba(255,255,255,0.16)", fontSize: "13px", fontWeight: 600 } },
+            streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক" : "🔥 আজ থেকে স্ট্রিক শুরু করুন"),
+          React.createElement("span", { "aria-hidden": "true", style: { padding: "4px 10px", borderRadius: "999px", background: T.amberSoft, color: "#4A3200", fontSize: "13px", fontWeight: 700 } }, "＋ খাবার")))),
+
+    // আজকের খাবার-লগ (নিজে যোগ করা; প্ল্যানের টিক আলাদা — লক্ষ্য ও প্ল্যান → মিল)
+    canLog && React.createElement("div", { style: CARD_STYLE },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
+        React.createElement("div", null,
+          React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "🍽 আজকের খাবার-লগ"),
+          React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, "নিজে যোগ করা · আজ মোট " + bnNum(eaten) + " কিলোক্যালরি (প্ল্যানের টিকসহ)")),
+        React.createElement("button", { onClick: openFood, style: { minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "none", background: T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ যোগ")),
+      foodErr && !foodOpen && ErrorBox(foodErr),
+      extras.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "8px" } }, "এখনও নিজে কিছু যোগ করা হয়নি। যা খেলেন, ‘＋ যোগ’ চেপে লিখে রাখুন।"),
+      MEAL_SLOTS.map((s) => {
+        const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
+        if (!mine.length) return null;
+        return React.createElement("div", { key: s.id, style: { marginTop: "10px" } },
+          React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink } }, s.label + " · " + bnNum(mine.reduce((a, x) => a + x.kcal, 0)) + " কিলোক্যালরি"),
+          mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border } },
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+              React.createElement("div", { style: { fontSize: "14px", color: T.ink } }, x.name),
+              React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, [entryAmountText(x), x.p !== undefined ? "প্রো " + fmtMacro(x.p) + " · কার্ব " + fmtMacro(x.c) + " · ফ্যাট " + fmtMacro(x.f) : ""].filter(Boolean).join(" · "))),
+            React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, bnNum(x.kcal)),
+            React.createElement("button", { onClick: () => writeExtras(extras.filter((_, i) => i !== x.idx)), disabled: busy, "aria-label": x.name + " মুছুন", style: { minWidth: "44px", minHeight: "44px", borderRadius: "12px", border: "none", background: "#FDECEA", color: "#A32018", fontSize: "16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 } }, "✕"))));
+      })),
+    foodOpen && canLog && React.createElement(FoodLogSheet, {
+      allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      count: extras.length, busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
+    }),
 
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },

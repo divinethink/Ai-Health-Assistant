@@ -23,13 +23,13 @@ export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋�
 
 const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
-const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
+export const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
 const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "11px", fontWeight: 700 };
 const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#B3261E", border: "1px solid #B3261E", color: "#fff", fontSize: "11px", fontWeight: 700 };
 const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "11px", fontWeight: 700 };
-const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
+export const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
-function Sheet({ title, subtitle, onClose, children }) {
+export function Sheet({ title, subtitle, onClose, children }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -56,7 +56,7 @@ function Sheet({ title, subtitle, onClose, children }) {
       children));
 }
 
-const Msg = (txt, tone) => React.createElement("div", {
+export const Msg = (txt, tone) => React.createElement("div", {
   role: tone === "err" ? "alert" : undefined,
   style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", fontSize: "13px", lineHeight: 1.5,
     background: tone === "err" ? "#FDECEA" : "#FFF6DD", border: "1px solid " + (tone === "err" ? "#E5A29A" : "#E8D08A"), color: tone === "err" ? "#7A1F14" : "#7A5B00" },
@@ -69,7 +69,7 @@ function Stepper(text, onDec, onInc, decDisabled, incDisabled, what) {
     React.createElement("button", { onClick: onInc, disabled: incDisabled, "aria-label": what + " বাড়ান", style: { ...BTN, border: "none", background: "#E4ECE7", color: GREEN, opacity: incDisabled ? 0.4 : 1 } }, "+"));
 }
 
-const primaryBtn = (label, onClick, busy, disabled) => React.createElement("button", {
+export const primaryBtn = (label, onClick, busy, disabled) => React.createElement("button", {
   onClick, disabled: busy || disabled,
   style: { ...BTN, flex: 1, border: "none", background: busy || disabled ? "#8FAFA9" : GREEN, color: "#fff", cursor: busy || disabled ? "default" : "pointer" },
 }, busy ? "অপেক্ষা করুন..." : label);
@@ -80,7 +80,7 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
-function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit }) {
+export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });

@@ -102,3 +102,53 @@ test("মোট ক্যালরি সঙ্গতি: নতুন ফিল
   assert.equal(caloriesForDay({ slots: [] }, [], list), s.kcal + 30);
   assert.equal(sumNutrition(list).kcal, extraFoodsKcal(list));
 });
+
+// ---------- ধাপ ২ ----------
+import { buildFoodEntry, slotForNow, entryAmountText } from "../../src/health/tracker/foodCalc.js";
+import { setFoodOverrides } from "../../src/health/tracker/mealPlanData.js";
+
+test("slotForNow: সময় → ডিফল্ট বেলা", () => {
+  const at = (h, m = 0) => slotForNow(new Date(2026, 10, 10, h, m));
+  assert.equal(at(7), "breakfast"); assert.equal(at(10), "snack1"); assert.equal(at(13), "lunch");
+  assert.equal(at(16), "snack2"); assert.equal(at(21), "dinner"); assert.equal(at(1), "breakfast");
+});
+
+test("buildFoodEntry: মাপ-মোড → sanitize-সঙ্গত এন্ট্রি; sanitize-এ অপরিবর্তিত", () => {
+  const e = buildFoodEntry("dal", "lunch", { measureId: "bowl", qty: 1.5 });
+  assert.equal(e.grams, 240); assert.equal(e.measure, "bowl"); assert.equal(e.qty, 1.5); assert.equal(e.slot, "lunch");
+  assert.deepEqual(sanitizeExtraFoods([e]), [e]);
+  assert.equal(e.kcal, scaleNutrition("dal", 240).kcal);
+});
+
+test("buildFoodEntry: গ্রাম-মোড; অবৈধ → null", () => {
+  const e = buildFoodEntry("rice", "dinner", { measureId: "g", grams: "150" });
+  assert.equal(e.grams, 150); assert.equal("measure" in e, false);
+  assert.deepEqual(sanitizeExtraFoods([e]), [e]);
+  for (const g of ["", "0", "-3", "abc", "2001"]) assert.equal(buildFoodEntry("rice", "dinner", { measureId: "g", grams: g }), null, g);
+  assert.equal(buildFoodEntry("rice", "bogus", { measureId: "g", grams: 100 }), null);
+  assert.equal(buildFoodEntry("nope", "lunch", { measureId: "g", grams: 100 }), null);
+  assert.equal(buildFoodEntry("rice", "lunch", { measureId: "nomeasure", qty: 1 }), null);
+  assert.equal(buildFoodEntry("rice", "lunch", { measureId: "cup", qty: 0 }), null);
+});
+
+test("buildFoodEntry: সীমা — kcal>৩০০০ বা ম্যাক্রো>৫০০ হলে null (sanitize-এ নিঃশব্দে হারাত)", () => {
+  assert.equal(buildFoodEntry("badam", "snack1", { measureId: "g", grams: 2000 }), null);
+  assert.equal(buildFoodEntry("rice", "lunch", { measureId: "g", grams: 2000 }), null); // কার্ব ৫৬৪ গ্রাম
+  assert.ok(buildFoodEntry("rice", "lunch", { measureId: "g", grams: 1500 }));
+});
+
+test("buildFoodEntry: নিজের মান (override) থাকলে ইউনিট-মোড, ম্যাক্রো ছাড়া", () => {
+  setFoodOverrides({ rice: { k: 300 } });
+  try {
+    const e = buildFoodEntry("rice", "lunch", { qty: 2 });
+    assert.deepEqual(e, { name: "ভাত", kcal: 600, slot: "lunch", key: "rice", qty: 2 });
+    assert.deepEqual(sanitizeExtraFoods([e]), [e]);
+  } finally { setFoodOverrides({}); }
+});
+
+test("entryAmountText", () => {
+  assert.equal(entryAmountText(buildFoodEntry("dal", "lunch", { measureId: "bowl", qty: 1 })), "১ বাটি ≈ ১৬০ গ্রাম");
+  assert.equal(entryAmountText(buildFoodEntry("rice", "lunch", { measureId: "g", grams: 150 })), "১৫০ গ্রাম");
+  assert.equal(entryAmountText({ name: "চা", kcal: 30, slot: "snack1" }), "");
+  assert.equal(entryAmountText(null), "");
+});
