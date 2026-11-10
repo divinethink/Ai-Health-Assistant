@@ -10,7 +10,7 @@ import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, EXERCISE_TYPES } from "./planPrefs.js";
-import { entryAmountText, fmtMacro, sumNutrition } from "./foodCalc.js";
+import { entryAmountText, fmtMacro, sumNutrition, slotBudgets } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
@@ -181,7 +181,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       })),
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
-      count: extras.length, busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
+      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং

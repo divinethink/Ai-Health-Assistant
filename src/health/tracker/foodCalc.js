@@ -85,6 +85,19 @@ export function slotForNow(now = new Date()) {
   return "dinner";
 }
 
+// বেলা-ভিত্তিক ক্যালরি (শুধু তথ্য, ব্লক নয়): planned = কার্যকর প্ল্যানের বেলা-ক্যালরি;
+// eaten = ওই বেলার নিজে-যোগ-করা খাবার + (টিক থাকলে) প্ল্যানের বেলা — caloriesForDay-এর একই সূত্র।
+export function slotBudgets(plan, eatenIds, extras) {
+  const ticked = new Set(Array.isArray(eatenIds) ? eatenIds : []);
+  const list = Array.isArray(extras) ? extras : [];
+  const out = {};
+  ((plan && plan.slots) || []).forEach((s) => {
+    const mine = list.filter((x) => x && x.slot === s.id && Number.isFinite(x.kcal)).reduce((a, x) => a + x.kcal, 0);
+    out[s.id] = { planned: Math.round(s.kcal), eaten: Math.round(mine + (ticked.has(s.id) ? s.kcal : 0)) };
+  });
+  return out;
+}
+
 // খাবার + পরিমাণ → extraFoods-এন্ট্রি (sanitizeExtraFoods-সঙ্গত) বা null (অবৈধ/সীমার বাইরে)।
 // opts: { measureId, qty } অথবা { measureId: "g", grams }।
 // ডেটা না থাকলে বা সদস্য নিজে খাবারের মান বদলে থাকলে (override) আগের মতো ক্যাটালগ-ইউনিট × qty, ম্যাক্রো ছাড়া।

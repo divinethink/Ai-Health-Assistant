@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { FOOD_NUTRITION, nutritionOf } from "../../src/health/tracker/foodNutrition.js";
-import { scaleNutrition, measureToGrams, sumNutrition, fmtMacro, per100Of, measuresOf } from "../../src/health/tracker/foodCalc.js";
+import { scaleNutrition, measureToGrams, sumNutrition, fmtMacro, per100Of, measuresOf, slotBudgets } from "../../src/health/tracker/foodCalc.js";
 import { sanitizeExtraFoods, extraFoodsKcal, caloriesForDay } from "../../src/health/tracker/planPrefs.js";
 
 test("scaleNutrition: ১০০ গ্রামে per100-এর সমান; ১৮০ গ্রাম ডাল ≈ আনুপাতিক", () => {
@@ -151,4 +151,16 @@ test("entryAmountText", () => {
   assert.equal(entryAmountText(buildFoodEntry("rice", "lunch", { measureId: "g", grams: 150 })), "১৫০ গ্রাম");
   assert.equal(entryAmountText({ name: "চা", kcal: 30, slot: "snack1" }), "");
   assert.equal(entryAmountText(null), "");
+});
+
+test("slotBudgets: বেলা-ভিত্তিক খাওয়া/পরিকল্পনা, caloriesForDay-এর সাথে মোট মেলে", () => {
+  const plan = { slots: [{ id: "breakfast", kcal: 400 }, { id: "lunch", kcal: 600 }] };
+  const extras = [{ name: "কলা", kcal: 90, slot: "breakfast" }, { name: "চা", kcal: 30, slot: "lunch" }, { name: "ডিম", kcal: 77, slot: "breakfast" }];
+  const b = slotBudgets(plan, ["lunch"], extras);
+  assert.deepEqual(b, { breakfast: { planned: 400, eaten: 167 }, lunch: { planned: 600, eaten: 630 } });
+  assert.equal(b.breakfast.eaten + b.lunch.eaten, caloriesForDay(plan, ["lunch"], extras));
+});
+test("slotBudgets: খালি/অবৈধ ইনপুটে ভাঙে না", () => {
+  assert.deepEqual(slotBudgets(null, null, null), {});
+  assert.deepEqual(slotBudgets({ slots: [{ id: "lunch", kcal: 500 }] }, undefined, [null, { slot: "lunch", kcal: NaN }]), { lunch: { planned: 500, eaten: 0 } });
 });

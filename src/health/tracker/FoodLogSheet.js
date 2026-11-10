@@ -20,8 +20,8 @@ const MUTED = "#5F716C";
 const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#fff", color: on ? "#fff" : "#1F2D2A" });
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
-// props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), busy, err, onAdd(entry) → Promise<boolean>, onClose
-export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, busy, err, onAdd, onClose }) {
+// props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), busy, err, onAdd(entry) → Promise<boolean>, onClose
+export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBudgets, busy, err, onAdd, onClose }) {
   const [slot, setSlot] = useState(slotForNow());
   const [key, setKey] = useState(null);
   const [measureId, setMeasureId] = useState(null); // measure id | "g" (গ্রাম)
@@ -30,6 +30,7 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, busy, e
   const [notice, setNotice] = useState(null);
   const slotLabel = (MEAL_SLOTS.find((s) => s.id === slot) || {}).label;
   const full = count >= MAX_LIST;
+  const budget = slotBudgets && slotBudgets[slot];
 
   const pick = (k) => {
     const ms = measuresOf(k);
@@ -43,6 +44,7 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, busy, e
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
       TabPills(MEAL_SLOTS.map((s) => [s.id, s.label]), slot, setSlot),
+      budget && React.createElement("div", { style: { fontSize: "13px", color: MUTED, margin: "-6px 0 10px" } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি (প্ল্যানের তথ্য; বেশি হলেও বাধা নেই)"),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
       React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
