@@ -10,6 +10,11 @@
 import { listHealthRecords, describeHealthRecord, RESOURCE_TYPE_LABELS } from "../records/healthRecordsData.js";
 import { listDocuments, DOC_TYPE_LABELS } from "../documents/documentsData.js";
 import { listEpisodesForMember, getTriageResult } from "../episodes/episodesData.js";
+import { listCalendarEvents } from "../calendar/calendarData.js";
+import { getWeekDaily } from "../tracker/trackerData.js";
+import { last7DatesISO } from "../tracker/weeklyTrend.js";
+import { localISO } from "../../shared/dates.js";
+import { calendarEntries, trackerWeekEntry } from "./timelineExtras.js";
 
 // টাইমলাইনের জন্য পুরো-বাংলা লেবেল ও ফিল্টার-category (শুধু display)
 const RECORD_LABELS_BN = {
@@ -52,11 +57,15 @@ function dateStrToMillis(str) {
   return Number.isNaN(t) ? null : t;
 }
 
-export async function buildTimeline(familyId, targetMemberId) {
-  const [records, docs, episodes] = await Promise.all([
-    listHealthRecords(familyId, targetMemberId),
+// opts.records: useMemberHealth-এর shared রেকর্ড (দিলে আলাদা read হয় না)। ক্যালেন্ডার/ট্র্যাকার বাড়তি অংশ —
+// না পড়া গেলে (ব্যর্থ/অনুমতি নেই) শুধু ওই এন্ট্রিগুলো বাদ, বাকি টাইমলাইন চলে।
+export async function buildTimeline(familyId, targetMemberId, opts) {
+  const [records, docs, episodes, events, weekDocs] = await Promise.all([
+    opts && opts.records ? Promise.resolve(opts.records) : listHealthRecords(familyId, targetMemberId),
     listDocuments(familyId, targetMemberId),
     listEpisodesForMember(familyId, targetMemberId),
+    listCalendarEvents(familyId).catch(() => []),
+    getWeekDaily(familyId, targetMemberId, last7DatesISO()).catch(() => []),
   ]);
 
   const recordEntries = records.map((r) => {
@@ -122,7 +131,12 @@ export async function buildTimeline(familyId, targetMemberId) {
     };
   });
 
-  const all = [...recordEntries, ...docEntries, ...episodeEntries];
+  const weekEntry = trackerWeekEntry(weekDocs);
+  const all = [
+    ...recordEntries, ...docEntries, ...episodeEntries,
+    ...calendarEntries(events, targetMemberId, localISO()),
+    ...(weekEntry ? [weekEntry] : []),
+  ];
   all.sort((a, b) => (b.sortMillis || 0) - (a.sortMillis || 0));
   return all;
 }

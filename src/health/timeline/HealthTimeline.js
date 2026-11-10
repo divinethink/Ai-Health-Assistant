@@ -12,6 +12,7 @@ import { t } from "../../shared/i18n.js";
 import { ErrorBox } from "../../shared/ui.js";
 import { bnDateFromMillis, bnMonthYear, bnTime, bnNum } from "../../shared/dates.js";
 import { buildTimeline } from "./timelineData.js";
+import { useMemberHealth } from "../records/useMemberHealth.js";
 
 const { useState, useEffect, useMemo } = React;
 
@@ -23,6 +24,9 @@ const FILTERS = [
   { id: "medication", label: "ওষুধ" },
   { id: "illness", label: "অসুস্থতা" },
   { id: "measurement", label: "পরিমাপ" },
+  { id: "vaccine", label: "টিকা" },
+  { id: "calendar", label: "অ্যাপয়েন্টমেন্ট" },
+  { id: "tracker", label: "ট্র্যাকার" },
 ];
 
 const RISK_SHORT = {
@@ -75,6 +79,7 @@ function TimelineRow({ row }) {
       "div", { style: { fontSize: "14px", lineHeight: 1.4 } },
       e.icon + " ", React.createElement("b", null, e.label),
       e.riskLevel && Badge(RISK_SHORT[e.riskLevel] || e.riskLevel, danger),
+      e.source && Badge(e.source, false),
       count > 1 && React.createElement("button", {
         onClick: () => setOpen((v) => !v), "aria-expanded": open,
         style: { marginLeft: "6px", padding: "1px 8px", minHeight: "24px", borderRadius: "999px", border: "1px solid #C3D2CA", background: "#fff", color: "#0E4B43", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
@@ -98,18 +103,25 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
   const [filter, setFilter] = useState("all");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const targetMemberId = selectedMemberId;
+  // শেয়ার্ড লোডার (ধাপ ১): রেকর্ড বদলালে/সেভের পর নিজে থেকে টাইমলাইন নতুন হয়
+  const { records, error: recErr } = useMemberHealth(familyId, targetMemberId);
 
   useEffect(() => {
-    if (!targetMemberId) return;
+    if (!targetMemberId || !records) return undefined;
+    let alive = true;
     setEntries(null);
     setEntriesErr(null);
     setVisible(PAGE_SIZE);
-    buildTimeline(familyId, targetMemberId)
-      .then(setEntries)
-      .catch((e) => setEntriesErr(e.code === "permission-denied"
-        ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
-        : (e.message || String(e))));
-  }, [familyId, targetMemberId]);
+    buildTimeline(familyId, targetMemberId, { records })
+      .then((r) => { if (alive) setEntries(r); })
+      .catch((e) => {
+        if (!alive) return;
+        setEntriesErr(e.code === "permission-denied"
+          ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
+          : (e.message || String(e)));
+      });
+    return () => { alive = false; };
+  }, [familyId, targetMemberId, records]);
 
   const rows = useMemo(() => {
     if (!entries) return [];
@@ -154,8 +166,8 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
       }, f.label))
     ),
 
-    entriesErr && ErrorBox(entriesErr),
-    !entriesErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    (entriesErr || recErr) && ErrorBox(entriesErr || (recErr.code === "permission-denied" ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই।" : (recErr.message || String(recErr)))),
+    !entriesErr && !recErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
     !entriesErr && entries && rows.length === 0 &&
       React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, entries.length === 0 ? "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।" : "এই ফিল্টারে কোনো এন্ট্রি নেই।"),
 
