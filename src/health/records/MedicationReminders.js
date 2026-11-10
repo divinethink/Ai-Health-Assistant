@@ -23,7 +23,7 @@ import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendar
 // ওষুধ যোগ (নাম-সাজেশনসহ), "আজকের ওষুধ" + খেয়েছি-চিহ্ন (শুধু এই ডিভাইসের localStorage —
 // কোনো নতুন schema/rules নেই), মেয়াদের হিসাব। ডেটা-ফাংশন/Calendar-sync অপরিবর্তিত।
 
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 const h = React.createElement;
 
 const GREEN = "#0E4B43";
@@ -109,7 +109,6 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [takenErr, setTakenErr] = useState(null);
   const [tick, setTick] = useState(0);
   const [todayOpen, setTodayOpen] = useState(true);
-  const notifiedRef = useRef({});
 
   // নতুন ওষুধ যোগের ফর্ম
   const [addOpen, setAddOpen] = useState(false);
@@ -179,40 +178,13 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   useEffect(() => { loadMeds(); }, [familyId]);
   useEffect(() => { if (selectedMemberId) setAMember(selectedMemberId); }, [selectedMemberId]);
 
-  // প্রতি ৬০ সেকেন্ডে: tick (UI refresh) + notification — app খোলা অবস্থায় (backend push নেই)।
+  // প্রতি ৬০ সেকেন্ডে UI refresh (দেরি-হওয়া ডোজ চিহ্নিত রাখতে)। নোটিফিকেশন এখানে নেই — একটাই চালক
+  // (Dashboard-এর TrackerReminderRunner) সব ট্যাবে ওষুধের রিমাইন্ডার ও কোর্স-শেষ সতর্কতা দেয়।
   useEffect(() => {
-    if (!meds) return;
-    const interval = setInterval(() => {
-      setTick((x) => x + 1);
-      if (permission !== "granted") return;
-      const nowHHMM = new Date().toTimeString().slice(0, 5);
-      const today = todayStr();
-      meds.forEach((m) => {
-        if (!m.reminderTimes.includes(nowHHMM)) return;
-        if (m.endDate && today > m.endDate) return;
-        const key = m.recordId + "_" + nowHHMM;
-        if (notifiedRef.current[key] === today) return;
-        notifiedRef.current[key] = today;
-        try { new Notification("ওষুধ সেবনের সময়", { body: m.memberName + " — " + m.genericName + (m.mealTiming && m.mealTiming !== "any" ? " (" + MEAL_LABELS[m.mealTiming] + ")" : "") }); } catch (e) { /* ignore */ }
-      });
-    }, 60000);
+    if (!meds) return undefined;
+    const interval = setInterval(() => setTick((x) => x + 1), 60000);
     return () => clearInterval(interval);
-  }, [meds, permission]);
-
-  // ঘ) কোর্স শেষ হতে চলেছে (আর ২ দিন বা কম) — দিনে একবার নোটিফিকেশন (app খোলা থাকলে)।
-  useEffect(() => {
-    if (!meds || permission !== "granted") return;
-    meds.forEach((m) => {
-      const left = daysLeft(m.endDate);
-      if (left === null || left < 0 || left > 2) return;
-      const k = "hs-med-endwarn-" + m.recordId;
-      try {
-        if (localStorage.getItem(k) === todayStr()) return;
-        localStorage.setItem(k, todayStr());
-        new Notification("ওষুধ শেষ হতে চলেছে", { body: m.memberName + " — " + m.genericName + (left === 0 ? " আজ শেষ দিন" : " আর " + bn(left) + " দিন বাকি") + "। প্রয়োজনে ডাক্তার দেখান/ওষুধ কিনে রাখুন।" });
-      } catch (e) { /* ignore */ }
-    });
-  }, [meds, permission]);
+  }, [meds]);
 
   // গ) আগের কোর্সের ওষুধ আবার — ফর্ম আগে থেকে ভরে দেয়, সেভ চাপলেই নতুন কোর্স শুরু।
   function reuseCourse(p) {
