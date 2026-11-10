@@ -3,6 +3,7 @@
 // ডেটা না থাকলে null — কলার তখন আগের মতো শুধু কিলোক্যালরি (k) ব্যবহার করবে।
 
 import { nutritionOf } from "./foodNutrition.js";
+import { extraMeasuresFor } from "./foodMeasures.js";
 import { bnNum } from "../../shared/dates.js";
 import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods } from "./planPrefs.js";
 import { FOODS, MEAL_SLOTS, foodK, hasFoodOverride } from "./mealPlanData.js";
@@ -23,10 +24,12 @@ export function per100Of(foodKey) {
   return n ? { ...n.per100 } : null;
 }
 
-// খাবারের মাপ-তালিকা [{id,label,g}] — না থাকলে খালি।
+// খাবারের মাপ-তালিকা [{id,label,g}] — না থাকলে খালি। প্রথমটি ডিফল্ট; তরল খাবারে কাটোরি/কাপ/চামচ শেষে যোগ (foodMeasures.js)।
 export function measuresOf(foodKey) {
   const n = nutritionOf(foodKey);
-  return n ? n.measures.map((m) => ({ ...m })) : [];
+  if (!n) return [];
+  const base = n.measures.map((m) => ({ ...m }));
+  return [...base, ...extraMeasuresFor(foodKey, base)];
 }
 
 // গ্রাম → { kcal, p, c, f, fib }; ডেটা নেই বা গ্রাম অবৈধ (১–২০০০-এর বাইরে/NaN) হলে null।
@@ -44,7 +47,7 @@ export function measureToGrams(foodKey, measureId, qty) {
   const n = nutritionOf(foodKey);
   const q = Number(qty);
   if (!n || !Number.isFinite(q) || q <= 0 || q > MAX_MEASURE_QTY) return null;
-  const m = n.measures.find((x) => x.id === measureId);
+  const m = measuresOf(foodKey).find((x) => x.id === measureId);
   if (!m) return null;
   return validGrams(Math.round(m.g * q * 10) / 10);
 }
@@ -159,5 +162,9 @@ export function entryAmountText(e) {
     const m = measuresOf(e.key).find((x) => x.id === e.measure);
     return (m && e.qty ? bnNum(e.qty) + " " + m.label + " ≈ " : "") + bnNum(e.grams) + " গ্রাম";
   }
-  return e.qty && Object.prototype.hasOwnProperty.call(FOODS, e.key) ? bnNum(e.qty) + " " + FOODS[e.key].u : "";
+  if (!e.qty || !Object.prototype.hasOwnProperty.call(FOODS, e.key)) return "";
+  const u = FOODS[e.key].u;
+  // পুরনো/ইউনিট-মোড এন্ট্রিতেও গ্রাম দেখানো: ইউনিটের নামে মাপ মিললে (এবং নিজের-মান override না থাকলে) আনুমানিক গ্রাম।
+  const m = hasFoodOverride(e.key) ? null : measuresOf(e.key).find((x) => x.label === u);
+  return bnNum(e.qty) + " " + u + (m ? " ≈ " + bnNum(Math.round(m.g * e.qty * 10) / 10) + " গ্রাম" : "");
 }

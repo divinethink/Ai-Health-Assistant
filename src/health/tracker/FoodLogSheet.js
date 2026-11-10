@@ -10,7 +10,7 @@ import { medFoodNotes } from "./medFoodNotes.js";
 import { foodStatus, STATUS_COLORS } from "./foodStatus.js";
 import { MAX_QTY, MAX_LIST } from "./planPrefs.js";
 import { nutritionOf } from "./foodNutrition.js";
-import { per100Of, measuresOf, buildFoodEntry, slotForNow, fmtMacro, MAX_MEASURE_QTY } from "./foodCalc.js";
+import { per100Of, measuresOf, buildFoodEntry, slotForNow, fmtMacro, entryAmountText, MAX_MEASURE_QTY } from "./foodCalc.js";
 import { Sheet, FoodPicker, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets.js";
 
 const { useState } = React;
@@ -62,7 +62,7 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
         React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · ১ ট্যাপে " + slotLabel + "-এ যোগ"),
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
           quick.map((e) => React.createElement("button", { key: e.name, onClick: () => quickAdd(e), disabled: busy || full, "aria-label": e.name + " " + slotLabel + "-এ যোগ করুন", style: { ...chip(false), opacity: busy || full ? 0.5 : 1 } },
-            "＋ " + e.name + " · " + bnNum(e.kcal))))),
+            "＋ " + e.name + (entryAmountText(e) ? " (" + entryAmountText(e) + ")" : "") + " · " + bnNum(e.kcal))))),
       React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
       React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
         React.createElement("button", { onClick: onClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));

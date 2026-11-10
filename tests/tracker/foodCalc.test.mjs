@@ -182,3 +182,11 @@ test("recentFoodEntries: পূর্ণ এন্ট্রি, ফ্রিক�
   assert.equal(recentFoodEntries(docs, { now, limit: 1 }).length, 1);
   assert.deepEqual(recentFoodEntries(null), []);
 });
+
+test("entryAmountText: পুরনো/ইউনিট-মোড এন্ট্রিতেও আনুমানিক গ্রাম; override থাকলে নয়", () => {
+  assert.equal(entryAmountText({ name: "ডাল", kcal: 112, slot: "lunch", key: "dal", qty: 1 }), "১ বাটি ≈ ১৬০ গ্রাম");
+  assert.equal(entryAmountText({ name: "রুটি", kcal: 168, slot: "breakfast", key: "roti", qty: 2 }), "২ টি ≈ ৬৪ গ্রাম");
+  setFoodOverrides({ dal: { k: 200 } });
+  try { assert.equal(entryAmountText({ name: "ডাল", kcal: 200, slot: "lunch", key: "dal", qty: 1 }), "১ বাটি"); }
+  finally { setFoodOverrides({}); }
+});
