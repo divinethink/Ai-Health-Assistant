@@ -24,7 +24,7 @@ export const FOOD_EN = {
   haleem: "Haleem", kathBadam: "Almond", akhrot: "Walnut", kajuBadam: "Cashew", kumraBeej: "Pumpkin seeds", tishi: "Flaxseed", isabgol: "Psyllium husk",
   oatsBiscuit: "Oats biscuit", honey: "Honey", milkTea: "Milk tea (with sugar)", milk: "Cow's milk", tokDoi: "Plain yogurt", dabWater: "Coconut water",
   sugarcane: "Sugarcane juice", lemonSharbat: "Lemonade (with sugar)", softDrink: "Soft drink", juice: "Packaged fruit juice", lassi: "Lassi",
-  coffee: "Coffee (milk, sugar)", tonedMilk: "Toned / skim milk", tokDoi100: "Plain yogurt (100 g)", goldenWater: "Turmeric water",
+  coffee: "Coffee (milk, sugar)", tonedMilk: "Packaged liquid milk (pasteurised / UHT)", tokDoi100: "Plain yogurt (100 g)", goldenWater: "Turmeric water",
   gingerTea: "Ginger / tulsi tea", redTea: "Black tea (no sugar)", lemonWater: "Lemon water (no sugar)", mintGingerWater: "Ginger-mint water",
 };
 
@@ -32,7 +32,7 @@ export const FOOD_EN = {
 export const FOOD_ALIAS = {
   rice: ["bhat", "vat", "chal", "ভাত"], roti: ["ruti", "chapati"], dal: ["daal", "lentil", "ডাল"], veg: ["sobji", "shobji", "vegetable", "তরকারি"],
   egg: ["dim", "ডিম"], fish: ["mach", "maach", "মাছ"], chicken: ["murgi", "মুরগি"], beef: ["goru", "গরু"], mutton: ["khashi", "খাসি"],
-  banana: ["kola", "কলা"], mango: ["aam", "আম"], tea: ["cha", "চা"], milk: ["dudh", "দুধ"], tokDoi: ["doi", "দই", "yogurt", "yoghurt", "curd"],
+  banana: ["kola", "কলা"], mango: ["aam", "আম"], tea: ["cha", "চা"], milk: ["dudh", "দুধ"], tonedMilk: ["dudh", "দুধ", "packet", "প্যাকেট", "liquid", "লিকুইড", "milk vita", "aarong"], tokDoi: ["doi", "দই", "yogurt", "yoghurt", "curd"],
   muri: ["murmura", "মুড়ি"], pauruti: ["bread", "pauruti", "paurooti", "পাউরুটি"], khichuri: ["khichdi", "khichri"], hilshaBhaja: ["ilish", "hilsha", "ইলিশ"], hilshaJhol: ["ilish", "hilsha", "ইলিশ"],
   chingri: ["shrimp", "chingri", "চিংড়ি"], papaya: ["pepe", "পেঁপে"], guava: ["peyara", "পেয়ারা"], watermelon: ["tormuj", "তরমুজ"], dabWater: ["dab", "ডাব"],
   singara: ["samosa"], jilapi: ["jalebi", "jilebi"], haleem: ["halim"], chhola: ["chola", "chana", "ছোলা"], shak: ["saag", "spinach", "শাক"],

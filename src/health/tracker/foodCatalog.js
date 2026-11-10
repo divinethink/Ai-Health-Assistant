@@ -160,7 +160,7 @@ export const CATALOG_FOODS = {
   juice: { n: "ফলের জুস (প্যাকেট)", u: "গ্লাস", k: 110, g: "drink", tg: ["sugar"] },
   lassi: { n: "লাচ্ছি", u: "গ্লাস", k: 200, al: "dairy", g: "drink", tg: ["gut", "sugar"] },
   coffee: { n: "কফি (দুধ-চিনি)", u: "কাপ", k: 70, al: "dairy", g: "drink", tg: ["caffeine"] },
-  tonedMilk: { n: "টোনড/স্কিম দুধ", u: "গ্লাস", k: 100, al: "dairy", g: "drink", tg: ["gut", "medgap"] },
+  tonedMilk: { n: "প্যাকেট/লিকুইড দুধ", u: "গ্লাস", k: 150, al: "dairy", g: "drink", tg: ["gut", "medgap"] },
   tokDoi100: { n: "টক দই (১০০ গ্রাম)", u: "পরিবেশন", k: 60, al: "dairy", g: "drink", tg: ["medgap"] },
   goldenWater: { n: "গোল্ডেন ওয়াটার (হলুদ-পানি)", u: "গ্লাস", k: 25, g: "drink" },
   gingerTea: { n: "আদা/তুলসী চা (চিনি ছাড়া)", u: "কাপ", k: 0, g: "drink" },

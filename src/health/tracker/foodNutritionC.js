@@ -29,7 +29,7 @@ export const FOOD_NUTRITION_C = {
   honey: e(304, 0.3, 82.4, 0, 0.2, [["tsp", "চা-চামচ", 7]], T, 0, "USDA honey (recalled)"),
   // বাদাম-বীজ-ভুসি
   kathBadam: e(579, 21.2, 21.6, 49.9, 12.5, [["pc", "টি", 1.3]], T, 0, US + " almonds"),
-  akhrot: e(654, 15.2, 13.7, 65.2, 6.7, [["pc", "টি", 3.8]], T, 0, US + " walnuts"),
+  akhrot: e(654, 15.2, 13.7, 65.2, 6.7, [["pc", "টি", 3.8]], T, 1, "USDA FDC 170187"),
   kajuBadam: e(553, 18.2, 30.2, 43.9, 3.3, [["pc", "টি", 2.7]], T, 0, US + " cashews"),
   kumraBeej: e(559, 30.2, 10.7, 49, 6, [["tsp", "চা-চামচ", 5]], T, 0, US + " pumpkin seeds"),
   tishi: e(534, 18.3, 28.9, 42.2, 27.3, [["tsp", "চা-চামচ", 4.8]], T, 0, US + " flaxseed"),
@@ -41,7 +41,7 @@ export const FOOD_NUTRITION_C = {
   redTea: e(0, 0, 0, 0, 0, [["cup", "কাপ", 150]], T, 0, ZERO),
   milkTea: e(55, 1.3, 9, 1.4, 0, [["cup", "কাপ", 150]], R, 0, GR),
   milk: e(61, 3.2, 4.8, 3.3, 0, [["glass", "গ্লাস", 245]], T, 0, US + " whole milk"),
-  tonedMilk: e(45, 3.2, 4.9, 1.5, 0, [["glass", "গ্লাস", 225]], T, 0, "মাঝারি-ফ্যাট দুধ (লেবেল-গড়)"),
+  tonedMilk: e(63, 3.3, 4.9, 3.4, 0, [["glass", "গ্লাস", 240]], T, 0, "বাংলাদেশি প্যাকেট দুধ: ফ্যাট ৩.২৬–৩.৫১% (Milk Vita/Aarong/Farm Fresh, banglajol); Aarong UHT লেবেল ≈ ২৪০ গ্রামে ১৫০ kcal"),
   tokDoi: e(61, 3.5, 4.7, 3.3, 0, [["bowl", "বাটি", 165]], T, 0, US + " whole-milk yogurt"),
   tokDoi100: e(61, 3.5, 4.7, 3.3, 0, [["serve", "পরিবেশন (১০০ গ্রাম)", 100]], T, 0, US + " whole-milk yogurt"),
   dabWater: e(19, 0.7, 3.7, 0.2, 1.1, [["glass", "গ্লাস", 240]], T, 0, US + " coconut water"),
