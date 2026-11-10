@@ -85,7 +85,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     Promise.all([
       listMembers(familyId),
       listHealthRecords(familyId, selectedMemberId),
-      listDietGuidanceRules(),
+      // সম্পূরক — rules পুরনো/ব্যর্থ হলে পুরো প্রোফাইল-কার্ড আটকাবে না; শুধু Firestore-নিয়ম বাদ, কোডে-বসানো বয়স/অবস্থা-নিয়ম থাকে।
+      listDietGuidanceRules().catch(() => []),
       getGoal(familyId, selectedMemberId).catch(() => null), // বয়স/অবস্থা-নিয়মের জন্য
       // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
       listCalendarEvents(familyId).catch(() => null),
