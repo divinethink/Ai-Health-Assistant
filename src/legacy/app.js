@@ -416,14 +416,44 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
 function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   useLang(); // ভাষা বদলালে পুরো স্ক্রিন নতুন করে আঁকা হয় (state অক্ষত থাকে)
   const [refreshTick, setRefreshTick] = useState(0);
-  const [activeTab, setActiveTab] = useState("home");
+  // ফোনের Back বাটন: ট্যাব/ওভারলে বদলালে browser-history-তে এন্ট্রি যোগ হয়, Back চাপলে ঠিক আগের স্ক্রিনে ফেরে
+  // (আগে history-তে কিছুই ছিল না বলে সরাসরি অ্যাপ থেকে বেরিয়ে যেত)। ভিউ = {tab, gc: General Chat, dd: Doctor Details}।
+  const [view, setView] = useState({ tab: "home", gc: false, dd: false });
+  const viewRef = React.useRef(view);
+  viewRef.current = view;
+  const navigate = (patch) => {
+    const cur = viewRef.current;
+    const next = { ...cur, ...patch };
+    if (next.tab === cur.tab && next.gc === cur.gc && next.dd === cur.dd) return;
+    try { window.history.pushState({ hs: 1, ...next }, ""); } catch (_e) { /* history ব্যর্থ হলেও নেভিগেশন চলে */ }
+    viewRef.current = next;
+    setView(next);
+  };
+  useEffect(() => {
+    try { window.history.replaceState({ hs: 1, tab: "home", gc: false, dd: false }, ""); } catch (_e) { /* উপেক্ষা */ }
+    const onPop = (e) => {
+      const st = e.state;
+      if (st && st.hs) { const next = { tab: st.tab || "home", gc: !!st.gc, dd: !!st.dd }; viewRef.current = next; setView(next); }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const activeTab = view.tab;
+  const setActiveTab = (tab) => navigate({ tab, gc: false, dd: false });
+  const showGeneralChat = view.gc;
+  const showDoctorDetails = view.dd;
+  // ওভারলে বন্ধ = history-তে এক ধাপ পিছনে (নতুন এন্ট্রি নয়), নইলে Back আবার ওভারলে ফেরাত
+  const closeOverlay = (key) => {
+    if (viewRef.current[key] && window.history.state && window.history.state.hs && window.history.state[key]) window.history.back();
+    else navigate({ [key]: false });
+  };
+  const setShowGeneralChat = (v) => (v ? navigate({ gc: true, dd: false }) : closeOverlay("gc"));
+  const setShowDoctorDetails = (v) => (v ? navigate({ dd: true, gc: false }) : closeOverlay("dd"));
   const [members, setMembers] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   // General Chat / Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
   // full-screen overlay (এখন Menu ট্যাব থেকে trigger হয়, আগে flat-dashboard-
   // এর বাটন থেকে হতো — শুধু entry-point বদলেছে, component/rules অপরিবর্তিত)।
-  const [showGeneralChat, setShowGeneralChat] = useState(false);
-  const [showDoctorDetails, setShowDoctorDetails] = useState(false);
 
   // app-wide সদস্য-তালিকা — একবারই fetch, Home/AI-চ্যাট/Documents ৩ ট্যাব-ই
   // এই একই selectedMemberId শেয়ার করে (ট্যাব পাল্টালেও persist থাকে, item ১)।
