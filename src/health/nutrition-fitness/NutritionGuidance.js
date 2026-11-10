@@ -18,7 +18,7 @@ import { TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
-import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
+import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
 
 const { useState, useEffect } = React;
 
@@ -79,12 +79,14 @@ export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
       let guidance = null;
       try {
         if (focus === "fitness") throw new Error("skip-diet-grounding"); // ব্যায়াম-ট্যাবে খাদ্য-তালিকা দরকার নেই
-        const allRules = await listVerifiedDietGuidanceRules();
+        const allRules = await listDietGuidanceRules();
         const tags = [
           ...(context.relevantClinicalContext.relevantConditions || []),
           ...(context.relevantClinicalContext.relevantAllergies || []),
         ];
-        const matched = matchDietGuidanceForTags(allRules, tags);
+        // প্রসঙ্গ-ডেটায় শুধু রোগের নাম আছে → নাম থেকেই বয়স/অবস্থা-নিয়ম মেলানো (রেকর্ড-আকারে সাজিয়ে)
+        const condRecs = (context.relevantClinicalContext.relevantConditions || []).map((name) => ({ resourceType: "condition", name, status: "active" }));
+        const matched = matchFoodGuidance(allRules, tags, { records: condRecs, age: typeof ageYears === "number" ? ageYears : null, goal: null });
         if (matched.avoidFoods.length || matched.includeFoods.length) {
           guidance = matched;
           context.dietGuidanceContext = { avoidFoods: matched.avoidFoods, includeFoods: matched.includeFoods };

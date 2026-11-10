@@ -180,7 +180,6 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       onRemoveExtra: (idx) => writeExtras(extras.filter((_, i) => i !== idx)),
       onClose: closeSheet,
     }),
-    React.createElement(AvoidCard, { domain: "food", age: info.age, flags: info.flags, condKeys: info.condKeys }),
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের এলার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 

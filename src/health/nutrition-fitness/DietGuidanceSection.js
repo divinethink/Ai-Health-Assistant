@@ -9,7 +9,10 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { foodColumns, habitTipsBox } from "./FoodColumns.js";
-import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "./dietGuidanceData.js";
+import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
+import { listMembers } from "../../legacy/familyIdentity.js";
+import { getGoal } from "../tracker/trackerData.js";
+import { ageYears } from "../tracker/trackerCalc.js";
 
 const { useState, useEffect } = React;
 
@@ -43,8 +46,12 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
   useEffect(() => {
     if (!targetMemberId) return;
     setResult(null);
-    Promise.all([listHealthRecords(familyId, targetMemberId), listVerifiedDietGuidanceRules()])
-      .then(([records, allRules]) => {
+    Promise.all([
+      listHealthRecords(familyId, targetMemberId), listDietGuidanceRules(),
+      listMembers(familyId).catch(() => []), getGoal(familyId, targetMemberId).catch(() => null), // বয়স/অবস্থা-নিয়মের জন্য; না এলে শুধু বাকি নিয়ম
+    ])
+      .then(([records, allRules, members, goal]) => {
+        const member = (members || []).find((m) => m.id === targetMemberId) || null;
         const relevantConditions = records
           .filter((r) => r.resourceType === "condition" && (r.status === "active" || r.status === "chronic"))
           .map((r) => r.name);
@@ -52,7 +59,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
           .filter((r) => r.resourceType === "allergy")
           .map((r) => r.substance);
         const bmiTag = deriveBmiTag(records);
-        setResult(matchDietGuidanceForTags(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])]));
+        setResult(matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age: member ? ageYears(member.dob) : null, goal }));
       })
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId, targetMemberId]);

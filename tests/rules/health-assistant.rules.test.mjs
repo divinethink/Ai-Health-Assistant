@@ -892,6 +892,17 @@ describe('Health Assistant — Firestore Rules', function () {
       );
     });
 
+    it('11a. dietGuidanceRules: draft-ও লগইন-করা সবাই পড়ে (শুধু সতর্কবার্তা); write সবসময় বন্ধ', async () => {
+      await seed(async (db) => {
+        await setDoc(doc(db, 'dietGuidanceRules', 'd1'), { linkedTag: { type: 'condition', value: 'x' }, status: 'draft' });
+      });
+      await assertSucceeds(getDoc(doc(dbAs('uidA'), 'dietGuidanceRules', 'd1')));
+      await assertSucceeds(getDocs(collection(dbAs('uidA'), 'dietGuidanceRules')));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'dietGuidanceRules', 'd1')));
+      await assertFails(setDoc(doc(dbAs('uidA'), 'dietGuidanceRules', 'z'), { status: 'verified' }));
+      await assertFails(setDoc(doc(dbAs(ADMIN_UID), 'dietGuidanceRules', 'z'), { status: 'verified' }));
+    });
+
     it('11b. General Chat শুধু Admin-এর', async () => {
       await seedOwned('mA', 'uidA');
       await assertSucceeds(setDoc(famDoc(dbAs(ADMIN_UID), 'generalChatSessions', 's1'), { title: 'x' }));

@@ -12,7 +12,8 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { foodColumns, habitTipsBox } from "../nutrition-fitness/FoodColumns.js";
-import { listVerifiedDietGuidanceRules, matchDietGuidanceForTags } from "../nutrition-fitness/dietGuidanceData.js";
+import { listDietGuidanceRules, matchFoodGuidance } from "../nutrition-fitness/dietGuidanceData.js";
+import { getGoal } from "../tracker/trackerData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
 import { t } from "../../shared/i18n.js";
@@ -84,12 +85,13 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     Promise.all([
       listMembers(familyId),
       listHealthRecords(familyId, selectedMemberId),
-      listVerifiedDietGuidanceRules(),
+      listDietGuidanceRules(),
+      getGoal(familyId, selectedMemberId).catch(() => null), // বয়স/অবস্থা-নিয়মের জন্য
       // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
       listCalendarEvents(familyId).catch(() => null),
       fetchTestNameDictionary().catch(() => []), // ল্যাব সতর্কতা — না এলে শুধু ঐ টাইল বাদ
     ])
-      .then(([members, records, allRules, calEvents, dict]) => {
+      .then(([members, records, allRules, goal, calEvents, dict]) => {
         const member = members.find((m) => m.id === selectedMemberId) || null;
 
         const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -104,7 +106,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
 
         const relevantConditions = activeConditions.map((r) => r.name);
         const bmiTag = (bmiCategory && bmiCategory !== "normal") ? bmiCategory : null;
-        const dietResult = matchDietGuidanceForTags(allRules, [...relevantConditions, ...(bmiTag ? [bmiTag] : [])]);
+        const dietResult = matchFoodGuidance(allRules, [...relevantConditions, ...(bmiTag ? [bmiTag] : [])], { records, age: member ? getAgeInYears(member.dob) : null, goal });
 
         const allergies = records.filter((r) => r.resourceType === "allergy");
         const nowD = new Date();

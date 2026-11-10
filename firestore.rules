@@ -227,8 +227,8 @@ service cloud.firestore {
     }
 
     match /dietGuidanceRules/{tagId} {
-      allow read: if request.auth != null
-        && resource.data.status == 'verified';
+      // মালিকের সিদ্ধান্ত (২০২৬-১১-১০): শুধু সতর্কবার্তা, verify-গেট নেই — লগইন-করা সবাই পড়ে; write বন্ধই
+      allow read: if request.auth != null;
       allow write: if false;
     }
 

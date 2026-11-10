@@ -9,12 +9,19 @@
 // vector-DB না" নীতির সাথে সংগতিপূর্ণ, নতুন composite-index এড়াতে)।
 
 import { db } from "../../legacy/firebaseConfig.js";
+import { staticFoodGroups, mergeFoodGuidance } from "./foodGuidance.js";
 
-// পুরো verified list — ছোট collection বলে ১ read-এই যথেষ্ট, বারবার আলাদা
-// tag-ভিত্তিক query করার দরকার নেই।
-export async function listVerifiedDietGuidanceRules() {
-  const snap = await db.collection("dietGuidanceRules").where("status", "==", "verified").get();
+// পুরো তালিকা (draft সহ — মালিকের সিদ্ধান্ত ২০২৬-১১-১০: শুধু সতর্কবার্তা, verify-গেট নেই) — ছোট collection বলে ১ read।
+export async function listDietGuidanceRules() {
+  const snap = await db.collection("dietGuidanceRules").get();
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// একটাই খাদ্য-নিয়ম: Firestore-নিয়ম + বয়স/অবস্থা-নিয়ম মিলিয়ে (foodGuidance.js)। সব স্ক্রিন/AI এটাই ব্যবহার করে।
+// ctx: { records, age, goal } — না দিলে শুধু Firestore-নিয়ম (আগের মতো)।
+export function matchFoodGuidance(allRules, tagValues, ctx) {
+  const base = matchDietGuidanceForTags(allRules, tagValues);
+  return ctx ? mergeFoodGuidance(base, staticFoodGroups(ctx)) : base;
 }
 
 // Member-এর relevantConditions/relevantAllergies (healthContextEngine.js-এর
