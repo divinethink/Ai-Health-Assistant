@@ -20,8 +20,8 @@ const MUTED = "#5F716C";
 const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#fff", color: on ? "#fff" : "#1F2D2A" });
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
-// props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), busy, err, onAdd(entry) → Promise<boolean>, onClose
-export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBudgets, busy, err, onAdd, onClose }) {
+// props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), recent (ঐচ্ছিক, foodCalc.recentFoodEntries), busy, err, onAdd(entry) → Promise<boolean>, onClose
+export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
   const [slot, setSlot] = useState(slotForNow());
   const [key, setKey] = useState(null);
   const [measureId, setMeasureId] = useState(null); // measure id | "g" (গ্রাম)
@@ -40,6 +40,17 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
   };
   const back = () => { setKey(null); };
 
+  // সাম্প্রতিক খাবার: ✕ (এড়ানো/এলার্জি) স্ট্যাটাসের খাবার ১-ট্যাপে দেওয়া হয় না — খুঁজে সতর্কতাসহ যোগ করতে হবে।
+  const quick = (Array.isArray(recent) ? recent : []).filter((e) => {
+    const f0 = e.key && FOODS[e.key];
+    return !f0 || foodStatus(e.key, f0, { allergyTags, ctx: avoidCtx }).level !== "red";
+  });
+  const quickAdd = async (e) => {
+    if (busy || full) return;
+    const ok = await onAdd({ ...e, slot });
+    if (ok) setNotice("✓ " + e.name + " যোগ হয়েছে (" + slotLabel + ")");
+  };
+
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
@@ -47,6 +58,11 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBud
       budget && React.createElement("div", { style: { fontSize: "13px", color: MUTED, margin: "-6px 0 10px" } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি (প্ল্যানের তথ্য; বেশি হলেও বাধা নেই)"),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
+      quick.length > 0 && React.createElement("div", { style: { marginBottom: "10px" } },
+        React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · ১ ট্যাপে " + slotLabel + "-এ যোগ"),
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+          quick.map((e) => React.createElement("button", { key: e.name, onClick: () => quickAdd(e), disabled: busy || full, "aria-label": e.name + " " + slotLabel + "-এ যোগ করুন", style: { ...chip(false), opacity: busy || full ? 0.5 : 1 } },
+            "＋ " + e.name + " · " + bnNum(e.kcal))))),
       React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
       React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
         React.createElement("button", { onClick: onClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));

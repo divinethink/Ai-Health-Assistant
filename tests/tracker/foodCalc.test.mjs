@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { FOOD_NUTRITION, nutritionOf } from "../../src/health/tracker/foodNutrition.js";
-import { scaleNutrition, measureToGrams, sumNutrition, fmtMacro, per100Of, measuresOf, slotBudgets } from "../../src/health/tracker/foodCalc.js";
+import { scaleNutrition, measureToGrams, sumNutrition, fmtMacro, per100Of, measuresOf, slotBudgets, recentFoodEntries } from "../../src/health/tracker/foodCalc.js";
 import { sanitizeExtraFoods, extraFoodsKcal, caloriesForDay } from "../../src/health/tracker/planPrefs.js";
 
 test("scaleNutrition: ১০০ গ্রামে per100-এর সমান; ১৮০ গ্রাম ডাল ≈ আনুপাতিক", () => {
@@ -163,4 +163,22 @@ test("slotBudgets: বেলা-ভিত্তিক খাওয়া/পর�
 test("slotBudgets: খালি/অবৈধ ইনপুটে ভাঙে না", () => {
   assert.deepEqual(slotBudgets(null, null, null), {});
   assert.deepEqual(slotBudgets({ slots: [{ id: "lunch", kcal: 500 }] }, undefined, [null, { slot: "lunch", kcal: NaN }]), { lunch: { planned: 500, eaten: 0 } });
+});
+
+test("recentFoodEntries: পূর্ণ এন্ট্রি, ফ্রিকোয়েন্সি-ক্রম, নতুনটি জেতে, ৭ দিনের বাইরে বাদ", () => {
+  const now = new Date(2026, 10, 10);
+  const rice1 = { name: "ভাত", kcal: 195, slot: "lunch", key: "rice", measure: "g", grams: 150 };
+  const rice2 = { name: "ভাত", kcal: 260, slot: "dinner", key: "rice", measure: "g", grams: 200 };
+  const docs = [
+    { date: "2026-11-08", extraFoods: [rice1, { name: "চা", kcal: 30, slot: "snack1" }] },
+    { date: "2026-11-09", extraFoods: [rice2] },
+    { date: "2026-10-20", extraFoods: [{ name: "পুরনো", kcal: 10, slot: "lunch" }, { name: "চা", kcal: 30, slot: "snack1" }] },
+    null, { date: "2026-11-09" },
+  ];
+  const r = recentFoodEntries(docs, { now });
+  assert.deepEqual(r.map((x) => x.name), ["ভাত", "চা"]);
+  assert.equal(r[0].grams, 200); // সবচেয়ে সাম্প্রতিক
+  assert.equal(r[0].key, "rice");
+  assert.equal(recentFoodEntries(docs, { now, limit: 1 }).length, 1);
+  assert.deepEqual(recentFoodEntries(null), []);
 });

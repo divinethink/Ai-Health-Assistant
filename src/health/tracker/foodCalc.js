@@ -4,7 +4,7 @@
 
 import { nutritionOf } from "./foodNutrition.js";
 import { bnNum } from "../../shared/dates.js";
-import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY } from "./planPrefs.js";
+import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods } from "./planPrefs.js";
 import { FOODS, MEAL_SLOTS, foodK, hasFoodOverride } from "./mealPlanData.js";
 
 export const MIN_GRAMS = 1;
@@ -96,6 +96,31 @@ export function slotBudgets(plan, eatenIds, extras) {
     out[s.id] = { planned: Math.round(s.kcal), eaten: Math.round(mine + (ticked.has(s.id) ? s.kcal : 0)) };
   });
   return out;
+}
+
+// "সাম্প্রতিক খাবার" (১-ট্যাপ যোগ): গত `days` দিনের (আজসহ) দৈনিক ডক থেকে পূর্ণ এন্ট্রি (পরিমাণ/গ্রাম/ম্যাক্রোসহ)।
+// একই নাম (ছোট-হাতের) = এক খাবার; সবচেয়ে সাম্প্রতিক এন্ট্রিটি থাকে; ক্রম = ফ্রিকোয়েন্সি, তারপর নতুন, তারপর নাম।
+// pure; নতুন Firestore read নেই। কলার বেলা (slot) বদলে নেবে।
+export function recentFoodEntries(dailyDocs, { now = new Date(), days = 7, limit = 6 } = {}) {
+  const p2 = (n) => String(n).padStart(2, "0");
+  const dates = new Set(Array.from({ length: days }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+  }));
+  const seen = new Map();
+  (Array.isArray(dailyDocs) ? dailyDocs : []).forEach((doc) => {
+    if (!doc || typeof doc !== "object" || !dates.has(doc.date)) return;
+    sanitizeExtraFoods(doc.extraFoods).forEach((x) => {
+      const k = x.name.toLowerCase();
+      const cur = seen.get(k);
+      if (!cur) seen.set(k, { entry: x, count: 1, last: doc.date });
+      else { cur.count++; if (doc.date >= cur.last) { cur.last = doc.date; cur.entry = x; } }
+    });
+  });
+  return [...seen.values()]
+    .sort((a, b) => b.count - a.count || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || a.entry.name.localeCompare(b.entry.name))
+    .slice(0, Math.max(0, limit))
+    .map((v) => ({ ...v.entry }));
 }
 
 // খাবার + পরিমাণ → extraFoods-এন্ট্রি (sanitizeExtraFoods-সঙ্গত) বা null (অবৈধ/সীমার বাইরে)।
