@@ -45,7 +45,7 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, busy, e
       TabPills(MEAL_SLOTS.map((s) => [s.id, s.label]), slot, setSlot),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
-      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick }),
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
       React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
         React.createElement("button", { onClick: onClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));
   }
@@ -113,6 +113,7 @@ export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, busy, e
     st.level === "red" && Msg("⚠ এই খাবার আপনার জন্য এড়ানোর কথা। ডাক্তারের পরামর্শ প্রাধান্য পায়; তবু খেলে যোগ করতে পারেন।", "warn"),
     full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। আগের কোনোটি মুছুন।", "warn"),
     err && Msg(err, "err"),
-    React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
+    // যোগ-বাটন স্থির (sticky) — লম্বা স্ক্রিনেও সবসময় নিচে দেখা যায়
+    React.createElement("div", { style: { position: "sticky", bottom: 0, display: "flex", gap: "8px", marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff" } },
       primaryBtn((st.level === "red" ? "তবু যোগ করুন" : "যোগ করুন") + " (" + slotLabel + ")", submit, busy, !entry || full)));
 }
