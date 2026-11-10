@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   waterTargetFor, sanitizeWaterTarget, checkWaterTargetInput, sanitizeFastDays, fastModeGate, activeFastDays,
-  checkFastDaysInput, weekdayIndexOf, isFastDate, FAST_BLOCK_REASON,
+  checkFastDaysInput, weekdayIndexOf, isFastDate, FAST_WARN_REASON,
 } from "../../src/health/tracker/trackerCalc.js";
 import { metricsOf, dayHit, streakOf, weekSummary } from "../../src/health/tracker/todaySummary.js";
 import { buildTrend, weeklySummary, targetCtxFor } from "../../src/health/tracker/weeklyTrend.js";
@@ -11,23 +11,17 @@ import { buildTrend, weeklySummary, targetCtxFor } from "../../src/health/tracke
 const OK = { age: 30, flags: {} };
 
 test("গেট ম্যাট্রিক্স: <১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+, বয়স অজানা = বন্ধ; ১৮–৬৪ সুস্থ = খোলা", () => {
-  assert.equal(fastModeGate(OK).blocked, false);
-  assert.equal(fastModeGate({ age: 18, flags: {} }).blocked, false);
-  assert.equal(fastModeGate({ age: 64, flags: {} }).blocked, false);
-  assert.equal(fastModeGate({ age: 17, flags: {} }).blocked, true);
-  assert.equal(fastModeGate({ age: 65, flags: {} }).blocked, true);
-  assert.equal(fastModeGate({ age: 30, flags: { pregnant: true } }).blocked, true);
-  assert.equal(fastModeGate({ age: 30, flags: { diabetes: true } }).blocked, true);
-  assert.equal(fastModeGate({ age: 30, flags: { kidney: true } }).blocked, true);
-  assert.equal(fastModeGate({ age: null, flags: {} }).blocked, true);
-  assert.equal(fastModeGate({ age: 10, flags: {} }).reason, FAST_BLOCK_REASON);
-  assert.ok(FAST_BLOCK_REASON.includes("ডাক্তারের পরামর্শ নিন"));
+  // Approved Deviation (১০ নভেম্বর ২০২৬): কখনো ব্লক নয়; আগের ব্লক-গ্রুপে warn=true
+  [OK, { age: 18, flags: {} }, { age: 64, flags: {} }].forEach((x) => { const g = fastModeGate(x); assert.equal(g.blocked, false); assert.equal(g.warn, false); assert.equal(g.reason, null); });
+  [{ age: 17, flags: {} }, { age: 65, flags: {} }, { age: 30, flags: { pregnant: true } }, { age: 30, flags: { diabetes: true } }, { age: 30, flags: { kidney: true } }, { age: null, flags: {} }, { age: 10, flags: {} }]
+    .forEach((x) => { const g = fastModeGate(x); assert.equal(g.blocked, false); assert.equal(g.warn, true); assert.equal(g.reason, FAST_WARN_REASON); });
+  assert.ok(FAST_WARN_REASON.includes("ডাক্তারের পরামর্শ নিন"));
 });
-test("পড়ার পথে গেট: সংরক্ষিত fastDays থাকলেও ব্লক হলে []", () => {
+test("পড়ার পথ: সংরক্ষিত fastDays সবার জন্য (ব্লক নেই)", () => {
   const goal = { fastDays: [0, 3] };
   assert.deepEqual(activeFastDays(goal, OK), [0, 3]);
-  assert.deepEqual(activeFastDays(goal, { age: 30, flags: { diabetes: true } }), []);
-  assert.deepEqual(activeFastDays(goal, { age: 70, flags: {} }), []);
+  assert.deepEqual(activeFastDays(goal, { age: 30, flags: { diabetes: true } }), [0, 3]);
+  assert.deepEqual(activeFastDays(goal, { age: 70, flags: {} }), [0, 3]);
   assert.deepEqual(activeFastDays(null, OK), []);
   assert.deepEqual(activeFastDays({ fastDays: "x" }, OK), []);
 });
@@ -35,7 +29,7 @@ test("সেভ-যাচাই: গেট, সীমা, ধরন; খাল�
   assert.equal(checkFastDaysInput([], { age: 10, flags: {} }), null); // বন্ধ করা সবসময় চলে
   assert.equal(checkFastDaysInput([1], OK), null);
   assert.equal(checkFastDaysInput([1, 4], OK), null);
-  assert.ok(checkFastDaysInput([1], { age: 10, flags: {} }));        // ব্লক
+  assert.equal(checkFastDaysInput([1], { age: 10, flags: {} }), null); // ব্লক নেই, শুধু সতর্কতা
   assert.ok(checkFastDaysInput([1, 2, 3], OK));                      // >২
   assert.ok(checkFastDaysInput([7], OK));
   assert.ok(checkFastDaysInput([1, 1], OK));
@@ -114,12 +108,12 @@ test("ট্রেন্ড: উপবাস-দিনের ক্যালর�
   assert.equal(without.calInRange, 2);
   assert.equal(without.calRangeDays, 3);
 });
-test("এক্সপোর্টের লক্ষ্য-ctx: গেট-পরবর্তী fastDays ও waterTarget-ওভাররাইড", () => {
+test("এক্সপোর্টের লক্ষ্য-ctx: fastDays (ব্লক ছাড়া) ও waterTarget-ওভাররাইড", () => {
   const goal = { fastDays: [1], waterTarget: 10, calc: { calorieTarget: 2000 } };
   const c = targetCtxFor({ age: 30, flags: {}, goal });
   assert.deepEqual(c.fastDays, [1]);
   assert.equal(c.waterTarget, 10);
-  assert.deepEqual(targetCtxFor({ age: 30, flags: { diabetes: true }, goal }).fastDays, []);
+  assert.deepEqual(targetCtxFor({ age: 30, flags: { diabetes: true }, goal }).fastDays, [1]); // ব্লক নেই (Approved Deviation)
   assert.equal(targetCtxFor({ age: 30, flags: { kidney: true }, goal }).waterTarget, null);
   const dates = ["2026-11-07", "2026-11-08", "2026-11-09"];
   const s = weeklySummary([{ date: "2026-11-08", exerciseMin: 30, waterGlasses: 10 }], dates, c);

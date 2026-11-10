@@ -149,7 +149,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const sheetSlot = sheet ? plan.slots.find((s) => s.id === sheet) : null;
 
   return React.createElement("div", null,
-    isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ সিয়াম/ফাস্টিং-এর দিন — ক্যালরি-টার্গেট আজ স্থগিত। মিল-প্ল্যান শুধু দেখার জন্য।"),
+    isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ সিয়াম/ফাস্টিং-এর দিন (পরিকল্পিত) — দিনের বেলা খাবার লগ করলে সিয়াম ধরা হবে না। মিল-প্ল্যান শুধু দেখার জন্য।"),
     React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "4px" } },
       "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
     React.createElement(Bar, { pct: ((d.caloriesIn || 0) / calc.calorieTarget) * 100, color: T.amber }),
@@ -522,7 +522,7 @@ function InputTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 }
 
 // ---------- উপবাস-দিবস মোড + ব্যক্তিগত পানির লক্ষ্য (পার্ট ১০) ----------
-// গেট: fastModeGate (সেফটি-গেটের উপর) — ব্লক হলে দিন-বাছাই দেখানোই হয় না, সেভে [] লেখা হয়।
+// fastModeGate: ব্লক নয়, শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — বয়স/রোগ-গ্রুপে ⚠ বার্তা, দিন-বাছাই সবার জন্য খোলা।
 function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved }) {
   const g = goal || {};
   const gate = fastModeGate({ age, flags });
@@ -537,7 +537,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
 
   const submit = async () => {
     setErr(null); setOk(false);
-    const fd = gate.blocked ? [] : days;
+    const fd = days;
     const e = checkFastDaysInput(fd, { age, flags }) || (waterLocked ? null : checkWaterTargetInput(water));
     if (e) { setErr(e); return; }
     setBusy(true);
@@ -552,9 +552,8 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
 
   return React.createElement("div", { style: CARD },
     React.createElement("b", null, "সিয়াম/ফাস্টিং ও পানির লক্ষ্য (ঐচ্ছিক)"),
-    gate.blocked
-      ? React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, "🌙 " + gate.reason))
-      : React.createElement("div", null,
+    React.createElement("div", null,
+      gate.warn && React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, gate.reason)),
         React.createElement("label", { style: LABEL }, "সিয়াম/ফাস্টিং-এর দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
           DAY_LABELS.map((lbl, i) => React.createElement("button", {

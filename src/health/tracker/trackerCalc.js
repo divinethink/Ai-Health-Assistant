@@ -132,7 +132,8 @@ export function waterTargetFor(age, flags, override) {
 // goal.fastDays = সর্বোচ্চ ২টি সপ্তাহ-দিনের সূচক, শনি=০ … শুক্র=৬ (exercisePlanData.bdDayIndex-এর মতো)।
 // সেফটি-গেট ব্লক হলে (<১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+, বয়স অজানা) মোড বন্ধ — সেভ-যাচাই ও পড়া, দুই পথেই; UI এড়াতে পারে না।
 export const MAX_FAST_DAYS = 2;
-export const FAST_BLOCK_REASON = "সিয়াম/ফাস্টিং মোড আপনার ক্ষেত্রে বন্ধ — ডাক্তারের পরামর্শ নিন।";
+// Approved Deviation (১০ নভেম্বর ২০২৬, owner): সিয়াম/ফাস্টিং মোড সবার জন্য খোলা; আগের ব্লক-গ্রুপে শুধু সতর্কতা।
+export const FAST_WARN_REASON = "⚠ আপনার ক্ষেত্রে (বয়স/শারীরিক অবস্থা) সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন।";
 
 export function sanitizeFastDays(raw) {
   if (!Array.isArray(raw)) return [];
@@ -142,18 +143,16 @@ export function sanitizeFastDays(raw) {
 }
 export function fastModeGate({ age, flags }) {
   const g = safetyGate({ age, flags });
-  return g.blocked ? { blocked: true, reason: FAST_BLOCK_REASON } : { blocked: false, reason: null };
+  return g.blocked ? { blocked: false, warn: true, reason: FAST_WARN_REASON } : { blocked: false, warn: false, reason: null };
 }
 // পড়ার পথ: গেট ব্লক হলে সংরক্ষিত মান থাকলেও [] (পরে ডায়াবেটিস/বয়স ইত্যাদি বদলালে আপনা-আপনি বন্ধ)
 export function activeFastDays(goal, { age, flags }) {
-  if (fastModeGate({ age, flags }).blocked) return [];
   return sanitizeFastDays(goal && goal.fastDays);
 }
 // সেভের আগে যাচাই: ত্রুটি-বার্তা অথবা null। খালি তালিকা (মোড বন্ধ করা) সবসময় বৈধ।
 export function checkFastDaysInput(raw, { age, flags }) {
   if (!Array.isArray(raw)) return "সিয়াম/ফাস্টিং-এর দিন বাছুন।";
   if (raw.length === 0) return null;
-  if (fastModeGate({ age, flags }).blocked) return FAST_BLOCK_REASON;
   if (raw.length > MAX_FAST_DAYS) return "সর্বোচ্চ " + MAX_FAST_DAYS + " দিন বাছা যায়।";
   if (sanitizeFastDays(raw).length !== raw.length) return "অবৈধ দিন।";
   return null;

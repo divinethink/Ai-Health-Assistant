@@ -3,7 +3,7 @@
 // ক্যালরি পূরণ = টার্গেটের ৮০%–১১০% — কম খাওয়াকে "সফল" ধরা হয় না।
 // ডেটা শুধু ব্যবহারকারীর নিজের দেওয়া; কিছু বানানো হয় না।
 
-import { isFastDate } from "./trackerCalc.js";
+import { fastOnDate } from "./fastDay.js";
 
 export const STREAK_MAX = 30; // Firestore `in` সীমা (৩০)
 
@@ -31,7 +31,7 @@ export function pctOf(value, target) {
 // ctx.fastDays (পার্ট ১০): উপবাস-দিনে ক্যালরি-লক্ষ্য প্রযোজ্য নয়। date না দিলে doc.date।
 export function metricsOf(doc, ctx, date) {
   const d = doc || {};
-  const onFast = isFastDate(date || d.date, ctx.fastDays);
+  const onFast = fastOnDate(date || d.date, ctx.fastDays, d);
   const applicable = [];
   const met = [];
   const add = (key, ok) => { applicable.push(key); if (ok) met.push(key); };
@@ -62,7 +62,7 @@ export function streakOf(docs, todayISO, ctx) {
   for (let i = 0; i < STREAK_MAX; i++) {
     const date = iso(new Date(y, mo - 1, da - i));
     if (dayHit(m[date], ctx, date)) count++;
-    else if (isFastDate(date, ctx.fastDays)) continue; // উপবাস-দিন: গোনাও হয় না, ভাঙেও না
+    else if (fastOnDate(date, ctx.fastDays, m[date])) continue; // উপবাস-দিন: গোনাও হয় না, ভাঙেও না
     else if (i > 0) break;
   }
   return count;
@@ -76,7 +76,7 @@ export function weekSummary(docs, weekDates, todayISO, ctx) {
     let state;
     if (date > todayISO) state = "future";
     else if (dayHit(m[date], ctx, date)) { state = "hit"; hitCount++; }
-    else if (isFastDate(date, ctx.fastDays)) state = "fast"; // উপবাস-দিন: miss নয়
+    else if (fastOnDate(date, ctx.fastDays, m[date])) state = "fast"; // উপবাস-দিন: miss নয়
     else state = date === todayISO ? "today" : "miss";
     return { date, state };
   });

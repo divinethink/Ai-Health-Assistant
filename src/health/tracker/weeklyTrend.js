@@ -1,7 +1,8 @@
 // সাপ্তাহিক ট্রেন্ড ও রিভিউ — pure functions (ধাপ ৫)। AI নয়: মন্তব্য ফিক্সড নিয়মে,
 // শুধু ব্যবহারকারীর নিজের দেওয়া ডাটা থেকে; নতুন সংখ্যা বানানো হয় না।
 
-import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate, activeFastDays, isFastDate } from "./trackerCalc.js";
+import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate, activeFastDays } from "./trackerCalc.js";
+import { fastOnDate } from "./fastDay.js";
 import { dayHit } from "./todaySummary.js";
 
 export function last7DatesISO(now = new Date()) {
@@ -27,6 +28,7 @@ export function buildTrend(docs, dates, opts) {
       sleepH: d.sleepMinutes ? round1(d.sleepMinutes / 60) : null,
       exerciseMin: d.exerciseMin || 0,
       logged: !!byDate[date],
+      fasting: fastOnDate(date, opts.fastDays, byDate[date]),
     };
   });
 
@@ -35,7 +37,7 @@ export function buildTrend(docs, dates, opts) {
   const calDays = days.filter((x) => x.calories);
   const T = opts.calorieTarget;
   // উপবাস-দিন (opts.fastDays) ক্যালরি-লক্ষ্যের হিসাবের বাইরে — "লক্ষ্যের বাইরে" ধরা হয় না
-  const calCountDays = calDays.filter((x) => !isFastDate(x.date, opts.fastDays));
+  const calCountDays = calDays.filter((x) => !x.fasting);
   const calInRange = T ? calCountDays.filter((x) => Math.abs(x.calories - T) <= T * 0.1).length : null;
   const sleepDays = days.filter((x) => x.sleepH);
   const sleepLow = sleepDays.filter((x) => x.sleepH < opts.sleepMinH).length;

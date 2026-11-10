@@ -6,7 +6,7 @@ import { nutritionOf } from "./foodNutrition.js";
 import { extraMeasuresFor } from "./foodMeasures.js";
 import { bnNum } from "../../shared/dates.js";
 import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods, checkExtraFood } from "./planPrefs.js";
-import { FOODS, MEAL_SLOTS, foodK, hasFoodOverride } from "./mealPlanData.js";
+import { FOODS, MEAL_SLOTS, FAST_SLOT_IDS, foodK, hasFoodOverride } from "./mealPlanData.js";
 
 export const MIN_GRAMS = 1;
 export const MAX_MEASURE_QTY = 100;
@@ -76,7 +76,7 @@ export function fmtMacro(x) {
 }
 
 // ---------- ধাপ ২: খাবার-লগের pure সহায়ক ----------
-const SLOT_IDS = MEAL_SLOTS.map((s) => s.id);
+const SLOT_IDS = MEAL_SLOTS.map((s) => s.id).concat(FAST_SLOT_IDS); // slotForNow শুধু MEAL_SLOTS থেকে
 
 // বর্তমান সময়ের ডিফল্ট বেলা (লোকাল সময়)।
 export function slotForNow(now = new Date()) {

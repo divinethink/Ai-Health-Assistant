@@ -14,6 +14,15 @@ export const MEAL_SLOTS = [
   { id: "dinner", label: "রাত", time: "20:00" },
 ];
 
+// সিয়াম/ফাস্টিং-এর দিনের অতিরিক্ত বেলা — শুধু খাবার-লগে (extraFoods.slot); প্ল্যান/রিমাইন্ডারে নেই।
+export const FAST_SLOTS = [
+  { id: "sehri", label: "সেহরি", time: "04:00" },
+  { id: "iftar", label: "ইফতার", time: "18:30" },
+];
+export const FAST_SLOT_IDS = FAST_SLOTS.map((s) => s.id);
+// দিনের বেলার খাওয়া = সিয়াম রাখা হয়নি ধরা হয় (সেহরি/ইফতার/রাত নয়)
+export const DAYTIME_SLOT_IDS = ["breakfast", "snack1", "lunch", "snack2"];
+
 // k = এক ইউনিটের আনুমানিক কিলোক্যালরি; al = এলার্জি-ট্যাগ; swap = [বিকল্প খাবার, অনুপাত]
 const CORE_FOODS = {
   roti: { n: "রুটি", u: "টি", k: 80, al: "wheat", swap: ["rice", 0.5], g: "rice" },

@@ -5,10 +5,11 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO } from "./trackerData.js";
 import { weekDatesISO } from "./exercisePlanData.js";
-import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, bmiOf } from "./trackerCalc.js";
+import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { ringDash, pctOf, weekSummary } from "./todaySummary.js";
-import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
+import { buildMealPlan } from "./mealPlanData.js";
+import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
 import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
@@ -75,7 +76,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget);
   const today = todayISO();
   const ctx = { calorieTarget: calc ? calc.calorieTarget : null, exTarget, waterTarget, sleepMinH: sMin, fastDays };
-  const onFast = isFastDate(today, fastDays);
+  // পরিকল্পিত সিয়ামের দিন বনাম বাস্তব: দিনের বেলার খাবার লগ হলে onFast=false (fastDay.js)। সতর্কতা সবার জন্য খোলা (Approved Deviation)।
+  const plannedFast = isFastDate(today, fastDays);
+  const onFast = fastOnDate(today, fastDays, daily);
+  const fastWarn = plannedFast && fastModeGate({ age, flags }).warn;
   const week = weekSummary(recent, weekDatesISO(), today, ctx);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -93,9 +97,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     finally { setBusy(false); }
   };
 
-  // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লক/উপবাস-দিনে নয়)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
+  // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লকে নয়; সিয়ামের দিনেও চালু)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
   const extras = sanitizeExtraFoods(d.extraFoods);
-  const canLog = !onFast && !!calc;
+  const canLog = !!calc;
   const macros = sumNutrition(extras);
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
@@ -106,7 +110,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
     finally { setBusy(false); }
   };
-  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
+  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : fastDefaultSlot(plannedFast)); setFoodOpen(true); };
 
   // ধাপ ৩: ব্যায়াম/ঘুম/স্টেপ/ওজন শিট। saveDaily একই (নির্দিষ্ট ডক-ID + merge); busy লক = double-tap নিরাপদ।
   const [inKind, setInKind] = useState(null); // "exercise" | "sleep" | "steps" | "weight" | null
@@ -148,26 +152,34 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘লক্ষ্য সেট করুন’-এ যান।"),
 
     // উপবাস-দিন (পার্ট ১০): ক্যালরি-টার্গেট স্থগিত
-    onFast && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },
+    onFast && !calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },
       React.createElement("div", { style: { fontSize: "20px", fontWeight: 800 } }, "🌙 আজ সিয়াম/ফাস্টিং"),
       React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "6px", lineHeight: 1.6 } },
         "আজ ক্যালরি-টার্গেট স্থগিত। পানি পান করুন; সেহরি/ইফতারে হালকা ও সুষম খাবার নিন। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
 
     // হিরো-কার্ড: নাম/বয়স/BMI + ক্যালরি রিং + আজকের হিসাব (গ্রাম, শুধু যোগফল — টার্গেট/শতাংশ নেই)। AlertStrip নিচে।
-    !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
+    calc && React.createElement("div", { style: { ...CARD_STYLE, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 10px", marginBottom: "6px" } },
         React.createElement("span", { style: { fontSize: "21px", fontWeight: 800, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, info.member && info.member.name ? info.member.name : "আমার"),
         info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, String(info.age) + " yrs"),
         // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
         React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 10px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.18)", background: "rgba(255,255,255,0.14)", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন")),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
-        React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 70, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
+        React.createElement(Ring, { pct: onFast ? 0 : pctOf(eaten, calc.calorieTarget), size: 70, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
           React.createElement("span", { style: { fontSize: "17px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
           React.createElement("span", { style: { fontSize: "11px", color: T.onDarkSoft } }, "কিলোক্যালরি")),
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-          React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজকের টার্গেট"),
-          React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
-          React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]))),
+          onFast
+            ? React.createElement(React.Fragment, null,
+              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজ"),
+              React.createElement("div", { style: { fontSize: "21px", fontWeight: 800, lineHeight: 1.2 } }, "🌙 সিয়াম/ফাস্টিং"),
+              React.createElement("div", { style: { fontSize: "12.5px", color: T.onDarkSoft, marginTop: "2px", lineHeight: 1.4 } }, "ক্যালরি-টার্গেট স্থগিত · সেহরি/ইফতার লগ করুন"))
+            : React.createElement(React.Fragment, null,
+              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজকের টার্গেট"),
+              React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
+              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]),
+              plannedFast && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "2px" } }, "🌙 আজ সিয়ামের দিন ছিল — দিনের খাবার লগ হওয়ায় ধরা হয়নি")))),
+      fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।"),
       // আজকের হিসাব: লেবেল-বাক্স নেই; একক "(গ্রাম)" ফাইবারের ডানে; পাতলা বিভাজক-রেখা
       canLog && macros.withMacro > 0 && React.createElement("div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.18)" }, "aria-label": "আজকের হিসাব (গ্রাম)" },
         React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
@@ -181,7 +193,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
-      initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      slots: slotsForDay(plannedFast), initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
@@ -191,7 +203,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       React.createElement(MiniRing, { value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "ঘুম · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
       stTarget && React.createElement(MiniRing, { value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
       // হিরো না থাকলে (উপবাস/টার্গেট-ব্লক) BMI কার্ড এখানে ফেরে — নইলে ওজন দেওয়ার পথ থাকত না
-      !(!onFast && calc) && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
+      !calc && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
         style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer" } },
         React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1.2 } }, "⚖️"),
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bmiVal ? bnNum(Math.round(bmiVal * 10) / 10) : "—"),
@@ -246,7 +258,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, "🍽 আজকের খাবার-লগ"),
       React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি (প্ল্যানের টিকসহ)"),
       foodErr && !foodOpen && ErrorBox(foodErr)),
-    canLog && MEAL_SLOTS.map((sl) => {
+    canLog && slotsForDay(plannedFast).map((sl) => {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sl.id);
       const sm = sumNutrition(mine);
       const head = [bnNum(sm.kcal) + " কিলোক্যালরি"].concat(sm.withMacro > 0 ? ["প্রো " + bnNum(Math.round(sm.p)), "কার্ব " + bnNum(Math.round(sm.c)), "ফ্যাট " + bnNum(Math.round(sm.f))] : []).join(" · ");

@@ -14,7 +14,7 @@ export const GRADIENT_HERO = "linear-gradient(135deg, #0E4B43, #17705F)";
 export const CARD_STYLE = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "10px 12px", marginBottom: "8px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
 // বেলা-আইকন (emoji — অ্যাপের বাকি অংশের মতো) ও আইকন-টালির নরম রং
-export const SLOT_ICON = { breakfast: "🌅", snack1: "🍎", lunch: "☀️", snack2: "🫖", dinner: "🌙" };
-export const SLOT_TINT = { breakfast: "#FFF0D6", snack1: "#FDE8E4", lunch: "#E4F2EA", snack2: "#F3ECD9", dinner: "#E6E4F5" };
+export const SLOT_ICON = { sehri: "🌙", iftar: "🌇", breakfast: "🌅", snack1: "🍎", lunch: "☀️", snack2: "🫖", dinner: "🌙" };
+export const SLOT_TINT = { sehri: "#E6E4F5", iftar: "#FFE9CF", breakfast: "#FFF0D6", snack1: "#FDE8E4", lunch: "#E4F2EA", snack2: "#F3ECD9", dinner: "#E6E4F5" };
 
 export const MAX_WATER = 40; // InputTab-এর সীমার সাথে মেলে

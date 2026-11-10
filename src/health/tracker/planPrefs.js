@@ -5,7 +5,7 @@
 // সব ফিল্ড ঐচ্ছিক — না থাকলে বিদ্যমান ডিফল্ট প্ল্যান অপরিবর্তিত।
 
 import { bnNum } from "../../shared/dates.js";
-import { MEAL_SLOTS, FOODS, kcalOf, foodK, itemText, caloriesForEaten, cleanFoodOverrides, setFoodOverrides, MAX_FOOD_OVERRIDES } from "./mealPlanData.js";
+import { MEAL_SLOTS, FAST_SLOT_IDS, FOODS, kcalOf, foodK, itemText, caloriesForEaten, cleanFoodOverrides, setFoodOverrides, MAX_FOOD_OVERRIDES } from "./mealPlanData.js";
 import { MIN_KCAL } from "./trackerCalc.js";
 
 export const PLAN_PREFS_VERSION = 1;
@@ -57,7 +57,7 @@ export const EXERCISE_TYPES = {
   pilates: { label: "পিলাটেস", en: "Pilates", counted: true, home: true },
 };
 
-const SLOT_IDS = MEAL_SLOTS.map((s) => s.id);
+const SLOT_IDS = MEAL_SLOTS.map((s) => s.id).concat(FAST_SLOT_IDS);
 const isObj = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
