@@ -21,8 +21,8 @@ const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
 // props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), recent (ঐচ্ছিক, foodCalc.recentFoodEntries), busy, err, onAdd(entry) → Promise<boolean>, onClose
-export function FoodLogSheet({ allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
-  const [slot, setSlot] = useState(slotForNow());
+export function FoodLogSheet({ initialSlot, allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
+  const [slot, setSlot] = useState(initialSlot || slotForNow());
   const [key, setKey] = useState(null);
   const [measureId, setMeasureId] = useState(null); // measure id | "g" (গ্রাম)
   const [qty, setQty] = useState(1);

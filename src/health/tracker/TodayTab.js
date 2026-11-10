@@ -64,6 +64,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [foodOpen, setFoodOpen] = useState(false);
+  const [foodSlot, setFoodSlot] = useState(null); // বেলার "＋" থেকে খুললে সেই বেলা আগে থেকে বাছা
   const [foodErr, setFoodErr] = useState(null);
   const fmtH = (m) => bnNum(Math.floor(m / 60)) + " ঘ. " + bnNum(m % 60) + " মি.";
 
@@ -89,7 +90,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
     finally { setBusy(false); }
   };
-  const openFood = () => { setFoodErr(null); setFoodOpen(true); };
+  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
 
   // ধাপ ৩: ব্যায়াম/ঘুম/স্টেপ/ওজন শিট। saveDaily একই (নির্দিষ্ট ডক-ID + merge); busy লক = double-tap নিরাপদ।
   const [inKind, setInKind] = useState(null); // "exercise" | "sleep" | "steps" | "weight" | null
@@ -135,7 +136,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "10px 14px 12px" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "6px" } },
         React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "15px", fontWeight: 700, color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "👤 " + (info.member && info.member.name ? info.member.name : "আমার")),
-        React.createElement("button", { type: "button", onClick: openFood, "aria-label": "খাবার যোগ করুন", style: { flexShrink: 0, minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "none", background: T.amberSoft, color: "#4A3200", fontSize: "15px", fontWeight: 800, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" } }, "＋ খাবার")),
+        React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flexShrink: 0, minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "none", background: T.amberSoft, color: "#4A3200", fontSize: "15px", fontWeight: 800, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" } }, "＋ খাবার")),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "14px" } },
         React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 96, stroke: 11, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
           React.createElement("span", { style: { fontSize: "20px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
@@ -159,7 +160,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
-      allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
@@ -225,9 +226,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       return React.createElement("div", { key: sl.id, style: { ...CARD_STYLE, padding: "10px 12px", opacity: mine.length ? 1 : 0.8 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
           React.createElement("span", { "aria-hidden": "true", style: { width: "40px", height: "40px", borderRadius: "12px", background: SLOT_TINT[sl.id], display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", flexShrink: 0 } }, SLOT_ICON[sl.id]),
-          React.createElement("div", { style: { minWidth: 0 } },
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, sl.label),
-            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, mine.length ? head : "এখনও কিছু যোগ হয়নি"))),
+            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, mine.length ? head : "এখনও কিছু যোগ হয়নি")),
+          React.createElement("button", { type: "button", onClick: () => openFood(sl.id), "aria-label": sl.label + "-এ খাবার যোগ করুন", style: { flexShrink: 0, alignSelf: "flex-start", width: "44px", height: "44px", marginTop: "-4px", marginRight: "-4px", borderRadius: "50%", border: "none", background: T.track, color: T.green, fontSize: "24px", fontWeight: 700, lineHeight: 1, cursor: "pointer", fontFamily: "inherit" } }, "＋")),
         mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border, marginTop: "6px" } },
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "14px", color: T.ink } }, x.name),
