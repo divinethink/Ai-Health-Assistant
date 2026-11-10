@@ -14,13 +14,15 @@ import { DocumentList } from "./DocumentList.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 
-const { useState, useCallback } = React;
+const { useState, useCallback, useEffect } = React;
+import { takeQuickIntent } from "../../shared/quickIntent.js";
 
 export function DocumentsSection({ familyId, callerMemberId, selectedMemberId }) {
   const [refreshTick, setRefreshTick] = useState(0);
   // panel: null | { mode: "add" } | { mode: "analyze", file } | { mode: "manual" }
   const [panel, setPanel] = useState(null);
   const targetMemberId = selectedMemberId;
+  useEffect(() => { if (takeQuickIntent(["report"])) setPanel({ mode: "add" }); }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
   const startAnalyze = useCallback((file) => setPanel({ mode: "analyze", file, key: Date.now() }), []);

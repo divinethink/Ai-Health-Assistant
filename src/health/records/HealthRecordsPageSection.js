@@ -45,6 +45,7 @@ import { Skeleton } from "../../shared/ui.js";
 
 const { useState } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
+import { peekQuickIntent, takeQuickIntent } from "../../shared/quickIntent.js";
 
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
@@ -68,9 +69,10 @@ const TABS = [
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
-  const [activeTab, setActiveTab] = useState("today");
+  // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
+  const [activeTab, setActiveTab] = useState(() => (peekQuickIntent(["bp", "sugar", "medicine"]) ? "records" : "today"));
   const [timelineSub, setTimelineSub] = useState("diet");
-  const [recordSub, setRecordSub] = useState("records");
+  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : "records"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind("home-main", activeTab, setActiveTab);
   histBind("home-rec", recordSub, setRecordSub);

@@ -15,7 +15,8 @@ import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
 
-const { useState } = React;
+const { useState, useEffect } = React;
+import { takeQuickIntent } from "../../shared/quickIntent.js";
 
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
 
@@ -96,6 +97,12 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
   const [inKind, setInKind] = useState(null); // "exercise" | "sleep" | "steps" | "weight" | null
   const [inErr, setInErr] = useState(null);
   const openIn = (k) => { setInErr(null); setInKind(k); };
+  // "+ দ্রুত যোগ" থেকে এলে বিদ্যমান ফর্ম/শিট খোলা (ধাপ ৯); নতুন কোনো লেখার পথ নয়
+  useEffect(() => {
+    const k = takeQuickIntent(["weight", "sleep", "food"]);
+    if (k === "food") openFood(); else if (k) openIn(k);
+    // eslint-disable-next-line
+  }, []);
   const closeIn = () => { setInErr(null); setInKind(null); };
   const exLog = sanitizeExerciseLog(d.exerciseLog);
   const writeIn = async (fields, closeAfter) => {

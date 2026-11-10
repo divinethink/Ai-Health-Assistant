@@ -13,6 +13,7 @@ import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
 
 const { useState, useEffect, useRef } = React;
+import { takeQuickIntent } from "../../shared/quickIntent.js";
 
 // section: "all" (ডিফল্ট, পুরনো callers-এর জন্য অপরিবর্তিত) | "profile"
 // (শুধু vitals) | "records" (form+list+trend) — P11 mockup §৩-এর হোম-পেজ
@@ -27,6 +28,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
   const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
+  const [presetObs, setPresetObs] = useState(null); // "+ দ্রুত যোগ" থেকে প্রেসার/সুগার (ধাপ ৯)
   const formRef = useRef(null);
   const targetMemberId = selectedMemberId;
 
@@ -34,6 +36,12 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   // ফর্মে খোলা না থাকে তা নিশ্চিত করতে reset (আগে dropdown-change handler-এ
   // ইনলাইন ছিল, এখন selectedMemberId parent থেকে আসায় effect দিয়ে)।
   useEffect(() => { setEditingRecord(null); setAdding(false); }, [targetMemberId]);
+  useEffect(() => {
+    if (section !== "records" && section !== "all") return;
+    const k = takeQuickIntent(["bp", "sugar"]);
+    if (k) { setPresetObs(k); setAdding(true); }
+    // eslint-disable-next-line
+  }, []);
   // ✎ সম্পাদনা চাপলে ফর্ম খোলে ও দৃশ্যে আসে
   useEffect(() => { if (editingRecord && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [editingRecord]);
 
@@ -55,10 +63,10 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
         style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
       }, "+ বর্তমান স্বাস্থ্যের অবস্থা যুক্ত করুন"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
-        key: "form-" + targetMemberId,
-        familyId, targetMemberId, callerMemberId,
-        editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); },
-        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); },
+        key: "form-" + targetMemberId + (presetObs || ""),
+        familyId, targetMemberId, callerMemberId, presetObs,
+        editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
+        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); },
       }),
       ),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {

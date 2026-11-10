@@ -11,22 +11,24 @@ import { listDoctors } from "../doctor-details/doctorDetailsData.js";
 import { DoctorFieldsRow } from "../doctor-details/DoctorFieldsRow.js";
 import { buildCandidates, suggestDoctors, pickPatch, isDuplicate } from "../doctor-details/doctorSuggest.js";
 
+import { OBS_PRESETS } from "../quickadd/quickAddTargets.js";
 const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
 const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
 // না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
-export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit }) {
+export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs }) {
   const isEdit = !!editingRecord;
-  const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : "condition");
+  const preset = !isEdit && presetObs ? OBS_PRESETS[presetObs] : null; // "+ দ্রুত যোগ": প্রেসার/সুগার — শুধু ধরন+একক আগে-থেকে-ভরা
+  const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : preset ? "observation" : "condition");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("A");
   const [status, setStatus] = useState("active");
   const [chronicManagement, setChronicManagement] = useState(false);
-  const [obsType, setObsType] = useState("");
+  const [obsType, setObsType] = useState(preset ? preset.type : "");
   const [value, setValue] = useState("");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState(preset ? preset.unit : "");
   const [tier, setTier] = useState("otc-self-care");
   const [frequency, setFrequency] = useState("");
   const [durationDays, setDurationDays] = useState("");

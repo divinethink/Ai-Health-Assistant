@@ -33,6 +33,9 @@ import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSect
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
+import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
+import { quickTarget } from "../health/quickadd/quickAddTargets.js";
+import { setQuickIntent } from "../shared/quickIntent.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
 import { listMembers } from "./familyIdentity.js";
@@ -469,6 +472,16 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   }, [familyId, memberId]);
 
   const goHome = () => setActiveTab("home");
+  // "+ দ্রুত যোগ" (ধাপ ৯): বার্তা রেখে গন্তব্যে যাওয়া; হোমেই থাকলে হোম নতুন করে আঁকা (homeKey) যাতে ফর্ম খোলে
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [homeKey, setHomeKey] = useState(0);
+  const onQuickPick = (kind) => {
+    const tab = quickTarget(kind);
+    setQuickIntent(kind);
+    setQuickOpen(false);
+    if (!tab) return;
+    if (tab === activeTab) setHomeKey((n) => n + 1); else setActiveTab(tab);
+  };
 
   if (isAdmin && showGeneralChat) {
     return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
@@ -487,7 +500,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(HealthRecordsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(HealthRecordsPageSection, { key: "home-" + homeKey, familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
     tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
@@ -507,6 +520,8 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     React.Fragment, null,
     tabContent,
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
+    activeTab === "home" && selectedMemberId && React.createElement(QuickAddFab, { onOpen: () => setQuickOpen(true) }),
+    React.createElement(QuickAddSheet, { open: quickOpen, onClose: () => setQuickOpen(false), onPick: onQuickPick, memberName: ((members || []).find((m) => m.id === selectedMemberId) || {}).name || "" }),
     React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: setActiveTab })
   );
 }
