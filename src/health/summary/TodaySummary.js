@@ -116,7 +116,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
   };
 
   if (error || auxErr) return ErrorBox(auxErr || (error.code === "permission-denied" ? "এই সদস্যের তথ্য দেখার অনুমতি আপনার নেই।" : (error.message || String(error))));
-  if (!selectedMemberId || loading || !records || !aux) return Skeleton(onlyMeds ? 2 : 4, 96);
+  if (!selectedMemberId || loading || !records || !aux) return onlyMeds ? null : Skeleton(4, 96); // হোমে লোডের সময় ফাঁকা জায়গা/লাফ এড়াতে কিছুই দেখাই না
 
   const { member, goal, daily, events } = aux;
   const d = daily || {};
@@ -138,7 +138,10 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
   const upcoming = upcomingEvents(events, selectedMemberId, today);
   const dateLine = new Date(today + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" });
 
-  return h("div", { style: { fontFamily: FONT } },
+  // হোমে (onlyMeds) ইনপুট না থাকলে কার্ডই দেখাব না; রেকর্ড/ইভেন্ট দিলে অটো আসবে
+  if (onlyMeds && !doses.length && !noTimeCount && !upcoming.length) return null;
+
+  return h("div", { style: { fontFamily: FONT, marginBottom: onlyMeds ? "10px" : 0 } },
     ...(onlyMeds ? [] : [h("div", { style: { fontSize: "14px", color: T.muted, margin: "0 2px 8px" } }, dateLine + (member && member.name ? " · " + member.name.split(" ")[0] : "")),
     h("div", { style: { background: T.green, borderRadius: "20px", padding: "16px 18px", color: "#fff" } },
       h("div", { style: { fontSize: "14px", color: T.onDarkSoft } }, "আজকের স্বাস্থ্য" + (pct === null ? "" : " — " + bnNum(pct) + "% সম্পন্ন")),
@@ -153,17 +156,17 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
       h(Stat, { icon: "🍽️", title: "ক্যালরি", big: bnNum(d.caloriesIn || 0), small: calorieTarget ? "/" + bnNum(calorieTarget) : "কিলোক্যালরি", pct: calorieTarget ? ((d.caloriesIn || 0) / calorieTarget) * 100 : undefined, color: T.green }),
       h(Stat, { icon: "⚖️", title: "ওজন", big: weightKg ? bnNum(weightKg) : "—", small: weightKg ? "কেজি" + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "") : "" }))]),
 
-    h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
+    (!onlyMeds || doses.length > 0) && h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
       h("div", { style: SEC }, "আজকের ওষুধ"), doses.length > 0 && h("div", { style: { fontSize: "13px", color: T.muted } }, "সব ডিভাইসে মিলবে")),
     doseErr && ErrorBox(doseErr),
-    h("div", { style: { ...BOX, padding: "4px 14px" } },
+    (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: "4px 14px" } },
       doses.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ প্রেসক্রিপশন/রিপোর্ট।")
         : doses.map((x, i) => h(DoseRow, { key: x.key, d: x, busy: busyKey !== null, onToggle: () => toggle(x), last: i === doses.length - 1 }))),
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 
-    h("div", { style: SEC }, "আসন্ন"),
-    h("div", { style: { ...BOX, padding: "4px 14px" } },
+    (!onlyMeds || upcoming.length > 0) && h("div", { style: SEC }, "আসন্ন"),
+    (!onlyMeds || upcoming.length > 0) && h("div", { style: { ...BOX, padding: "4px 14px" } },
       upcoming.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0" } }, "আগামী ৩০ দিনে টিকা বা অ্যাপয়েন্টমেন্ট নেই।")
         : upcoming.map((e, i) => h("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: i === upcoming.length - 1 ? "none" : "1px solid " + T.track } },

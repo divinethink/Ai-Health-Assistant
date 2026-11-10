@@ -53,12 +53,13 @@ const COND_LABEL = { active: "চলছে", chronic: "দীর্ঘমেয�
 // হোমের উপরের সতর্ক-সারি: এলার্জি (লাল) + চলমান অসুস্থতা। এলার্জি-রেকর্ড না থাকলে "নেই" বা সবুজ নয়,
 // শুধু "তথ্য দেওয়া হয়নি" — যাতে "নেই" মানে "নিরাপদ" মনে না হয় (safe-default)।
 function AlertStrip({ allergies, conds }) {
+  if (!allergies.length && !conds.length) return null; // কিছু না থাকলে কার্ডই নেই; রেকর্ড দিলে অটো আসবে
   const chip = (key, text, bg, fg) => React.createElement("span", { key, style: { padding: "5px 12px", borderRadius: "999px", background: bg, color: fg, fontSize: "14px", fontWeight: 700 } }, text);
   const shown = conds.slice(0, 3);
   return React.createElement("div", { style: { ...CARD_STYLE, padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "এলার্জি ও চলমান অসুস্থতা" },
     allergies.length
       ? chip("al", "⚠️ এলার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
-      : React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "এলার্জি তথ্য দেওয়া হয়নি"),
+      : null,
     shown.map((c, i) => chip("c" + i, "🩺 " + c.name + (COND_LABEL[c.status] ? " (" + COND_LABEL[c.status] + ")" : ""), "#E4F0E9", T.green)),
     conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"));
 }
@@ -156,13 +157,16 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
         streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক — আজ ভাঙবে না" : "🔥 স্ট্রিক আজ ভাঙবে না")),
 
     // ক্যালরি হিরো-কার্ড + স্ট্রিক
-    !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "8px 14px 10px" } },
-      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "6px" } },
-        React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "15px", fontWeight: 700, color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, "👤 " + (info.member && info.member.name ? info.member.name : "আমার")),
-        React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flexShrink: 0, minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "none", background: T.amberSoft, color: "#4A3200", fontSize: "15px", fontWeight: 800, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" } }, "＋ খাবার")),
+    !onFast && calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "6px 14px 8px" } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "4px" } },
+        React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px 8px" } },
+          React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, "👤 " + (info.member && info.member.name ? info.member.name : "আমার") + (info.age !== null && info.age !== undefined ? " · " + bnNum(info.age) + " বছর" : "")),
+          // BMI — শুধু সংখ্যা (রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
+          React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 10px", borderRadius: "999px", border: "none", background: "rgba(255,255,255,0.16)", color: T.onDark, fontSize: "12.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, bmiVal ? "⚖️ BMI " + bnNum(Math.round(bmiVal * 10) / 10) : "⚖️ ওজন দিন")),
+        React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flexShrink: 0, minHeight: "40px", padding: "0 12px", borderRadius: "999px", border: "none", background: T.amberSoft, color: "#4A3200", fontSize: "13px", fontWeight: 800, display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit" } }, "＋ খাবার")),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "14px" } },
-        React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 84, stroke: 10, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
-          React.createElement("span", { style: { fontSize: "20px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
+        React.createElement(Ring, { pct: pctOf(eaten, calc.calorieTarget), size: 72, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
+          React.createElement("span", { style: { fontSize: "18px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
           React.createElement("span", { style: { fontSize: "11px", color: T.onDarkSoft } }, "কিলোক্যালরি")),
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজকের টার্গেট"),
@@ -194,8 +198,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       React.createElement(MiniRing, { value: bnNum(d.exerciseMin || 0) + "/" + bnNum(exTarget), pct: pctOf(d.exerciseMin, exTarget), color: T.orange, caption: "ব্যায়াম (মি.)", label: "ব্যায়াম", onTap: () => openIn("exercise") }),
       React.createElement(MiniRing, { value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "ঘুম · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
       stTarget && React.createElement(MiniRing, { value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
-      // BMI — শুধু সংখ্যা (রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট (আগের ওজন-কার্ডের কাজ)
-      React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
+      // হিরো না থাকলে (উপবাস/টার্গেট-ব্লক) BMI কার্ড এখানে ফেরে — নইলে ওজন দেওয়ার পথ থাকত না
+      !(!onFast && calc) && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
         style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer" } },
         React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1.2 } }, "⚖️"),
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bmiVal ? bnNum(Math.round(bmiVal * 10) / 10) : "—"),
