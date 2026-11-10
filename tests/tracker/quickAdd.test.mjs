@@ -7,7 +7,7 @@ import { setQuickIntent, peekQuickIntent, takeQuickIntent } from "../../src/shar
 test("৯টা টাইল, id অনন্য, প্রতিটার গন্তব্য আছে", () => {
   assert.equal(QUICK_ITEMS.length, 9);
   assert.equal(new Set(QUICK_ITEMS.map((x) => x.id)).size, 9);
-  QUICK_ITEMS.forEach((x) => assert.ok(["home", "tracker", "documents", "aichat"].includes(quickTarget(x.id))));
+  QUICK_ITEMS.forEach((x) => assert.ok(["home", "health", "tracker", "aichat"].includes(quickTarget(x.id))));
   assert.equal(quickTarget("nope"), null);
 });
 test("প্রেসার/সুগার প্রিসেট", () => {

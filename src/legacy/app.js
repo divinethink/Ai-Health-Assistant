@@ -37,7 +37,6 @@ import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js"
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent } from "../shared/quickIntent.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
-import { DocumentsPageSection } from "../health/documents/DocumentsPageSection.js";
 import { listMembers } from "./familyIdentity.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -72,7 +71,7 @@ const BOTTOM_NAV_HEIGHT = 56;
 const NAV_TABS = [
   // ৫ ট্যাব (owner-request): এআই চ্যাট এখন মেনু থেকে খোলে (activeTab "aichat" থাকে, শুধু বটম-নেভে বাটন নেই)
   ["home", "🏠", "nav.home"],
-  ["documents", "📁", "nav.docs"],
+  ["health", "🩺", "nav.health"],
   ["tracker", "📈", "nav.tracker"],
   ["blog", "📚", "nav.blog"],
   ["menu", "☰", "nav.menu"],
@@ -500,15 +499,15 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(HealthRecordsPageSection, { key: "home-" + homeKey, familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(HealthRecordsPageSection, { key: "home-" + homeKey, mode: "home", familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+  } else if (activeTab === "health") {
+    tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
     tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
     tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
-  } else if (activeTab === "documents") {
-    tabContent = React.createElement(DocumentsPageSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,

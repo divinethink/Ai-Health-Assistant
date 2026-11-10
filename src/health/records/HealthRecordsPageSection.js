@@ -41,7 +41,9 @@ import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
-import { Skeleton } from "../../shared/ui.js";
+import { Skeleton, TabPills } from "../../shared/ui.js";
+import { DocumentsSection } from "../documents/DocumentsSection.js";
+import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 
 const { useState } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
@@ -61,32 +63,42 @@ const TIMELINE_SUBS = [
   { id: "timeline", label: "🕘 টাইমলাইন" },
 ];
 
-const TABS = [
-  { id: "today", label: "tab.today" },
+// mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = প্রোফাইল · স্বাস্থ্য তথ্য · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
+const HEALTH_TABS = [
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
   { id: "timeline", label: "tab.timeline" },
+  { id: "docs", label: "nav.docs" },
 ];
+const DOC_SUBS = [["upload", "tab.upload"], ["doctor-export", "tab.export"]];
 
-export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
-  // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
-  const [activeTab, setActiveTab] = useState(() => (peekQuickIntent(["bp", "sugar", "medicine"]) ? "records" : "today"));
+export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
+  const isHealth = mode === "health";
+  const TABS = isHealth ? HEALTH_TABS : [];
+  const hk = isHealth ? "health-" : "home-";
+  const [docSub, setDocSub] = useState("upload");
+  // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; রিপোর্ট → নথিপত্র; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
+  const [activeTab, setActiveTab] = useState(() => {
+    if (!isHealth) return "today";
+    if (peekQuickIntent(["report"])) return "docs";
+    return peekQuickIntent(["bp", "sugar", "medicine"]) ? "records" : "profile";
+  });
   const [timelineSub, setTimelineSub] = useState("diet");
   const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : "records"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
-  histBind("home-main", activeTab, setActiveTab);
-  histBind("home-rec", recordSub, setRecordSub);
-  histBind("home-tl", timelineSub, setTimelineSub);
+  histBind(hk + "main", activeTab, setActiveTab);
+  histBind(hk + "rec", recordSub, setRecordSub);
+  histBind(hk + "tl", timelineSub, setTimelineSub);
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
-    React.createElement(
+    isHealth && React.createElement(
       "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
       chip || null,
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,
-          onClick: () => histChange("home-main", activeTab, tb.id, setActiveTab),
+          onClick: () => histChange(hk + "main", activeTab, tb.id, setActiveTab),
           style: {
             flexShrink: 0, padding: "6px 14px", minHeight: "32px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
             border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
@@ -100,12 +112,12 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
-      activeTab === "today" && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
-      activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
-      activeTab === "records" && React.createElement(React.Fragment, null,
+      !isHealth && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
+      isHealth && activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
+      isHealth && activeTab === "records" && React.createElement(React.Fragment, null,
         React.createElement("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
           RECORD_SUBS.map((sb) => React.createElement("button", {
-            key: sb.id, onClick: () => histChange("home-rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
+            key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
             style: {
               flex: 1, minHeight: "44px", padding: "6px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
               border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
@@ -114,12 +126,16 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
           }, sb.label))),
         recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId })),
-      activeTab === "timeline" && React.createElement(
+      isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
+        TabPills(DOC_SUBS.map(([i, k]) => [i, t(k)]), docSub, setDocSub, null, "health-docs"),
+        docSub === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
+        docSub === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => setDocSub("upload") })),
+      isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
           "div", { style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           TIMELINE_SUBS.map((sb) => React.createElement("button", {
-            key: sb.id, onClick: () => histChange("home-tl", timelineSub, sb.id, setTimelineSub), "aria-pressed": timelineSub === sb.id,
+            key: sb.id, onClick: () => histChange(hk + "tl", timelineSub, sb.id, setTimelineSub), "aria-pressed": timelineSub === sb.id,
             style: {
               flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
               border: timelineSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",

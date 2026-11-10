@@ -2,14 +2,14 @@
 // tab = বটম-নেভ ট্যাব id (app.js); "aichat" মেনু-গ্রুপের ট্যাব।
 export const QUICK_ITEMS = [
   { id: "weight", icon: "⚖️", label: "ওজন", tab: "tracker" },
-  { id: "bp", icon: "❤️", label: "প্রেসার", tab: "home" },
-  { id: "sugar", icon: "🩸", label: "সুগার", tab: "home" },
-  { id: "medicine", icon: "💊", label: "ওষুধ", tab: "home" },
+  { id: "bp", icon: "❤️", label: "প্রেসার", tab: "health" },
+  { id: "sugar", icon: "🩸", label: "সুগার", tab: "health" },
+  { id: "medicine", icon: "💊", label: "ওষুধ", tab: "health" },
   { id: "symptom", icon: "🤒", label: "লক্ষণ", tab: "aichat" },
   { id: "food", icon: "🍽️", label: "খাবার", tab: "tracker" },
   { id: "water", icon: "💧", label: "পানি", tab: "tracker" },
   { id: "sleep", icon: "😴", label: "ঘুম", tab: "tracker" },
-  { id: "report", icon: "📄", label: "রিপোর্ট", tab: "documents" },
+  { id: "report", icon: "📄", label: "রিপোর্ট", tab: "health" },
 ];
 
 export function quickTarget(kind) {
