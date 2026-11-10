@@ -1,25 +1,25 @@
-# সাপ্তাহিক নিরাপদ আপডেট। বড় (major) আপগ্রেড — যেমন vite ৮, firebase ১২ — নিজে থেকে আসবে না।
+# মাসে একবার, কম PR। বড় (major) আপগ্রেড — যেমন vite ৮, firebase ১২ — নিজে থেকে আসবে না।
+# PR মার্জ না হলে কিছুই বদলায় না — deploy শুধু main-এ merge হলে হয়। নিরাপদ PR ci সবুজ হলে
+# dependabot-automerge.yml নিজে merge করে।
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Asia/Dhaka
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /worker
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
       time: "06:00"
       timezone: Asia/Dhaka
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
