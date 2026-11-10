@@ -6,7 +6,7 @@ import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO } from "./trackerData.js";
 import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate } from "./trackerCalc.js";
-import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
+import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
@@ -160,26 +160,29 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
       React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "8px", lineHeight: 1.5 } },
         "শুধু নিজে-যোগ-করা খাবারের হিসাব; প্ল্যানের টিক ধরা হয়নি।" + (macros.withMacro < macros.total ? " " + bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।" : ""))),
 
-    // আজকের খাবার-লগ (নিজে যোগ করা; প্ল্যানের টিক আলাদা — লক্ষ্য ও প্ল্যান → মিল)
-    canLog && React.createElement("div", { style: CARD_STYLE },
-      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
-        React.createElement("div", null,
-          React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "🍽 আজকের খাবার-লগ"),
-          React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, "নিজে যোগ করা · আজ মোট " + bnNum(eaten) + " কিলোক্যালরি (প্ল্যানের টিকসহ)"))),
-      foodErr && !foodOpen && ErrorBox(foodErr),
-      extras.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "8px" } }, "এখনও নিজে কিছু যোগ করা হয়নি। যা খেলেন, উপরের ‘＋ খাবার’ চেপে লিখে রাখুন।"),
-      MEAL_SLOTS.map((s) => {
-        const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
-        if (!mine.length) return null;
-        return React.createElement("div", { key: s.id, style: { marginTop: "10px" } },
-          React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink } }, s.label + " · " + bnNum(mine.reduce((a, x) => a + x.kcal, 0)) + " কিলোক্যালরি"),
-          mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border } },
-            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-              React.createElement("div", { style: { fontSize: "14px", color: T.ink } }, x.name),
-              React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, [entryAmountText(x), x.p !== undefined ? "প্রো " + fmtMacro(x.p) + " · কার্ব " + fmtMacro(x.c) + " · ফ্যাট " + fmtMacro(x.f) : ""].filter(Boolean).join(" · "))),
-            React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, bnNum(x.kcal)),
-            React.createElement("button", { onClick: () => writeExtras(extras.filter((_, i) => i !== x.idx)), disabled: busy, "aria-label": x.name + " মুছুন", style: { minWidth: "44px", minHeight: "44px", borderRadius: "12px", border: "none", background: "#FDECEA", color: "#A32018", fontSize: "16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 } }, "✕"))));
-      })),
+    // আজকের খাবার-লগ — বেলা-ভিত্তিক কার্ড (আইকন, বেলার যোগফল ও ম্যাক্রো, খালি বেলাও দেখায়)। যোগ করা হয় শুধু উপরের "＋ খাবার" থেকে।
+    // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
+    canLog && React.createElement("div", { style: { ...CARD_STYLE, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "10px 14px" } },
+      React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, "🍽 আজকের খাবার-লগ"),
+      React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি (প্ল্যানের টিকসহ)"),
+      foodErr && !foodOpen && ErrorBox(foodErr)),
+    canLog && MEAL_SLOTS.map((sl) => {
+      const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sl.id);
+      const sm = sumNutrition(mine);
+      const head = [bnNum(sm.kcal) + " কিলোক্যালরি"].concat(sm.withMacro > 0 ? ["প্রো " + bnNum(Math.round(sm.p)), "কার্ব " + bnNum(Math.round(sm.c)), "ফ্যাট " + bnNum(Math.round(sm.f))] : []).join(" · ");
+      return React.createElement("div", { key: sl.id, style: { ...CARD_STYLE, padding: "10px 12px", opacity: mine.length ? 1 : 0.8 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+          React.createElement("span", { "aria-hidden": "true", style: { width: "40px", height: "40px", borderRadius: "12px", background: SLOT_TINT[sl.id], display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", flexShrink: 0 } }, SLOT_ICON[sl.id]),
+          React.createElement("div", { style: { minWidth: 0 } },
+            React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, sl.label),
+            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, mine.length ? head : "এখনও কিছু যোগ হয়নি"))),
+        mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border, marginTop: "6px" } },
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontSize: "14px", color: T.ink } }, x.name),
+            React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, [entryAmountText(x), bnNum(x.kcal) + " ক্যাল", x.p !== undefined ? "প্রো " + fmtMacro(x.p) + " · কার্ব " + fmtMacro(x.c) + " · ফ্যাট " + fmtMacro(x.f) : ""].filter(Boolean).join(" · "))),
+          React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, bnNum(x.kcal)),
+          React.createElement("button", { onClick: () => writeExtras(extras.filter((_, i) => i !== x.idx)), disabled: busy, "aria-label": x.name + " মুছুন", style: { minWidth: "44px", minHeight: "44px", borderRadius: "12px", border: "none", background: "#FDECEA", color: "#A32018", fontSize: "16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 } }, "✕"))));
+    }),
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
