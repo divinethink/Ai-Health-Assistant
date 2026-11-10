@@ -15,6 +15,8 @@ import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
+import { getMedTaken, setMedDoseTaken } from "../tracker/trackerData.js";
+import { doseKey, legacyTakenToKeys, recordIdOfDoseKey } from "./medTaken.js";
 import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendarEventsByIds } from "../../legacy/googleCalendar.js";
 
 // UI পুনর্গঠন (owner-request, ২০২৬-০৯-১৭): কমপ্যাক্ট তালিকা (ট্যাপে খোলে), এই ট্যাবেই নতুন
@@ -57,15 +59,19 @@ function fallbackEndDate(startDate, durationDays) {
 // সাধারণ ওষুধের নাম (শুধু নামের সাজেশন, কোনো ডোজ/তথ্য নয়)।
 const COMMON_MEDS = ["Paracetamol", "Ibuprofen", "Naproxen", "Diclofenac", "Mefenamic Acid", "Aspirin", "Esomeprazole", "Omeprazole", "Pantoprazole", "Rabeprazole", "Domperidone", "Ondansetron", "Metoclopramide", "Antacid", "Cetirizine", "Levocetirizine", "Fexofenadine", "Bilastine", "Loratadine", "Chlorpheniramine", "Montelukast", "Salbutamol", "Ambroxol", "Azithromycin", "Amoxicillin", "Amoxicillin + Clavulanic Acid", "Cefixime", "Cefuroxime", "Cephalexin", "Ciprofloxacin", "Levofloxacin", "Metronidazole", "Doxycycline", "Fluconazole", "Prednisolone", "Vitamin D3", "Calcium", "Iron + Folic Acid", "Vitamin B Complex", "Vitamin C", "Zinc Sulfate", "ORS", "Metformin", "Gliclazide", "Glimepiride", "Insulin", "Amlodipine", "Losartan", "Telmisartan", "Atenolol", "Bisoprolol", "Atorvastatin", "Rosuvastatin", "Clopidogrel", "Levothyroxine", "Thyrox", "Clonazepam", "Lactulose", "Bisacodyl", "Isabgol (Psyllium Husk)", "Loperamide", "Itopride"];
 
-function loadTaken() {
+// পুরনো ব্যবস্থা (শুধু এই ডিভাইস): আজকের চিহ্ন একবার Firestore-এ তুলে আনার জন্য পড়া হয়; আর কোথাও লেখা হয় না।
+// তোলা সফল হলে MIGRATED_KEY-তে আজকের তারিখ রাখা হয় (পুরনো ডেটা মোছা হয় না)।
+const MIGRATED_KEY = "hs-med-taken-migrated";
+function loadLegacyTaken() {
   try {
+    if (localStorage.getItem(MIGRATED_KEY) === todayStr()) return {};
     const v = JSON.parse(localStorage.getItem(TAKEN_KEY) || "null");
     if (v && v.date === todayStr() && v.taken) return v.taken;
   } catch (e) { /* ignore */ }
   return {};
 }
-function saveTaken(taken) {
-  try { localStorage.setItem(TAKEN_KEY, JSON.stringify({ date: todayStr(), taken })); } catch (e) { /* ignore */ }
+function markLegacyMigrated() {
+  try { localStorage.setItem(MIGRATED_KEY, todayStr()); } catch (e) { /* ignore */ }
 }
 
 function chip(active, label, onClick, key) {
@@ -99,7 +105,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [calBusy, setCalBusy] = useState(null);
   const [calMsg, setCalMsg] = useState(null);
   const [permission, setPermission] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
-  const [taken, setTaken] = useState(loadTaken);
+  const [taken, setTaken] = useState({});
+  const [takenErr, setTakenErr] = useState(null);
   const [tick, setTick] = useState(0);
   const [todayOpen, setTodayOpen] = useState(true);
   const notifiedRef = useRef({});
@@ -145,7 +152,29 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       const ev = {};
       flat.forEach((m) => { ev[m.recordId] = { slots: [...m.reminderTimes], endDate: m.endDate || fallbackEndDate(m.startDate, m.durationDays), mealTiming: m.mealTiming || "any" }; });
       setEditValues(ev);
+      await loadTakenState(flat);
     } catch (e) { setLoadErr(e.message || String(e)); }
+  }
+
+  // আজকের "খেয়েছি" চিহ্ন Firestore থেকে (সব ডিভাইসে একই); না পড়া গেলে ওই সদস্যের চিহ্ন খালি দেখায় (ওষুধ তালিকা অক্ষত)।
+  async function loadTakenState(flat) {
+    const date = todayStr();
+    const next = {};
+    const ids = [...new Set(flat.map((m) => m.memberId))];
+    await Promise.all(ids.map(async (id) => { try { Object.assign(next, await getMedTaken(familyId, id, date)); } catch (e) { /* ignore */ } }));
+    const legacy = legacyTakenToKeys(loadLegacyTaken());
+    if (legacy.length) {
+      const byRecord = new Map(flat.map((m) => [m.recordId, m]));
+      let allOk = true;
+      for (const k of legacy) {
+        if (next[k]) continue;
+        const m = byRecord.get(recordIdOfDoseKey(k));
+        if (!m) continue;
+        try { await setMedDoseTaken(familyId, m.memberId, callerMemberId, date, k, true); next[k] = true; } catch (e) { allOk = false; }
+      }
+      if (allOk) markLegacyMigrated();
+    }
+    setTaken(next);
   }
   useEffect(() => { loadMeds(); }, [familyId]);
   useEffect(() => { if (selectedMemberId) setAMember(selectedMemberId); }, [selectedMemberId]);
@@ -207,8 +236,15 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     finally { setDelBusy(false); }
   }
   function setEdit(recordId, patch) { setEditValues((prev) => ({ ...prev, [recordId]: { ...prev[recordId], ...patch } })); }
-  function toggleTaken(key) {
-    setTaken((prev) => { const n = { ...prev }; if (n[key]) delete n[key]; else n[key] = true; saveTaken(n); return n; });
+  async function toggleTaken(key, memberId) {
+    const want = !taken[key];
+    const apply = (on) => setTaken((prev) => { const n = { ...prev }; if (on) n[key] = true; else delete n[key]; return n; });
+    apply(want); setTakenErr(null);
+    try { await setMedDoseTaken(familyId, memberId, callerMemberId, todayStr(), key, want); }
+    catch (e) {
+      apply(!want);
+      setTakenErr(e && e.code === "permission-denied" ? "এই সদস্যের ওষুধে চিহ্ন দেওয়ার অনুমতি আপনার নেই।" : "চিহ্ন সেভ হয়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন।");
+    }
   }
 
   async function saveSchedule(recordId) {
@@ -291,7 +327,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const doses = [];
   shown.forEach((m) => {
     if (isExpired(m) || (m.startDate && m.startDate > today)) return;
-    m.reminderTimes.forEach((t) => doses.push({ key: m.recordId + "_" + t, time: t, m }));
+    m.reminderTimes.forEach((t) => doses.push({ key: doseKey(m.recordId, t), time: t, m }));
   });
   doses.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
   const takenCount = doses.filter((d) => taken[d.key]).length;
@@ -327,6 +363,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
       h("button", { onClick: () => setTodayOpen((o) => !o), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer" } },
         h("span", null, "📋 আজকের ওষুধ — " + bn(takenCount) + "/" + bn(doses.length) + " খাওয়া হয়েছে"), h("span", null, todayOpen ? "▲" : "▼")),
+      takenErr && h("div", { style: { marginTop: "8px", padding: "8px 10px", borderRadius: "10px", background: "#FBE3E1", color: "#B3261E", fontSize: "13px" } }, takenErr),
       todayOpen && h("div", { style: { marginTop: "8px" } }, doses.map((d) => {
         const done = !!taken[d.key];
         const late = !done && d.time < nowHHMM;
@@ -334,7 +371,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
           h("div", { style: { flex: 1, minWidth: 0 } },
             h("div", { style: { fontSize: F, fontWeight: 600, color: "#1F2D2A", textDecoration: done ? "line-through" : "none" } }, d.m.genericName),
             h("div", { style: { fontSize: "12px", color: "#5F716C" } }, bnTime(d.time) + (members.length > 1 ? " · " + d.m.memberName : "") + (d.m.mealTiming && d.m.mealTiming !== "any" ? " · " + MEAL_LABELS[d.m.mealTiming] : "") + (late ? " · ⏰ সময় পার" : ""))),
-          h("button", { onClick: () => toggleTaken(d.key), style: { padding: "7px 12px", minHeight: "36px", borderRadius: "10px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid " + GREEN, background: done ? GREEN : "#fff", color: done ? "#fff" : GREEN, flexShrink: 0 } }, done ? "✔ খেয়েছি" : "খেয়েছি?"));
+          h("button", { onClick: () => toggleTaken(d.key, d.m.memberId), style: { padding: "7px 12px", minHeight: "36px", borderRadius: "10px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid " + GREEN, background: done ? GREEN : "#fff", color: done ? "#fff" : GREEN, flexShrink: 0 } }, done ? "✔ খেয়েছি" : "খেয়েছি?"));
       })),
       todayOpen && h("div", { style: { fontSize: "12px", color: "#6B7B76", marginTop: "2px" } }, "(এই চিহ্ন শুধু এই ফোনে থাকে)")),
 

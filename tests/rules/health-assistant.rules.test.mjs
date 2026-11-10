@@ -837,6 +837,45 @@ describe('Health Assistant — Firestore Rules', function () {
     });
   });
 
+  // ধাপ ২: daily-ডকের ঐচ্ছিক `medTaken` ("ওষুধ খেয়েছি" লগ)
+  describe('12i. Tracker daily: medTaken (ওষুধ খেয়েছি)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const dly = (extra = {}) => ({
+      type: 'daily', memberId: 'mA', date: '2026-11-08', caloriesIn: 0, sources: {},
+      lastEditedByMemberId: 'mA', createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+    const ref = (db) => famDoc(db, 'healthTracker', 'daily_mA_2026-11-08');
+
+    it('12i-1. owner নতুন daily ডক medTaken-সহ তৈরি ও একটা key সেট/মোছা (dotted update) করতে পারেন', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(ref(db), dly({ medTaken: { Rec1_0800: true } })));
+      await assertSucceeds(updateDoc(ref(db), { 'medTaken.Rec2_1400': true, lastEditedByMemberId: 'mA' }));
+      await assertSucceeds(updateDoc(ref(db), { 'medTaken.Rec1_0800': deleteField(), lastEditedByMemberId: 'mA' }));
+    });
+
+    it('12i-2. medTaken map না হলে, ৬০-এর বেশি key হলে, বা goal-ডকে হলে reject', async () => {
+      const db = dbAs('uidA');
+      await assertFails(setDoc(ref(db), dly({ medTaken: 'yes' })));
+      const big = {};
+      for (let i = 0; i < 61; i++) big['R' + i + '_0800'] = true;
+      await assertFails(setDoc(ref(db), dly({ medTaken: big })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), dly({ type: 'goal', medTaken: { Rec1_0800: true } })));
+      const ok = {};
+      for (let i = 0; i < 60; i++) ok['R' + i + '_0800'] = true;
+      await assertSucceeds(setDoc(ref(db), dly({ medTaken: ok })));
+    });
+
+    it('12i-3. grant ছাড়া অন্য সদস্য লিখতে পারেন না; approved read+write grant থাকলে পারেন', async () => {
+      await seed(async (db) => { await setDoc(ref(db), dly()); });
+      await assertFails(updateDoc(ref(dbAs('uidB')), { 'medTaken.Rec1_0800': true, lastEditedByMemberId: 'mB' }));
+      await seedGrant('mA', 'mB');
+      await assertSucceeds(updateDoc(ref(dbAs('uidB')), { 'medTaken.Rec1_0800': true, lastEditedByMemberId: 'mB' }));
+    });
+  });
+
   // ============================================================
   describe('11. Global reference DB ও General Chat', () => {
     it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {

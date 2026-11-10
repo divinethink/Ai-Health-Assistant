@@ -105,7 +105,9 @@ service cloud.firestore {
         && (d.fastDays.size() < 2 || (d.fastDays[1] is int && d.fastDays[1] >= 0 && d.fastDays[1] <= 6 && d.fastDays[1] != d.fastDays[0])));
       let waterOk = !('waterTarget' in d) || (d.type == 'goal'
         && (d.waterTarget == null || (d.waterTarget is int && d.waterTarget >= 1 && d.waterTarget <= 20)));
-      return planOk && foodsOk && logOk && fastOk && waterOk;
+      // ধাপ ২: ঐচ্ছিক daily-ফিল্ড `medTaken` (ওষুধ খেয়েছি — map, সর্বোচ্চ ৬০ key; key-মান যাচাই client-এর medTaken.js-এ)।
+      let medOk = !('medTaken' in d) || (d.type == 'daily' && d.medTaken is map && d.medTaken.size() <= 60);
+      return planOk && foodsOk && logOk && fastOk && waterOk && medOk;
     }
 
     // ============================================================
@@ -512,7 +514,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
@@ -523,7 +525,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);

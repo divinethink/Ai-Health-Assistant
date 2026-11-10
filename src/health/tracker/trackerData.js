@@ -9,6 +9,7 @@ import { db } from "../../legacy/firebaseConfig.js";
 import { createHealthRecord, updateHealthRecord } from "../records/healthRecordsData.js";
 import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
 import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
+import { sanitizeTaken } from "../records/medTaken.js";
 
 function col(familyId) {
   return db.collection("families").doc(familyId).collection("healthTracker");
@@ -119,4 +120,30 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
 export async function getWeekDaily(familyId, memberId, dates) {
   const snap = await col(familyId).where("memberId", "==", memberId).where("date", "in", dates).get();
   return snap.docs.map((d) => d.data()).filter((x) => x.type === "daily");
+}
+
+// "ওষুধ খেয়েছি" লগ (ধাপ ২)। daily-ডকের `medTaken` map: key = doseKey(), মান true। সব ডিভাইসে মেলে, ডাক্তার-এক্সপোর্টের
+// adherence-এ কাজে লাগে। এক dose = এক key → নির্দিষ্ট ডক-ID, double-tap/retry-তে ডুপ্লিকেট হয় না (idempotent)।
+export async function getMedTaken(familyId, memberId, date) {
+  const d = await getDaily(familyId, memberId, date);
+  return sanitizeTaken(d && d.medTaken);
+}
+
+// taken=true → key সেট; false → শুধু ওই key মোছা (বাকি ফিল্ড/key অক্ষত)। ডক না থাকলে (ওই দিনের প্রথম লেখা) তৈরি হয়।
+export async function setMedDoseTaken(familyId, memberId, callerMemberId, date, key, taken) {
+  const ref = col(familyId).doc("daily_" + memberId + "_" + date);
+  const path = "medTaken." + key;
+  try {
+    await ref.update({ [path]: taken ? true : firebase.firestore.FieldValue.delete(), lastEditedByMemberId: callerMemberId, updatedAt: ts() });
+  } catch (e) {
+    if (e && e.code === "not-found") {
+      if (!taken) return; // ডকই নেই = চিহ্নও নেই
+      await ref.set({
+        type: "daily", memberId, date, medTaken: { [key]: true }, caloriesIn: 0, sources: {},
+        lastEditedByMemberId: callerMemberId, createdAt: ts(), updatedAt: ts(),
+      }, { merge: true });
+      return;
+    }
+    throw e;
+  }
 }
