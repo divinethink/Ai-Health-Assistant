@@ -40,6 +40,7 @@ import { VaccinationScheduler } from "../calendar/VaccinationScheduler.js";
 import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
+import { TodaySummary } from "../summary/TodaySummary.js";
 import { Skeleton } from "../../shared/ui.js";
 
 const { useState } = React;
@@ -60,13 +61,14 @@ const TIMELINE_SUBS = [
 ];
 
 const TABS = [
+  { id: "today", label: "tab.today" },
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
   { id: "timeline", label: "tab.timeline" },
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("today");
   const [timelineSub, setTimelineSub] = useState("diet");
   const [recordSub, setRecordSub] = useState("records");
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
@@ -96,6 +98,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
+      activeTab === "today" && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
       activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
       activeTab === "records" && React.createElement(React.Fragment, null,
         React.createElement("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
