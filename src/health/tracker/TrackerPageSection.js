@@ -149,7 +149,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const sheetSlot = sheet ? plan.slots.find((s) => s.id === sheet) : null;
 
   return React.createElement("div", null,
-    isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ উপবাস-দিন — ক্যালরি-টার্গেট আজ স্থগিত। মিল-প্ল্যান শুধু দেখার জন্য; আজকের ক্যালরি দিয়ে স্ট্রিক ভাঙে না।"),
+    isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ সিয়াম/ফাস্টিং-এর দিন — ক্যালরি-টার্গেট আজ স্থগিত। মিল-প্ল্যান শুধু দেখার জন্য।"),
     React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "4px" } },
       "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
     React.createElement(Bar, { pct: ((d.caloriesIn || 0) / calc.calorieTarget) * 100, color: T.amber }),
@@ -551,17 +551,17 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
   };
 
   return React.createElement("div", { style: CARD },
-    React.createElement("b", null, "উপবাস-দিবস ও পানির লক্ষ্য (ঐচ্ছিক)"),
+    React.createElement("b", null, "সিয়াম/ফাস্টিং ও পানির লক্ষ্য (ঐচ্ছিক)"),
     gate.blocked
       ? React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, "🌙 " + gate.reason))
       : React.createElement("div", null,
-        React.createElement("label", { style: LABEL }, "উপবাস/রোজার দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
+        React.createElement("label", { style: LABEL }, "সিয়াম/ফাস্টিং-এর দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
           DAY_LABELS.map((lbl, i) => React.createElement("button", {
             key: i, onClick: () => toggle(i), "aria-pressed": days.includes(i), disabled: busy,
             style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid " + T.green, background: days.includes(i) ? T.green : "#fff", color: days.includes(i) ? "#fff" : T.green },
           }, lbl))),
-        React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "উপবাস-দিনে ক্যালরি-টার্গেট স্থগিত থাকে এবং স্ট্রিক ভাঙে না। শরীর খারাপ লাগলে উপবাস ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
+        React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "সিয়াম/ফাস্টিং-এর দিনে ক্যালরি-টার্গেট স্থগিত থাকে। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
     !waterLocked && React.createElement("div", null,
       React.createElement("label", { style: LABEL }, "পানির লক্ষ্য (গ্লাস/দিন) — খালি রাখলে সাধারণ গাইড: " + bnNum(defaultWater)),
       React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => { setWater(e.target.value); setOk(false); }, style: INPUT }),

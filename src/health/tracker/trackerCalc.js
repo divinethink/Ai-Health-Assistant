@@ -132,7 +132,7 @@ export function waterTargetFor(age, flags, override) {
 // goal.fastDays = সর্বোচ্চ ২টি সপ্তাহ-দিনের সূচক, শনি=০ … শুক্র=৬ (exercisePlanData.bdDayIndex-এর মতো)।
 // সেফটি-গেট ব্লক হলে (<১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+, বয়স অজানা) মোড বন্ধ — সেভ-যাচাই ও পড়া, দুই পথেই; UI এড়াতে পারে না।
 export const MAX_FAST_DAYS = 2;
-export const FAST_BLOCK_REASON = "উপবাস-দিবস মোড আপনার ক্ষেত্রে বন্ধ — ডাক্তারের পরামর্শ নিন।";
+export const FAST_BLOCK_REASON = "সিয়াম/ফাস্টিং মোড আপনার ক্ষেত্রে বন্ধ — ডাক্তারের পরামর্শ নিন।";
 
 export function sanitizeFastDays(raw) {
   if (!Array.isArray(raw)) return [];
@@ -151,7 +151,7 @@ export function activeFastDays(goal, { age, flags }) {
 }
 // সেভের আগে যাচাই: ত্রুটি-বার্তা অথবা null। খালি তালিকা (মোড বন্ধ করা) সবসময় বৈধ।
 export function checkFastDaysInput(raw, { age, flags }) {
-  if (!Array.isArray(raw)) return "উপবাস-দিন বাছুন।";
+  if (!Array.isArray(raw)) return "সিয়াম/ফাস্টিং-এর দিন বাছুন।";
   if (raw.length === 0) return null;
   if (fastModeGate({ age, flags }).blocked) return FAST_BLOCK_REASON;
   if (raw.length > MAX_FAST_DAYS) return "সর্বোচ্চ " + MAX_FAST_DAYS + " দিন বাছা যায়।";

@@ -50,7 +50,7 @@ export function reviewPoints(t, bn) {
   if (t.weightChange !== null) {
     out.push(t.weightChange === 0 ? "ওজন অপরিবর্তিত" : "ওজন " + bn(Math.abs(t.weightChange)) + " কেজি " + (t.weightChange < 0 ? "কমেছে" : "বেড়েছে"));
   }
-  if (t.calInRange !== null && t.calRangeDays > 0) out.push(bn(t.calInRange) + " দিন ক্যালরি লক্ষ্যের মধ্যে (" + bn(t.calRangeDays) + " দিনের তথ্যে" + (t.calRangeDays < t.calDays ? "; উপবাস-দিন বাদে" : "") + ")");
+  if (t.calInRange !== null && t.calRangeDays > 0) out.push(bn(t.calInRange) + " দিন ক্যালরি লক্ষ্যের মধ্যে (" + bn(t.calRangeDays) + " দিনের তথ্যে" + (t.calRangeDays < t.calDays ? "; সিয়াম/ফাস্টিং-এর দিন বাদে" : "") + ")");
   if (t.sleepDays > 0) out.push("গত ৭ দিনে " + bn(t.sleepDays) + " দিনের ঘুম দেওয়া; " + bn(t.sleepLow) + " দিন লক্ষ্যের নিচে");
   if (t.weeklyExerciseTarget) out.push("ব্যায়াম " + bn(t.exerciseTotal) + "/" + bn(t.weeklyExerciseTarget) + " মিনিট");
   return out;
