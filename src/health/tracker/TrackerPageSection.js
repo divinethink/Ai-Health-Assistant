@@ -86,7 +86,7 @@ const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "�
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
 const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}";
 function Pills(tabs, active, onChange, leading) {
-  return React.createElement("div", { className: "hs-trk-pills" }, TabPills(tabs, active, onChange, leading));
+  return React.createElement("div", { className: "hs-trk-pills" }, TabPills(tabs, active, onChange, leading, "trk:" + tabs.map((x) => x[0]).join("|")));
 }
 
 function errText(x) {

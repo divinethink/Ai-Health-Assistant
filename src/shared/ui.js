@@ -1,6 +1,7 @@
 // ---- ছোট UI primitives (app.js থেকে split, Component-Split — অংশ A) ----
 // কোনো functional পরিবর্তন নেই, শুধু নিজস্ব ফাইলে সরানো হয়েছে।
 
+import { histBind, histChange } from "./navHistory.js";
 import { localISO } from "./dates.js";
 
 export function ErrorBox(msg) {
@@ -74,7 +75,8 @@ export function SelectField(label, value, onChange, options) {
 // পাশাপাশি স্তূপ না করে ট্যাব হিসেবে ভাগ করার জন্য (roadmap §1_5-এর "sub-tab
 // pill" pattern, প্রথম ব্যবহার: AI চ্যাট ও Documents full-page reorg, ২০২৬-০৯-১৬)।
 // শুধু presentation primitive — কোনো state/business-logic এখানে নেই।
-export function TabPills(tabs, activeId, onChange, leading) {
+export function TabPills(tabs, activeId, onChange, leading, histKey) {
+  if (histKey) histBind(histKey, activeId, onChange); // Back বাটনে এই পিল-সারির আগের অবস্থায় ফেরা
   return React.createElement(
     "div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px", marginBottom: "12px" } },
     leading || null,
@@ -82,7 +84,7 @@ export function TabPills(tabs, activeId, onChange, leading) {
       const active = id === activeId;
       return React.createElement(
         "button", {
-          key: id, onClick: () => onChange(id),
+          key: id, onClick: () => (histKey ? histChange(histKey, activeId, id, onChange) : onChange(id)),
           style: {
             flexShrink: 0, fontSize: "14px", fontWeight: 600, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", cursor: "pointer",
             border: active ? "1px solid #0E4B43" : "1px solid #C3D2CA",

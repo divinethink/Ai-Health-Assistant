@@ -17,6 +17,7 @@
 
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
+import { histRestore } from "../shared/navHistory.js";
 import { t, useLang, setLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
 import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
@@ -433,7 +434,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     try { window.history.replaceState({ hs: 1, tab: "home", gc: false, dd: false }, ""); } catch (_e) { /* উপেক্ষা */ }
     const onPop = (e) => {
       const st = e.state;
-      if (st && st.hs) { const next = { tab: st.tab || "home", gc: !!st.gc, dd: !!st.dd }; viewRef.current = next; setView(next); }
+      if (st && st.hs) { const next = { tab: st.tab || "home", gc: !!st.gc, dd: !!st.dd }; viewRef.current = next; setView(next); histRestore(st.inner); }
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);

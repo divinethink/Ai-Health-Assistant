@@ -39,7 +39,7 @@ export function DocumentsPageSection({ familyId, callerMemberId, selectedMemberI
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "12px" } },
-      TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab, chip),
+      TabPills(TABS.map(([i, k]) => [i, t(k)]), tab, setTab, chip, "docs"),
       !selectedMemberId
         ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য-তালিকা লোড হচ্ছে...")
         : React.createElement(

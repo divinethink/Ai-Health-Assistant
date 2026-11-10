@@ -43,6 +43,7 @@ import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js
 import { Skeleton } from "../../shared/ui.js";
 
 const { useState } = React;
+import { histBind, histChange } from "../../shared/navHistory.js";
 
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
@@ -69,6 +70,9 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
   const [timelineSub, setTimelineSub] = useState("diet");
   const [recordSub, setRecordSub] = useState("records");
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
+  histBind("home-main", activeTab, setActiveTab);
+  histBind("home-rec", recordSub, setRecordSub);
+  histBind("home-tl", timelineSub, setTimelineSub);
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
@@ -78,7 +82,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,
-          onClick: () => setActiveTab(tb.id),
+          onClick: () => histChange("home-main", activeTab, tb.id, setActiveTab),
           style: {
             flexShrink: 0, padding: "6px 14px", minHeight: "32px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
             border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
@@ -96,7 +100,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       activeTab === "records" && React.createElement(React.Fragment, null,
         React.createElement("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
           RECORD_SUBS.map((sb) => React.createElement("button", {
-            key: sb.id, onClick: () => setRecordSub(sb.id), "aria-pressed": recordSub === sb.id,
+            key: sb.id, onClick: () => histChange("home-rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
             style: {
               flex: 1, minHeight: "44px", padding: "6px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
               border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
@@ -110,7 +114,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
         React.createElement(
           "div", { style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           TIMELINE_SUBS.map((sb) => React.createElement("button", {
-            key: sb.id, onClick: () => setTimelineSub(sb.id), "aria-pressed": timelineSub === sb.id,
+            key: sb.id, onClick: () => histChange("home-tl", timelineSub, sb.id, setTimelineSub), "aria-pressed": timelineSub === sb.id,
             style: {
               flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
               border: timelineSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
