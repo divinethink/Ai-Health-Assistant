@@ -191,7 +191,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     // unconditional fetch — আগে শুধু cardiac-branch-এই records আনা হতো, এখন
     // সবসময় আনা হয় যাতে chronicManagement flag সঠিকভাবে RiskBasedTreatmentModes-এ
     // পৌঁছায় (আগে hardcode `false` ছিল, checklist §৭ known-gap)।
-    listHealthRecords(familyId, targetMemberId)
+    listHealthRecords(familyId, targetMemberId, { fresh: true })
       .then((records) => {
         const conditionRecords = records.filter((r) => r.resourceType === "condition");
         setHasChronicCondition(conditionRecords.some((c) => c.chronicManagement === true && c.status !== "resolved"));

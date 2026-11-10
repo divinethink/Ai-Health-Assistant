@@ -10,7 +10,7 @@ import { localISO } from "../../shared/dates.js";
 import { findDuplicateMed, reminderTimesFor, frequencyText } from "./prescriptionParsing.js";
 
 export async function loadPrescriptionContext(familyId, memberId) {
-  const records = await listHealthRecords(familyId, memberId);
+  const records = await listHealthRecords(familyId, memberId, { fresh: true });
   return { records, allergies: records.filter((r) => r.resourceType === "allergy") };
 }
 
@@ -26,7 +26,7 @@ function endDateFor(days) {
  * @returns {Promise<{saved: string[], skipped: string[], failed: Array<{name: string, message: string}>}>}
  */
 export async function saveApprovedMedications(familyId, targetMemberId, callerMemberId, items) {
-  const known = (await listHealthRecords(familyId, targetMemberId)).slice();
+  const known = (await listHealthRecords(familyId, targetMemberId, { fresh: true })).slice();
   const today = localISO();
   const out = { saved: [], skipped: [], failed: [] };
   for (const it of items) {

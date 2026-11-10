@@ -14,6 +14,7 @@
 
 import { db } from "./firebaseConfig.js";
 import { listMembers } from "./familyIdentity.js";
+import { invalidateMemberHealth } from "../health/records/memberHealthStore.js";
 
 export const BACKUP_SCHEMA_VERSION = 1;
 
@@ -196,9 +197,11 @@ export async function commitRestore(familyId, plan) {
   const famRef = db.collection("families").doc(familyId);
 
   await Promise.all(plan.members.updated.map((m) => writeMember(famRef, m)));
-  await Promise.all(
-    [...plan.healthRecords.added, ...plan.healthRecords.updated].map((r) => writeRecord(famRef.collection("healthRecords"), r))
-  );
+  try {
+    await Promise.all(
+      [...plan.healthRecords.added, ...plan.healthRecords.updated].map((r) => writeRecord(famRef.collection("healthRecords"), r))
+    );
+  } finally { invalidateMemberHealth(familyId); }
   await Promise.all(
     [...plan.healthEpisodes.added, ...plan.healthEpisodes.updated].map((e) => writeRecord(famRef.collection("healthEpisodes"), e))
   );

@@ -55,7 +55,7 @@ export async function assembleHealthContext(familyId, targetMemberId, triageResu
   const members = await listMembers(familyId);
   const member = members.find((m) => m.id === targetMemberId);
   if (!member) throw new Error("সদস্য পাওয়া যায়নি: " + targetMemberId);
-  const records = await listHealthRecords(familyId, targetMemberId);
+  const records = await listHealthRecords(familyId, targetMemberId, { fresh: true });
   const context = buildHealthContext({ member, records, triageResult, symptomInputs });
   return { context, ageYears: getAgeInYears(member.dob) };
 }

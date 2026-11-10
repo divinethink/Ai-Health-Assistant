@@ -13,6 +13,7 @@ import { db } from "../../legacy/firebaseConfig.js";
 import { notifyMember } from "../../legacy/accessGrants.js";
 import { listDoctors, createDoctor } from "../doctor-details/doctorDetailsData.js";
 import { isDuplicate } from "../doctor-details/doctorSuggest.js";
+import { getMemberRecords, invalidateMemberHealth } from "./memberHealthStore.js";
 
 export const RESOURCE_TYPE_LABELS = {
   condition: "Condition (রোগ/সমস্যা)",
@@ -76,25 +77,29 @@ export function buildHealthRecordFields(resourceType, fields) {
 export async function createHealthRecord(familyId, targetMemberId, callerMemberId, resourceType, fields) {
   const ref = db.collection("families").doc(familyId).collection("healthRecords").doc();
   const now = firebase.firestore.FieldValue.serverTimestamp();
-  await ref.set({
-    memberId: targetMemberId,
-    resourceType,
-    ...buildHealthRecordFields(resourceType, fields),
-    lastEditedByMemberId: callerMemberId,
-    createdAt: now,
-    updatedAt: now,
-  });
+  try {
+    await ref.set({
+      memberId: targetMemberId,
+      resourceType,
+      ...buildHealthRecordFields(resourceType, fields),
+      lastEditedByMemberId: callerMemberId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } finally { invalidateMemberHealth(familyId, targetMemberId); }
   return ref.id;
 }
 
 // resourceType বদলানো যায় না (rules-এও locked, L413) — শুধু field-value edit।
 export async function updateHealthRecord(familyId, recordId, resourceType, callerMemberId, fields) {
   const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
-  await ref.update({
-    ...buildHealthRecordFields(resourceType, fields),
-    lastEditedByMemberId: callerMemberId,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
+  try {
+    await ref.update({
+      ...buildHealthRecordFields(resourceType, fields),
+      lastEditedByMemberId: callerMemberId,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } finally { invalidateMemberHealth(familyId); }
 }
 
 // "ডিরেক্টরিতে রাখুন": idempotent — একই নাম+ফোনের ডাক্তার আগে থেকে থাকলে নতুন
@@ -114,7 +119,9 @@ export async function ensureDoctorInDirectory(familyId, callerMemberId, p) {
 // অনুমতি দেয়, তাই targetMemberId != callerMemberId মানেই Admin-override) —
 // owner-কে notification। ２-ধাপ confirm UI-স্তরে (HealthRecordList)।
 export async function deleteHealthRecord(familyId, recordId, targetMemberId, callerMemberId) {
-  await db.collection("families").doc(familyId).collection("healthRecords").doc(recordId).delete();
+  try {
+    await db.collection("families").doc(familyId).collection("healthRecords").doc(recordId).delete();
+  } finally { invalidateMemberHealth(familyId, targetMemberId); }
   if (targetMemberId !== callerMemberId) {
     await notifyMember(familyId, targetMemberId, "record-deleted",
       "আপনার একটি Health Record Admin কর্তৃক মুছে ফেলা হয়েছে।");
@@ -124,7 +131,7 @@ export async function deleteHealthRecord(familyId, recordId, targetMemberId, cal
 // শুধু equality filter (memberId ==) — orderBy যোগ করলে composite index লাগত, তাই
 // client-side sort করা হচ্ছে (§3.4.5-এর memberId+resourceType composite index শুধু
 // resourceType-ফিল্টার-সহ query-র জন্য প্রয়োজন হবে, এই মুহূর্তে সেই query নেই)।
-export async function listHealthRecords(familyId, targetMemberId) {
+async function fetchHealthRecords(familyId, targetMemberId) {
   const snap = await db.collection("families").doc(familyId).collection("healthRecords")
     .where("memberId", "==", targetMemberId).get();
   const records = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -134,6 +141,12 @@ export async function listHealthRecords(familyId, targetMemberId) {
     return bt - at;
   });
   return records;
+}
+
+// শেয়ার্ড cache-সহ পাঠ (memberHealthStore.js)। `{ fresh: true }` = cache এড়িয়ে সার্ভার থেকে সরাসরি
+// (AI/triage/duplicate-check/ডাক্তার-এক্সপোর্টের মতো নিরাপত্তা-সংবেদনশীল পাঠে)।
+export function listHealthRecords(familyId, targetMemberId, opts) {
+  return getMemberRecords(familyId, targetMemberId, () => fetchHealthRecords(familyId, targetMemberId), opts);
 }
 
 // নতুন (owner-request, ২০২৬-০৯-১২ — Medication reminder/adherence tracker, item ২):
@@ -151,12 +164,14 @@ export async function setMedicationReminderTimes(familyId, recordId, callerMembe
   const extraFields = {};
   if (extra.endDate !== undefined) extraFields.endDate = extra.endDate || null;
   if (extra.mealTiming !== undefined) extraFields.mealTiming = extra.mealTiming || null;
-  await ref.update({
-    reminderTimes,
-    ...extraFields,
-    lastEditedByMemberId: callerMemberId,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
+  try {
+    await ref.update({
+      reminderTimes,
+      ...extraFields,
+      lastEditedByMemberId: callerMemberId,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } finally { invalidateMemberHealth(familyId); }
 }
 
 // Google Calendar sync-এর event-ID — প্রতি সদস্যের (যিনি sync করেছেন) নিজস্ব Google
@@ -164,11 +179,13 @@ export async function setMedicationReminderTimes(familyId, recordId, callerMembe
 // একটা key আপডেট হয় (dotted-path), অন্য সদস্যের entry অক্ষত। rules-change লাগে না।
 export async function setMedicationCalendarEvents(familyId, recordId, callerMemberId, eventIds) {
   const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(recordId);
-  await ref.update({
-    ["calendarEventIds." + callerMemberId]: eventIds,
-    lastEditedByMemberId: callerMemberId,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
+  try {
+    await ref.update({
+      ["calendarEventIds." + callerMemberId]: eventIds,
+      lastEditedByMemberId: callerMemberId,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } finally { invalidateMemberHealth(familyId); }
 }
 
 export function describeHealthRecord(r) {

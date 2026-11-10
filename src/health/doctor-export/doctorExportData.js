@@ -58,7 +58,7 @@ export async function buildHealthProfileExport(familyId, targetMemberId, generat
   const member = allMembers.find((m) => m.id === targetMemberId);
   if (!member) throw new Error("সদস্য পাওয়া যায়নি।");
 
-  const records = await listHealthRecords(familyId, targetMemberId);
+  const records = await listHealthRecords(familyId, targetMemberId, { fresh: true });
   const allergies = records.filter((r) => r.resourceType === "allergy");
   const activeConditions = records.filter((r) => r.resourceType === "condition" && (r.status === "active" || r.status === "chronic"));
   const pastHistory = records.filter((r) => r.resourceType === "condition" && r.status === "resolved");

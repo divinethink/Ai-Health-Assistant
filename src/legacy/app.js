@@ -18,6 +18,7 @@
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
 import { histRestore } from "../shared/navHistory.js";
+import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
 import { t, useLang, setLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
 import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
@@ -160,7 +161,7 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members
       ),
       React.createElement(
         "button", {
-          onClick: () => { setOpen(false); auth.signOut(); },
+          onClick: () => { setOpen(false); clearMemberHealthCache(); auth.signOut(); },
           style: { marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B", borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         },
         t("top.logout")
