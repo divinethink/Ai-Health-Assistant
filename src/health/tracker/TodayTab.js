@@ -10,7 +10,7 @@ import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, EXERCISE_TYPES } from "./planPrefs.js";
-import { entryAmountText, fmtMacro } from "./foodCalc.js";
+import { entryAmountText, fmtMacro, sumNutrition } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
@@ -79,6 +79,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
   // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লক/উপবাস-দিনে নয়)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
   const extras = sanitizeExtraFoods(d.extraFoods);
   const canLog = !onFast && !!calc;
+  const macros = sumNutrition(extras);
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
   const writeExtras = async (next) => {
@@ -144,6 +145,18 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
           React.createElement("span", { style: { padding: "4px 10px", borderRadius: "999px", background: "rgba(255,255,255,0.16)", fontSize: "13px", fontWeight: 600 } },
             streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক" : "🔥 আজ থেকে স্ট্রিক শুরু করুন"),
           React.createElement("span", { "aria-hidden": "true", style: { padding: "4px 10px", borderRadius: "999px", background: T.amberSoft, color: "#4A3200", fontSize: "13px", fontWeight: 700 } }, "＋ খাবার")))),
+
+    // ধাপ ৪: আজকের ম্যাক্রো-সারাংশ — শুধু যোগফল (গ্রাম); কোনো টার্গেট/শতাংশ নেই।
+    canLog && macros.withMacro > 0 && React.createElement("div", { style: CARD_STYLE, "aria-label": "আজকের ম্যাক্রো-সারাংশ" },
+      React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "আজ পর্যন্ত (গ্রাম)"),
+      React.createElement("div", { style: { display: "flex", gap: "8px" } },
+        [["প্রোটিন", macros.p, T.green], ["কার্ব", macros.c, T.orange], ["ফ্যাট", macros.f, T.purple], ["ফাইবার", macros.fib, T.blue]].map(([name, v, col]) =>
+          React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, name),
+            React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: T.ink } }, fmtMacro(v)),
+            React.createElement("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: col, marginTop: "4px" } })))),
+      React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "8px", lineHeight: 1.5 } },
+        "শুধু নিজে-যোগ-করা খাবারের হিসাব; প্ল্যানের টিক ধরা হয়নি।" + (macros.withMacro < macros.total ? " " + bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।" : ""))),
 
     // আজকের খাবার-লগ (নিজে যোগ করা; প্ল্যানের টিক আলাদা — লক্ষ্য ও প্ল্যান → মিল)
     canLog && React.createElement("div", { style: CARD_STYLE },
