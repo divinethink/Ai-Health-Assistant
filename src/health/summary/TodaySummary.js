@@ -9,7 +9,7 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { getGoal, getDaily, setMedDoseTaken } from "../tracker/trackerData.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
 import { sanitizeTaken } from "../records/medTaken.js";
-import { ageYears, bmiOf, safetyGate, waterTargetFor, detectFlagsFromConditions } from "../tracker/trackerCalc.js";
+import { ageYears, bmiOf, safetyGate, waterTargetFor, detectFlagsFromConditions, effectivePregnant } from "../tracker/trackerCalc.js";
 import { T } from "../tracker/trackerTheme.js";
 import { bnNum, localISO } from "../../shared/dates.js";
 import { buildTodayDoses, progressPct, headlineOf, upcomingEvents, whenLabel, bnClock } from "./todaySummaryCalc.js";
@@ -123,7 +123,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
   const age = member ? ageYears(member.dob) : null;
   const detected = detectFlagsFromConditions(records);
   const gf = (goal && goal.flags) || {};
-  const flags = { pregnant: !!gf.pregnant, diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
+  const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
   const gate = safetyGate({ age, flags });
   const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
   const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget);

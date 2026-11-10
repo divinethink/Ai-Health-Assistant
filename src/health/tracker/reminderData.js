@@ -6,7 +6,7 @@
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, bdDayIndex } from "./exercisePlanData.js";
 import { applyMealPrefs, applyExercisePrefs } from "./planPrefs.js";
-import { ageYears, safetyGate, sleepTargetHours, detectFlagsFromConditions } from "./trackerCalc.js";
+import { ageYears, safetyGate, sleepTargetHours, detectFlagsFromConditions, effectivePregnant } from "./trackerCalc.js";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -76,7 +76,7 @@ export function buildReminderContext({ goal, records, member, now = new Date() }
   const age = member ? ageYears(member.dob, now) : null;
   const detected = detectFlagsFromConditions(records);
   const flags = {
-    pregnant: !!(goal && goal.flags && goal.flags.pregnant),
+    pregnant: effectivePregnant(goal, records),
     diabetes: !!(goal && goal.flags && goal.flags.diabetes) || detected.diabetes,
     kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
   };

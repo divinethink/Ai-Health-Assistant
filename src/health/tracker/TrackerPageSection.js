@@ -34,7 +34,7 @@ import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
-  sleepTargetHours, detectFlagsFromConditions, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
+  sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -575,12 +575,12 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
 // ---------- লক্ষ্য ----------
 function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const { goal, age, member, heightCm, weightKg, detected } = info;
+  const pregnant = !!(info.flags && info.flags.pregnant); // প্রোফাইল থেকে (ধাপ ৬) — এখানে আর আলাদা টগল নেই
   const g = goal || {};
   const [goalType, setGoalType] = useState(g.goalType || "");
   const [activity, setActivity] = useState(g.activity || "medium");
   const [target, setTarget] = useState(g.targetWeightKg ? String(g.targetWeightKg) : "");
   const [weeks, setWeeks] = useState(g.weeks ? String(g.weeks) : "");
-  const [pregnant, setPregnant] = useState(!!(g.flags && g.flags.pregnant));
   const [diabetes, setDiabetes] = useState(!!(g.flags && g.flags.diabetes) || detected.diabetes);
   const [kidney, setKidney] = useState(!!(g.flags && g.flags.kidney) || detected.kidney);
   const [busy, setBusy] = useState(false);
@@ -638,9 +638,10 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য হোম → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink, margin: "4px 2px 6px" } }, "প্রযোজ্য হলে টিক দিন"),
     React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" } },
-      showPregnant && tile("গর্ভবতী / বুকের দুধ", pregnant, setPregnant, false),
       tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
       tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
+    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: হোম ▸ প্রোফাইল।"),
+    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে হোম ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
     gate.blocked
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
       : React.createElement("div", null,
@@ -692,7 +693,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       const detected = detectFlagsFromConditions(recs);
       const age = member ? ageYears(member.dob) : null;
       const flags = {
-        pregnant: !!(goal && goal.flags && goal.flags.pregnant),
+        pregnant: effectivePregnant(goal, recs),
         diabetes: !!(goal && goal.flags && goal.flags.diabetes) || detected.diabetes,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };

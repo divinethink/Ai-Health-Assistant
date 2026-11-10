@@ -11,7 +11,7 @@ import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getAgeInYears, deriveAgeGroup } from "../triage/triageEngine.js";
 import { getGoal, getWeekDaily } from "../tracker/trackerData.js";
 import { last7DatesISO, targetCtxFor, weeklySummary } from "../tracker/weeklyTrend.js";
-import { detectFlagsFromConditions } from "../tracker/trackerCalc.js";
+import { detectFlagsFromConditions, effectivePregnant } from "../tracker/trackerCalc.js";
 
 function isHeightType(t) {
   const s = (t || "").trim().toLowerCase();
@@ -45,7 +45,7 @@ async function fetchTrackerWeek(familyId, memberId, member, records) {
     const [docs, goal] = await Promise.all([getWeekDaily(familyId, memberId, dates), getGoal(familyId, memberId)]);
     const detected = detectFlagsFromConditions(records);
     const gf = (goal && goal.flags) || {};
-    const flags = { pregnant: !!gf.pregnant, diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
+    const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
     const ay = getAgeInYears(member.dob);
     return weeklySummary(docs, dates, targetCtxFor({ age: ay === null ? null : Math.floor(ay), flags, goal })); // ট্র্যাকারের ageYears-এর মতো পূর্ণ বছর
   } catch (_e) {

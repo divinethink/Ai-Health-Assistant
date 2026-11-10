@@ -186,6 +186,21 @@ export function sleepMinutes(bed, wake) {
   return diff;
 }
 
+// গর্ভাবস্থা/বুকের দুধ (ধাপ ৬): একবার প্রোফাইলে condition-রেকর্ড হিসেবে সেভ হয় — ট্র্যাকার, খাবার-নিয়ম, AI ও ডাক্তার-রিপোর্ট সবাই এটাই পড়ে।
+// নাম মেলানো ইচ্ছাকৃতভাবে সংকীর্ণ ("গর্ভাশয়ের সিস্ট" ইত্যাদি যেন ভুলে না মেলে); ডায়েট-নিয়মের alias-এর সাথে সংগতিপূর্ণ।
+export const PREGNANCY_NAME_RE = /গর্ভাবস্থা|গর্ভবতী|গর্ভকালীন|প্রেগন্যান্ট|pregnan|breast\s*-?\s*feed|lactat|বুকের দুধ|দুগ্ধদান|স্তন্যদান/i;
+export const PREGNANCY_CONDITION_NAME = "গর্ভাবস্থা / বুকের দুধ";
+export function pregnancyRecordsOf(records) {
+  return (records || []).filter((r) => r.resourceType === "condition" && PREGNANCY_NAME_RE.test(r.name || ""));
+}
+// রেকর্ড আছে (যেকোনো অবস্থায়) → রেকর্ডই সত্য (resolved = বন্ধ)। রেকর্ড কখনো না থাকলে পুরনো ট্র্যাকার-টগল (goal.flags.pregnant) — যাতে
+// স্থানান্তরের আগে সুরক্ষা হারায় না, আর স্থানান্তরের পর টগল বন্ধ করা যায়।
+export function effectivePregnant(goal, records) {
+  const recs = pregnancyRecordsOf(records);
+  if (recs.length) return recs.some((r) => r.status !== "resolved");
+  return !!(goal && goal.flags && goal.flags.pregnant);
+}
+
 // প্রোফাইলের রোগ-তালিকা থেকে ডায়াবেটিস/কিডনি আগে-থেকে-টিক (ব্যবহারকারী বদলাতে পারবেন)
 export function detectFlagsFromConditions(records) {
   const flags = { diabetes: false, kidney: false };

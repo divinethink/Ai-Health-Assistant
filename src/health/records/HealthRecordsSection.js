@@ -10,6 +10,7 @@ import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
+import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -47,6 +48,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       familyId, selectedMemberId: targetMemberId, callerMemberId, refreshTick,
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
+    (section === "all" || section === "profile") && React.createElement(PregnancyStatusCard, { key: "preg-" + targetMemberId, familyId, selectedMemberId: targetMemberId, callerMemberId }),
     (section === "all" || section === "records") && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),

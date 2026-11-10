@@ -22,6 +22,7 @@ import { askAI } from "../../ai/aiClient.js";
 import { createEpisode, saveTriageResult, addMessage, archiveEpisode } from "../episodes/episodesData.js";
 import { RiskBasedTreatmentModes } from "../treatment-modes/RiskBasedTreatmentModes.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
+import { pregnancyRecordsOf } from "../tracker/trackerCalc.js";
 import { checkAspirinContraindication } from "../emergency/bystanderAspirin.js";
 import { BystanderAspirinCard } from "../emergency/BystanderAspirinCard.js";
 
@@ -80,6 +81,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
   const [cardiacAnswers, setCardiacAnswers] = useState({ cardiacPersistent: false, cardiacAssociated: false });
   const [aspirinCheck, setAspirinCheck] = useState(null);
   const [hasChronicCondition, setHasChronicCondition] = useState(false);
+  const [isPregnant, setIsPregnant] = useState(false); // প্রোফাইলের গর্ভাবস্থা/বুকের দুধ (ধাপ ৬)
   const [healthContext, setHealthContext] = useState(null);
   const [memberAgeYears, setMemberAgeYears] = useState(null); // Groq-payload-এ যায় না, শুধু Worker dose-lookup-এর জন্য (§6.6 প্রাইভেসি)
   const [contextErr, setContextErr] = useState(null);
@@ -195,6 +197,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       .then((records) => {
         const conditionRecords = records.filter((r) => r.resourceType === "condition");
         setHasChronicCondition(conditionRecords.some((c) => c.chronicManagement === true && c.status !== "resolved"));
+        setIsPregnant(pregnancyRecordsOf(records).some((c) => c.status !== "resolved"));
         if (cardiacTriggered) {
           const ageYears = targetMember ? getAgeInYears(targetMember.dob) : null;
           const allergyRecords = records.filter((r) => r.resourceType === "allergy");
@@ -203,6 +206,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       })
       .catch(() => {
         setHasChronicCondition(false);
+        setIsPregnant(false);
         if (cardiacTriggered) setAspirinCheck({ blocked: true, reason: "প্রোফাইল যাচাই করা যায়নি (safe-default: block)" });
       });
 
@@ -436,7 +440,8 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     // reference)-এর দিকে পয়েন্ট করে, dose/prescription-জাতীয় কিছু bypass হয় না।
     aiResponse && React.createElement(RiskBasedTreatmentModes, {
       riskLevel: result && result.riskLevel,
-      ageGroupContext: result && result.ageGroupContext,
+      // গর্ভবতী/দুগ্ধদানকারী (প্রোফাইল, ধাপ ৬) হলে high-risk উপস্থাপনা — শুধু Herbal/Homeopathy-কে গৌণ রাখে; triage-ফল/riskLevel অপরিবর্তিত
+      ageGroupContext: isPregnant && !(result && isPediatricAgeGroup(result.ageGroupContext)) ? "pregnant" : (result && result.ageGroupContext),
       // এই সদস্যের active/chronic-status Condition-এ chronicManagement:true থাকলে
       // (HealthRecordForm.js checkbox থেকে সেট করা) এখন actual value ব্যবহার হয় —
       // আগে hardcode false ছিল (checklist §৭ known-gap, এখন resolved)।
