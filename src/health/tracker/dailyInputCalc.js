@@ -7,6 +7,8 @@ import { sleepMinutes } from "./trackerCalc.js";
 export const WEIGHT_MIN = 2;
 export const WEIGHT_MAX = 400;
 export const STEPS_MAX = 100000;
+export const HEIGHT_MIN = 30;
+export const HEIGHT_MAX = 250;
 
 function parseNum(v) {
   if (v === null || v === undefined || !String(v).trim()) return null;
@@ -18,6 +20,19 @@ export function checkWeightInput(v) {
   const n = parseNum(v);
   if (n === null || Number.isNaN(n) || n < WEIGHT_MIN || n > WEIGHT_MAX) return { error: "ওজন সঠিক সংখ্যা দিন।" };
   return { value: Math.round(n * 10) / 10 };
+}
+
+// উচ্চতা (সেমি): ৩০–২৫০, এক দশমিক পর্যন্ত। ফুট/ইঞ্চি → সেমি: cmFromFtIn।
+export function checkHeightInput(v) {
+  const n = parseNum(v);
+  if (n === null || Number.isNaN(n) || n < HEIGHT_MIN || n > HEIGHT_MAX) return { error: "উচ্চতা সঠিক সংখ্যা দিন (" + HEIGHT_MIN + "–" + HEIGHT_MAX + " সেমি)।" };
+  return { value: Math.round(n * 10) / 10 };
+}
+export function cmFromFtIn(ft, inch) {
+  const f = parseNum(ft), i = parseNum(inch);
+  if (f === null && i === null) return null;
+  if (Number.isNaN(f) || Number.isNaN(i)) return NaN;
+  return (f || 0) * 30.48 + (i || 0) * 2.54;
 }
 
 export function checkStepsInput(v) {

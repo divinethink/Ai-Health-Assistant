@@ -9,7 +9,10 @@
 
 import { ErrorBox, PrimaryButton } from "../../shared/ui.js";
 import { localISO } from "../../shared/dates.js";
-import { createHealthRecord, listHealthRecords } from "./healthRecordsData.js";
+import { listHealthRecords } from "./healthRecordsData.js";
+import { saveVitals } from "./vitalsData.js";
+import { VitalsLinkNote } from "./VitalsLinkNote.js";
+import { checkHeightInput, checkWeightInput, cmFromFtIn } from "../tracker/dailyInputCalc.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -49,29 +52,25 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
 
   const submit = useCallback(async () => {
     setErr(null);
-    const ft = parseFloat(feetInput);
-    const inch = parseFloat(inchInput);
-    const hasFtIn = feetInput.trim() || inchInput.trim();
-    // ft/in দিলে cm-এ convert করে একই ক্যানোনিকাল "height"/cm হিসেবেই সংরক্ষণ হয়
-    // (owner-request: cm-এর পাশাপাশি বিকল্প ইনপুট-পদ্ধতি, স্টোরেজ-schema/unit অপরিবর্তিত)।
-    const h = heightInput.trim() ? parseFloat(heightInput) : (hasFtIn ? (isNaN(ft) ? 0 : ft) * 30.48 + (isNaN(inch) ? 0 : inch) * 2.54 : NaN);
-    const w = parseFloat(weightInput);
-    if (!heightInput.trim() && !hasFtIn && !weightInput.trim()) { setErr("উচ্চতা বা ওজন অন্তত একটা দিন।"); return; }
-    if ((heightInput.trim() || hasFtIn) && (isNaN(h) || h <= 0)) { setErr("উচ্চতা সঠিক সংখ্যা হতে হবে (cm অথবা ft/in)।"); return; }
-    if (weightInput.trim() && (isNaN(w) || w <= 0)) { setErr("ওজন সঠিক সংখ্যা হতে হবে (kg)।"); return; }
+    const hasH = !!(heightInput.trim() || feetInput.trim() || inchInput.trim());
+    const hasW = !!weightInput.trim();
+    if (!hasH && !hasW) { setErr("উচ্চতা বা ওজন অন্তত একটা দিন।"); return; }
+    // ft/in দিলে cm-এ রূপান্তর; সংরক্ষণ সবসময় ক্যানোনিকাল "height"/cm (owner-request: স্টোরেজ-unit অপরিবর্তিত)
+    let heightCm = null, weightKg = null;
+    if (hasH) {
+      const hr = checkHeightInput(heightInput.trim() ? heightInput : cmFromFtIn(feetInput, inchInput));
+      if (hr.error) { setErr(hr.error); return; }
+      heightCm = hr.value;
+    }
+    if (hasW) {
+      const wr = checkWeightInput(weightInput);
+      if (wr.error) { setErr(wr.error); return; }
+      weightKg = wr.value;
+    }
     setBusy(true);
     try {
-      const today = localISO();
-      if (heightInput.trim() || hasFtIn) {
-        await createHealthRecord(familyId, targetMemberId, callerMemberId, "observation", {
-          type: "height", value: String(Math.round(h * 10) / 10), unit: "cm", date: today,
-        });
-      }
-      if (weightInput.trim()) {
-        await createHealthRecord(familyId, targetMemberId, callerMemberId, "observation", {
-          type: "weight", value: String(w), unit: "kg", date: today,
-        });
-      }
+      // একটাই লেখার পথ (vitalsData.js): একই দিনে আবার সেভ করলে বদলায়, ডুপ্লিকেট হয় না
+      await saveVitals(familyId, targetMemberId, callerMemberId, { heightCm, weightKg }, localISO());
       setHeightInput(""); setFeetInput(""); setInchInput(""); setWeightInput("");
       load();
       onSaved && onSaved();
@@ -92,6 +91,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
         (latest.weightKg ? latest.weightKg + " kg" : "ওজন নেই") +
         (latest.bmi ? " · BMI: " + latest.bmi : "")
     ),
+    React.createElement(VitalsLinkNote, { title: "এই একটা ইনপুট যেখানে যাবে (ট্র্যাকারেও ওজন দেওয়া যায়)" }),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" } },
       React.createElement(

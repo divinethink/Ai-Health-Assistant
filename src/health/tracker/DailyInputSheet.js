@@ -6,6 +6,7 @@ import { bnNum } from "../../shared/dates.js";
 import { T } from "./trackerTheme.js";
 import { Sheet, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets.js";
 import { stepWeight, shiftTime } from "./stepper.js";
+import { VitalsLinkNote } from "../records/VitalsLinkNote.js";
 import { checkWeightInput, checkStepsInput, checkSleepInput } from "./dailyInputCalc.js";
 
 const { useState } = React;
@@ -53,7 +54,8 @@ export function DailyInputSheet({ kind, daily, latestWeight, stepsTarget, busy, 
         React.createElement("button", { onClick: () => { setLocalErr(null); setWeight(stepWeight(weight, -0.1, latestWeight)); }, "aria-label": "ওজন ০.১ কমান", style: { ...BTN, border: "none", background: "#E4ECE7", color: T.green } }, "−"),
         React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", value: weight, onChange: (e) => { setLocalErr(null); setWeight(e.target.value); }, "aria-label": "ওজন (কেজি)", style: { ...INPUT, textAlign: "center", flex: 1 } }),
         React.createElement("button", { onClick: () => { setLocalErr(null); setWeight(stepWeight(weight, 0.1, latestWeight)); }, "aria-label": "ওজন ০.১ বাড়ান", style: { ...BTN, border: "none", background: "#E4ECE7", color: T.green } }, "+")),
-      latestWeight && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "সর্বশেষ সংরক্ষিত: " + bnNum(latestWeight) + " কেজি")),
+      latestWeight && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "সর্বশেষ সংরক্ষিত: " + bnNum(latestWeight) + " কেজি"),
+      React.createElement(VitalsLinkNote, null)),
 
     kind === "steps" && React.createElement("div", null,
       React.createElement("label", { style: LAB }, "স্টেপ"),

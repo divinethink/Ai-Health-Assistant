@@ -6,7 +6,7 @@
 // `reminders`: ধাপ ৩-এর রিমাইন্ডার-সেটিং (saveReminders)। saveGoal এটা ছোঁয় না, তাই লক্ষ্য বদলালে সেটিং হারায় না।
 
 import { db } from "../../legacy/firebaseConfig.js";
-import { createHealthRecord, updateHealthRecord } from "../records/healthRecordsData.js";
+import { createHealthRecord, updateHealthRecord, listHealthRecords } from "../records/healthRecordsData.js";
 import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
 import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
 import { sanitizeTaken } from "../records/medTaken.js";
@@ -101,9 +101,20 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
   if (fields.weightKg !== undefined) {
     put("weightKg", fields.weightKg);
     const rec = { type: "weight", value: String(fields.weightKg), unit: "kg", date };
-    if (prev && prev.weightObsId) {
-      if (prev.weightKg !== fields.weightKg) await updateHealthRecord(familyId, prev.weightObsId, "observation", callerMemberId, rec);
-      out.weightObsId = prev.weightObsId;
+    let obsId = prev && prev.weightObsId;
+    let obsVal = prev && prev.weightKg;
+    if (!obsId) {
+      // ধাপ ৫: ওই তারিখে অন্য পথে (প্রোফাইল) আগেই ওজন সেভ হয়ে থাকলে সেটাই বদলাই — একই দিনে দুটো Observation নয়।
+      // পড়া ব্যর্থ হলে (অফলাইন) আগের আচরণ: নতুন বানানো।
+      try {
+        const recs = await listHealthRecords(familyId, memberId, { fresh: true });
+        const ex = recs.find((r) => r.resourceType === "observation" && /^(weight|ওজন)$/.test((r.type || "").trim().toLowerCase()) && r.date === date);
+        if (ex) { obsId = ex.id; obsVal = parseFloat(ex.value); }
+      } catch (e) { /* ignore */ }
+    }
+    if (obsId) {
+      if (obsVal !== fields.weightKg) await updateHealthRecord(familyId, obsId, "observation", callerMemberId, rec);
+      out.weightObsId = obsId;
     } else {
       out.weightObsId = await createHealthRecord(familyId, memberId, callerMemberId, "observation", rec);
     }

@@ -35,3 +35,13 @@ test("ঘুম: সময় অনুপস্থিত/অবৈধ হলে
   assert.ok(checkSleepInput("22:00", "", 3).error);
   assert.ok(checkSleepInput("x", "y", 3).error);
 });
+
+import { checkHeightInput, cmFromFtIn } from "../../src/health/tracker/dailyInputCalc.js";
+test("উচ্চতা: সীমা ও ফুট-ইঞ্চি", () => {
+  assert.equal(checkHeightInput("162.64").value, 162.6);
+  assert.ok(checkHeightInput("20").error); assert.ok(checkHeightInput("300").error); assert.ok(checkHeightInput("").error); assert.ok(checkHeightInput("abc").error);
+  assert.ok(Math.abs(cmFromFtIn("5", "4") - 162.56) < 0.01);
+  assert.ok(Math.abs(cmFromFtIn("", "10") - 25.4) < 0.01);
+  assert.equal(cmFromFtIn("", ""), null);
+  assert.ok(Number.isNaN(cmFromFtIn("x", "1")));
+});
