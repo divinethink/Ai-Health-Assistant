@@ -13,7 +13,7 @@ import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, tagsOf, posTagsOf } from "./f
 import { foodStatus, STATUS_COLORS } from "./foodStatus.js";
 import { per100Of, fmtMacro } from "./foodCalc.js";
 import {
-  EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, mealWarnings, exerciseWarnings,
+  EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, searchExercises, mealWarnings, exerciseWarnings,
   draftFromSlotItems, addDraftFood, changeDraftQty, removeDraftAt, draftKcal,
   draftFromDayItems, addDraftExercise, changeDraftMin, draftDayMinutes,
   checkExtraFood,
@@ -21,7 +21,10 @@ import {
 
 const { useState, useEffect, useRef } = React;
 
-export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋️", sports: "⚽", swim: "🏊", yoga: "🧘", other: "➕", stretch: "🧘" };
+export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋️", sports: "⚽", swim: "🏊", yoga: "🧘", other: "➕", stretch: "🧘",
+  squat: "🦵", pushup: "💪", lunges: "🦵", mountain: "🧗", glute: "🍑", plank: "🧍", situp: "🤸", crunch: "🤸", bicycle: "🚴", legraise: "🦵",
+  jacks: "🤸", burpee: "🔥", highknee: "🏃", skipping: "🪢", tricepdip: "💪", wallsit: "🧱", stepup: "🪜", superman: "🦸", birddog: "🐕",
+  chairstand: "🪑", stairs: "🪜", dance: "💃", hiit: "⚡", pilates: "🧘" };
 
 const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
@@ -267,18 +270,22 @@ export function ExerciseEditSheet({ dayLabel, items, isCustom, busy, err, onSave
 export function ExerciseLogSheet({ initialType, entries, busy, err, onAdd, onRemove, onClose }) {
   const [type, setType] = useState(initialType || "other");
   const [min, setMin] = useState(30);
+  const [q, setQ] = useState("");
+  const list = searchExercises(q);
   return React.createElement(Sheet, { title: "আজ আসলে কী করলেন?", subtitle: "শুধু আজকের হিসাবে যোগ হবে", onClose },
     entries.length > 0 && React.createElement("div", { style: { marginBottom: "8px" } },
       entries.map((x, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, (EX_ICON[x.type] || "") + " " + EXERCISE_TYPES[x.type].label + " · " + bnNum(x.min) + " মিনিট"),
         React.createElement("button", { onClick: () => onRemove(i), disabled: busy, "aria-label": EXERCISE_TYPES[x.type].label + " মুছুন", style: { ...BTN, border: "none", background: "#FDECEA", color: "#7A1F14" } }, "✕")))),
-    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-      exerciseOptions().map((o) => React.createElement("button", {
+    React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "🔍 ব্যায়াম খুঁজুন — বাংলা/English (Squat, পুশ-আপ)", "aria-label": "ব্যায়াম খুঁজুন", style: { ...INPUT, marginBottom: "8px" } }),
+    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", maxHeight: "34vh", overflowY: "auto" } },
+      list.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, "মেলেনি — নিচে ‘অন্য’ বেছে নিন।"),
+      list.map((o) => React.createElement("button", {
         key: o.type, onClick: () => setType(o.type), "aria-pressed": type === o.type,
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (type === o.type ? GREEN : "#C3D2CA"), background: type === o.type ? GREEN : "#F1F6F2", color: type === o.type ? "#fff" : "#1F2D2A" },
       }, (EX_ICON[o.type] || "") + " " + o.label))),
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "14px" } },
-      React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A" } }, "কতক্ষণ"),
+      React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A" } }, (EX_ICON[type] || "") + " " + EXERCISE_TYPES[type].label + " — কতক্ষণ"),
       Stepper(bnNum(min) + " মি.", () => setMin(Math.max(MIN_EX_MIN, min - 5)), () => setMin(Math.min(MAX_EX_MIN, min + 5)), min <= MIN_EX_MIN, min >= MAX_EX_MIN, "মিনিট")),
     err && Msg(err, "err"),
     React.createElement("div", { style: { display: "flex", marginTop: "14px" } }, primaryBtn("যোগ করুন", () => onAdd(type, min), busy)));

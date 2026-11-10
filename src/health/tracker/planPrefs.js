@@ -30,6 +30,31 @@ export const EXERCISE_TYPES = {
   yoga: { label: "যোগব্যায়াম", counted: true },
   other: { label: "অন্য", counted: true },
   stretch: { label: "স্ট্রেচিং", counted: false },
+  // বাসায় করার ব্যায়াম (additive; home:true = শুধু "আজ আসলে" শিটে সার্চসহ আসে, প্ল্যান-এডিট শিটে নয়)।
+  squat: { label: "স্কোয়াট", en: "Squat", counted: true, home: true },
+  pushup: { label: "পুশ-আপ", en: "Push-up", counted: true, home: true },
+  lunges: { label: "লাঞ্জেস", en: "Lunges", counted: true, home: true },
+  mountain: { label: "মাউন্টেন ক্লাইম্বার", en: "Mountain Climbers", counted: true, home: true },
+  glute: { label: "গ্লুট ব্রিজ", en: "Glute Bridge", counted: true, home: true },
+  plank: { label: "প্ল্যাংক", en: "Plank", counted: true, home: true },
+  situp: { label: "সিট-আপ", en: "Sit-up", counted: true, home: true },
+  crunch: { label: "ক্রাঞ্চ", en: "Crunches", counted: true, home: true },
+  bicycle: { label: "বাইসাইকেল ক্রাঞ্চ", en: "Bicycle Crunch", counted: true, home: true },
+  legraise: { label: "লেগ রেইজ", en: "Leg Raises", counted: true, home: true },
+  jacks: { label: "জাম্পিং জ্যাক", en: "Jumping Jacks", counted: true, home: true },
+  burpee: { label: "বার্পি", en: "Burpees", counted: true, home: true },
+  highknee: { label: "হাই নি", en: "High Knees", counted: true, home: true },
+  skipping: { label: "দড়ি-লাফ", en: "Skipping Rope", counted: true, home: true },
+  tricepdip: { label: "ট্রাইসেপ ডিপ (চেয়ারে)", en: "Triceps Dips", counted: true, home: true },
+  wallsit: { label: "ওয়াল সিট", en: "Wall Sit", counted: true, home: true },
+  stepup: { label: "স্টেপ-আপ", en: "Step-ups", counted: true, home: true },
+  superman: { label: "সুপারম্যান", en: "Superman", counted: true, home: true },
+  birddog: { label: "বার্ড-ডগ", en: "Bird Dog", counted: true, home: true },
+  chairstand: { label: "চেয়ার-স্ট্যান্ড", en: "Chair Stand", counted: true, home: true },
+  stairs: { label: "সিঁড়ি ভাঙা", en: "Stair Climbing", counted: true, home: true },
+  dance: { label: "নাচ/জুম্বা", en: "Dance Zumba", counted: true, home: true },
+  hiit: { label: "HIIT", en: "HIIT Home Workout", counted: true, home: true },
+  pilates: { label: "পিলাটেস", en: "Pilates", counted: true, home: true },
 };
 
 const SLOT_IDS = MEAL_SLOTS.map((s) => s.id);
@@ -144,8 +169,17 @@ export function mealOptions(allergyTags) {
   return Object.entries(FOODS)
     .map(([key, f]) => ({ key, name: f.n, unit: f.u, kcal: foodK(key), allergy: !!(f.al && tags.has(f.al)) }));
 }
-export function exerciseOptions() {
-  return Object.entries(EXERCISE_TYPES).map(([type, e]) => ({ type, label: e.label, counted: e.counted }));
+// all=false (ডিফল্ট): আগের ৯টি — প্ল্যান-এডিট শিট অপরিবর্তিত। all=true: বাসার ব্যায়ামসহ সব (আজ-শিটের সার্চের জন্য)।
+export function exerciseOptions(all) {
+  return Object.entries(EXERCISE_TYPES).filter(([, e]) => all || !e.home)
+    .map(([type, e]) => ({ type, label: e.label, en: e.en || "", counted: e.counted }));
+}
+// সার্চ: বাংলা বা English; খালি হলে সব। pure — টেস্টযোগ্য।
+export function searchExercises(q) {
+  const t = String(q || "").trim().toLowerCase();
+  const all = exerciseOptions(true);
+  if (!t) return all;
+  return all.filter((o) => o.label.toLowerCase().includes(t) || o.en.toLowerCase().includes(t));
 }
 
 // ---------- মিল ----------

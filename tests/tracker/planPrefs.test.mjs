@@ -190,3 +190,13 @@ test("checkExtraFood/checkExerciseLog: যাচাই ও সীমা", () => 
   assert.ok(checkExerciseLog(301, 0));
   assert.ok(checkExerciseLog(30, 20));
 });
+
+test("exerciseOptions: ডিফল্টে আগের ৯টি; all=true হলে বাসার ব্যায়ামসহ; searchExercises বাংলা/English", async () => {
+  const { exerciseOptions: eo, searchExercises, sanitizeExerciseLog: sx } = await import("../../src/health/tracker/planPrefs.js");
+  assert.equal(eo().length, 9);
+  assert.ok(eo(true).length > 9);
+  assert.ok(searchExercises("squat").some((o) => o.type === "squat"));
+  assert.ok(searchExercises("পুশ").some((o) => o.type === "pushup"));
+  assert.equal(searchExercises("").length, eo(true).length);
+  assert.deepEqual(sx([{ type: "lunges", min: 10 }, { type: "nope", min: 5 }]), [{ type: "lunges", min: 10 }]);
+});
