@@ -37,14 +37,14 @@ export function scaleNutrition(foodKey, grams) {
   return { kcal: Math.round(kcal * k), p: r1(p * k), c: r1(c * k), f: r1(f * k), fib: r1(fib * k) };
 }
 
-// মাপ × পরিমাণ → গ্রাম (পূর্ণসংখ্যা); খাবার/মাপ অজানা, পরিমাণ অবৈধ বা ফল ১–২০০০-এর বাইরে হলে null।
+// মাপ × পরিমাণ → গ্রাম (১ দশমিক পর্যন্ত — বাদামের মতো ছোট মাপের জন্য); খাবার/মাপ অজানা, পরিমাণ অবৈধ বা ফল ১–২০০০-এর বাইরে হলে null।
 export function measureToGrams(foodKey, measureId, qty) {
   const n = nutritionOf(foodKey);
   const q = Number(qty);
   if (!n || !Number.isFinite(q) || q <= 0 || q > MAX_MEASURE_QTY) return null;
   const m = n.measures.find((x) => x.id === measureId);
   if (!m) return null;
-  return validGrams(Math.round(m.g * q));
+  return validGrams(Math.round(m.g * q * 10) / 10);
 }
 
 // sanitize-করা extraFoods এন্ট্রির যোগফল। kcal সব এন্ট্রির (পুরনো {name,kcal,slot} সহ);

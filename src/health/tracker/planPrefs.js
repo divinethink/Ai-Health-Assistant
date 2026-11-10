@@ -90,7 +90,7 @@ export function sanitizeExtraFoods(raw) {
     if (typeof r.measure === "string" && /^[A-Za-z0-9_]{1,20}$/.test(r.measure)) out.measure = r.measure;
     const qty = Number(r.qty);
     if (Number.isFinite(qty) && qty > 0 && qty <= 100) out.qty = Math.round(qty * 100) / 100;
-    const grams = Math.round(Number(r.grams));
+    const grams = Math.round(Number(r.grams) * 10) / 10;
     if (r.grams !== null && r.grams !== "" && Number.isFinite(grams) && grams >= 1 && grams <= MAX_GRAMS) out.grams = grams;
     ["p", "c", "f", "fib"].forEach((k) => {
       const v = Number(r[k]);
