@@ -14,6 +14,8 @@ export const MAX_ITEMS_PER_SLOT = 12;
 export const MAX_ITEMS_PER_DAY = 6;
 export const MAX_LIST = 20;
 export const MAX_KCAL = 3000;
+export const MAX_GRAMS = 2000;
+export const MAX_MACRO = 500;
 export const MAX_EX_MIN = 300;
 export const MIN_EX_MIN = 5;
 
@@ -82,7 +84,19 @@ export function sanitizeExtraFoods(raw) {
     const name = r.name.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
     const kcal = cleanMin(r.kcal, 0, MAX_KCAL);
     if (!name || kcal === null || !SLOT_IDS.includes(r.slot)) return null;
-    return { name, kcal, slot: r.slot };
+    const out = { name, kcal, slot: r.slot };
+    // ধাপ ১খ — ঐচ্ছিক পুষ্টি-ফিল্ড (additive; অবৈধ হলে শুধু সেই ফিল্ড বাদ, এন্ট্রি নয়)।
+    if (typeof r.key === "string" && /^[A-Za-z0-9_]{1,40}$/.test(r.key)) out.key = r.key;
+    if (typeof r.measure === "string" && /^[A-Za-z0-9_]{1,20}$/.test(r.measure)) out.measure = r.measure;
+    const qty = Number(r.qty);
+    if (Number.isFinite(qty) && qty > 0 && qty <= 100) out.qty = Math.round(qty * 100) / 100;
+    const grams = Math.round(Number(r.grams));
+    if (r.grams !== null && r.grams !== "" && Number.isFinite(grams) && grams >= 1 && grams <= MAX_GRAMS) out.grams = grams;
+    ["p", "c", "f", "fib"].forEach((k) => {
+      const v = Number(r[k]);
+      if (r[k] !== null && r[k] !== "" && r[k] !== undefined && Number.isFinite(v) && v >= 0 && v <= MAX_MACRO) out[k] = Math.round(v * 10) / 10;
+    });
+    return out;
   }).filter(Boolean);
 }
 
