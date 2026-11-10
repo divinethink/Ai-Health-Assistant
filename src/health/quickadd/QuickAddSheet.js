@@ -8,7 +8,7 @@ const h = React.createElement;
 export function QuickAddFab({ onOpen }) {
   return h("button", {
     type: "button", onClick: onOpen, "aria-label": "দ্রুত যোগ করুন",
-    style: { position: "fixed", right: "16px", bottom: "72px", zIndex: 60, width: "58px", height: "58px", borderRadius: "50%", border: "none", background: T.green, color: "#fff", fontSize: "30px", lineHeight: 1, cursor: "pointer", boxShadow: "0 6px 16px rgba(14,75,67,0.35)", fontFamily: "inherit" },
+    style: { position: "fixed", right: "12px", bottom: "68px", zIndex: 60, width: "50px", height: "50px", borderRadius: "50%", border: "none", background: T.green, color: "#fff", fontSize: "28px", lineHeight: 1, cursor: "pointer", boxShadow: "0 6px 16px rgba(14,75,67,0.35)", fontFamily: "inherit" },
   }, "+");
 }
 

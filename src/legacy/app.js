@@ -499,13 +499,13 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(HealthRecordsPageSection, { key: "home-" + homeKey, mode: "home", familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
+    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
   } else if (activeTab === "health") {
     tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
     tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
-    tabContent = React.createElement(TrackerPageSection, { familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
+    tabContent = React.createElement(TrackerPageSection, { mode: "plan", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else {

@@ -64,7 +64,7 @@ function DoseRow({ d, busy, onToggle, last }) {
     }, label));
 }
 
-export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
+export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyMeds }) {
   const { records, loading, error } = useMemberHealth(familyId, selectedMemberId);
   const [aux, setAux] = useState(null); // { member, goal, daily, events }
   const [auxErr, setAuxErr] = useState(null);
@@ -80,7 +80,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
       const day = localISO();
       const [members, goal, daily, events] = await Promise.all([
         listMembers(familyId).catch(() => []),
-        getGoal(familyId, selectedMemberId),
+        onlyMeds ? Promise.resolve(null) : getGoal(familyId, selectedMemberId), // শুধু ওষুধ/আসন্ন মোডে লক্ষ্য লাগে না
         getDaily(familyId, selectedMemberId, day),
         listCalendarEvents(familyId).catch(() => []), // ইভেন্ট না পড়া গেলে শুধু "আসন্ন" খালি — বাকি সারাংশ চলে
       ]);
@@ -89,7 +89,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
       setAux(null);
       setAuxErr(e.code === "permission-denied" ? "এই সদস্যের তথ্য দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
     }
-  }, [familyId, selectedMemberId]);
+  }, [familyId, selectedMemberId, onlyMeds]);
 
   useEffect(() => { setAux(null); load(); }, [load, today]);
 
@@ -116,7 +116,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
   };
 
   if (error || auxErr) return ErrorBox(auxErr || (error.code === "permission-denied" ? "এই সদস্যের তথ্য দেখার অনুমতি আপনার নেই।" : (error.message || String(error))));
-  if (!selectedMemberId || loading || !records || !aux) return Skeleton(4, 96);
+  if (!selectedMemberId || loading || !records || !aux) return Skeleton(onlyMeds ? 2 : 4, 96);
 
   const { member, goal, daily, events } = aux;
   const d = daily || {};
@@ -139,7 +139,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
   const dateLine = new Date(today + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" });
 
   return h("div", { style: { fontFamily: FONT } },
-    h("div", { style: { fontSize: "14px", color: T.muted, margin: "0 2px 8px" } }, dateLine + (member && member.name ? " · " + member.name.split(" ")[0] : "")),
+    ...(onlyMeds ? [] : [h("div", { style: { fontSize: "14px", color: T.muted, margin: "0 2px 8px" } }, dateLine + (member && member.name ? " · " + member.name.split(" ")[0] : "")),
     h("div", { style: { background: T.green, borderRadius: "20px", padding: "16px 18px", color: "#fff" } },
       h("div", { style: { fontSize: "14px", color: T.onDarkSoft } }, "আজকের স্বাস্থ্য" + (pct === null ? "" : " — " + bnNum(pct) + "% সম্পন্ন")),
       h("div", { style: { fontSize: "22px", fontWeight: 700, lineHeight: 1.3, marginTop: "6px" } }, headlineOf({ doses, water, waterTarget })),
@@ -151,7 +151,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
         ? h(Stat, { icon: "💧", title: "পানি", big: bnNum(water), small: "/" + bnNum(waterTarget) + " গ্লাস", pct: (water / waterTarget) * 100 })
         : h(Stat, { icon: "💧", title: "পানি", big: bnNum(water), small: "গ্লাস" }),
       h(Stat, { icon: "🍽️", title: "ক্যালরি", big: bnNum(d.caloriesIn || 0), small: calorieTarget ? "/" + bnNum(calorieTarget) : "কিলোক্যালরি", pct: calorieTarget ? ((d.caloriesIn || 0) / calorieTarget) * 100 : undefined, color: T.green }),
-      h(Stat, { icon: "⚖️", title: "ওজন", big: weightKg ? bnNum(weightKg) : "—", small: weightKg ? "কেজি" + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "") : "" })),
+      h(Stat, { icon: "⚖️", title: "ওজন", big: weightKg ? bnNum(weightKg) : "—", small: weightKg ? "কেজি" + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "") : "" }))]),
 
     h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
       h("div", { style: SEC }, "আজকের ওষুধ"), doses.length > 0 && h("div", { style: { fontSize: "13px", color: T.muted } }, "সব ডিভাইসে মিলবে")),
@@ -171,5 +171,5 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId }) {
           h("div", { style: { minWidth: 0 } },
             h("div", { style: { fontSize: "17px", fontWeight: 700, color: T.ink } }, e.title),
             h("div", { style: { fontSize: "14px", color: T.muted } }, new Date(e.date + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" }) + " · " + whenLabel(e)))))),
-    h("p", { style: { fontSize: "12px", color: T.muted, margin: "10px 2px 0" } }, "এটা শুধু আপনার দেওয়া তথ্যের সারাংশ; চিকিৎসা পরামর্শ নয়।"));
+    !onlyMeds && h("p", { style: { fontSize: "12px", color: T.muted, margin: "10px 2px 0" } }, "এটা শুধু আপনার দেওয়া তথ্যের সারাংশ; চিকিৎসা পরামর্শ নয়।"));
 }

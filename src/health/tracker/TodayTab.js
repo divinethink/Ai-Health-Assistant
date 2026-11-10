@@ -5,7 +5,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO } from "./trackerData.js";
 import { weekDatesISO } from "./exercisePlanData.js";
-import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate } from "./trackerCalc.js";
+import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, bmiOf } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { ringDash, pctOf, streakOf, weekSummary } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan } from "./mealPlanData.js";
@@ -48,7 +48,22 @@ function MiniRing({ value, pct, color, caption, label, onTap }) {
     React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, textAlign: "center", lineHeight: 1.3, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, caption));
 }
 
-export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+const COND_LABEL = { active: "চলছে", chronic: "দীর্ঘমেয়াদি" };
+
+// হোমের উপরের সতর্ক-সারি: এলার্জি (লাল) + চলমান অসুস্থতা। এলার্জি-রেকর্ড না থাকলে "নেই" বা সবুজ নয়,
+// শুধু "তথ্য দেওয়া হয়নি" — যাতে "নেই" মানে "নিরাপদ" মনে না হয় (safe-default)।
+function AlertStrip({ allergies, conds }) {
+  const chip = (key, text, bg, fg) => React.createElement("span", { key, style: { padding: "5px 12px", borderRadius: "999px", background: bg, color: fg, fontSize: "14px", fontWeight: 700 } }, text);
+  const shown = conds.slice(0, 3);
+  return React.createElement("div", { style: { ...CARD_STYLE, padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "এলার্জি ও চলমান অসুস্থতা" },
+    allergies.length
+      ? chip("al", "⚠️ এলার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
+      : React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "এলার্জি তথ্য দেওয়া হয়নি"),
+    shown.map((c, i) => chip("c" + i, "🩺 " + c.name + (COND_LABEL[c.status] ? " (" + COND_LABEL[c.status] + ")" : ""), "#E4F0E9", T.green)),
+    conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"));
+}
+
+export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, homeExtra }) {
   const { daily, goal, age, flags, gate, recent } = info;
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   const d = daily || {};
@@ -122,6 +137,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
   const removeExLog = (i) => writeExLog(exLog.filter((_, k) => k !== i), EXERCISE_TYPES[exLog[i].type].counted ? -exLog[i].min : 0);
 
   const glasses = d.waterGlasses || 0;
+  const bmiVal = bmiOf(info.weightKg, info.heightCm);
   const eaten = d.caloriesIn || 0;
   const left = calc ? calc.calorieTarget - eaten : 0;
 
@@ -155,6 +171,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
           React.createElement("span", { style: { display: "inline-block", marginTop: "4px", padding: "3px 10px", borderRadius: "999px", background: "rgba(255,255,255,0.16)", fontSize: "12.5px", fontWeight: 600 } },
             streak > 0 ? "🔥 " + bnNum(streak) + (streak >= 30 ? "+" : "") + " দিনের স্ট্রিক" : "🔥 আজ থেকে স্ট্রিক শুরু করুন")))),
 
+    React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
+
     // ধাপ ৪: আজকের ম্যাক্রো-সারাংশ — শুধু যোগফল (গ্রাম); কোনো টার্গেট/শতাংশ নেই।
     canLog && macros.withMacro > 0 && React.createElement("div", { style: { ...CARD_STYLE, padding: "8px 12px" }, "aria-label": "আজকের ম্যাক্রো-সারাংশ" },
       React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginBottom: "4px" } }, "আজকের হিসাব (গ্রাম)"),
@@ -175,9 +193,15 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
       React.createElement(MiniRing, { value: bnNum(d.exerciseMin || 0) + "/" + bnNum(exTarget), pct: pctOf(d.exerciseMin, exTarget), color: T.orange, caption: "ব্যায়াম (মি.)", label: "ব্যায়াম", onTap: () => openIn("exercise") }),
       React.createElement(MiniRing, { value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "ঘুম · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
-      stTarget && React.createElement(MiniRing, { value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") })),
+      stTarget && React.createElement(MiniRing, { value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
+      // BMI — শুধু সংখ্যা (রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট (আগের ওজন-কার্ডের কাজ)
+      React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
+        style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer" } },
+        React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1.2 } }, "⚖️"),
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bmiVal ? bnNum(Math.round(bmiVal * 10) / 10) : "—"),
+        React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, bmiVal && info.weightKg ? "BMI · " + bnNum(info.weightKg) + " কেজি" : "ওজন দিন"))),
 
-    // পানি + ওজন — এক সারিতে পাশাপাশি দুই কার্ড (পানির টার্গেট না থাকলে ওজন পুরো প্রস্থে)।
+    // পানি — পুরো প্রস্থে (ওজন এখন BMI কার্ডে)।
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
       waterTarget && React.createElement("div", { style: { ...CARD_STYLE, flex: 1.5, minWidth: 0, marginBottom: 0, padding: "6px 10px 7px", display: "flex", flexDirection: "column", gap: "4px" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4px" } },
@@ -187,14 +211,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
           Array.from({ length: Math.max(waterTarget, Math.min(glasses, 16)) }, (_, i) => React.createElement("div", { key: i, style: { width: "10px", height: "10px", borderRadius: "3px", background: i < glasses ? T.blue : T.blueSoft } }))),
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
           React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: busy || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "38px", borderRadius: "11px", border: "none", background: busy ? "#9BB9D6" : T.blue, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px" } }, "＋ গ্লাস"),
-          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: busy || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "38px", borderRadius: "11px", border: "1.5px solid " + T.blue, background: T.surface, color: T.blue, fontSize: "20px", fontWeight: 700, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−"))),
-      React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
-        style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 10px 7px", display: "flex", flexDirection: "column", gap: "4px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" } },
-          React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "⚖️ ওজন"),
-          React.createElement("span", { "aria-hidden": "true", style: { width: "24px", height: "24px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "16px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" } }, "＋")),
-        React.createElement("div", { style: { flex: 1, display: "flex", alignItems: "center", gap: "4px", fontSize: d.weightKg ? "22px" : "14px", fontWeight: 800, color: d.weightKg ? T.ink : T.muted, lineHeight: 1.2 } }, d.weightKg ? bnNum(d.weightKg) : "দেওয়া হয়নি",
-          d.weightKg && React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color: T.muted } }, " কেজি")))),
+          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: busy || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "38px", borderRadius: "11px", border: "1.5px solid " + T.blue, background: T.surface, color: T.blue, fontSize: "20px", fontWeight: 700, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−")))),
+
     err && ErrorBox(err),
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
@@ -219,6 +237,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved }) 
               background: hit ? T.green : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || isToday ? T.onDark : T.muted,
               border: hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : isToday ? "আজ" : isFast ? "🌙" : ""));
         }))),
+
+    // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)
+    homeExtra || null,
 
     // আজকের খাবার-লগ — বেলা-ভিত্তিক কার্ড (আইকন, বেলার যোগফল ও ম্যাক্রো, খালি বেলাও দেখায়)। যোগ করা হয় শুধু উপরের "＋ খাবার" থেকে।
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।

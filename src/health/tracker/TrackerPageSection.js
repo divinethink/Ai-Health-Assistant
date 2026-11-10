@@ -10,6 +10,7 @@ import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
 import { TodayTab } from "./TodayTab.js";
+import { TodaySummary } from "../summary/TodaySummary.js";
 import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { last30DatesISO } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
@@ -405,7 +406,7 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement(MealTab, common),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
       React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
-      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: হোম → খাদ্যাভ্যাস ও টাইমলাইন।")));
+      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: Health → টাইমলাইন।")));
 }
 
 // ---------- ট্রেন্ড ও রিমাইন্ডার (ট্রেন্ড | দৈনিক ইনপুট | রিমাইন্ডার) ----------
@@ -634,13 +635,13 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement("b", null, "প্রোফাইল থেকে"),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } },
         (age !== null ? bnNum(age) + " বছর" : "বয়স নেই") + " · " + (heightCm ? "উচ্চতা " + bnNum(heightCm) + " সেমি" : "উচ্চতা নেই") + " · " + (weightKg ? "ওজন " + bnNum(weightKg) + " কেজি" : "ওজন নেই") + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "")),
-      (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য হোম → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
+      (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য Health → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink, margin: "4px 2px 6px" } }, "প্রযোজ্য হলে টিক দিন"),
     React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" } },
       tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
       tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
-    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: হোম ▸ প্রোফাইল।"),
-    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে হোম ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
+    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: Health ▸ প্রোফাইল।"),
+    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে Health ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
     gate.blocked
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেট বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
       : React.createElement("div", null,
@@ -666,8 +667,10 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- মূল পেজ ----------
 // টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
-export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx }) {
-  const [tab, setTab] = useState("today");
+export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan" }) {
+  // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান + ট্রেন্ড ও রিমাইন্ডার)
+  const isToday = mode === "today";
+  const [tab, setTab] = useState(isToday ? "today" : "plan");
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
@@ -685,6 +688,8 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       const weekDates = weekDatesISO();
       const weekMin = recent.filter((x) => weekDates.includes(x.date)).reduce((a, x) => a + (x.exerciseMin || 0), 0);
       const allergyTags = allergyTagsOf(recs.filter((r) => r.resourceType === "allergy").map((r) => r.substance));
+      const allergies = recs.filter((r) => r.resourceType === "allergy" && r.substance && String(r.substance).trim()).map((r) => String(r.substance).trim());
+      const conds = recs.filter((r) => r.resourceType === "condition" && r.status !== "resolved" && r.name && String(r.name).trim()).map((r) => ({ name: String(r.name).trim(), status: r.status }));
       const member = (members || []).find((m) => m.id === selectedMemberId) || null;
       const h = recs.find((r) => isType(r, ["height", "উচ্চতা"]));
       const w = recs.find((r) => isType(r, ["weight", "ওজন"]));
@@ -697,7 +702,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
-      setData({ condKeys: conditionKeysOf(recs), weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
+      setData({ allergies, conds, condKeys: conditionKeysOf(recs), weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
@@ -706,17 +711,18 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["today", "আজ"], ["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড ও রিমাইন্ডার"]];
+  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড ও রিমাইন্ডার"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
-    React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
-    React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: "0 12px 16px" } },
+    !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
+    React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: isToday ? "8px 12px 88px" : "0 12px 16px" } }, // হোমে নিচে বাড়তি ফাঁকা: ভাসমান + বাটন শেষ কার্ডের উপর না পড়ে
       err && ErrorBox(err),
       (!selectedMemberId || (!data && !err)) && Skeleton(3, 88),
-      data && tab === "today" && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load,
+        homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
-      data && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && tab === "trend" && React.createElement(TrendReminderTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
+      data && !isToday && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
+      data && !isToday && tab === "trend" && React.createElement(TrendReminderTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
     )
   );
 }
