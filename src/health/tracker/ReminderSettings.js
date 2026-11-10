@@ -3,7 +3,7 @@ import { ErrorBox, PrimaryButton } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveReminders } from "./trackerData.js";
 import { MEAL_SLOTS } from "./mealPlanData.js";
-import { normalizeReminders, MEAL_TITLES } from "./reminderData.js";
+import { normalizeReminders, MEAL_TITLES, CAL_DAYS_BEFORE } from "./reminderData.js";
 import { REMINDERS_CHANGED_EVENT } from "./TrackerReminderRunner.js";
 
 const { useState } = React;
@@ -61,6 +61,10 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
       children: timeInput(s.exercise.time, (v) => set("exercise", { time: v }), "ব্যায়ামের সময়") }),
     Row({ title: "ঘুমাতে যাওয়া", on: s.sleep.on, onToggle: (v) => set("sleep", { on: v }),
       children: timeInput(s.sleep.time, (v) => set("sleep", { time: v }), "ঘুমাতে যাওয়ার সময়") }),
+    Row({ title: "টিকা ও অ্যাপয়েন্টমেন্ট (ক্যালেন্ডার)", on: s.calendar.on, onToggle: (v) => set("calendar", { on: v }), note: "ক্যালেন্ডারের ইভেন্টের কয়েক দিন আগে ও সেই দিন সকালে জানানো হবে (সম্পন্ন ইভেন্ট বাদ)।",
+      children: h("div", { style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", fontSize: "14px" } },
+        h("select", { value: s.calendar.daysBefore, "aria-label": "কত দিন আগে", onChange: (e) => set("calendar", { daysBefore: Number(e.target.value) }), style: TIME }, CAL_DAYS_BEFORE.map((n) => h("option", { key: n, value: n }, bnNum(n)))),
+        "দিন আগে") }),
     err && ErrorBox(err),
     ok && h("div", { style: { ...CARD, background: "#E4F0E9", color: "#0E4B43", fontSize: "14px" } }, "সংরক্ষিত হয়েছে ✓"),
     PrimaryButton("সংরক্ষণ", save, busy));

@@ -6,6 +6,7 @@
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, bdDayIndex } from "./exercisePlanData.js";
 import { applyMealPrefs, applyExercisePrefs } from "./planPrefs.js";
+import { daysLeft } from "../records/medReminderCalc.js";
 import { ageYears, safetyGate, sleepTargetHours, detectFlagsFromConditions, effectivePregnant } from "./trackerCalc.js";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -20,7 +21,9 @@ export const DEFAULT_REMINDERS = {
   water: { on: false, everyHours: 2, from: "08:00", to: "20:00" },
   exercise: { on: false, time: "17:00" },
   sleep: { on: false, time: "22:30" },
+  calendar: { on: false, daysBefore: 1 }, // ক্যালেন্ডারের টিকা/অ্যাপয়েন্টমেন্ট: N দিন আগে ও সেই দিন
 };
+export const CAL_DAYS_BEFORE = [1, 2, 3, 7];
 
 const okTime = (v, fb) => (typeof v === "string" && HHMM.test(v) ? v : fb);
 
@@ -38,10 +41,11 @@ export function normalizeReminders(raw) {
     water: { on: !!(r.water && r.water.on), everyHours: Number.isInteger(eh) && eh >= 1 && eh <= 6 ? eh : D.water.everyHours, from, to: to > from ? to : D.water.to > from ? D.water.to : "23:00" },
     exercise: { on: !!(r.exercise && r.exercise.on), time: okTime(r.exercise && r.exercise.time, D.exercise.time) },
     sleep: { on: !!(r.sleep && r.sleep.on), time: okTime(r.sleep && r.sleep.time, D.sleep.time) },
+    calendar: { on: !!(r.calendar && r.calendar.on), daysBefore: CAL_DAYS_BEFORE.includes(Number(r.calendar && r.calendar.daysBefore)) ? Number(r.calendar.daysBefore) : D.calendar.daysBefore },
   };
 }
 
-export const anyReminderOn = (s) => !!(s.meal.on || s.water.on || s.exercise.on || s.sleep.on);
+export const anyReminderOn = (s) => !!(s.meal.on || s.water.on || s.exercise.on || s.sleep.on || (s.calendar && s.calendar.on));
 
 const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
 const fromMin = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
@@ -69,6 +73,23 @@ export function expandReminders(settings, ctx) {
     out.push({ id: "sleep", time: s.sleep.time, title: "ঘুমাতে যাওয়ার সময়", body: ctx.sleepRange ? "লক্ষ্য: " + ctx.sleepRange[0] + "–" + ctx.sleepRange[1] + " ঘণ্টা ঘুম" : "" });
   }
   return out.sort((a, b) => a.time.localeCompare(b.time));
+}
+
+// ক্যালেন্ডার-ইভেন্টের নোটিফিকেশন (শুধু সেটিং চালু থাকলে): সম্পন্ন নয় এমন ইভেন্ট, এই সদস্যের বা সবার (memberId==null),
+// যেদিনের `daysBefore` দিন আগে ও সেই দিন। দিনে একবার দেখানো runner-এর alreadyShown দেখে। সকাল ৮টার আগে নয়।
+// ফল: [{ id, title, body }]
+export function dueCalendarEvents(events, memberId, calSettings, today, nowHHMM) {
+  if (!calSettings || !calSettings.on || nowHHMM < "08:00") return [];
+  const before = calSettings.daysBefore;
+  const out = [];
+  (events || []).forEach((e) => {
+    if (!e || !e.date || !e.title || e.status === "done" || (e.memberId && e.memberId !== memberId)) return;
+    const left = daysLeft(e.date, today);
+    if (left === null || left < 0 || (left !== 0 && left !== before)) return;
+    const when = left === 0 ? "আজ" : left === 1 ? "আগামীকাল" : String(left).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]) + " দিন পরে";
+    out.push({ id: "cal_" + e.id + "_" + left, title: "আসন্ন: " + e.title, body: when + (e.time ? " · " + e.time : "") });
+  });
+  return out;
 }
 
 // goal-ডক + প্রোফাইলের রেকর্ড + সদস্য → ctx (প্ল্যান/গেট আগের ধাপের একই pure ফাংশন থেকে)

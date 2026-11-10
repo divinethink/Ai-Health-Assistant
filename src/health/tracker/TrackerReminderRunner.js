@@ -4,10 +4,11 @@
 // যে ডোজ "খেয়েছি" চিহ্নিত তার নোটিফিকেশন আসে না। সীমা: ব্রাউজার Notification API — অ্যাপ/ট্যাব খোলা থাকলে তবেই আসে (ধাপ ০-র পর native হলে বন্ধ অবস্থায়ও)।
 
 import { listHealthRecords } from "../records/healthRecordsData.js";
+import { listCalendarEvents } from "../calendar/calendarData.js";
 import { getGoal, getMedTaken } from "./trackerData.js";
 import { subscribeMemberHealth } from "../records/memberHealthStore.js";
 import { buildActiveMeds, dueMedDoses, endingSoonMeds } from "../records/medReminderCalc.js";
-import { normalizeReminders, anyReminderOn, expandReminders, buildReminderContext } from "./reminderData.js";
+import { normalizeReminders, anyReminderOn, expandReminders, buildReminderContext, dueCalendarEvents } from "./reminderData.js";
 import { bnNum, localISO } from "../../shared/dates.js";
 
 const { useState, useEffect, useCallback, useRef } = React;
@@ -58,15 +59,19 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
   const load = useCallback(async () => {
     if (!familyId || !memberId) return;
     try {
-      const [goal, records] = await Promise.all([getGoal(familyId, memberId), listHealthRecords(familyId, memberId)]);
-      setData({ goal, records });
+      const [goal, records, events] = await Promise.all([
+        getGoal(familyId, memberId), listHealthRecords(familyId, memberId),
+        listCalendarEvents(familyId).catch(() => []), // ইভেন্ট না পড়া গেলে শুধু ক্যালেন্ডার-নোটিফিকেশন বাদ
+      ]);
+      setData({ goal, records, events });
     } catch (e) { /* non-critical: রিমাইন্ডার না চললেও অ্যাপ চলবে */ }
   }, [familyId, memberId]);
 
   useEffect(() => {
     load();
     window.addEventListener(REMINDERS_CHANGED_EVENT, load);
-    return () => window.removeEventListener(REMINDERS_CHANGED_EVENT, load);
+    const poll = setInterval(load, 10 * 60 * 1000); // অ্যাপ খোলা থাকলে নতুন ইভেন্ট ১০ মিনিটে ধরা পড়ে
+    return () => { window.removeEventListener(REMINDERS_CHANGED_EVENT, load); clearInterval(poll); };
   }, [load]);
 
   useEffect(() => {
@@ -93,6 +98,12 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
         expandReminders(settings, ctx).filter((r) => r.time === now).forEach((r) => {
           if (alreadyShown(r.id)) return;
           try { new Notification(r.title, { body: r.body ? r.body.replace(/\d+/g, (n) => bnNum(n)) : "" }); } catch (e) { /* ignore */ }
+        });
+      }
+      if (trackerOn && settings.calendar.on) {
+        dueCalendarEvents(data.events, memberId, settings.calendar, today, now).forEach((c) => {
+          if (alreadyShown(c.id)) return;
+          try { new Notification(c.title, { body: c.body }); } catch (e) { /* ignore */ }
         });
       }
       dueMedDoses(medData, now, today).forEach((d) => { if (!alreadyShown(d.id)) fireDose(d, today); });

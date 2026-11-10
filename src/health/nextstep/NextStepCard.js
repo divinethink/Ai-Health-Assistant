@@ -7,6 +7,7 @@
 
 import { localISO, bnDate, bnNum } from "../../shared/dates.js";
 import { courseEndPlan, foodMedNoteItems, doctorNoteSummary, addDays } from "./nextStepCalc.js";
+import { REMINDERS_CHANGED_EVENT } from "../tracker/TrackerReminderRunner.js";
 import { addFollowUpEvent, addCourseEndEvents, addDoctorVisitEvent } from "./nextStepData.js";
 
 const { useState, useCallback } = React;
@@ -38,7 +39,7 @@ function Step({ step }) {
     if (step.details) { setOpen((o) => !o); return; }
     if (step.date && !(date >= step.date.min)) { setErr("আজ বা পরের একটা তারিখ বাছুন।"); return; }
     setErr(null); setState("busy");
-    try { setMsg(await step.run(date)); setState("done"); }
+    try { setMsg(await step.run(date)); setState("done"); window.dispatchEvent(new Event(REMINDERS_CHANGED_EVENT)); /* রানার নতুন ইভেন্ট পড়ে */ }
     catch (e) { setErr(e.code === "permission-denied" ? "ক্যালেন্ডারে যোগ করার অনুমতি নেই।" : (e.message || String(e))); setState("idle"); }
   }, [state, step, date]);
 
