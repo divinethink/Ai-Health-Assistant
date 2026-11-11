@@ -20,6 +20,7 @@ import { TextField, DateField, ErrorBox, SuccessBox, PrimaryButton } from "../..
 import { createHealthRecord } from "../records/healthRecordsData.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
 import { buildLabAlerts, summarizeSaved } from "./labAlerts.js";
+import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
 const { useState, useCallback } = React;
 
@@ -40,7 +41,8 @@ const FLAG_LABELS = {
 // candidate ডিফল্টে checked থাকে।
 function rowFromCandidate(c) {
   return {
-    include: c.status === "ok",
+    include: c.status === "ok" && c.source !== "ai", // AI-মান ডিফল্টে টিক-ছাড়া: যাচাই করে টিক দেবেন
+    source: c.source || null,
     testId: c.testId,
     canonicalNameEn: c.canonicalNameEn,
     value: String(c.value),
@@ -128,9 +130,11 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
         style: {
           marginBottom: "10px", padding: "10px", borderRadius: "14px",
           border: "1px solid " + (r.status === "ok" ? "#D3E0D9" : "#E0A72E"),
-          background: r.status === "ok" ? "#fff" : "#FFF9EC",
+          borderLeft: r.source === "ai" ? "5px solid " + AI_COLORS.border : undefined,
+          background: r.source === "ai" ? AI_COLORS.soft : r.status === "ok" ? "#fff" : "#FFF9EC",
         },
       },
+      r.source === "ai" ? React.createElement("div", { style: { marginBottom: "6px" } }, AiBadge("AI বসিয়েছে — যাচাই করুন")) : null,
       React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600, color: "#0E4B43" } },
         React.createElement("input", { type: "checkbox", checked: r.include, onChange: (e) => updateRow(idx, { include: e.target.checked }) }),
         r.canonicalNameEn

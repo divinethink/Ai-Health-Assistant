@@ -9,6 +9,7 @@ import { ErrorBox, PrimaryButton } from "../../shared/ui.js";
 import { localISO } from "../../shared/dates.js";
 import { matchAllergy, findDuplicateMed, parsePatternInput, FLAG_LABELS_BN } from "./prescriptionParsing.js";
 import { saveApprovedMedications } from "./prescriptionData.js";
+import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
 const { useState, useCallback } = React;
 const h = React.createElement;
@@ -20,7 +21,8 @@ const MEALS = [["before", "খাবারের আগে"], ["after", "খা�
 function rowFrom(it, allergies, records, today) {
   const allergy = matchAllergy(it.name, allergies);
   const duplicate = findDuplicateMed(it.name, records, today);
-  return { it, include: !allergy && !duplicate, allergy, duplicate, name: it.name, pattern: it.patternRaw || "", days: it.days ? String(it.days) : "", meal: it.meal || "" };
+  return { it, include: !allergy && !duplicate && it.source !== "ai", // AI-ভুক্তি ডিফল্টে টিক-ছাড়া: যাচাই করে টিক দেবেন
+     allergy, duplicate, name: it.name, pattern: it.patternRaw || "", days: it.days ? String(it.days) : "", meal: it.meal || "" };
 }
 
 const inputStyle = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "8px 10px", border: "1.5px solid " + LINE, borderRadius: "12px", fontSize: "15px", fontFamily: "inherit" };
@@ -44,10 +46,15 @@ function finalize(r) {
   return { name, days, meal: r.meal || null, ...freq };
 }
 
+// AI-বসানো ঘরে হলুদ রিং (ব্যবহারকারী বদলালে/খালি করলে সরে যায়)
+const aiRing = (it, key, cur) => ((it.source === "ai" && it[key]) || (it.aiFilled && it.aiFilled.includes(key)) ? (String(cur || "") === String(it[key] || "") ? { background: AI_COLORS.soft, borderColor: AI_COLORS.border } : null) : null);
+
 function card(r, idx, update) {
   const it = r.it;
   const warn = r.allergy || r.duplicate;
-  return h("div", { key: idx, style: { marginBottom: "12px", padding: "12px", borderRadius: "16px", border: "1px solid " + (r.allergy ? "#E8B4AE" : it.clear ? LINE : "#E0A72E"), background: r.allergy ? "#FFF7F6" : it.clear ? "#fff" : "#FFFBF2" } },
+  return h("div", { key: idx, style: { marginBottom: "12px", padding: "12px", borderRadius: "16px", border: "1px solid " + (r.allergy ? "#E8B4AE" : it.clear ? LINE : "#E0A72E"), borderLeft: it.source === "ai" ? "5px solid " + AI_COLORS.border : undefined, background: r.allergy ? "#FFF7F6" : it.source === "ai" ? AI_COLORS.soft : it.clear ? "#fff" : "#FFFBF2" } },
+    it.source === "ai" && h("div", { style: { marginBottom: "4px" } }, AiBadge("AI বসিয়েছে — যাচাই করুন")),
+    it.source !== "ai" && it.aiFilled && it.aiFilled.length > 0 && h("div", { style: { marginBottom: "4px" } }, AiBadge("AI ভরেছে: " + it.aiFilled.map((k) => (k === "days" ? "কতদিন" : "কয় বেলা")).join(", ") + " — মিলিয়ে নিন")),
     h("label", { style: { display: "flex", alignItems: "center", gap: "10px", minHeight: "44px", cursor: "pointer" } },
       h("input", { type: "checkbox", checked: r.include, onChange: (e) => update(idx, { include: e.target.checked }), style: { width: "24px", height: "24px", flexShrink: 0 } }),
       h("b", { style: { fontSize: "16px", color: G, overflowWrap: "anywhere" } }, (it.form && !r.it.name.startsWith(it.form) ? it.form + ". " : "") + r.name)),
@@ -61,8 +68,8 @@ function card(r, idx, update) {
     it.clear && !warn && h("div", { style: { fontSize: "13px", color: G, margin: "4px 0" } }, "✓ স্পষ্ট"),
     lbl("নাম"), h("input", { type: "text", value: r.name, onChange: (e) => update(idx, { name: e.target.value }), style: inputStyle }),
     h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } },
-      h("div", null, lbl("কয় বেলা (যেমন ১+০+১)"), h("input", { type: "text", value: r.pattern, onChange: (e) => update(idx, { pattern: e.target.value }), style: inputStyle })),
-      h("div", null, lbl("কতদিন"), h("input", { type: "number", inputMode: "numeric", min: 1, max: 365, value: r.days, onChange: (e) => update(idx, { days: e.target.value }), style: inputStyle }))),
+      h("div", null, lbl("কয় বেলা (যেমন ১+০+১)"), h("input", { type: "text", value: r.pattern, onChange: (e) => update(idx, { pattern: e.target.value }), style: { ...inputStyle, ...aiRing(it, "patternRaw", r.pattern) } })),
+      h("div", null, lbl("কতদিন"), h("input", { type: "number", inputMode: "numeric", min: 1, max: 365, value: r.days, onChange: (e) => update(idx, { days: e.target.value }), style: { ...inputStyle, ...aiRing(it, "days", r.days) } }))),
     lbl("খাবারের সাথে"),
     h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
       MEALS.map(([v, l]) => h("button", { key: v, type: "button", onClick: () => update(idx, { meal: v }), "aria-pressed": r.meal === v,

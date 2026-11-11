@@ -29,6 +29,8 @@ import { ReportVerificationForm } from "./ReportVerificationForm.js";
 import { ManualReportEntryForm } from "./ManualReportEntryForm.js";
 import { LabResultSummary } from "./LabResultSummary.js";
 import { ReportNextSteps } from "../nextstep/NextStepCard.js";
+import { AiAssistBar } from "../doc-ai/AiAssistBar.js";
+import { shouldTryAi, mergeLabCandidates } from "../doc-ai/aiAdapters.js";
 
 const { useState, useCallback, useRef, useEffect } = React;
 
@@ -67,6 +69,8 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
   const [err, setErr] = useState(null);
   const [candidates, setCandidates] = useState(null);
   const [extractionMethod, setExtractionMethod] = useState(null);
+  const [aiJob, setAiJob] = useState(null); // ধাপ ৪-ঘ: { text, parsed, dict } — AI-র ফলের অপেক্ষায়
+  const [aiNote, setAiNote] = useState(null); // AI-র ফলাফল/ব্যর্থতার নরম বার্তা
   const [ocrNotes, setOcrNotes] = useState(null); // { qualityReasons, suspectHandwriting, confusions } — শুধু OCR হলে
   const fileInputRef = useRef(null);
 
@@ -83,7 +87,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     setErr(null);
     setCandidates(null);
     setSavedAlerts([]); setSavedSummary(null);
-    setOcrNotes(null);
+    setOcrNotes(null); setAiJob(null); setAiNote(null);
     setBusy(true);
     setProgress(0);
     try {
@@ -120,11 +124,15 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
 
       setStage("parsing");
       const parsed = parseAndValidateReportText(rawText, dict);
+      let suspect = false;
       if (ocrResult) {
         const a = assessOcr({ confidence: ocrResult.confidence, matchedCount: parsed.length, textLength: rawText.length });
+        suspect = a.suspectHandwriting;
         setOcrNotes({ qualityReasons: ocrResult.quality.reasons, suspectHandwriting: a.suspectHandwriting, confusions: findDoseConfusions(rawText) });
       }
-      setCandidates(parsed);
+      // ধাপ ৪-ঘ: চেনা মান কম হলে AI-সহায়তা (সম্মতি/নীরব fallback AiAssistBar-এর ভেতরে); নইলে আগের পথ অক্ষত
+      if (shouldTryAi("lab-report", { text: rawText, knownCount: parsed.length, suspectHandwriting: suspect })) { setAiJob({ text: rawText, parsed, dict }); setCandidates(null); }
+      else setCandidates(parsed);
       setExtractionMethod(method);
       setStage("done");
     } catch (e) {
@@ -138,6 +146,20 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
   useEffect(() => {
     if (presetFile) analyze();
     // শুধু mount-এ একবার
+  }, []);
+
+  const aiJobRef = useRef(null);
+  aiJobRef.current = aiJob;
+  const onAiSettled = useCallback(({ result, message }) => {
+    const job = aiJobRef.current;
+    if (!job) return;
+    let merged = job.parsed, note = message ? "ℹ️ " + message : null;
+    if (result && !result.empty) {
+      const m = mergeLabCandidates(job.parsed, result.items, job.dict);
+      merged = m.candidates;
+      note = m.added ? "🤖 AI " + m.added + "টি মান যোগ করেছে — হলুদ চিহ্নিত মানগুলো নিজে মিলিয়ে টিক দিন।" : "🤖 AI-ও নতুন কোনো পরিচিত টেস্ট-মান পায়নি।";
+    }
+    setAiJob(null); setCandidates(merged); setAiNote(note);
   }, []);
 
   const stageLabels = {
@@ -172,6 +194,8 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     SecondaryButton("এটা হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", () => setHandwrittenMode(true), false),
     err ? ErrorBox(err) : null,
     ocrNotes && ocrNotesView(ocrNotes, () => setHandwrittenMode(true)),
+    aiJob ? React.createElement(AiAssistBar, { familyId, docType: "lab-report", ocrText: aiJob.text, onSettled: onAiSettled, label: "টেস্টের মান ঠিকমতো পড়া যায়নি — AI-র সাহায্য নেবেন?" }) : null,
+    aiNote ? React.createElement("div", { role: "status", style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: aiNote.startsWith("🤖") ? "#FFF8E1" : "#F7F6F1", color: aiNote.startsWith("🤖") ? "#8A5A00" : "#4B5C57", fontSize: "14px", lineHeight: 1.5 } }, aiNote) : null,
     candidates
       ? React.createElement(ReportVerificationForm, {
           familyId, targetMemberId, callerMemberId, candidates, extractionMethod,

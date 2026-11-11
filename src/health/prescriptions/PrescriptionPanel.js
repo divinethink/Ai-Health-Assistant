@@ -17,6 +17,8 @@ import { PrescriptionSavedScreen } from "./PrescriptionSavedScreen.js";
 import { PrescriptionNextSteps } from "../nextstep/NextStepCard.js";
 import { extractFollowUpDate } from "../nextstep/nextStepCalc.js";
 import { localISO } from "../../shared/dates.js";
+import { AiAssistBar } from "../doc-ai/AiAssistBar.js";
+import { shouldTryAi, mergeMedicines } from "../doc-ai/aiAdapters.js";
 
 const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
@@ -44,18 +46,35 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
       const items = parsePrescriptionText(text);
       const ctx = await loadPrescriptionContext(familyId, targetMemberId);
       const notes = [];
+      let suspectHandwriting = false;
       if (ocr) {
         if (ocr.quality.reasons.length > 0) notes.push(["#FFF6E5", "#8A5A00", "📷 " + ocr.quality.reasons.map((r) => QUALITY_MESSAGES[r]).join(", ") + " — আলোতে, সোজা করে আরেকবার তুললে ভালো পড়া যাবে।"]);
-        if (assessOcr({ confidence: ocr.confidence, matchedCount: items.length, textLength: text.length }).suspectHandwriting) {
+        suspectHandwriting = assessOcr({ confidence: ocr.confidence, matchedCount: items.length, textLength: text.length }).suspectHandwriting;
+        if (suspectHandwriting) {
           notes.push(["#FFF6E5", "#8A5A00", "✍️ এটা হাতে-লেখা হতে পারে — মেশিন ঠিকভাবে পড়তে পারে না। নিচের মান নিজে মিলিয়ে ঠিক করুন, বা স্বাস্থ্য প্রোফাইল → ওষুধ অংশে হাতে লিখে যোগ করুন।"]);
         }
       }
-      setRes({ items, ctx, notes, ocrPercent: ocr ? Math.round(ocr.confidence) : null, text, followUp: extractFollowUpDate(text, localISO()) });
+      setRes({ items, ctx, notes, ocrPercent: ocr ? Math.round(ocr.confidence) : null, text, followUp: extractFollowUpDate(text, localISO()),
+        aiWanted: shouldTryAi("prescription", { text, itemsCount: items.length, suspectHandwriting }) }); // ধাপ ৪-ঘ
       setStage("done");
     } catch (e) { setErr(e.message || String(e)); setStage("error"); }
   }, [file, familyId, targetMemberId]);
 
   useEffect(() => { run(); }, []); // শুধু mount-এ একবার; ব্যর্থ হলে "আবার চেষ্টা"
+
+  // ধাপ ৪-ঘ: AI-র ফল শুধু প্রস্তাব — বিদ্যমান ভুক্তি অক্ষত, নতুন/খালি ঘরে হলুদ ট্যাগসহ; সেভ নয়
+  const onAiSettled = useCallback(({ result, message }) => {
+    setRes((r) => {
+      if (!r) return r;
+      const next = { ...r, aiWanted: false, notes: [...r.notes] };
+      if (result && !result.empty) {
+        const m = mergeMedicines(r.items, result.items, r.text);
+        next.items = m.items;
+        next.notes.push(["#FFF8E1", "#8A5A00", "🤖 AI " + (m.added ? m.added + "টি ওষুধ যোগ" : "") + (m.added && m.filledCells ? " ও " : "") + (m.filledCells ? m.filledCells + "টি খালি ঘর পূরণ" : "") + (m.added || m.filledCells ? " করেছে — হলুদ চিহ্নিত অংশ নিজে মিলিয়ে নিন।" : "-ও নতুন কিছু পায়নি।")]);
+      } else if (message) next.notes.push(["#F7F6F1", "#4B5C57", "ℹ️ " + message]);
+      return next;
+    });
+  }, []);
 
   const savedOk = !!(saved && saved.res.saved.length > 0); // কিছু সংরক্ষিত হলেই ৩/৩ স্ক্রিন
   const step = savedOk ? 3 : (stage === "done" ? 2 : 1);
@@ -72,7 +91,9 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
   }
   return h("div", null, bar,
     res.notes.map(([bg, c, t], i) => h("div", { key: i }, note(bg, c, t))),
-    res.items.length === 0
+    res.aiWanted
+      ? h(AiAssistBar, { familyId, docType: "prescription", ocrText: res.text, onSettled: onAiSettled, label: res.items.length === 0 ? "কোনো ওষুধ পড়া যায়নি — AI-র সাহায্য নেবেন?" : "হাতে-লেখা মনে হচ্ছে — AI-র সাহায্য নেবেন?" })
+      : res.items.length === 0
       ? h("div", null,
           note("#FFF6E5", "#8A5A00", "কোনো ওষুধ শনাক্ত করা যায়নি। স্বাস্থ্য প্রোফাইল → ওষুধ অংশে হাতে যোগ করুন।"),
           res.text.trim() && h("details", { style: { marginTop: "8px", fontSize: "13px", color: "#5F716C" } }, h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer" } }, "মেশিন যা পড়েছে দেখুন"), h("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" } }, res.text)))
