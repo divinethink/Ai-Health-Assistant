@@ -47,7 +47,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
       if (ocr) {
         if (ocr.quality.reasons.length > 0) notes.push(["#FFF6E5", "#8A5A00", "📷 " + ocr.quality.reasons.map((r) => QUALITY_MESSAGES[r]).join(", ") + " — আলোতে, সোজা করে আরেকবার তুললে ভালো পড়া যাবে।"]);
         if (assessOcr({ confidence: ocr.confidence, matchedCount: items.length, textLength: text.length }).suspectHandwriting) {
-          notes.push(["#FFF6E5", "#8A5A00", "✍️ এটা হাতে-লেখা হতে পারে — মেশিন ঠিকভাবে পড়তে পারে না। নিচের মান নিজে মিলিয়ে ঠিক করুন, বা স্বাস্থ্য তথ্য → ওষুধ অংশে হাতে লিখে যোগ করুন।"]);
+          notes.push(["#FFF6E5", "#8A5A00", "✍️ এটা হাতে-লেখা হতে পারে — মেশিন ঠিকভাবে পড়তে পারে না। নিচের মান নিজে মিলিয়ে ঠিক করুন, বা স্বাস্থ্য প্রোফাইল → ওষুধ অংশে হাতে লিখে যোগ করুন।"]);
         }
       }
       setRes({ items, ctx, notes, ocrPercent: ocr ? Math.round(ocr.confidence) : null, text, followUp: extractFollowUpDate(text, localISO()) });
@@ -74,7 +74,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
     res.notes.map(([bg, c, t], i) => h("div", { key: i }, note(bg, c, t))),
     res.items.length === 0
       ? h("div", null,
-          note("#FFF6E5", "#8A5A00", "কোনো ওষুধ শনাক্ত করা যায়নি। স্বাস্থ্য তথ্য → ওষুধ অংশে হাতে যোগ করুন।"),
+          note("#FFF6E5", "#8A5A00", "কোনো ওষুধ শনাক্ত করা যায়নি। স্বাস্থ্য প্রোফাইল → ওষুধ অংশে হাতে যোগ করুন।"),
           res.text.trim() && h("details", { style: { marginTop: "8px", fontSize: "13px", color: "#5F716C" } }, h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer" } }, "মেশিন যা পড়েছে দেখুন"), h("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" } }, res.text)))
       : h("div", null,
           h(PrescriptionReviewForm, { familyId, targetMemberId, callerMemberId, items: res.items, allergies: res.ctx.allergies, records: res.ctx.records, ocrPercent: res.ocrPercent, onDone, onSaved: setSaved }),

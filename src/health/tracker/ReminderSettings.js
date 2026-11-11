@@ -64,7 +64,7 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
       perm === "default" && h("button", { onClick: askPermission, style: { display: "block", marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 700, cursor: "pointer" } }, "অনুমতি দিন")),
     h("div", { style: { fontSize: "12.5px", color: "#5F716C", lineHeight: 1.5, margin: "0 2px 10px" } }, "এখন অ্যাপ/ট্যাব খোলা থাকলে তবেই নোটিফিকেশন আসবে।"),
     Row({ icon: "💊", title: "ওষুধ", on: s.medicine.on, onToggle: (v) => set("medicine", { on: v }),
-      note: s.medicine.on ? "ওষুধের সময় এলে জানানো হবে; “খেয়েছি” দিলে আর আসবে না। সময় বদলাতে: Health → ওষুধ।" : "বন্ধ থাকলে ওষুধের কোনো নোটিফিকেশন আসবে না।" }),
+      note: s.medicine.on ? "ওষুধের সময় এলে জানানো হবে; “খেয়েছি” দিলে আর আসবে না। সময় বদলাতে: Health → স্বাস্থ্য প্রোফাইল → ওষুধ।" : "বন্ধ থাকলে ওষুধের কোনো নোটিফিকেশন আসবে না।" }),
     Row({ icon: "🍽️", title: "খাবার", on: s.meal.on, onToggle: (v) => set("meal", { on: v }), note: "মিল-প্ল্যান থাকলে নোটিফিকেশনে খাবারের নামও আসে।",
       children: MEAL_SLOTS.map((slot) => h("div", { key: slot.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "4px 0" } },
         h("span", { style: { fontSize: "14px", color: "#1F2D2A" } }, MEAL_TITLES[slot.id]),

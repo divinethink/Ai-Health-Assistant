@@ -66,10 +66,9 @@ const TIMELINE_SUBS = [
   { id: "timeline", label: "🕘 টাইমলাইন" },
 ];
 
-// mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = প্রোফাইল · স্বাস্থ্য তথ্য · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
+// mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = স্বাস্থ্য প্রোফাইল (প্রোফাইল+স্বাস্থ্য তথ্য) · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
 const HEALTH_TABS = [
-  { id: "profile", label: "tab.profile" },
-  { id: "records", label: "tab.records" },
+  { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + স্বাস্থ্য তথ্য একসাথে (owner-approved ২০২৬-১১-১১)
   { id: "timeline", label: "tab.timeline" },
   { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
 ];
@@ -85,7 +84,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
   // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; রিপোর্ট → নথিপত্র; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
   const [activeTab, setActiveTab] = useState(() => {
     if (!isHealth) return "today";
-    return peekQuickIntent(["bp", "sugar", "medicine", "report"]) ? "records" : "profile";
+    return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
   });
   const [timelineSub, setTimelineSub] = useState("diet");
   const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "all"));
@@ -117,31 +116,32 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
       !isHealth && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
-      isHealth && activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
-      isHealth && activeTab === "records" && React.createElement(React.Fragment, null,
-        React.createElement("h3", { style: { fontSize: "20px", fontWeight: 800, color: "#0E4B43", margin: "4px 2px 2px" } }, "আমার স্বাস্থ্য"),
-        React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "0 2px 10px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint),
-        React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
-          RECORD_SUBS.map((sb) => React.createElement("button", {
-            key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
-            style: {
-              flex: "1 0 auto", minHeight: "44px", padding: "6px 16px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-              background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
-            },
-          }, sb.label))),
-        // "সব": তিনটি তালিকা একসাথে, প্রতিটির ছোট শিরোনামসহ; আলাদা চিপে চাপলে শুধু সেটা
+      // স্বাস্থ্য প্রোফাইল = হিরো-কার্ড (নাম/বয়স/উচ্চতা/ওজন/BMI/অ্যালার্জি) + ফিল্টার-পিল (সব | অসুখ | ওষুধ | রিপোর্ট) + সংশ্লিষ্ট তালিকা।
+      // "সব"/"অসুখ" = section "all" (কার্ড + ফর্ম + তালিকা + ট্রেন্ড একই instance); "ওষুধ"/"রিপোর্ট" = section "profile" (শুধু কার্ড)।
+      isHealth && activeTab === "profile" && React.createElement(React.Fragment, null,
+        React.createElement(HealthRecordsSection, {
+          familyId, callerMemberId, selectedMemberId, section: recordSub === "all" || recordSub === "records" ? "all" : "profile",
+          belowSummary: React.createElement("div", { key: "subs" },
+            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "6px", overflowX: "auto" } },
+              RECORD_SUBS.map((sb) => React.createElement("button", {
+                key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
+                style: {
+                  flex: "1 0 auto", minHeight: "44px", padding: "6px 16px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                  border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
+                  background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
+                },
+              }, sb.label))),
+            React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
+        }),
+        // "সব": অসুখ-পরিমাপের নিচে ওষুধ ও রিপোর্ট (অসুখ-তালিকা উপরের "all" instance-এ)
         recordSub === "all" && React.createElement(React.Fragment, null,
-          sectionHead("🩺", "অসুখ ও পরিমাপ"),
-          React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
           sectionHead("💊", "ওষুধ"),
           React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
           sectionHead("📁", "রিপোর্ট"),
           React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
-        recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
-      isHealth && activeTab === "docs" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "records", setActiveTab); setRecordSub("docs"); } }),
+      isHealth && activeTab === "docs" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(

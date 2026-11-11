@@ -557,7 +557,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement("b", null, "প্রোফাইল থেকে"),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } },
         (age !== null ? bnNum(age) + " বছর" : "বয়স নেই") + " · " + (heightCm ? "উচ্চতা " + bnNum(heightCm) + " সেমি" : "উচ্চতা নেই") + " · " + (weightKg ? "ওজন " + bnNum(weightKg) + " কেজি" : "ওজন নেই") + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "")),
-      (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য Health → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
+      (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য Health → স্বাস্থ্য প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
     gate.blocked
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেটের জন্য তথ্য লাগবে"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
       : React.createElement("div", null,

@@ -42,7 +42,7 @@ const DICT = {
     "title.home": "🏠 স্বাস্থ্য রেকর্ড", "title.aichat": "🩺 এআই চ্যাট", "title.blog": "🌿 স্বাস্থ্য ব্লগ", "title.tracker": "📈 হেলথ ট্র্যাকার",
     "title.docs": "📁 নথি", "title.menu": "☰ মেনু",
 
-    "tab.today": "আজ", "tab.profile": "প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
+    "tab.today": "আজ", "tab.profile": "প্রোফাইল", "tab.healthProfile": "স্বাস্থ্য প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
     "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "খাদ্যাভ্যাস ও টাইমলাইন",
     "tab.symptom": "🩺 লক্ষণ যাচাই", "tab.medsci": "⚕️ আধুনিক চিকিৎসা", "tab.herbal": "🌿 ভেষজ", "tab.homeo": "💧 হোমিওপ্যাথি",
     "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তারের জন্য",

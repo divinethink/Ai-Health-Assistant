@@ -44,8 +44,8 @@ export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, 
   if (!GOAL_LABELS[goalType]) return { error: "লক্ষ্য বেছে নিন।" };
   if (!ACTIVITY_FACTOR[activity]) return { error: "কার্যকলাপ বেছে নিন।" };
   if (sex !== "male" && sex !== "female") return { error: "প্রোফাইলে লিঙ্গ (পুরুষ/মহিলা) দিন।" };
-  if (!heightCm || heightCm <= 0) return { error: "প্রোফাইলে উচ্চতা যোগ করুন (Health → প্রোফাইল)।" };
-  if (!weightKg || weightKg <= 0) return { error: "প্রোফাইলে ওজন যোগ করুন (Health → প্রোফাইল)।" };
+  if (!heightCm || heightCm <= 0) return { error: "প্রোফাইলে উচ্চতা যোগ করুন (Health → স্বাস্থ্য প্রোফাইল)।" };
+  if (!weightKg || weightKg <= 0) return { error: "প্রোফাইলে ওজন যোগ করুন (Health → স্বাস্থ্য প্রোফাইল)।" };
 
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + (sex === "male" ? 5 : -161);
   const tdee = bmr * ACTIVITY_FACTOR[activity];
