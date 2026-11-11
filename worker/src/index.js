@@ -90,8 +90,13 @@ const DOSE_PATTERN = new RegExp(
   "i"
 );
 
-function scanForDoseLeak(text) {
-  return typeof text === "string" && DOSE_PATTERN.test(text);
+// allowed: app-এর verified DB থেকে inject-করা হুবহু dose/frequency লেখা — শুধু সেগুলো বাদ দিয়ে স্ক্যান;
+// অন্য যেকোনো সংখ্যা-dose এখনো block (defense-in-depth অক্ষত)।
+function scanForDoseLeak(text, allowed = []) {
+  if (typeof text !== "string") return false;
+  let t = text;
+  for (const a of allowed) if (a && String(a).length >= 2) t = t.split(String(a)).join(" ");
+  return DOSE_PATTERN.test(t);
 }
 
 // Detection-layer, §6.4.1 (highRiskFlag medicine — Clonazepam/Flupentixol+Melitracen-এর
@@ -159,13 +164,21 @@ function checkInteractionFlags(medicineEntry, activeMedicationNames) {
   return flags;
 }
 
+// গুরুতর (high-severity) interaction — এগুলো সক্রিয় ওষুধ হলে dose কখনো দেখানো হয় না (block থাকে)।
+// বাকি (মাঝারি/কম, qualitative) interaction-এ dose দেখানো হয় লাল সতর্কতা সহ (owner-approved, ২০২৬-১১-১১)।
+const HIGH_SEVERITY_INTERACTION_TERMS = ["azithromycin", "clarithromycin", "erythromycin", "warfarin", "clopidogrel", "methotrexate", "lithium", "digoxin"];
+function isHighSeverityInteraction(flag) {
+  const hay = (String(flag.withGenericName || "") + " " + String(flag.note || "")).toLowerCase();
+  return HIGH_SEVERITY_INTERACTION_TERMS.some((t) => hay.includes(t));
+}
+
 function resolveDoseCore({ medicineEntry, ageYears, allergySubstances, activeMedicationNames }) {
   if (!medicineEntry) return { blocked: true, reason: "no-verified-data" };
   if (medicineEntry.tier === "requires-consult") {
     return { blocked: true, reason: "requires-consult", genericName: medicineEntry.genericName, educationalUseNote: medicineEntry.educationalUseNote || null };
   }
   const interactionFlags = checkInteractionFlags(medicineEntry, activeMedicationNames);
-  if (interactionFlags.length > 0) {
+  if (interactionFlags.some(isHighSeverityInteraction)) {
     return { blocked: true, reason: "interaction-flag", genericName: medicineEntry.genericName, interactionFlags };
   }
   if (medicineEntry.highRiskFlag) {
@@ -183,6 +196,7 @@ function resolveDoseCore({ medicineEntry, ageYears, allergySubstances, activeMed
     maxDurationDays: rule.maxDurationDays || null,
     contraindications: medicineEntry.contraindications || [],
     source: medicineEntry.source || [],
+    interactionWarnings: interactionFlags.length > 0 ? interactionFlags : undefined,
   };
 }
 
@@ -293,8 +307,13 @@ function detectMentionedMedicine(text) {
 
 function buildDoseFactMessage(resolution) {
   const msg = buildDoseFactCore(resolution);
-  if (msg && resolution && resolution.allergyWarning) {
-    return msg + " ⚠ সতর্কতা: এই সদস্যের প্রোফাইলে সংশ্লিষ্ট এলার্জি রেকর্ড আছে — উত্তরে এলার্জির সতর্কতা স্পষ্ট জানান এবং ডাক্তার/pharmacist-এর সাথে যোগাযোগের পরামর্শ দিন।";
+  const warns = [];
+  if (resolution && resolution.allergyWarning) warns.push("এই সদস্যের প্রোফাইলে সংশ্লিষ্ট এলার্জি রেকর্ড আছে");
+  if (resolution && !resolution.blocked && Array.isArray(resolution.interactionWarnings) && resolution.interactionWarnings.length) {
+    warns.push("চলমান অন্য ওষুধের সাথে সম্ভাব্য interaction আছে (" + resolution.interactionWarnings.map((f) => f.withGenericName).join(", ") + ")");
+  }
+  if (msg && warns.length) {
+    return msg + " লাল সতর্কতা (বাধ্যতামূলক): উত্তরের একদম শুরুতে আলাদা একটি লাইনে লিখুন \"⚠️ **সতর্কতা:** " + warns.join("; ") + " — ব্যবহারের আগে ডাক্তার/ফার্মাসিস্টকে জানান।\" (লাইনটা ⚠️ দিয়ে শুরু হতে হবে)। তারপর ডাটাবেসের dose যেমন আছে হুবহু (একই লেখা ও একক) দিন, নিজে বদলাবেন না।";
   }
   return msg;
 }
@@ -326,8 +345,8 @@ function buildDoseFactCore(resolution) {
     const reasonText = REASON_TEXT[resolution.reason] || "dose তথ্য দেখানো যাবে না";
     return (
       `সিস্টেম-নোট (app-এর verified database থেকে, বাধ্যতামূলক পালনীয়): "${resolution.genericName || ""}"-এর ` +
-      `কোনো dose/সংখ্যা উল্লেখ করবেন না। কারণ: ${reasonText}। শুধু generic/সাধারণ তথ্য দিন এবং সরাসরি ডাক্তার/` +
-      `pharmacist-এর সাথে যোগাযোগের পরামর্শ দিন — নিজে থেকে কোনো dose-সংখ্যা কল্পনা করবেন না।`
+      `কোনো dose/সংখ্যা উল্লেখ করবেন না। কারণ: ${reasonText}। উত্তরের একদম শুরুতে আলাদা লাইনে লিখুন "⚠️ **সতর্কতা:** ${reasonText}।" ` +
+      `তারপর সাধারণ তথ্য দিন, ফার্মেসি/ডাক্তারকে কী কী জানাতে হবে (বয়স, এলার্জি, চলমান ওষুধ) বলুন এবং কোন লক্ষণে দ্রুত ডাক্তার/হাসপাতালে যেতে হবে সংক্ষেপে বলুন। নিজে থেকে কোনো dose-সংখ্যা কল্পনা করবেন না।`
     );
   }
   return (
@@ -345,6 +364,10 @@ const SYSTEM_PROMPT = `আপনি একটি পারিবারিক AI 
 - আনুষ্ঠানিক "Prescription" জারি করবেন না — এটা "AI Health Guidance", প্রতিস্থাপন নয়, ডাক্তারের বিকল্প নয়।
 - Emergency/urgent risk মনে হলে সবসময় দ্রুত ডাক্তার/হাসপাতাল/৯৯৯-এর পরামর্শ দিন।
 - বাংলায় স্পষ্ট, সহজ ভাষায় উত্তর দিন।
+- **ভাষা — প্রমিত বাংলা:** উত্তর সবসময় প্রমিত/শুদ্ধ চলিত বাংলায় (সাধু বা আঞ্চলিক নয়), সম্পূর্ণ ও সুসংলগ্ন বাক্যে লিখুন। অনুবাদ-ঢঙের বা ভাঙা বাক্য, নিজে বানানো শব্দ এড়ান; নিশ্চিত না হলে সহজ প্রচলিত শব্দ ব্যবহার করুন।
+- **দৈর্ঘ্য-সীমা (কঠোর):** উত্তর সর্বোচ্চ প্রায় ২০০ শব্দে শেষ করুন। সংক্ষিপ্ত পয়েন্টে সবচেয়ে জরুরি কথা আগে বলুন; পুনরাবৃত্তি, দীর্ঘ ভূমিকা ও অপ্রয়োজনীয় disclaimer নয়। উত্তর কখনো মাঝপথে অসম্পূর্ণ রেখে থামবেন না — আগেই গুছিয়ে শেষ করুন।
+- **ফলো-আপ:** উত্তরের শেষে এক লাইনে একটি ছোট প্রশ্ন করুন (যেমন "আরও কোনো লক্ষণ আছে কি?")।
+- **ফরম্যাট:** গুরুত্বপূর্ণ শব্দে **বোল্ড** (দুই-তারকা) ব্যবহার করা যাবে; তালিকায় "- " ব্যবহার করুন। হেডিং (#) বা টেবিল নয়।
 - **টেকনিক্যাল/বৈজ্ঞানিক শব্দ — কঠোর নিয়ম (bug-fix):** কোনো ইংরেজি টেকনিক্যাল/মেডিকেল/বৈজ্ঞানিক শব্দ (যেমন Gut, Celiac, catecholamine) নিজে থেকে ফোনেটিক বাংলা বানান বানিয়ে লিখবেন না (যেমন ভুল "গোট"/"কোরাল"-জাতীয় অর্থহীন শব্দ) — এটা বিভ্রান্তিকর ও ভুল। যদি প্রচলিত সঠিক বাংলা প্রতিশব্দ জানা থাকে সেটাই ব্যবহার করুন, নাহলে ইংরেজি শব্দটা মূল (Latin/English) বানানেই ইংরেজিতে লিখুন — বাংলা হরফে নিজে থেকে বানান তৈরি করবেন না।`;
 
 // --- Medical Science — Specialty-Context Routing (roadmap §4.1, P6 ধাপ ৩) ---
@@ -600,7 +623,10 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     throw new Error(`groq-error-${res.status}: ${errText}`);
   }
   const data = await res.json();
-  const content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  let content = cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  if (data.choices?.[0]?.finish_reason === "length") {
+    content += "\n\n⚠️ উত্তর দীর্ঘ হওয়ায় কেটে গেছে। বাকিটা জানতে \"বাকিটা বলুন\" লিখে পাঠান।";
+  }
   return { content, usage: data.usage || null, sources };
 }
 
@@ -1089,6 +1115,7 @@ export default {
         // §6.4.1 Prevention-layer flag — true হলে detection-layer-এ high-risk
         // suppress-pattern-ও scan হবে (নিচে)।
         let highRiskContext = false;
+        let allowedDoseStrings = [];
         try {
           const lastUserMsg = Array.isArray(conversationHistory)
             ? [...conversationHistory].reverse().find((m) => m && m.role === "user")
@@ -1105,6 +1132,7 @@ export default {
             });
             doseFactNote = buildDoseFactMessage(resolution);
             highRiskContext = resolution.reason === "high-risk-flag";
+            if (!resolution.blocked) allowedDoseStrings = [resolution.dose, resolution.frequency, resolution.maxDurationDays ? resolution.maxDurationDays + " দিন" : null];
           }
         } catch (e) {
           doseFactNote = null;
@@ -1121,7 +1149,7 @@ export default {
         // highRiskFlag-suppression scanner সব specialty-তেই unconditionally সক্রিয়।
         const OPEN_DISCUSSION_SPECIALTIES = ["medical-science", "herbal-homeopathy", "nutrition-fitness"];
         const allowEducationalDose = OPEN_DISCUSSION_SPECIALTIES.includes(payload?.specialty);
-        const doseLeak = allowEducationalDose ? false : scanForDoseLeak(content);
+        const doseLeak = allowEducationalDose ? false : scanForDoseLeak(content, allowedDoseStrings);
         const highRiskLeak = highRiskContext && scanForHighRiskLeak(content);
         const blocked = doseLeak || highRiskLeak;
         const fallbackMessage = highRiskLeak

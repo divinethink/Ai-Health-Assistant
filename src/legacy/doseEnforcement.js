@@ -51,6 +51,14 @@ export function checkInteractionFlags(medicineEntry, activeMedicationNames = [])
   return flags;
 }
 
+// গুরুতর (high-severity) interaction — এগুলো সক্রিয় ওষুধ হলে dose কখনো দেখানো হয় না (block থাকে)।
+// বাকি (মাঝারি/কম, qualitative) interaction-এ dose দেখানো হয় লাল সতর্কতা সহ (owner-approved, ২০২৬-১১-১১)।
+const HIGH_SEVERITY_INTERACTION_TERMS = ["azithromycin", "clarithromycin", "erythromycin", "warfarin", "clopidogrel", "methotrexate", "lithium", "digoxin"];
+function isHighSeverityInteraction(flag) {
+  const hay = (String(flag.withGenericName || "") + " " + String(flag.note || "")).toLowerCase();
+  return HIGH_SEVERITY_INTERACTION_TERMS.some((t) => hay.includes(t));
+}
+
 // মূল enforcement — একটামাত্র entry-point, ফলাফল সবসময় { blocked, ... } আকারে।
 // blocked: true হলে UI/Worker কখনো dose-সংখ্যা দেখাবে না, শুধু reason-অনুযায়ী
 // fallback message (§6.4.1 highRiskFlag suppression, §12.1 Tier-2 flag, ইত্যাদি)।
@@ -79,11 +87,8 @@ function resolveDoseCore({
   }
 
   const interactionFlags = checkInteractionFlags(medicineEntry, activeMedicationNames);
-  if (interactionFlags.length > 0) {
-    // এই dataset-এ per-interaction severity-level নেই (§5.7 flag শুধু qualitative) —
-    // তাই conservative default: যেকোনো matched interaction-এই dose suppress করা হবে,
-    // pharmacist/physician-consult flag দেখানো হবে (§6.4 "high-severity suppress" নীতির
-    // রক্ষণশীল প্রয়োগ, dose-safety-তে ambiguity থাকলে সবসময় block)।
+  if (interactionFlags.some(isHighSeverityInteraction)) {
+    // গুরুতর interaction → block (অপরিবর্তিত)। মাঝারি/কম interaction নিচে dose + লাল সতর্কতা।
     return { blocked: true, reason: "interaction-flag", genericName: medicineEntry.genericName, interactionFlags };
   }
 
@@ -119,6 +124,7 @@ function resolveDoseCore({
     contraindications: medicineEntry.contraindications || [],
     source: medicineEntry.source || [],
     tier: medicineEntry.tier,
+    interactionWarnings: interactionFlags.length > 0 ? interactionFlags : undefined,
   };
 }
 
