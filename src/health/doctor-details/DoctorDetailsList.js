@@ -12,6 +12,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
   const [err, setErr] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [openId, setOpenId] = useState(null); // ৩-কলাম টাইলে চাপলে নিচের শিটে পুরো কার্ড
 
   useEffect(() => {
     setDoctors(null);
@@ -24,6 +25,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
     try {
       await deleteDoctor(familyId, d.id);
       setConfirmId(null);
+      setOpenId(null);
       onDeleted && onDeleted();
     } catch (e) {
       setErr(e.message || String(e));
@@ -43,9 +45,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
 
   const pill = (color, bg) => ({ minHeight: "40px", padding: "0 14px", borderRadius: "999px", border: "1px solid " + color, background: bg, color, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", textDecoration: "none" });
 
-  return React.createElement(
-    "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" } },
-    filtered.map((d) => {
+  const renderCard = (d) => {
       const canEdit = !!callerMemberId && d.lastEditedByMemberId === callerMemberId;
       const canDelete = isAdmin || canEdit;
       const telMatch = d.phone ? String(d.phone).match(/\+?\d[\d\s-]{6,}/) : null;
@@ -75,7 +75,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
         (telHref || canEdit || canDelete) && React.createElement(
           "div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "10px" } },
           telHref && React.createElement("a", { href: telHref, style: pill("#fff", "#0E4B43") }, "📞 কল করুন"),
-          canEdit && React.createElement("button", { onClick: () => onEdit(d), style: pill("#0E4B43", "#fff") }, "✎ এডিট"),
+          canEdit && React.createElement("button", { onClick: () => { setOpenId(null); onEdit(d); }, style: pill("#0E4B43", "#fff") }, "✎ এডিট"),
           canDelete && (confirmId === d.id
             ? React.createElement(
                 React.Fragment, null,
@@ -85,6 +85,33 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
               )
             : React.createElement("button", { onClick: () => setConfirmId(d.id), style: pill("#C0392B", "#fff") }, "🗑 মুছুন")))
       );
-    })
-  );
+  };
+
+  // ৩-কলাম ছোট টাইল (ছবি/ইনিশিয়াল, নাম, বিশেষজ্ঞতা, কল) — চাপলে নিচ থেকে শিটে পুরো কার্ড, এডিট/মুছুন সহ
+  const tileOf = (d) => {
+    const telM = d.phone ? String(d.phone).match(/\+?\d[\d\s-]{6,}/) : null;
+    const ini = Array.from(String(d.name || "?").replace(/^(ডাঃ|ডা\.?|Dr\.?)\s*/i, "").trim())[0] || "🩺";
+    return React.createElement("div", { key: d.id, style: { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", minWidth: 0 } },
+      React.createElement("button", { onClick: () => setOpenId(d.id), "aria-label": d.name + " — বিস্তারিত", style: { border: "none", background: "none", padding: "10px 6px 4px", minHeight: "96px", cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: 0 } },
+        d.visitingCardImageUrl
+          ? React.createElement("img", { src: String(d.visitingCardImageUrl).replace(/\.pdf$/i, ".jpg"), alt: "", onError: (e) => { e.target.style.display = "none"; }, style: { width: "44px", height: "44px", objectFit: "cover", borderRadius: "50%", border: "1px solid #D3E0D9" } })
+          : React.createElement("div", { "aria-hidden": "true", style: { width: "44px", height: "44px", borderRadius: "50%", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800 } }, ini),
+        React.createElement("span", { style: { fontSize: "13px", fontWeight: 800, color: "#0E4B43", lineHeight: 1.25, textAlign: "center", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", maxWidth: "100%" } }, d.name),
+        React.createElement("span", { style: { fontSize: "12px", color: "#3E4E49", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory || "")),
+      telM
+        ? React.createElement("a", { href: "tel:" + telM[0].replace(/[\s-]/g, ""), "aria-label": d.name + " — কল করুন", style: { minHeight: "36px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, color: "#0E4B43", textDecoration: "none", borderTop: "1px solid #E3ECE7" } }, "📞 কল")
+        : React.createElement("div", { style: { minHeight: "36px", borderTop: "1px solid #E3ECE7" } }));
+  };
+  const openDoc = openId ? filtered.find((x) => x.id === openId) : null;
+
+  return React.createElement(
+    React.Fragment, null,
+    React.createElement("div", { style: { marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } }, filtered.map(tileOf)),
+    openDoc && React.createElement(
+      React.Fragment, null,
+      React.createElement("div", { onClick: () => { setOpenId(null); setConfirmId(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 90 } }),
+      React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": openDoc.name, style: { position: "fixed", left: 0, right: 0, bottom: "56px", maxHeight: "70vh", overflowY: "auto", background: "#F1F6F2", borderRadius: "18px 18px 0 0", padding: "10px 12px 14px", zIndex: 91, boxShadow: "0 -4px 16px rgba(0,0,0,0.2)" } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "6px" } },
+          React.createElement("button", { onClick: () => { setOpenId(null); setConfirmId(null); }, "aria-label": "বন্ধ করুন", style: { width: "44px", height: "44px", borderRadius: "50%", border: "1px solid #C3D2CA", background: "#fff", color: "#0E4B43", fontSize: "18px", cursor: "pointer" } }, "✕")),
+        renderCard(openDoc))));
 }

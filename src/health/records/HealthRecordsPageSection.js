@@ -88,12 +88,14 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
     return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
   });
   const [timelineSub, setTimelineSub] = useState("diet");
+  const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
   const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "all"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
   histBind(hk + "rec", recordSub, setRecordSub);
   histBind(hk + "tl", timelineSub, setTimelineSub);
+  histBind(hk + "doc", docSub, setDocSub);
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
@@ -146,9 +148,18 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick, familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
-        React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
+        React.createElement("div", { role: "group", "aria-label": "ডাক্তার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
+          [["summary", "📋 সারাংশ"], ["doctors", "🩺 আমার ডাক্তার"]].map(([id, label]) => React.createElement("button", {
+            key: id, onClick: () => histChange(hk + "doc", docSub, id, setDocSub), "aria-pressed": docSub === id,
+            style: {
+              flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              border: docSub === id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
+              background: docSub === id ? "#0E4B43" : "#fff", color: docSub === id ? "#fff" : "#2B3A36",
+            },
+          }, label))),
+        docSub === "summary" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
         // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode
-        React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
+        docSub === "doctors" && React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
