@@ -1,7 +1,7 @@
 // চালান: node --test tests/shared/*.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findDictEntry, evaluateLabValue, buildLabAlerts, alertForGroup, alertLine, summarizeAlerts, parseLabNumber } from "../../src/health/reports/labAlerts.js";
+import { findDictEntry, evaluateLabValue, buildLabAlerts, alertForGroup, alertLine, summarizeAlerts, parseLabNumber, summarizeSaved } from "../../src/health/reports/labAlerts.js";
 
 const Q = "qualitative (Positive/Negative)";
 const dict = [
@@ -78,4 +78,19 @@ test("alertForGroup শুধু সর্বশেষ মান দেখে", 
 test("dictionary ফাঁকা/অনুপস্থিত হলে ক্র্যাশ নয়", () => {
   assert.deepEqual(buildLabAlerts([{ type: "TSH", value: "9", unit: "mIU/L" }], []), []);
   assert.deepEqual(buildLabAlerts(null, null), []);
+});
+
+test("summarizeSaved: 🔴/🟢/অযাচাইযোগ্য আলাদা", () => {
+  const r = summarizeSaved([
+    { type: "TSH", value: "8.2", unit: "mIU/L" },        // 🔴
+    { type: "FBS", value: "85", unit: "mg/dL" },         // 🟢
+    { type: "Dengue NS1", value: "Negative", unit: Q },  // 🟢
+    { type: "HbA1c", value: "5.0", unit: "mg/dL" },      // একক মেলে না → যাচাইহীন
+    { type: "weight", value: "68", unit: "kg" },         // dictionary-তে নেই
+  ], dict);
+  assert.equal(r.alerts.length, 1);
+  assert.equal(r.alerts[0].testId, "tsh");
+  assert.equal(r.ok.length, 2);
+  assert.equal(r.unchecked, 2);
+  assert.deepEqual(summarizeSaved(null, dict), { alerts: [], ok: [], unchecked: 0 });
 });

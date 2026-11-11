@@ -361,7 +361,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
         h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ওষুধ"),
         h("button", { onClick: () => { setRxOpen(false); setRxFile(null); }, "aria-label": "বন্ধ করুন", style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C", minWidth: "44px", minHeight: "44px" } }, "✕")),
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f) => setRxFile(f) }),
-      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, onDone: () => loadMeds() })),
+      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান" })),
     addOpen && h("div", { style: card },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),

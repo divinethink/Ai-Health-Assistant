@@ -27,7 +27,7 @@ import { fetchTestNameDictionary } from "./testDictionaryData.js";
 import { parseAndValidateReportText } from "./reportParsing.js";
 import { ReportVerificationForm } from "./ReportVerificationForm.js";
 import { ManualReportEntryForm } from "./ManualReportEntryForm.js";
-import { LabAlertBox } from "./LabAlertBox.js";
+import { LabResultSummary } from "./LabResultSummary.js";
 import { ReportNextSteps } from "../nextstep/NextStepCard.js";
 
 const { useState, useCallback, useRef, useEffect } = React;
@@ -60,6 +60,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
   const [file, setFile] = useState(presetFile || null);
   const [savedCount, setSavedCount] = useState(0);
   const [savedAlerts, setSavedAlerts] = useState([]); // ধাপ ৫: যাচাই-শেষে লাল লাইন
+  const [savedSummary, setSavedSummary] = useState(null); // ধাপ ৬: ট্র্যাফিক-লাইট ফল
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState(""); // "" | "extracting" | "ocr" | "parsing" | "done"
@@ -73,7 +74,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     const f = e.target.files && e.target.files[0];
     setErr(null);
     setCandidates(null);
-    setSavedAlerts([]);
+    setSavedAlerts([]); setSavedSummary(null);
     setFile(f || null);
   }, []);
 
@@ -81,7 +82,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     if (!file) { setErr("একটা ছবি বা PDF ফাইল বেছে নিন।"); return; }
     setErr(null);
     setCandidates(null);
-    setSavedAlerts([]);
+    setSavedAlerts([]); setSavedSummary(null);
     setOcrNotes(null);
     setBusy(true);
     setProgress(0);
@@ -174,11 +175,10 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     candidates
       ? React.createElement(ReportVerificationForm, {
           familyId, targetMemberId, callerMemberId, candidates, extractionMethod,
-          onSaved: (n, alerts) => { setCandidates(null); setSavedCount(n || 0); setSavedAlerts(alerts || []); },
+          onSaved: (n, alerts, summary) => { setCandidates(null); setSavedCount(n || 0); setSavedAlerts(alerts || []); setSavedSummary(summary || null); },
         })
       : null,
-    savedCount > 0 ? SuccessBox(savedCount + "টা মান সংরক্ষণ করা হয়েছে।") : null,
-    savedAlerts.length > 0 ? React.createElement(LabAlertBox, { alerts: savedAlerts }) : null,
+    savedCount > 0 ? (savedSummary ? React.createElement(LabResultSummary, { summary: savedSummary, savedCount }) : SuccessBox(savedCount + "টা মান সংরক্ষণ করা হয়েছে।")) : null,
     savedAlerts.length > 0 ? React.createElement(ReportNextSteps, { familyId, targetMemberId, callerMemberId, alerts: savedAlerts }) : null
   );
 }

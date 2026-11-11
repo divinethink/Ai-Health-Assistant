@@ -12,6 +12,8 @@ import { assessOcr, QUALITY_MESSAGES } from "../reports/ocrQuality.js";
 import { parsePrescriptionText } from "./prescriptionParsing.js";
 import { loadPrescriptionContext } from "./prescriptionData.js";
 import { PrescriptionReviewForm } from "./PrescriptionReviewForm.js";
+import { StepIndicator } from "./StepIndicator.js";
+import { PrescriptionSavedScreen } from "./PrescriptionSavedScreen.js";
 import { PrescriptionNextSteps } from "../nextstep/NextStepCard.js";
 import { extractFollowUpDate } from "../nextstep/nextStepCalc.js";
 import { localISO } from "../../shared/dates.js";
@@ -20,7 +22,7 @@ const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
 const note = (bg, color, text) => h("div", { style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: bg, color, fontSize: "14px", lineHeight: 1.5 } }, text);
 
-export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, onDone }) {
+export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, onDone, onClose, closeLabel }) {
   const [stage, setStage] = useState("extracting"); // extracting | ocr | parsing | done | error
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
@@ -55,12 +57,20 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
 
   useEffect(() => { run(); }, []); // শুধু mount-এ একবার; ব্যর্থ হলে "আবার চেষ্টা"
 
-  if (stage === "error") return h("div", null, ErrorBox(err), SecondaryButton("আবার চেষ্টা করুন", run, false));
+  const savedOk = !!(saved && saved.res.saved.length > 0); // কিছু সংরক্ষিত হলেই ৩/৩ স্ক্রিন
+  const step = savedOk ? 3 : (stage === "done" ? 2 : 1);
+  const bar = h(StepIndicator, { step });
+  if (stage === "error") return h("div", null, bar, ErrorBox(err), SecondaryButton("আবার চেষ্টা করুন", run, false));
   if (stage !== "done" || !res) {
     const label = { extracting: "ফাইল পড়া হচ্ছে...", ocr: "OCR চলছে... (" + Math.round(progress * 100) + "%)", parsing: "ওষুধ শনাক্ত করা হচ্ছে..." }[stage];
-    return h("p", { role: "status", style: { fontSize: "14px", color: "#5F716C", margin: "12px 0" } }, "📄 " + file.name + " — " + label);
+    return h("div", null, bar, h("p", { role: "status", style: { fontSize: "14px", color: "#5F716C", margin: "12px 0" } }, "📄 " + file.name + " — " + label));
   }
-  return h("div", null,
+  if (savedOk) {
+    return h("div", null, bar,
+      h(PrescriptionSavedScreen, { familyId, callerMemberId, res: saved.res, onClose, closeLabel }),
+      h(PrescriptionNextSteps, { familyId, targetMemberId, callerMemberId, saved, followUp: res.followUp }));
+  }
+  return h("div", null, bar,
     res.notes.map(([bg, c, t], i) => h("div", { key: i }, note(bg, c, t))),
     res.items.length === 0
       ? h("div", null,

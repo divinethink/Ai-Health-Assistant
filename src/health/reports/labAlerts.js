@@ -117,3 +117,25 @@ export function summarizeAlerts(alerts, max = 3) {
   const list = alerts || [];
   return { total: list.length, shown: list.slice(0, max), more: Math.max(0, list.length - max) };
 }
+
+/**
+ * সেভ-করা মান → ট্র্যাফিক-লাইট সারাংশ। alerts = 🔴, ok = 🟢 (dictionary-তে পরিচিত + রেঞ্জের ভেতরে),
+ * unchecked = dictionary-তে নেই/একক-মান না মেলায় যাচাই করা যায়নি (চুপ থাকে, "ঠিক" বলা হয় না)।
+ */
+export function summarizeSaved(observations, dict) {
+  const alerts = [], ok = [];
+  let unchecked = 0;
+  for (const o of observations || []) {
+    const e = findDictEntry(o.type, dict);
+    if (!e) { unchecked++; continue; }
+    const a = evaluateLabValue(o, e);
+    if (a) { alerts.push(a); continue; }
+    // রেঞ্জ-তুলনা সম্ভব ছিল কিনা: qualitative বা সংখ্যা + মেলা একক (বা গ্লুকোজ mmol)
+    const comparable = isQualitative(e)
+      ? !!String(o.value || "").trim()
+      : parseLabNumber(o.value) !== null && (sameUnit(o.unit, e.unit) || (GLUCOSE_IDS.includes(e.id || e.testId) && normUnit(o.unit) === "mmol/l"));
+    if (comparable) ok.push({ name: shortName(e), value: String(o.value).trim(), unit: o.unit || "" });
+    else unchecked++;
+  }
+  return { alerts, ok, unchecked };
+}

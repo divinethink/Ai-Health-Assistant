@@ -19,7 +19,7 @@
 import { TextField, DateField, ErrorBox, SuccessBox, PrimaryButton } from "../../shared/ui.js";
 import { createHealthRecord } from "../records/healthRecordsData.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
-import { buildLabAlerts } from "./labAlerts.js";
+import { buildLabAlerts, summarizeSaved } from "./labAlerts.js";
 
 const { useState, useCallback } = React;
 
@@ -60,7 +60,7 @@ function rowFromCandidate(c) {
  * @param {string} props.callerMemberId
  * @param {Array<object>} props.candidates - reportParsing.parseAndValidateReportText() output
  * @param {"direct-text"|"ocr"} props.extractionMethod
- * @param {(savedCount: number, alerts: Array<object>) => void} [props.onSaved] - alerts: সেভ-করা মান থেকে labAlerts.js-এর ফল
+ * @param {(savedCount: number, alerts: Array<object>, summary: {alerts: object[], ok: object[], unchecked: number}) => void} [props.onSaved] - alerts/summary: সেভ-করা মান থেকে labAlerts.js-এর ফল
  */
 export function ReportVerificationForm({ familyId, targetMemberId, callerMemberId, candidates, extractionMethod, onSaved }) {
   const [rows, setRows] = useState(() => candidates.map(rowFromCandidate));
@@ -99,7 +99,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
       setSavedCount(count);
       // সতর্কতা শুধু দেখানোর জন্য — dictionary না এলে নীরবে বাদ, সেভ-সফলতা প্রভাবিত নয়
       const dict = await fetchTestNameDictionary().catch(() => []);
-      onSaved && onSaved(count, buildLabAlerts(savedObs, dict));
+      onSaved && onSaved(count, buildLabAlerts(savedObs, dict), summarizeSaved(savedObs, dict));
     } catch (e) {
       setErr(e.code === "permission-denied"
         ? "এই সদস্যের জন্য স্বাস্থ্য রেকর্ড যোগ করার অনুমতি আপনার নেই।"

@@ -66,7 +66,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
       }),
       panel.mode === "prescription" && React.createElement(PrescriptionPanel, {
         key: "rx-" + targetMemberId + "-" + panel.key,
-        familyId, targetMemberId, callerMemberId, file: panel.file,
+        familyId, targetMemberId, callerMemberId, file: panel.file, onClose: () => setPanel(null),
       }),
       panel.mode === "manual" && React.createElement(ReportAnalysisPanel, {
         key: "manual-" + targetMemberId + "-" + panel.key,
