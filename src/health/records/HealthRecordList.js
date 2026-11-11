@@ -17,7 +17,7 @@ import { LabAlertBox } from "../reports/LabAlertBox.js";
 
 const { useState, useEffect, useCallback } = React;
 
-const G = "#0E4B43", RED = "#B3261E", MUTED = "#5F716C", LINE = "#D3E0D9";
+const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", MUTED = "#5F716C", LINE = "#D3E0D9";
 const cardBase = { background: "#fff", border: "1px solid " + LINE, borderRadius: "14px", padding: "12px", textAlign: "left", width: "100%", boxSizing: "border-box", fontFamily: "inherit", color: "#1F2D2A", minHeight: "44px" };
 
 const bn1 = (n) => Number(n).toLocaleString("bn-BD", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -28,7 +28,7 @@ function Spark({ items }) {
   const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
   const pts = vals.map((v, i) => (i * (100 / (vals.length - 1))).toFixed(1) + "," + (22 - ((v - min) / span) * 18).toFixed(1)).join(" ");
   return React.createElement("svg", { viewBox: "0 0 100 26", width: "100%", height: "26", "aria-hidden": true, preserveAspectRatio: "none", style: { marginTop: "6px" } },
-    React.createElement("polyline", { points: pts, fill: "none", stroke: "#17705F", strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round", vectorEffect: "non-scaling-stroke" }));
+    React.createElement("polyline", { points: pts, fill: "none", stroke: "var(--hs-primary-2, #17705F)", strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
 export function HealthRecordList({ familyId, targetMemberId, callerMemberId, refreshTick, onEdit, onDeleted }) {

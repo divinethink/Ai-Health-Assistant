@@ -12,7 +12,7 @@ export function ErrorBox(msg) {
 
 export function SuccessBox(children) {
   return React.createElement("div", {
-    style: { marginTop: "12px", padding: "12px 14px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "14px", lineHeight: 1.5 },
+    style: { marginTop: "12px", padding: "12px 14px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", lineHeight: 1.5 },
   }, children);
 }
 
@@ -30,14 +30,14 @@ export function TextField(label, value, onChange, placeholder) {
 export function PrimaryButton(label, onClick, busy) {
   return React.createElement("button", {
     onClick, disabled: busy,
-    style: { marginTop: "16px", width: "100%", minHeight: "50px", padding: "12px", border: "none", borderRadius: "14px", background: busy ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: busy ? "default" : "pointer", boxShadow: busy ? "none" : "0 4px 12px rgba(14,75,67,0.28)" },
+    style: { marginTop: "16px", width: "100%", minHeight: "50px", padding: "12px", border: "none", borderRadius: "14px", background: busy ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: busy ? "default" : "pointer", boxShadow: busy ? "none" : "0 4px 12px rgba(14,75,67,0.28)" },
   }, busy ? "অপেক্ষা করুন..." : label);
 }
 
 export function SecondaryButton(label, onClick, busy) {
   return React.createElement("button", {
     onClick, disabled: busy,
-    style: { marginTop: "10px", width: "100%", minHeight: "48px", padding: "10px", borderRadius: "14px", background: "#fff", color: "#0E4B43", fontSize: "14px", fontWeight: 700, border: "1.5px solid #0E4B43", cursor: busy ? "default" : "pointer" },
+    style: { marginTop: "10px", width: "100%", minHeight: "48px", padding: "10px", borderRadius: "14px", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 700, border: "1.5px solid var(--hs-primary, #0E4B43)", cursor: busy ? "default" : "pointer" },
   }, label);
 }
 
@@ -87,8 +87,8 @@ export function TabPills(tabs, activeId, onChange, leading, histKey) {
           key: id, onClick: () => (histKey ? histChange(histKey, activeId, id, onChange) : onChange(id)),
           style: {
             flexShrink: 0, fontSize: "14px", fontWeight: 600, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", cursor: "pointer",
-            border: active ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-            background: active ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: active ? "#fff" : "#2B3A36",
+            border: active ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+            background: active ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: active ? "#fff" : "#2B3A36",
             boxShadow: active ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
         },

@@ -67,7 +67,7 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
 
   return React.createElement(
     "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 6px" } }, isEdit ? "ডাক্তারের তথ্য এডিট করুন" : "নতুন ডাক্তার যোগ করুন"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 6px" } }, isEdit ? "ডাক্তারের তথ্য এডিট করুন" : "নতুন ডাক্তার যোগ করুন"),
     React.createElement(DoctorFieldsRow, {
       value: v, suggestions, file, familyId,
       onChange: (patch) => setV((p) => ({ ...p, ...patch })),

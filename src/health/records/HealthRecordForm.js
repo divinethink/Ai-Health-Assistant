@@ -193,35 +193,35 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }
   const moreToggle = moreFields.length ? React.createElement("button", {
     key: "more", onClick: () => setMore((m) => !m), "aria-expanded": more,
-    style: { width: "100%", minHeight: "44px", margin: "8px 0 4px", borderRadius: "12px", border: "1px dashed #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+    style: { width: "100%", minHeight: "44px", margin: "8px 0 4px", borderRadius: "12px", border: "1px dashed #9CC5B4", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
   }, (more ? "কম দেখান ▲" : "আরও যোগ করুন ▼")) : null;
 
   const closeBtn = React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
-    style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" } }, "✕");
+    style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", cursor: "pointer" } }, "✕");
   if (!isEdit && !picked) {
     return React.createElement("div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
-        React.createElement("h4", { style: { fontSize: "18px", color: "#0E4B43", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
+        React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
         ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => pickType(type),
-          style: { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" } },
+          style: { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" } },
           React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label)),
         // রিপোর্ট/প্রেসক্রিপশন আপলোড (ছবি বা PDF) — রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
         onUpload && React.createElement("button", { onClick: onUpload,
-          style: { gridColumn: "1 / -1", minHeight: "64px", borderRadius: "16px", border: "1.5px solid #0E4B43", background: "#E6F3EC", color: "#0E4B43", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+          style: { gridColumn: "1 / -1", minHeight: "64px", borderRadius: "16px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#E6F3EC", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
           React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px" } }, "📄"), "রিপোর্ট / প্রেসক্রিপশন আপলোড (ছবি বা PDF)")));
   }
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
-      React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
+      React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
       closeBtn),
     isEdit
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
       : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", margin: "8px 0 0" } },
-          React.createElement("span", { style: { fontSize: "16px", fontWeight: 700, color: "#0E4B43" } }, (ADD_TILES.find((x) => x[0] === resourceType) || [])[1] + " " + (ADD_TILES.find((x) => x[0] === resourceType) || [])[2]),
-          React.createElement("button", { onClick: () => { resetFields(); setErr(null); setMore(false); setPicked(false); }, disabled: busy, style: { minHeight: "44px", padding: "0 12px", border: "none", background: "none", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "‹ বদলান")),
+          React.createElement("span", { style: { fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, (ADD_TILES.find((x) => x[0] === resourceType) || [])[1] + " " + (ADD_TILES.find((x) => x[0] === resourceType) || [])[2]),
+          React.createElement("button", { onClick: () => { resetFields(); setErr(null); setMore(false); setPicked(false); }, disabled: busy, style: { minHeight: "44px", padding: "0 12px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "‹ বদলান")),
     ...typeFields,
     moreToggle,
     ...(more ? moreFields : []),

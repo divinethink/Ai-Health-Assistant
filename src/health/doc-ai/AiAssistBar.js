@@ -13,7 +13,7 @@ const { useState, useEffect, useRef } = React;
 const h = React.createElement;
 
 export const AI_COLORS = { bg: "#FFF8E1", border: "#E0A72E", text: "#8A5A00", soft: "#FFFBEA", ring: "#F2D27A" };
-const G = "#0E4B43";
+const G = "var(--hs-primary, #0E4B43)";
 const CONSENT_KEY = "hs_ai_doc_consent_v1";
 
 export function hasAiConsent() { try { return window.localStorage.getItem(CONSENT_KEY) === "1"; } catch (_e) { return false; } }
@@ -33,7 +33,7 @@ export function AiBadge(text) {
   return h("span", { style: { display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: AI_COLORS.bg, border: "1px solid " + AI_COLORS.border, color: AI_COLORS.text, fontSize: "12px", fontWeight: 700, lineHeight: 1.4 } }, "🤖 " + (text || "AI বসিয়েছে — যাচাই করুন"));
 }
 
-const btn = (primary) => ({ flex: 1, minHeight: "48px", padding: "10px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: primary ? "none" : "1.5px solid " + AI_COLORS.border, background: primary ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: primary ? "#fff" : AI_COLORS.text, boxShadow: primary ? "0 4px 12px rgba(14,75,67,0.25)" : "none" });
+const btn = (primary) => ({ flex: 1, minHeight: "48px", padding: "10px 14px", borderRadius: "14px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: primary ? "none" : "1.5px solid " + AI_COLORS.border, background: primary ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: primary ? "#fff" : AI_COLORS.text, boxShadow: primary ? "0 4px 12px rgba(14,75,67,0.25)" : "none" });
 const wrap = { marginTop: "12px", padding: "14px", borderRadius: "16px", background: "linear-gradient(160deg, #FFFBEA 0%, #FFF3CF 100%)", border: "1px solid " + AI_COLORS.ring, boxShadow: "0 2px 10px rgba(138,90,0,0.10)" };
 
 /**

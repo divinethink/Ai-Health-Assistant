@@ -120,7 +120,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
 
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "রিপোর্টের মান যাচাই করুন"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "রিপোর্টের মান যাচাই করুন"),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", margin: "4px 0 10px" } },
       "OCR/extraction থেকে পাওয়া মান — Save করার আগে প্রতিটা যাচাই করে নিন। ভুল মনে হলে আনচেক করুন বা সংশোধন করুন।"
     ),
@@ -135,7 +135,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
         },
       },
       r.source === "ai" ? React.createElement("div", { style: { marginBottom: "6px" } }, AiBadge("AI বসিয়েছে — যাচাই করুন")) : null,
-      React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600, color: "#0E4B43" } },
+      React.createElement("label", { style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } },
         React.createElement("input", { type: "checkbox", checked: r.include, onChange: (e) => updateRow(idx, { include: e.target.checked }) }),
         r.canonicalNameEn
       ),

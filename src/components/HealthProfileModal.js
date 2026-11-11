@@ -56,7 +56,7 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
     Card(
       React.createElement(
         React.Fragment, null,
-        React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43" } }, "Health Profile — " + targetMember.name),
+        React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)" } }, "Health Profile — " + targetMember.name),
 
         React.createElement(
           "div", { style: { marginTop: "10px" } },
@@ -83,7 +83,7 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
             onClick: save, disabled: busy,
             style: {
               flex: 1, padding: "10px", borderRadius: "10px", border: "none",
-              background: "#0E4B43", color: "#fff", cursor: busy ? "default" : "pointer",
+              background: "var(--hs-primary, #0E4B43)", color: "#fff", cursor: busy ? "default" : "pointer",
               opacity: busy ? 0.6 : 1, fontSize: "14px",
             },
           }, busy ? "সংরক্ষণ হচ্ছে..." : "Save"),

@@ -326,7 +326,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, t("h.triage")),
+    React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } }, t("h.triage")),
 
     !ageGroup && targetMember && React.createElement(
       "div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "6px" } },
@@ -343,13 +343,13 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "4px" } }, "এখন প্রযোজ্য কোনটা? মিলিয়ে দেখুন"),
       groupChecklistItems(checklistItems, isPediatricAgeGroup(ageGroup)).map((g) => React.createElement(
         React.Fragment, { key: g.key },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", margin: "14px 0 6px", fontSize: "16px", fontWeight: 700, color: "#0E4B43" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", margin: "14px 0 6px", fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } },
           React.createElement("span", { "aria-hidden": "true" }, g.icon), g.title),
         g.items.map((it) => {
           const on = !!checklist[it.id];
           return React.createElement(
-            "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "12px", minHeight: "56px", boxSizing: "border-box", padding: "10px 14px", marginBottom: "8px", borderRadius: "14px", cursor: "pointer", fontSize: "15px", lineHeight: 1.4, color: "#1F2D2A", border: "1.5px solid " + (on ? "#0E4B43" : "#D9E5DE"), background: on ? "#E4F0E9" : "#fff" } },
-            React.createElement("input", { type: "checkbox", checked: on, onChange: () => toggleItem(it.id), style: { width: "26px", height: "26px", flexShrink: 0, accentColor: "#0E4B43", margin: 0 } }),
+            "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "12px", minHeight: "56px", boxSizing: "border-box", padding: "10px 14px", marginBottom: "8px", borderRadius: "14px", cursor: "pointer", fontSize: "15px", lineHeight: 1.4, color: "#1F2D2A", border: "1.5px solid " + (on ? "var(--hs-primary, #0E4B43)" : "#D9E5DE"), background: on ? "#E4F0E9" : "#fff" } },
+            React.createElement("input", { type: "checkbox", checked: on, onChange: () => toggleItem(it.id), style: { width: "26px", height: "26px", flexShrink: 0, accentColor: "var(--hs-primary, #0E4B43)", margin: 0 } }),
             it.label
           );
         }),
@@ -396,7 +396,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     checklistItems.length > 0 && React.createElement(
       "div", { style: { position: "sticky", bottom: "-12px", zIndex: 2, margin: "12px -12px -12px", padding: "8px 12px 12px", background: "linear-gradient(180deg, rgba(241,246,242,0), #F1F6F2 28%)" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#5F716C" } },
-        React.createElement("b", { style: { color: "#0E4B43" } }, bnNum(checklistItems.filter((it) => checklist[it.id]).length) + "টি বেছেছেন"),
+        React.createElement("b", { style: { color: "var(--hs-primary, #0E4B43)" } }, bnNum(checklistItems.filter((it) => checklist[it.id]).length) + "টি বেছেছেন"),
         React.createElement("span", null, "না বাছলেও চেক করা যায়")),
       PrimaryButton("চেক করুন", runCheck)
     ),
@@ -421,7 +421,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
     // preview block-এর মতোই)।
     healthContext && React.createElement(
       "details", { style: { marginTop: "12px", fontSize: "14px", color: "#3E4E49", background: "#F3F6F5", padding: "8px 10px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
-      React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "#0E4B43" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
+      React.createElement("summary", { style: { cursor: "pointer", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } }, "🔒 AI ব্যবহারের গোপনীয়তা তথ্য"),
       React.createElement(
         "div", { style: { marginTop: "6px", lineHeight: "1.5" } },
         "এই প্রশ্নোত্তরের জন্য ক্লাউড-ভিত্তিক AI (Groq) ব্যবহার করা হচ্ছে। Zero Data Retention (ZDR) মোড সক্রিয় থাকায় Groq এই তথ্য দিয়ে কোনো মডেল ট্রেইন করে না। আপনার নাম, ফোন নম্বর বা সরাসরি পরিচয়সূচক কোনো তথ্য কখনো পাঠানো হয় না — শুধু বয়স-গ্রুপ ও প্রাসঙ্গিক লক্ষণ/স্বাস্থ্য-তথ্য পাঠানো হয়।"
@@ -456,7 +456,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       medicalScienceNode: React.createElement(
         "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
         React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, renderRichText(aiResponse))
       ),
       herbalNode: React.createElement(

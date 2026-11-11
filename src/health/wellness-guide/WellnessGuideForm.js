@@ -82,7 +82,7 @@ export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, 
 
   return React.createElement(
     "div", { style: { marginTop: "10px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : "#F9FBFA" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 6px" } }, isEdit ? "পোস্ট এডিট করুন" : "নতুন লেখা যোগ করুন"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 6px" } }, isEdit ? "পোস্ট এডিট করুন" : "নতুন লেখা যোগ করুন"),
     SelectField("ক্যাটেগরি", category, setCategory, WELLNESS_CATEGORIES),
     TextField("শিরোনাম", title, setTitle, "যেমন: গর্ভাবস্থার ৩য় মাসের পুষ্টি"),
     needsAgeRange && React.createElement(
@@ -98,7 +98,7 @@ export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, 
     React.createElement(
       "p", { style: { fontSize: "14px", color: "#5F716C", margin: "6px 0" } },
       "প্রিভিউ কতটুকু দেখাবে তা ঠিক করতে, নিচের লেখায় যেখানে কাটতে চান সেখানে ঠিক এই শব্দটা বসান: ",
-      React.createElement("b", { style: { color: "#0E4B43" } }, "[MORE]"),
+      React.createElement("b", { style: { color: "var(--hs-primary, #0E4B43)" } }, "[MORE]"),
       " — এর আগে পর্যন্ত অংশ প্রিভিউ হিসেবে দেখাবে, বাকিটা \"আরো পড়ুন\"-এ ক্লিক করলে দেখা যাবে। না বসালে পুরো লেখা ক্লিকেই দেখাবে।"
     ),
     TextAreaField("মূল লেখা (Body)", body, setBody, "এখানে পূর্ণ ব্লগ-কন্টেন্ট লিখুন...\n\nপ্রিভিউ শেষ করতে চাইলে এখানে বসান: [MORE]"),

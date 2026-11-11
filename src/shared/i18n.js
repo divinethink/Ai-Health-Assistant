@@ -53,7 +53,7 @@ const DICT = {
     "menu.prefs": "⚙️ পছন্দ — থিম", "menu.settings": "⚙️ সেটিংস (ভাষা ও থিম)", "menu.back": "← মেনু", "menu.aichatSub": "লক্ষণ যাচাই ও স্বাস্থ্য-পরামর্শ", "menu.familyTitle": "পরিবার", "menu.familySub": "সদস্য ও অ্যাক্সেস", "menu.dataTitle": "ডেটা ব্যাকআপ", "menu.dataSub": "ব্যাকআপ রাখুন ও ফিরিয়ে আনুন", "menu.settingsTitle": "সেটিংস", "menu.settingsSub": "ভাষা ও থিম", "menu.copy": "কপি", "menu.copied": "কপি হয়েছে ✓", "menu.adminTools": "🛠 Admin টুলস (আমন্ত্রণ ও নতুন সদস্য)", "menu.emergencyShort": "📞 জরুরি সেবা", "menu.language": "🌐 ভাষা", "menu.family": "👨‍👩‍👧‍👦 পরিবার",
     "menu.nav": "🧭 নেভিগেশন", "menu.doctor": "🩺 ডাক্তারের তথ্য ও ভিজিটিং কার্ড",
     "menu.care": "📞 জরুরি সেবা — যাচাই করা তালিকা", "menu.data": "💾 ডেটা — ব্যাকআপ/রিস্টোর",
-    "theme.light": "☀️ হালকা", "theme.sepia": "📜 সেপিয়া", "theme.dark": "🌙 গাঢ়",
+    "theme.light": "☀️ হালকা", "theme.sepia": "📜 সেপিয়া", "theme.dark": "🌙 গাঢ়", "theme.herbal": "🌿 হার্বাল সবুজ", "theme.nightPulse": "🌃 নাইট পালস", "theme.calmPaper": "📄 শান্ত কাগজ", "theme.warmClay": "🧱 উষ্ণ মাটি", "theme.oceanCalm": "🌊 সাগর-শান্ত",
     "lang.bn": "বাংলা", "lang.en": "English",
 
     "h.records": "স্বাস্থ্য রেকর্ড", "h.timeline": "স্বাস্থ্য টাইমলাইন", "h.calendar": "📅 পরিবারের স্বাস্থ্য ক্যালেন্ডার",
@@ -95,7 +95,7 @@ const DICT = {
     "menu.prefs": "⚙️ Preferences — Theme", "menu.settings": "⚙️ Settings (Language & Theme)", "menu.back": "← Menu", "menu.aichatSub": "Symptom check & health guidance", "menu.familyTitle": "Family", "menu.familySub": "Members & access", "menu.dataTitle": "Data Backup", "menu.dataSub": "Back up and restore", "menu.settingsTitle": "Settings", "menu.settingsSub": "Language & theme", "menu.copy": "Copy", "menu.copied": "Copied ✓", "menu.adminTools": "🛠 Admin Tools (Invite & New Member)", "menu.emergencyShort": "📞 Emergency", "menu.language": "🌐 Language", "menu.family": "👨‍👩‍👧‍👦 Family",
     "menu.nav": "🧭 Navigation", "menu.doctor": "🩺 Doctor Details & Visiting Cards",
     "menu.care": "📞 Emergency Care — Verified Directory", "menu.data": "💾 Data — Backup/Restore",
-    "theme.light": "☀️ Light", "theme.sepia": "📜 Sepia", "theme.dark": "🌙 Dark",
+    "theme.light": "☀️ Light", "theme.sepia": "📜 Sepia", "theme.dark": "🌙 Dark", "theme.herbal": "🌿 Herbal Green", "theme.nightPulse": "🌃 Night Pulse", "theme.calmPaper": "📄 Calm Paper", "theme.warmClay": "🧱 Warm Clay", "theme.oceanCalm": "🌊 Ocean Calm",
     "lang.bn": "বাংলা", "lang.en": "English",
 
     "h.records": "Health Records", "h.timeline": "Health Timeline", "h.calendar": "📅 Family Health Calendar",

@@ -33,7 +33,7 @@ export function NotificationsPanel({ familyId, uid }) {
 
   return React.createElement(
     "div", { style: { marginTop: "14px" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43" } }, "নোটিফিকেশন"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } }, "নোটিফিকেশন"),
     items.map((n) =>
       React.createElement(
         "div", {

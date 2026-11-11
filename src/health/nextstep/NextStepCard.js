@@ -12,7 +12,7 @@ import { addFollowUpEvent, addCourseEndEvents, addDoctorVisitEvent } from "./nex
 
 const { useState, useCallback } = React;
 const h = React.createElement;
-const G = "#0E4B43", RED = "#B3261E", MUTED = "var(--hs-muted, #5F716C)";
+const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", MUTED = "var(--hs-muted, #5F716C)";
 
 const btn = (primary, disabled) => ({
   minHeight: "44px", padding: "8px 18px", borderRadius: "999px", fontSize: "15px", fontWeight: 700, fontFamily: "inherit",

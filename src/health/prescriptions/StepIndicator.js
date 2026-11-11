@@ -2,7 +2,7 @@
 //
 // ধাপ ৬ — প্রেসক্রিপশনের ৩-ধাপ ইন্ডিকেটর (১. ছবি · ২. দেখে নিন · ৩. যোগ)। শুধু presentation।
 const h = React.createElement;
-const G = "#0E4B43";
+const G = "var(--hs-primary, #0E4B43)";
 const LABELS = ["১. ছবি", "২. দেখে নিন", "৩. যোগ"];
 
 export function StepIndicator({ step }) {

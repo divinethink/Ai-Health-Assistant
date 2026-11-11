@@ -77,7 +77,7 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
     Card(
       React.createElement(
         React.Fragment, null,
-        React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43" } },
+        React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)" } },
           targetMember.name + "-এর সম্পর্ক ও অভিভাবকত্ব"),
 
         React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "10px", display: "block" } }, "সম্পর্ক"),
@@ -112,7 +112,7 @@ export function RelationshipModal({ familyId, targetMember, allMembers, myMember
             onClick: save, disabled: busy,
             style: {
               flex: 1, padding: "10px", borderRadius: "10px", border: "none",
-              background: "#0E4B43", color: "#fff", cursor: busy ? "default" : "pointer",
+              background: "var(--hs-primary, #0E4B43)", color: "#fff", cursor: busy ? "default" : "pointer",
               opacity: busy ? 0.6 : 1, fontSize: "14px",
             },
           }, busy ? "সংরক্ষণ হচ্ছে..." : "Save"),

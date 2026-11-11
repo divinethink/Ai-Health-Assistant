@@ -27,15 +27,15 @@ function formatSize(bytes) {
 function linkStyle(primary) {
   return {
     fontSize: "14px", fontWeight: 600, textDecoration: "none", padding: "8px 14px", minHeight: "20px", borderRadius: "12px",
-    border: "1px solid #0E4B43", background: primary ? "#0E4B43" : "#fff", color: primary ? "#fff" : "#0E4B43",
+    border: "1px solid var(--hs-primary, #0E4B43)", background: primary ? "var(--hs-primary, #0E4B43)" : "#fff", color: primary ? "#fff" : "var(--hs-primary, #0E4B43)",
   };
 }
 
 function chipStyle(active) {
   return {
     flexShrink: 0, fontSize: "14px", fontWeight: 600, padding: "7px 12px", borderRadius: "999px", cursor: "pointer",
-    border: active ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-    background: active ? "#0E4B43" : "#fff", color: active ? "#fff" : "#2B3A36",
+    border: active ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+    background: active ? "var(--hs-primary, #0E4B43)" : "#fff", color: active ? "#fff" : "#2B3A36",
   };
 }
 
@@ -76,11 +76,11 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   if (docs.length === 0) {
     return React.createElement("div", { style: { textAlign: "center", padding: "28px 16px", border: "1px dashed #B9CFC4", borderRadius: "16px", background: "#fff", color: "#5F716C", fontSize: "14px" } },
       React.createElement("div", { style: { fontSize: "40px" } }, "🗂️"),
-      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "#0E4B43", margin: "6px 0 4px" } }, "এখনো কোনো নথি নেই"),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "6px 0 4px" } }, "এখনো কোনো নথি নেই"),
       React.createElement("div", null, "Prescription, ল্যাব রিপোর্ট বা ছবি/PDF এক জায়গায় নিরাপদে রাখুন।"),
       onAdd && React.createElement("button", {
         onClick: onAdd,
-        style: { marginTop: "14px", minHeight: "44px", padding: "8px 20px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer" },
+        style: { marginTop: "14px", minHeight: "44px", padding: "8px 20px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer" },
       }, "＋ প্রথম নথি যোগ করুন"));
   }
 
@@ -108,7 +108,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           React.createElement("div", { style: { fontSize: "26px", lineHeight: 1 } }, TYPE_ICONS[d.docType] || "📄"),
           React.createElement(
             "div", { style: { flex: 1, minWidth: 0 } },
-            React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "#0E4B43" } },
+            React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } },
               (DOC_TYPE_LABELS[d.docType] || d.docType) + (isPdf ? " · PDF" : "")),
             React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", wordBreak: "break-all" } }, d.fileName),
             meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta)

@@ -8,7 +8,7 @@ import { listDocuments, DOC_TYPE_LABELS } from "../documents/documentsData.js";
 
 const { useState, useEffect } = React;
 const h = React.createElement;
-const G = "#0E4B43", MUTED = "#5F716C";
+const G = "var(--hs-primary, #0E4B43)", MUTED = "#5F716C";
 const BN = "০১২৩৪৫৬৭৮৯";
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
 const pad = (n) => String(n).padStart(2, "0");

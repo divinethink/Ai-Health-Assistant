@@ -42,14 +42,14 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
     "div", { key: post.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px", marginBottom: "8px" } },
     React.createElement(
       "div", { style: { cursor: "pointer" }, onClick: onToggle },
-      React.createElement("div", { style: { fontWeight: 600, color: "#0E4B43", fontSize: "14px" } }, post.title),
+      React.createElement("div", { style: { fontWeight: 600, color: "var(--hs-primary, #0E4B43)", fontSize: "14px" } }, post.title),
       React.createElement(
         "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "2px" } },
         (rangeLabel ? rangeLabel + " · " : "") + (post.tags || []).join(", ")
       ),
       previewText && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
       !expanded && hasMore && React.createElement(
-        "span", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600, marginTop: "4px", display: "inline-block" } },
+        "span", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, marginTop: "4px", display: "inline-block" } },
         "আরো পড়ুন »"
       )
     ),
@@ -82,7 +82,7 @@ function CategorySidebar({ category, onSelect }) {
   const items = [["all", "সব"], ...WELLNESS_CATEGORIES];
   return React.createElement(
     "div", { style: { width: "100%", height: "100%", background: "#EEF5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", padding: "4px 8px", marginBottom: "4px" } }, "ক্যাটেগরি"),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)", padding: "4px 8px", marginBottom: "4px" } }, "ক্যাটেগরি"),
     items.map(([catId, label]) => {
       const active = category === catId;
       return React.createElement(
@@ -90,7 +90,7 @@ function CategorySidebar({ category, onSelect }) {
           key: catId, onClick: () => onSelect(catId),
           style: {
             padding: "8px 10px", borderRadius: "10px", fontSize: "14px", cursor: "pointer", marginBottom: "2px",
-            background: active ? "#0E4B43" : "transparent", color: active ? "#fff" : "#1F2D2A",
+            background: active ? "var(--hs-primary, #0E4B43)" : "transparent", color: active ? "#fff" : "#1F2D2A",
           },
         },
         label
@@ -147,7 +147,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
   }
 
   const headerBar = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "#0E4B43", color: "#fff" } },
+    "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "var(--hs-primary, #0E4B43)", color: "#fff" } },
     React.createElement("button", {
       onClick: () => setSidebarOpen((o) => !o), title: "ক্যাটেগরি",
       style: { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "14px", padding: "4px 8px", borderRadius: "10px", cursor: "pointer" },
@@ -156,7 +156,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
     !showForm && !editingPost && React.createElement(
       "button", {
         onClick: () => { setEditingPost(null); setShowForm(true); },
-        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: "#0E4B43", cursor: "pointer", fontWeight: 600 },
+        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontWeight: 600 },
       },
       "+ নতুন লেখা"
     )
@@ -211,7 +211,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       "div", { style: { padding: "8px 14px", background: "#EEF5F0", borderTop: "1px solid #D3E0D9", textAlign: "right" } },
       React.createElement("button", {
         onClick: onExit,
-        style: { background: "none", border: "1px solid #0E4B43", color: "#0E4B43", fontSize: "14px", padding: "5px 12px", borderRadius: "10px", cursor: "pointer" },
+        style: { background: "none", border: "1px solid var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", padding: "5px 12px", borderRadius: "10px", cursor: "pointer" },
       }, "← ফিরে যান")
     )
   );

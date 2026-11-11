@@ -41,17 +41,17 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
     "div", { style: { marginTop: "12px" } },
     React.createElement(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" } },
-      React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: 0 } }, t("h.docs")),
+      React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, t("h.docs")),
       !panel && React.createElement("button", {
         onClick: () => setPanel({ mode: "add" }),
-        style: { minHeight: "42px", padding: "8px 16px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 8px rgba(14,75,67,0.25)" },
+        style: { minHeight: "42px", padding: "8px 16px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 8px rgba(14,75,67,0.25)" },
       }, "＋ নতুন যোগ করুন")
     ),
     panel && React.createElement(
       "div", { style: { border: "1px solid #D9E5DE", borderRadius: "16px", marginBottom: "14px", background: "#FFFBF2", padding: "12px 14px" } },
       React.createElement(
         "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-        React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: "#0E4B43" } }, panelTitle),
+        React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, panelTitle),
         React.createElement("button", {
           onClick: () => setPanel(null), "aria-label": "বন্ধ করুন",
           style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C" },

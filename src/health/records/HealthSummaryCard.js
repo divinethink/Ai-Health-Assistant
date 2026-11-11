@@ -63,7 +63,7 @@ const BMI_CHIP = {
   obese: { text: "স্থূলতা", bg: "#FFD3CD", fg: "#8A1C12" },
 };
 const SOFT = "#4A6159";
-const INK = "#0E4B43";
+const INK = "var(--hs-primary, #0E4B43)";
 const GLASS = { background: "#FFFFFF", border: "1px solid #CFE0D5", borderRadius: "10px", padding: "4px 9px", minWidth: 0, boxSizing: "border-box" };
 
 // হিরোর ভেতরের সংখ্যা-টাইল (উচ্চতা/ওজন/BMI)

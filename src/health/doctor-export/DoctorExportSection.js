@@ -23,9 +23,9 @@ function actionButton(label, onClick, disabled, primary) {
     onClick, disabled,
     style: {
       flex: 1, minHeight: "46px", padding: "10px 8px", borderRadius: "14px", fontWeight: 700, fontSize: "14px", cursor: disabled ? "default" : "pointer",
-      border: primary ? "none" : "1.5px solid #0E4B43",
-      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
-      color: primary ? "#fff" : "#0E4B43",
+      border: primary ? "none" : "1.5px solid var(--hs-primary, #0E4B43)",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))") : "#fff",
+      color: primary ? "#fff" : "var(--hs-primary, #0E4B43)",
       boxShadow: primary && !disabled ? "0 3px 8px rgba(14,75,67,0.22)" : "none",
     },
   }, label);
@@ -95,7 +95,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   const memberName = (members.find((m) => m.id === targetMemberId) || {}).name;
   return React.createElement(
     "div", { style: { marginTop: "12px" } },
-    React.createElement("h3", { style: { fontSize: "16px", color: "#0E4B43", margin: 0 } }, "ডাক্তারকে দেখানোর জন্য"),
+    React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "ডাক্তারকে দেখানোর জন্য"),
 
     exportCard("🧾", "স্বাস্থ্য প্রোফাইল", "যাচাই-করা তথ্য থেকে — কোনো AI মতামত নেই।", null,
       React.createElement(React.Fragment, null,

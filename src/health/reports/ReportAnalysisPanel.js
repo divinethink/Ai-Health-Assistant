@@ -174,7 +174,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
   if (handwrittenMode) {
     return React.createElement(
       "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-      React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "হাতে-লেখা রিপোর্ট — সরাসরি লিখুন"),
+      React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "হাতে-লেখা রিপোর্ট — সরাসরি লিখুন"),
       SecondaryButton("← OCR/AI বিশ্লেষণে ফিরে যান", () => setHandwrittenMode(false), false),
       React.createElement(ManualReportEntryForm, { familyId, targetMemberId, callerMemberId, onSaved: () => {} })
     );
@@ -182,12 +182,12 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
 
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, "রিপোর্ট বিশ্লেষণ করুন (AI/OCR)"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "রিপোর্ট বিশ্লেষণ করুন (AI/OCR)"),
     React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } },
       "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান স্বয়ংক্রিয়ভাবে শনাক্ত করার চেষ্টা করা হবে (পরের ধাপে আপনাকে যাচাই করতে হবে)।"
     ),
     presetFile
-      ? React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600, margin: "6px 0" } }, "📄 " + presetFile.name)
+      ? React.createElement("div", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, margin: "6px 0" } }, "📄 " + presetFile.name)
       : React.createElement("input", {
           ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
           style: { fontSize: "14px" },

@@ -8,7 +8,7 @@ import { setReminderEnabled } from "./prescriptionData.js";
 
 const { useState } = React;
 const h = React.createElement;
-const G = "#0E4B43", MUTED = "#5F716C", RED = "#B3261E";
+const G = "var(--hs-primary, #0E4B43)", MUTED = "#5F716C", RED = "#B3261E";
 const BN = "০১২৩৪৫৬৭৮৯";
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
 const TIME_BN = (t) => bn(t.replace(/^0/, ""));

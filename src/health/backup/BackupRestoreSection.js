@@ -137,9 +137,9 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
     onClick, disabled,
     style: {
       width: "100%", minHeight: "48px", marginTop: "10px", padding: "10px", borderRadius: "14px", fontSize: "14px", fontWeight: 700, cursor: disabled ? "default" : "pointer",
-      border: primary ? "none" : "1.5px solid #0E4B43",
-      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
-      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "#0E4B43"),
+      border: primary ? "none" : "1.5px solid var(--hs-primary, #0E4B43)",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))") : "#fff",
+      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "var(--hs-primary, #0E4B43)"),
     },
   }, label);
   const segmented = (value, onChange, disabled) => React.createElement(
@@ -147,7 +147,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
     [["personal", "👤 আমার ডেটা"], ["family", "👨‍👩‍👧‍👦 পরিবারের ডেটা"]].map(([v, l]) => React.createElement("button", {
       key: v, onClick: () => onChange(v), disabled,
       style: { flex: 1, minHeight: "38px", border: "none", borderRadius: "999px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
-        background: value === v ? "#0E4B43" : "transparent", color: value === v ? "#fff" : "#0E4B43" },
+        background: value === v ? "var(--hs-primary, #0E4B43)" : "transparent", color: value === v ? "#fff" : "var(--hs-primary, #0E4B43)" },
     }, l))
   );
   const stat = (n, label, color) => React.createElement(
@@ -176,7 +176,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
     card("📥", "ব্যাকআপ থেকে ফিরিয়ে আনুন", "আগে যাচাই হবে, নিশ্চিত করলে তবেই রিস্টোর হবে",
       React.createElement(React.Fragment, null,
         !plan && React.createElement("label", {
-          style: { display: "block", marginTop: "12px", textAlign: "center", padding: "12px", borderRadius: "14px", border: "1.5px dashed #0E4B43", color: "#0E4B43", fontWeight: 700, fontSize: "14px", cursor: restoreBusyAny ? "default" : "pointer", opacity: restoreBusyAny ? 0.6 : 1 },
+          style: { display: "block", marginTop: "12px", textAlign: "center", padding: "12px", borderRadius: "14px", border: "1.5px dashed var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", fontWeight: 700, fontSize: "14px", cursor: restoreBusyAny ? "default" : "pointer", opacity: restoreBusyAny ? 0.6 : 1 },
         },
           "📂 ব্যাকআপ ফাইল বেছে নিন",
           React.createElement("input", { type: "file", accept: "application/json,.json", onChange: handleFileChosen, disabled: restoreBusyAny, style: { display: "none" } })),
@@ -189,7 +189,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
           "div", { style: { marginTop: "12px" } },
           React.createElement("p", { style: { fontSize: "14px", margin: "0 0 8px", wordBreak: "break-all" } }, "📄 ", React.createElement("b", null, restoreFile)),
           React.createElement("div", { style: { display: "flex", gap: "8px" } },
-            stat(previewSummary.added, "নতুন যোগ হবে", "#0E4B43"),
+            stat(previewSummary.added, "নতুন যোগ হবে", "var(--hs-primary, #0E4B43)"),
             stat(previewSummary.updated, "আপডেট হবে", "#8A5A00"),
             stat(previewSummary.skipped, "অপরিবর্তিত", "#5F716C")),
           btn(restoreBusy ? "রিস্টোর হচ্ছে..." : "✅ নিশ্চিত করে রিস্টোর করুন", handleConfirmRestore, restoreBusyAny, true),

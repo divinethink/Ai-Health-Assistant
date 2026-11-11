@@ -28,7 +28,7 @@ function callButton(contact, emergency) {
     style: {
       display: "block", marginTop: "8px", textAlign: "center", textDecoration: "none", minHeight: "20px", padding: "9px 6px",
       borderRadius: "12px", fontSize: "14px", fontWeight: 700, color: "#fff",
-      background: emergency ? "#C0392B" : "linear-gradient(135deg, #0E4B43, #17705F)",
+      background: emergency ? "#C0392B" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))",
     },
   }, "📞 কল");
 }
@@ -47,7 +47,7 @@ function HotlineCard(e, emergency) {
     React.createElement(
       "div", null,
       !emergency && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", fontWeight: 600 } }, CARE_ESCALATION_TYPE_LABELS[e.type] || ""),
-      React.createElement("div", { style: { fontSize: "26px", fontWeight: 800, color: emergency ? "#C0392B" : "#0E4B43", lineHeight: 1.2 } }, e.contact),
+      React.createElement("div", { style: { fontSize: "26px", fontWeight: 800, color: emergency ? "#C0392B" : "var(--hs-primary, #0E4B43)", lineHeight: 1.2 } }, e.contact),
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, marginTop: "2px" } }, cleanName(e.name)),
       e.notes && React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "4px" } }, e.notes)
     ),
@@ -60,8 +60,8 @@ function OnlineRow(e) {
     "div", { key: e.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", padding: "10px", background: "#fff" } },
     React.createElement("div", { style: { fontWeight: 600 } }, e.name),
     isDomain(e.contact)
-      ? React.createElement("a", { href: "https://" + e.contact.trim(), target: "_blank", rel: "noopener noreferrer", style: { fontSize: "14px", color: "#0E4B43" } }, e.contact)
-      : React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", marginTop: "2px" } }, e.contact),
+      ? React.createElement("a", { href: "https://" + e.contact.trim(), target: "_blank", rel: "noopener noreferrer", style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)" } }, e.contact)
+      : React.createElement("div", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", marginTop: "2px" } }, e.contact),
     e.notes && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "4px" } }, e.notes)
   );
 }
@@ -93,7 +93,7 @@ export function CareEscalationDirectory() {
   const online = sorted.filter((e) => ONLINE_TYPES.includes(e.type));
   const hotlines = sorted.filter((e) => e.type !== EMERGENCY_TYPE && !ONLINE_TYPES.includes(e.type));
 
-  const heading = (text) => React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#0E4B43", margin: "14px 0 8px" } }, text);
+  const heading = (text) => React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "14px 0 8px" } }, text);
 
   return React.createElement(
     "div", null,

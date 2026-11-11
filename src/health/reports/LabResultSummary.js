@@ -18,7 +18,7 @@ export function LabResultSummary({ summary, savedCount }) {
   const [open, setOpen] = useState(false);
   const { alerts, ok, unchecked } = summary;
   return h("div", { style: { marginTop: "12px" } },
-    h("div", { role: "status", style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600, marginBottom: "8px" } }, "✓ " + bnCount(savedCount) + "টা মান সংরক্ষণ করা হয়েছে।"),
+    h("div", { role: "status", style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, marginBottom: "8px" } }, "✓ " + bnCount(savedCount) + "টা মান সংরক্ষণ করা হয়েছে।"),
     h("div", { style: { display: "flex", gap: "8px" } },
       tile(alerts.length, "🔴 ডাক্তারকে দেখান", "#FDEBE8", RED),
       tile(ok.length, "🟢 ঠিক আছে", "#E4F0E9", GREEN)),

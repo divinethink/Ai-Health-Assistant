@@ -83,7 +83,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
       onCardClick && React.createElement("button", { type: "button", onClick: onCardClick, "aria-label": "ভিজিটিং কার্ড", style: { minWidth: "48px", minHeight: "44px", border: "1.5px solid #C3D2CA", borderRadius: "12px", background: "#F9FBFA", fontSize: "18px", cursor: "pointer" } }, cardLabel || "📇")),
     // কার্ড স্ক্যান (ফাইল বাছা থাকলে)
     file && React.createElement("div", { style: { marginTop: "8px" } },
-      React.createElement("button", { type: "button", onClick: runScan, disabled: scan.busy, style: { width: "100%", minHeight: "44px", border: "1px dashed #9CC5B4", borderRadius: "12px", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: scan.busy ? "default" : "pointer", fontFamily: "inherit" } },
+      React.createElement("button", { type: "button", onClick: runScan, disabled: scan.busy, style: { width: "100%", minHeight: "44px", border: "1px dashed #9CC5B4", borderRadius: "12px", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: scan.busy ? "default" : "pointer", fontFamily: "inherit" } },
         scan.busy ? "কার্ড পড়া হচ্ছে… " + Math.round(scan.progress * 100) + "%" : "🔍 কার্ড থেকে পূরণ করুন"),
       filled.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#8A6D00", marginTop: "6px" } }, "OCR থেকে — যাচাই করুন (হলুদ ঘরগুলো)। সংরক্ষণ করার আগে ঠিক আছে কিনা দেখুন।"),
       scan.note && React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "6px" } }, scan.note),
@@ -102,7 +102,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
       React.createElement("input", { type: "tel", value: v.phone || "", placeholder: "ফোন", "aria-label": "ফোন", onChange: set("phone"), style: { ...inputStyle, ...cell, ...mark("phone") } })),
     // ভাঁজ
     showAddress && React.createElement("details", { style: { marginTop: "10px" }, open: !!v.chamberAddress || filled.includes("chamberAddress") },
-      React.createElement("summary", { style: { fontSize: "14px", color: "#0E4B43", cursor: "pointer", minHeight: "32px" } }, "আরও (ঠিকানা/সময়)"),
+      React.createElement("summary", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", minHeight: "32px" } }, "আরও (ঠিকানা/সময়)"),
       React.createElement("input", { type: "text", value: v.chamberAddress || "", placeholder: "চেম্বারের ঠিকানা/সময়সূচি", "aria-label": "চেম্বার-ঠিকানা", onChange: set("chamberAddress"), style: { ...inputStyle, marginTop: "6px", ...mark("chamberAddress") } }))
   );
 }

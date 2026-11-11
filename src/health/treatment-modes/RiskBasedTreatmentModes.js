@@ -42,7 +42,7 @@ function ModeCard({ title, node, emphasis, compact }) {
     {
       style: {
         ...CARD_BASE_STYLE,
-        ...(emphasis ? { border: "2px solid #0E4B43", background: "#F3FAF7" } : {}),
+        ...(emphasis ? { border: "2px solid var(--hs-primary, #0E4B43)", background: "#F3FAF7" } : {}),
         ...(compact ? { padding: "10px", opacity: 0.85 } : {}),
         flex: "1 1 240px",
         minWidth: "220px",
@@ -50,7 +50,7 @@ function ModeCard({ title, node, emphasis, compact }) {
     },
     React.createElement(
       "div",
-      { style: { fontSize: compact ? "13px" : "15px", fontWeight: 700, color: "#0E4B43", marginBottom: "8px" } },
+      { style: { fontSize: compact ? "13px" : "15px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", marginBottom: "8px" } },
       title
     ),
     node || null

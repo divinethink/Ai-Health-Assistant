@@ -105,8 +105,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           onClick: () => histChange(hk + "main", activeTab, tb.id, setActiveTab),
           style: {
             flexShrink: 0, padding: "6px 14px", minHeight: "32px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
-            border: activeTab === tb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-            background: activeTab === tb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff",
+            border: activeTab === tb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+            background: activeTab === tb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff",
             color: activeTab === tb.id ? "#fff" : "#2B3A36",
             boxShadow: activeTab === tb.id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
@@ -130,8 +130,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
                 key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
                 style: {
                   flex: "1 0 auto", minHeight: "44px", padding: "6px 16px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-                  background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
+                  border: recordSub === sb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+                  background: recordSub === sb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
                 },
               }, sb.label))),
             React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
@@ -146,8 +146,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             key: id, onClick: () => histChange(hk + "doc", docSub, id, setDocSub), "aria-pressed": docSub === id,
             style: {
               flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              border: docSub === id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-              background: docSub === id ? "#0E4B43" : "#fff", color: docSub === id ? "#fff" : "#2B3A36",
+              border: docSub === id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+              background: docSub === id ? "var(--hs-primary, #0E4B43)" : "#fff", color: docSub === id ? "#fff" : "#2B3A36",
             },
           }, label))),
         docSub === "summary" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
@@ -161,8 +161,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             key: sb.id, onClick: () => histChange(hk + "tl", timelineSub, sb.id, setTimelineSub), "aria-pressed": timelineSub === sb.id,
             style: {
               flex: "1 0 auto", minHeight: "40px", padding: "6px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-              border: timelineSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-              background: timelineSub === sb.id ? "#0E4B43" : "#fff", color: timelineSub === sb.id ? "#fff" : "#2B3A36",
+              border: timelineSub === sb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+              background: timelineSub === sb.id ? "var(--hs-primary, #0E4B43)" : "#fff", color: timelineSub === sb.id ? "#fff" : "#2B3A36",
             },
           }, sb.label))
         ),

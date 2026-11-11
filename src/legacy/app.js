@@ -201,10 +201,16 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
 // Firestore/schema টাচ হয় না, pure client-side preference।
 const HS_THEME_STORAGE_KEY = "hs-theme";
 const THEME_OPTIONS = [
-  ["light", "theme.light"],
-  ["sepia", "theme.sepia"],
-  ["dark", "theme.dark"],
+  ["light", "theme.light", "#0E4B43"],
+  ["sepia", "theme.sepia", "#6B4A2B"],
+  ["dark", "theme.dark", "#2E7D6F"],
+  ["herbal", "theme.herbal", "#14532D"],
+  ["night-pulse", "theme.nightPulse", "#1A8F60"],
+  ["calm-paper", "theme.calmPaper", "#185E6A"],
+  ["warm-clay", "theme.warmClay", "#AA4826"],
+  ["ocean-calm", "theme.oceanCalm", "#3E6092"],
 ];
+const HS_THEME_IDS = THEME_OPTIONS.map((o) => o[0]);
 
 function ThemeSwitcher() {
   const [theme, setTheme] = useState(
@@ -217,7 +223,7 @@ function ThemeSwitcher() {
   };
   return React.createElement(
     "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-    THEME_OPTIONS.map(([id, label]) =>
+    THEME_OPTIONS.map(([id, label, dot]) =>
       React.createElement(
         "button", {
           key: id, onClick: () => applyTheme(id),
@@ -228,6 +234,7 @@ function ThemeSwitcher() {
             color: "var(--hs-text)", fontWeight: theme === id ? 700 : 500,
           },
         },
+        React.createElement("span", { "aria-hidden": "true", style: { display: "inline-block", width: "12px", height: "12px", borderRadius: "50%", background: dot, marginRight: "6px", verticalAlign: "-1px", border: "1px solid var(--hs-border)" } }),
         t(label)
       )
     )
@@ -547,7 +554,7 @@ function App() {
     // localStorage থেকে পড়ে <html data-theme> সেট করা, যাতে Menu-তে না গিয়েও
     // reload-এর পর আগের theme বহাল থাকে। ThemeSwitcher (app.js) একই key ব্যবহার করে।
     const saved = localStorage.getItem(HS_THEME_STORAGE_KEY);
-    if (saved) document.documentElement.setAttribute("data-theme", saved);
+    if (saved && HS_THEME_IDS.includes(saved)) document.documentElement.setAttribute("data-theme", saved);
   }, []);
 
   // Google Sign-in Only (Architecture Part A §3.0) — কোনো Anonymous Auth

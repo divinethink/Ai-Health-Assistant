@@ -83,8 +83,8 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
     onClick, disabled,
     style: {
       flex: 1, minHeight: "42px", padding: "6px 8px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, cursor: disabled ? "default" : "pointer",
-      border: "1.5px solid " + (on ? "#0E4B43" : "#C3D2CA"),
-      background: on ? "#0E4B43" : "#fff", color: on ? "#fff" : "#4B5C57",
+      border: "1.5px solid " + (on ? "var(--hs-primary, #0E4B43)" : "#C3D2CA"),
+      background: on ? "var(--hs-primary, #0E4B43)" : "#fff", color: on ? "#fff" : "#4B5C57",
     },
   }, (on ? "✓ " : "") + label);
 

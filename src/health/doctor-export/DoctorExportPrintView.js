@@ -39,13 +39,13 @@ export function DoctorExportPrintView({ data, onBack }) {
     `),
     React.createElement(
       "div", { className: "no-print", style: { display: "flex", gap: "8px", marginBottom: "12px" } },
-      React.createElement("button", { onClick: onBack, style: { padding: "8px 14px", borderRadius: "8px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 600 } }, "← ফিরে যান"),
-      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "#0E4B43", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সংরক্ষণ করুন")
+      React.createElement("button", { onClick: onBack, style: { padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontWeight: 600 } }, "← ফিরে যান"),
+      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "var(--hs-primary, #0E4B43)", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সংরক্ষণ করুন")
     ),
 
     React.createElement("div", { style: { color: "#111", maxWidth: "720px", margin: "0 auto" } },
-      React.createElement("div", { style: { textAlign: "center", borderBottom: "2px solid #0E4B43", paddingBottom: "8px" } },
-        React.createElement("h2", { style: { margin: 0, color: "#0E4B43" } }, "Health Assistant — রোগী স্বাস্থ্য প্রোফাইল"),
+      React.createElement("div", { style: { textAlign: "center", borderBottom: "2px solid var(--hs-primary, #0E4B43)", paddingBottom: "8px" } },
+        React.createElement("h2", { style: { margin: 0, color: "var(--hs-primary, #0E4B43)" } }, "Health Assistant — রোগী স্বাস্থ্য প্রোফাইল"),
         React.createElement("p", { style: { fontSize: "11px", color: "#666", margin: "4px 0 0" } }, "এটি একটি factual সারাংশ — কোনো AI মতামত/রোগনির্ণয় এখানে নেই")
       ),
       React.createElement("p", { style: { fontSize: "11px", color: "#888", textAlign: "right" } }, "তৈরির তারিখ: " + fmtDate(data.generatedAt)),

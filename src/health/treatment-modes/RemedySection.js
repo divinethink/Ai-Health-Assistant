@@ -70,7 +70,7 @@ function ComparisonView({ herbal, homeo }) {
     ...useCases.map((uc) =>
       React.createElement(
         "div", { key: uc, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px", background: "#FAFCFB" } },
-        React.createElement("div", { style: { fontWeight: 700, fontSize: "14px", color: "#0E4B43", marginBottom: "8px" } }, uc),
+        React.createElement("div", { style: { fontWeight: 700, fontSize: "14px", color: "var(--hs-primary, #0E4B43)", marginBottom: "8px" } }, uc),
         React.createElement(
           "div", { style: { display: "flex", gap: "10px", flexWrap: "wrap" } },
           React.createElement(
@@ -96,7 +96,7 @@ function ComparisonView({ herbal, homeo }) {
 function RemedyGroup({ title, list }) {
   return React.createElement(
     "div", { style: { marginTop: "12px" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", marginBottom: "6px" } }, title),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, title),
     list.length === 0
       ? React.createElement(
           "p", { style: { color: "#5F716C", fontSize: "14px" } },
@@ -154,12 +154,12 @@ export function RemedySection({ familyId, selectedMemberId, mode }) {
     "div", { style: { marginTop: "20px" } },
     React.createElement(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" } },
-      React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, (mode ? MODE_LABEL[mode] : "Herbal / Homeopathy") + " — Evidence-Level Reference"),
+      React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, (mode ? MODE_LABEL[mode] : "Herbal / Homeopathy") + " — Evidence-Level Reference"),
       !mode && React.createElement(
         "button",
         {
           onClick: () => setCompareMode((v) => !v),
-          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", cursor: "pointer" },
+          style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer" },
         },
         compareMode ? "সাধারণ তালিকা দেখুন" : "Use-case অনুযায়ী তুলনা করুন"
       )

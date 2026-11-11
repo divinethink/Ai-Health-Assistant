@@ -15,7 +15,7 @@ import { Sheet, FoodPicker, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets
 
 const { useState } = React;
 
-const GREEN = "#0E4B43";
+const GREEN = "var(--hs-primary, #0E4B43)";
 const MUTED = "#5F716C";
 const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#fff", color: on ? "#fff" : "#1F2D2A" });
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];

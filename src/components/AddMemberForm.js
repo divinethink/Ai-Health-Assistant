@@ -45,7 +45,7 @@ export function AddMemberForm({ familyId, onAdded }) {
 
   return React.createElement(
     "div", { style: { marginTop: "16px", padding: "14px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "নতুন সদস্য"),
+    React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "নতুন সদস্য"),
     TextField("নাম", name, setName, "সদস্যের নাম"),
     React.createElement(
       "div", { style: { marginTop: "10px" } },

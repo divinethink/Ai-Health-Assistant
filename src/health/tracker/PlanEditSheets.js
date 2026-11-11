@@ -26,12 +26,12 @@ export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋�
   jacks: "🤸", burpee: "🔥", highknee: "🏃", skipping: "🪢", tricepdip: "💪", wallsit: "🧱", stepup: "🪜", superman: "🦸", birddog: "🐕",
   chairstand: "🪑", stairs: "🪜", dance: "💃", hiit: "⚡", pilates: "🧘" };
 
-const GREEN = "#0E4B43";
+const GREEN = "var(--hs-primary, #0E4B43)";
 const MUTED = "#5F716C";
 export const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
 const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "12px", fontWeight: 700 };
 const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#B3261E", border: "1px solid #B3261E", color: "#fff", fontSize: "12px", fontWeight: 700 };
-const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "12px", fontWeight: 700 };
+const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "var(--hs-primary, #0E4B43)", fontSize: "12px", fontWeight: 700 };
 export const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
 export function Sheet({ title, subtitle, onClose, children }) {

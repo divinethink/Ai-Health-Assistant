@@ -7,8 +7,8 @@ const RISK_STYLE = {
   emergency: { bg: "#C0392B", border: "#C0392B", color: "#FFFFFF", label: "জরুরি — এখনই", icon: "⚠️", solid: true },
   urgent: { bg: "#FFF3E0", border: "#E67E22", color: "#8A4B00", label: "দ্রুত — আজকের মধ্যে ডাক্তার দেখান", icon: "⚠️" },
   "needs-attention": { bg: "#FFF8E1", border: "#E8C46B", color: "#7A5B00", label: "নজর দিন", icon: "🔶" },
-  routine: { bg: "#E8F3EC", border: "#0E4B43", color: "#0E4B43", label: "সাধারণ", icon: "✅" },
-  "self-care": { bg: "#E8F3EC", border: "#0E4B43", color: "#0E4B43", label: "ঘরোয়া যত্ন", icon: "🏠" },
+  routine: { bg: "#E8F3EC", border: "var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", label: "সাধারণ", icon: "✅" },
+  "self-care": { bg: "#E8F3EC", border: "var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", label: "ঘরোয়া যত্ন", icon: "🏠" },
 };
 
 const h = React.createElement;

@@ -26,7 +26,7 @@ import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendar
 const { useState, useEffect } = React;
 const h = React.createElement;
 
-const GREEN = "#0E4B43";
+const GREEN = "var(--hs-primary, #0E4B43)";
 const F = "14px";
 const TAKEN_KEY = "hs-med-taken";
 

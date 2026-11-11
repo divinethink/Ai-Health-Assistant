@@ -13,7 +13,7 @@ import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
 const { useState, useCallback } = React;
 const h = React.createElement;
-const G = "#0E4B43", RED = "#B3261E", AMBER = "#8A5A00", MUTED = "#5F716C", LINE = "#D3E0D9";
+const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", AMBER = "#8A5A00", MUTED = "#5F716C", LINE = "#D3E0D9";
 const BN = "০১২৩৪৫৬৭৮৯";
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
 const MEALS = [["before", "খাবারের আগে"], ["after", "খাবারের পরে"], ["", "উল্লেখ নেই"]];

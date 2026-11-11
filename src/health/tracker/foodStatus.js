@@ -27,7 +27,7 @@ export function foodStatus(key, f, opts = {}) {
 }
 
 export const STATUS_COLORS = {
-  green: { bg: "#F1F6F2", border: "#9CC5B4", text: "#0E4B43" },
+  green: { bg: "#F1F6F2", border: "#9CC5B4", text: "var(--hs-primary, #0E4B43)" },
   yellow: { bg: "#FFF8E6", border: "#EBD9B4", text: "#7A5200" },
   red: { bg: "#FDECEA", border: "#E3A59E", text: "#7A1F14" },
 };

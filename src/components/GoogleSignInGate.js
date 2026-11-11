@@ -122,7 +122,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
     return Card(
       React.createElement(
         React.Fragment, null,
-        React.createElement("h1", { style: { color: "#0E4B43", fontSize: "22px", margin: "0 0 6px" } },
+        React.createElement("h1", { style: { color: "var(--hs-primary, #0E4B43)", fontSize: "22px", margin: "0 0 6px" } },
           inviteFamilyId ? "এই পরিবারে যোগ দিন" : "নতুন পরিবার তৈরি করুন"),
         React.createElement("p", { style: { color: "#555", fontSize: "14px" } },
           currentGoogleEmail()
@@ -145,8 +145,8 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
   return Card(
     React.createElement(
       React.Fragment, null,
-      React.createElement("div", { style: { width: "64px", height: "64px", borderRadius: "20px", background: "linear-gradient(135deg, #0E4B43, #17705F)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", margin: "0 auto 14px", boxShadow: "0 6px 16px rgba(14,75,67,0.3)" } }, "🩺"),
-      React.createElement("h1", { style: { color: "#0E4B43", fontSize: "24px", textAlign: "center", margin: "0" } }, "Health Assistant"),
+      React.createElement("div", { style: { width: "64px", height: "64px", borderRadius: "20px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", margin: "0 auto 14px", boxShadow: "0 6px 16px rgba(14,75,67,0.3)" } }, "🩺"),
+      React.createElement("h1", { style: { color: "var(--hs-primary, #0E4B43)", fontSize: "24px", textAlign: "center", margin: "0" } }, "Health Assistant"),
       React.createElement("p", { style: { color: "#4B5C57", fontSize: "14px", marginTop: "8px", textAlign: "center", lineHeight: 1.6 } },
         "পারিবারিক স্বাস্থ্য সহায়ক — শুরু করতে Google দিয়ে সাইন-ইন করুন।"),
       errorMsg && ErrorBox(errorMsg),

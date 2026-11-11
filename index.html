@@ -54,6 +54,7 @@
     --hs-primary-contrast: #FFFFFF;
     --hs-border: #D9E5DE;
     --hs-chip-bg: #E4F0E9;
+    --hs-input-border: #C3D2CA; --hs-primary-2: #17705F; --hs-hero-1: #0E4B43; --hs-hero-2: #17705F;
   }
   html[data-theme="sepia"] {
     --theme-primary: #6B4A2B;
@@ -65,6 +66,7 @@
     --hs-primary-contrast: #FFF8EC;
     --hs-border: #D8C7A8;
     --hs-chip-bg: #EFE1C8;
+    --hs-input-border: #C9B48F; --hs-primary-2: #8A6238; --hs-hero-1: #6B4A2B; --hs-hero-2: #8A6238;
   }
   html[data-theme="dark"] {
     --theme-primary: #2E7D6F;
@@ -76,6 +78,44 @@
     --hs-primary-contrast: #FFFFFF;
     --hs-border: #2C363F;
     --hs-chip-bg: #22303A;
+    --hs-input-border: #3A4852; --hs-primary-2: #3A9484; --hs-hero-1: #2E7D6F; --hs-hero-2: #3A9484;
+  }
+
+  /* Health & Habit রঙের থিম — শুধু টোকেন; নতুন থিম যোগ = একটা ব্লক। (Light/Sepia/Dark-এর পরে যাতে সমান specificity-তে জেতে) */
+  html[data-theme="herbal"] {
+    color-scheme: light;
+    --theme-primary: #14532D;
+    --hs-bg: #E6EEDE; --hs-surface: #FBF8EA; --hs-text: #163422; --hs-muted: #546856;
+    --hs-primary: #14532D; --hs-primary-contrast: #FFFFFF; --hs-border: #CFDCC6; --hs-chip-bg: #EEF0DE;
+    --hs-input-border: #B5C7AC; --hs-primary-2: #1F7A44; --hs-hero-1: #14532D; --hs-hero-2: #1F7A44;
+  }
+  html[data-theme="night-pulse"] {
+    color-scheme: dark;
+    --theme-primary: #1A8F60;
+    --hs-bg: #05080A; --hs-surface: #11181A; --hs-text: #ECF4F0; --hs-muted: #8FA39B;
+    --hs-primary: #1A8F60; --hs-primary-contrast: #FFFFFF; --hs-border: #2A3A3D; --hs-chip-bg: #1C2628;
+    --hs-input-border: #3A4F52; --hs-primary-2: #22A872; --hs-hero-1: #0F6B47; --hs-hero-2: #1A8F60;
+  }
+  html[data-theme="calm-paper"] {
+    color-scheme: light;
+    --theme-primary: #185E6A;
+    --hs-bg: #ECE0C2; --hs-surface: #FDF8E9; --hs-text: #2C2418; --hs-muted: #68583E;
+    --hs-primary: #185E6A; --hs-primary-contrast: #FFFFFF; --hs-border: #D9C9A0; --hs-chip-bg: #F3E8CD;
+    --hs-input-border: #C4B286; --hs-primary-2: #237A8A; --hs-hero-1: #185E6A; --hs-hero-2: #237A8A;
+  }
+  html[data-theme="warm-clay"] {
+    color-scheme: light;
+    --theme-primary: #AA4826;
+    --hs-bg: #F8EFE6; --hs-surface: #FFFAF5; --hs-text: #3A2218; --hs-muted: #7A5444;
+    --hs-primary: #AA4826; --hs-primary-contrast: #FFFFFF; --hs-border: #E8CDBB; --hs-chip-bg: #F6DCCB;
+    --hs-input-border: #D9B8A2; --hs-primary-2: #C45A33; --hs-hero-1: #AA4826; --hs-hero-2: #C45A33;
+  }
+  html[data-theme="ocean-calm"] {
+    color-scheme: light;
+    --theme-primary: #3E6092;
+    --hs-bg: #E2E7F2; --hs-surface: #F7F9FC; --hs-text: #222A3C; --hs-muted: #546078;
+    --hs-primary: #3E6092; --hs-primary-contrast: #FFFFFF; --hs-border: #C9D2E4; --hs-chip-bg: #E8EDF6;
+    --hs-input-border: #AEBAD2; --hs-primary-2: #5078AE; --hs-hero-1: #3E6092; --hs-hero-2: #5078AE;
   }
   html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
   html, body { color: var(--hs-text); -webkit-font-smoothing: antialiased; }
@@ -83,24 +123,24 @@
   /* ডিজাইন-পলিশ: ফর্ম-ঘর, বোতাম ও ফোকাস — বয়স্কদের জন্য বড় ছোঁয়ার জায়গা (≥44px), স্পষ্ট বর্ডার */
   input, select, textarea {
     font-family: inherit; font-size: 14px !important; min-height: 46px; box-sizing: border-box;
-    border: 1.5px solid #C3D2CA !important; border-radius: 12px !important; padding: 10px 12px !important;
-    background: #fff; color: #1B2430; transition: border-color .15s, box-shadow .15s;
+    border: 1.5px solid var(--hs-input-border, #C3D2CA) !important; border-radius: 12px !important; padding: 10px 12px !important;
+    background: var(--hs-surface, #fff); color: var(--hs-text, #1B2430); transition: border-color .15s, box-shadow .15s;
   }
   textarea { min-height: 96px; line-height: 1.5; }
-  input[type="checkbox"], input[type="radio"] { min-height: 0; width: 22px; height: 22px; padding: 0 !important; accent-color: #0E4B43; flex-shrink: 0; }
-  input[type="file"] { min-height: 0; padding: 8px !important; background: #F7FAF8; }
+  input[type="checkbox"], input[type="radio"] { min-height: 0; width: 22px; height: 22px; padding: 0 !important; accent-color: var(--hs-primary, #0E4B43); flex-shrink: 0; }
+  input[type="file"] { min-height: 0; padding: 8px !important; background: var(--hs-bg, #F7FAF8); }
   input[type="file"]::file-selector-button {
     font-family: inherit; font-size: 14px; font-weight: 600; margin-right: 10px; padding: 8px 14px;
-    border: none; border-radius: 999px; background: #0E4B43; color: #fff; cursor: pointer;
+    border: none; border-radius: 999px; background: var(--hs-primary, #0E4B43); color: var(--hs-primary-contrast, #fff); cursor: pointer;
   }
   select.hs-compact { min-height: 36px; padding: 4px 8px !important; border-radius: 10px !important; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #0E4B43 !important; box-shadow: 0 0 0 3px rgba(14, 75, 67, .2); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--hs-primary, #0E4B43) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--hs-primary, #0E4B43) 22%, transparent); }
   input::placeholder, textarea::placeholder { color: #8A9A96; }
   button { font-family: inherit; min-height: 44px; -webkit-tap-highlight-color: transparent; transition: transform .08s, box-shadow .15s, background .15s; }
   button[style*="background: none"] { min-height: 32px; }
   button:active:not(:disabled) { transform: scale(.97); }
   button:disabled { opacity: .65; }
-  button:focus-visible { outline: 3px solid rgba(14, 75, 67, .45); outline-offset: 2px; }
+  button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hs-primary, #0E4B43) 45%, transparent); outline-offset: 2px; }
   @keyframes hsFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .hs-page { animation: hsFade .25s ease; }
   .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }

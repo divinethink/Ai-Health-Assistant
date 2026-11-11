@@ -14,7 +14,7 @@ export function exportCard(icon, title, subtitle, tag, children) {
   return React.createElement("div", { style: { border: "1px solid #D9E5DE", borderRadius: "16px", background: "#fff", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", padding: "14px", marginTop: "12px" } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
       React.createElement("div", { style: { fontSize: "24px" } }, icon),
-      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "#0E4B43" } }, title)),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } }, title)),
     subtitle && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "6px 0 0" } }, subtitle),
     tag && React.createElement("div", { style: { display: "inline-block", marginTop: "6px", padding: "3px 10px", borderRadius: "999px", background: "#FFF4DC", color: "#8A5A00", fontSize: "12px", fontWeight: 600 } }, tag),
     children
@@ -26,9 +26,9 @@ function actionBtn(label, onClick, disabled, primary) {
     key: label, onClick, disabled,
     style: {
       flex: 1, minHeight: "46px", padding: "10px 8px", borderRadius: "14px", fontWeight: 700, fontSize: "14px", cursor: disabled ? "default" : "pointer",
-      border: primary ? "none" : "1.5px solid #0E4B43",
-      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, #0E4B43, #17705F)") : "#fff",
-      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "#0E4B43"),
+      border: primary ? "none" : "1.5px solid var(--hs-primary, #0E4B43)",
+      background: primary ? (disabled ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))") : "#fff",
+      color: primary ? "#fff" : (disabled ? "#8FAFA9" : "var(--hs-primary, #0E4B43)"),
     },
   }, label);
 }
@@ -97,13 +97,13 @@ export function DoctorDocumentPicker({ familyId, targetMemberId, memberName, onG
     React.createElement("p", { style: { color: "#5F716C", fontSize: "14px", margin: 0 } }, "এখনো কোনো নথি জমা নেই।"),
     onGoUpload && React.createElement("button", {
       onClick: onGoUpload,
-      style: { marginTop: "10px", minHeight: "44px", padding: "8px 16px", borderRadius: "14px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 700, fontSize: "14px", cursor: "pointer" },
+      style: { marginTop: "10px", minHeight: "44px", padding: "8px 16px", borderRadius: "14px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontWeight: 700, fontSize: "14px", cursor: "pointer" },
     }, "📁 জমা নথিতে গিয়ে যোগ করুন"));
   else body = React.createElement(
     React.Fragment, null,
     React.createElement("button", {
       onClick: toggleAll,
-      style: { border: "none", background: "none", color: "#0E4B43", fontWeight: 600, fontSize: "14px", padding: "0 0 6px", cursor: "pointer" },
+      style: { border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, fontSize: "14px", padding: "0 0 6px", cursor: "pointer" },
     }, chosen.length === docs.length ? "সব বাদ দিন" : "সব বেছে নিন"),
     docs.map((d) => React.createElement(
       "label", { key: d.id, style: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #EAF1ED", fontSize: "14px", cursor: "pointer" } },

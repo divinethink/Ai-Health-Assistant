@@ -18,7 +18,7 @@ import { AUTO, kindToVaultType, describeDetection, resolveKind } from "../doc-ai
 const { useState, useCallback, useRef, useEffect, useMemo } = React;
 const h = React.createElement;
 
-const G = "#0E4B43";
+const G = "var(--hs-primary, #0E4B43)";
 const CHIPS = [
   [AUTO, "🤖", "নিজে চিনে নিক"],
   ["prescription", "💊", "প্রেসক্রিপশন"],
@@ -27,10 +27,10 @@ const CHIPS = [
   ["other", "📄", "অন্যান্য"],
 ];
 const OTHER_TYPES = ["imaging", "discharge-summary", "other"];
-const CSS = "@keyframes hs-up-slide{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}.hs-up-bar{position:relative;overflow:hidden;height:6px;border-radius:999px;background:#DCEBE4}.hs-up-bar>i{position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:999px;background:linear-gradient(90deg,#17705F,#5DB89F);animation:hs-up-slide 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.hs-up-bar>i{animation:none;width:100%}}";
+const CSS = "@keyframes hs-up-slide{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}.hs-up-bar{position:relative;overflow:hidden;height:6px;border-radius:999px;background:#DCEBE4}.hs-up-bar>i{position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:999px;background:linear-gradient(90deg,var(--hs-primary-2, #17705F),#5DB89F);animation:hs-up-slide 1.3s ease-in-out infinite}@media (prefers-reduced-motion:reduce){.hs-up-bar>i{animation:none;width:100%}}";
 
 const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
-const chipStyle = (on) => ({ minHeight: "44px", padding: "8px 14px", borderRadius: "999px", fontSize: "14px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", border: on ? "1.5px solid " + G : "1.5px solid #C9D9D1", background: on ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: on ? "#fff" : "#1F2D2A", boxShadow: on ? "0 3px 8px rgba(14,75,67,0.22)" : "none" });
+const chipStyle = (on) => ({ minHeight: "44px", padding: "8px 14px", borderRadius: "999px", fontSize: "14px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer", border: on ? "1.5px solid " + G : "1.5px solid #C9D9D1", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#1F2D2A", boxShadow: on ? "0 3px 8px rgba(14,75,67,0.22)" : "none" });
 
 export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, onUploaded, onAnalyze, onManual, onPrescription, onCard }) {
   const rxLocked = !!onPrescription && !onAnalyze && !onCard; // ওষুধ-ট্যাবের পুরনো ব্যবহার: শুধু প্রেসক্রিপশন

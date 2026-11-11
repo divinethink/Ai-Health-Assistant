@@ -72,7 +72,7 @@ function TimelineRow({ row }) {
     React.createElement("div", {
       style: {
         position: "absolute", left: "-19px", top: "5px", width: "10px", height: "10px", borderRadius: "50%",
-        background: danger ? "#B3261E" : "#0E4B43", border: "2px solid #F5F7F5",
+        background: danger ? "#B3261E" : "var(--hs-primary, #0E4B43)", border: "2px solid #F5F7F5",
       },
     }),
     React.createElement(
@@ -82,13 +82,13 @@ function TimelineRow({ row }) {
       e.source && Badge(e.source, false),
       count > 1 && React.createElement("button", {
         onClick: () => setOpen((v) => !v), "aria-expanded": open,
-        style: { marginLeft: "6px", padding: "1px 8px", minHeight: "24px", borderRadius: "999px", border: "1px solid #C3D2CA", background: "#fff", color: "#0E4B43", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
+        style: { marginLeft: "6px", padding: "1px 8px", minHeight: "24px", borderRadius: "999px", border: "1px solid #C3D2CA", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
       }, bnNum(count) + " বার " + (open ? "▴" : "▾"))
     ),
     React.createElement("div", { style: { fontSize: "13px", color: "#1F2D2A", marginTop: "1px", wordBreak: "break-word" } }, e.description),
     e.sortMillis ? React.createElement("div", { style: { fontSize: "12px", color: "#5F716C" } }, bnDateFromMillis(e.sortMillis)) : null,
     e.url && React.createElement("a", {
-      href: e.url, target: "_blank", rel: "noopener noreferrer", style: { fontSize: "13px", color: "#0E4B43" },
+      href: e.url, target: "_blank", rel: "noopener noreferrer", style: { fontSize: "13px", color: "var(--hs-primary, #0E4B43)" },
     }, "👁 দেখুন"),
     open && React.createElement(
       "div", { style: { marginTop: "4px", paddingLeft: "10px", borderLeft: "2px solid #E1E9E4", fontSize: "12px", color: "#4B5C57" } },
@@ -143,7 +143,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
     if (monthLabel !== lastMonth) {
       nodes.push(React.createElement("div", {
         key: "m-" + monthLabel + "-" + row.sig,
-        style: { margin: "6px 0 8px -14px", fontSize: "13px", fontWeight: 700, color: "#0E4B43" },
+        style: { margin: "6px 0 8px -14px", fontSize: "13px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" },
       }, monthLabel));
       lastMonth = monthLabel;
     }
@@ -152,7 +152,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
 
   return React.createElement(
     "div", null,
-    React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: "0 0 8px" } }, t("h.timeline")),
+    React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, t("h.timeline")),
 
     React.createElement(
       "div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "6px" } },
@@ -160,8 +160,8 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
         key: f.id, onClick: () => { setFilter(f.id); setVisible(PAGE_SIZE); },
         style: {
           flexShrink: 0, padding: "4px 12px", minHeight: "32px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-          border: filter === f.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
-          background: filter === f.id ? "#0E4B43" : "#fff", color: filter === f.id ? "#fff" : "#2B3A36",
+          border: filter === f.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
+          background: filter === f.id ? "var(--hs-primary, #0E4B43)" : "#fff", color: filter === f.id ? "#fff" : "#2B3A36",
         },
       }, f.label))
     ),
@@ -176,7 +176,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
     ),
     !entriesErr && rows.length > visible && React.createElement("button", {
       onClick: () => setVisible((v) => v + PAGE_SIZE),
-      style: { marginTop: "6px", width: "100%", minHeight: "40px", borderRadius: "12px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+      style: { marginTop: "6px", width: "100%", minHeight: "40px", borderRadius: "12px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
     }, "আরও দেখুন (" + bnNum(rows.length - visible) + "টি বাকি)")
   );
 }

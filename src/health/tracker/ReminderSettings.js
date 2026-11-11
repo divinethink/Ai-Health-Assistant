@@ -8,7 +8,7 @@ import { REMINDERS_CHANGED_EVENT } from "./TrackerReminderRunner.js";
 
 const { useState } = React;
 const h = React.createElement;
-const GREEN = "#0E4B43";
+const GREEN = "var(--hs-primary, #0E4B43)";
 const CARD = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "16px", padding: "12px 14px", marginBottom: "10px", boxShadow: "0 1px 3px rgba(14,75,67,0.06)" };
 const TIME = { padding: "8px 10px", border: "1.5px solid #C3D2CA", borderRadius: "10px", fontSize: "15px", minHeight: "44px", boxSizing: "border-box", background: "#F7FAF8", color: "#1F2D2A", fontFamily: "inherit" };
 const BANNER = { ...CARD, background: "#E4F0E9", borderColor: "#BFD8CB", color: GREEN, fontSize: "13.5px", lineHeight: 1.5 };
@@ -61,7 +61,7 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
   return h("div", null,
     perm !== "granted" && h("div", { style: { ...CARD, background: "#FFF6DD", borderColor: "#E8D08A", color: "#7A5B00", fontSize: "13.5px", lineHeight: 1.5 } },
       perm === "denied" ? "ব্রাউজারে নোটিফিকেশন বন্ধ করা আছে। ব্রাউজারের সেটিং থেকে চালু করুন।" : perm === "unsupported" ? "এই ব্রাউজারে নোটিফিকেশন চলে না।" : "নোটিফিকেশন পেতে অনুমতি দিন।",
-      perm === "default" && h("button", { onClick: askPermission, style: { display: "block", marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 700, cursor: "pointer" } }, "অনুমতি দিন")),
+      perm === "default" && h("button", { onClick: askPermission, style: { display: "block", marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontWeight: 700, cursor: "pointer" } }, "অনুমতি দিন")),
     h("div", { style: { fontSize: "12.5px", color: "#5F716C", lineHeight: 1.5, margin: "0 2px 10px" } }, "এখন অ্যাপ/ট্যাব খোলা থাকলে তবেই নোটিফিকেশন আসবে।"),
     Row({ icon: "💊", title: "ওষুধ", on: s.medicine.on, onToggle: (v) => set("medicine", { on: v }),
       note: s.medicine.on ? "ওষুধের সময় এলে জানানো হবে; “খেয়েছি” দিলে আর আসবে না। সময় বদলাতে: Health → স্বাস্থ্য প্রোফাইল → ওষুধ।" : "বন্ধ থাকলে ওষুধের কোনো নোটিফিকেশন আসবে না।" }),

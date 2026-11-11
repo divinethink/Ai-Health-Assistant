@@ -70,7 +70,7 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
   const today = new Date().toISOString().slice(0, 10);
 
   const Wrap = inline
-    ? (props, ...kids) => React.createElement("div", { style: { background: "#fff", padding: "12px", borderRadius: "10px", border: "1px solid #D3E0D9" } }, React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 8px" } }, props.title), ...kids)
+    ? (props, ...kids) => React.createElement("div", { style: { background: "#fff", padding: "12px", borderRadius: "10px", border: "1px solid #D3E0D9" } }, React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, props.title), ...kids)
     : (props, ...kids) => React.createElement(CollapsibleSection, props, ...kids);
   return Wrap({ title: "💉 টিকা শিডিউল (EPI)" },
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px" } },
@@ -98,7 +98,7 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
             !isDone && React.createElement(
               "button", {
                 onClick: () => markDone(d.doseId, d.name), disabled: busy === d.doseId,
-                style: { padding: "6px 10px", border: "1px solid #0E4B43", borderRadius: "10px", background: "#0E4B43", color: "#fff", fontSize: "14px", cursor: "pointer" },
+                style: { padding: "6px 10px", border: "1px solid var(--hs-primary, #0E4B43)", borderRadius: "10px", background: "var(--hs-primary, #0E4B43)", color: "#fff", fontSize: "14px", cursor: "pointer" },
               }, busy === d.doseId ? "..." : "সম্পন্ন করুন"
             )
           );

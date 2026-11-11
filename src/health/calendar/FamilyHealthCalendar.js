@@ -146,7 +146,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     setViewMonth(m); setViewYear(y);
   }
 
-  const navBtn = { border: "none", background: "none", color: "#0E4B43", fontSize: "20px", cursor: "pointer", padding: "4px 12px", minHeight: "40px" };
+  const navBtn = { border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "20px", cursor: "pointer", padding: "4px 12px", minHeight: "40px" };
 
   // দেখানো তালিকা: তারিখ বাছলে সেই দিনের সব, নাহলে আগামী ৭ দিন (সম্পন্ন বাদে)
   const end = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate() + 6);
@@ -171,7 +171,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
         "div", { style: { display: "flex", gap: "8px", marginTop: "8px", alignItems: "center" } },
         !done && h("button", {
           onClick: () => handleDone(e.id),
-          style: { padding: "6px 14px", minHeight: "40px", border: "none", borderRadius: "10px", background: "#0E4B43", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+          style: { padding: "6px 14px", minHeight: "40px", border: "none", borderRadius: "10px", background: "var(--hs-primary, #0E4B43)", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         }, "✔ সম্পন্ন"),
         h("button", {
           onClick: () => setMenuFor((m) => (m === e.id ? null : e.id)), "aria-label": "আরও অপশন", "aria-expanded": menuFor === e.id,
@@ -187,20 +187,20 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
         }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 ক্যালেন্ডারে যুক্ত ✓" : "📅 সরাসরি ক্যালেন্ডারে যুক্ত করুন (আগের দিন ৯টায় রিমাইন্ডার)")),
         h("button", { onClick: () => handleDelete(e.id), style: { ...menuBtn, color: "#C0392B", border: "1px solid #E5A29A" } }, "🗑 মুছুন")
       ),
-      calMsg && calMsg.id === e.id && h("div", { style: { fontSize: "13px", marginTop: "6px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text)
+      calMsg && calMsg.id === e.id && h("div", { style: { fontSize: "13px", marginTop: "6px", color: calMsg.ok ? "var(--hs-primary, #0E4B43)" : "#B3261E" } }, calMsg.text)
     );
   }
 
   return h(
     "div", { style: { background: "#fff", padding: "12px", borderRadius: "10px", border: "1px solid #D3E0D9", boxSizing: "border-box", maxWidth: "100%" } },
-    h("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: "0 0 4px" } }, t("h.calendar")),
+    h("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 4px" } }, t("h.calendar")),
     h("div", { style: { fontSize: "13px", color: "#4B5C57", marginBottom: "8px" } }, "সবাই দেখতে পারবেন; শুধু নিজের তৈরি ইভেন্ট (বা Admin) পরিবর্তন/মুছতে পারবেন।"),
 
     // ---- month-grid ----
     h(
       "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" } },
       h("button", { onClick: () => navMonth(-1), "aria-label": "আগের মাস", style: navBtn }, "‹"),
-      h("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43" } }, new Date(viewYear, viewMonth, 1).toLocaleDateString("bn-BD", { month: "long", year: "numeric" })),
+      h("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } }, new Date(viewYear, viewMonth, 1).toLocaleDateString("bn-BD", { month: "long", year: "numeric" })),
       h("button", { onClick: () => navMonth(1), "aria-label": "পরের মাস", style: navBtn }, "›")
     ),
     h(
@@ -221,13 +221,13 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
             onClick: () => setSelectedDate((prev) => (prev === dateStr ? null : dateStr)),
             style: {
               width: "100%", minWidth: 0, padding: 0, aspectRatio: "1", boxSizing: "border-box",
-              border: isSelected ? "2px solid #0E4B43" : isToday ? "1px solid #0E4B43" : "1px solid #D3E0D9",
-              borderRadius: "10px", background: isSelected ? "#0E4B43" : hasEvent ? "#EAF6F0" : "#fff",
+              border: isSelected ? "2px solid var(--hs-primary, #0E4B43)" : isToday ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #D3E0D9",
+              borderRadius: "10px", background: isSelected ? "var(--hs-primary, #0E4B43)" : hasEvent ? "#EAF6F0" : "#fff",
               color: isSelected ? "#fff" : "#1F2D2A", fontSize: "14px", cursor: "pointer", position: "relative",
             },
           },
           d,
-          hasEvent && h("span", { style: { position: "absolute", bottom: "3px", left: "50%", transform: "translateX(-50%)", width: "5px", height: "5px", borderRadius: "50%", background: isSelected ? "#fff" : "#0E4B43" } })
+          hasEvent && h("span", { style: { position: "absolute", bottom: "3px", left: "50%", transform: "translateX(-50%)", width: "5px", height: "5px", borderRadius: "50%", background: isSelected ? "#fff" : "var(--hs-primary, #0E4B43)" } })
         );
       })
     ),
@@ -235,10 +235,10 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     // ---- তালিকা ----
     h(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px" } },
-      h("div", { style: { fontSize: "14px", fontWeight: 700, color: "#0E4B43" } }, listTitle),
+      h("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, listTitle),
       selectedDate && h("button", {
         onClick: () => setSelectedDate(null),
-        style: { fontSize: "13px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", minHeight: "32px" },
+        style: { fontSize: "13px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", minHeight: "32px" },
       }, "✕ আগামী ৭ দিন দেখুন")
     ),
     shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: "14px", margin: "6px 0" } }, selectedDate ? "এই তারিখে কোনো ইভেন্ট নেই।" : "আগামী ৭ দিনে কোনো ইভেন্ট নেই।"),
@@ -247,7 +247,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     // ---- নতুন ইভেন্ট ----
     !showForm && h("button", {
       onClick: () => { setForm((f) => ({ ...f, date: selectedDate || f.date })); setShowForm(true); },
-      style: { marginTop: "12px", width: "100%", minHeight: "44px", border: "1px dashed #0E4B43", borderRadius: "12px", background: "#F7FAF9", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+      style: { marginTop: "12px", width: "100%", minHeight: "44px", border: "1px dashed var(--hs-primary, #0E4B43)", borderRadius: "12px", background: "#F7FAF9", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
     }, "➕ নতুন ইভেন্ট"),
     showForm && h(
       "div", { style: { marginTop: "12px", padding: "10px", borderRadius: "12px", border: "1px solid #D3E0D9", background: "#F7FAF9" } },
@@ -268,7 +268,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
         "div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
         h("button", {
           onClick: handleAdd, disabled: saving || !form.title.trim() || !form.date,
-          style: { flex: 1, minHeight: "44px", border: "none", borderRadius: "10px", background: (saving || !form.title.trim() || !form.date) ? "#8FAFA9" : "#0E4B43", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+          style: { flex: 1, minHeight: "44px", border: "none", borderRadius: "10px", background: (saving || !form.title.trim() || !form.date) ? "#8FAFA9" : "var(--hs-primary, #0E4B43)", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         }, saving ? "..." : "যোগ করুন"),
         h("button", {
           onClick: () => setShowForm(false),
