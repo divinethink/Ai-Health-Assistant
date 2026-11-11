@@ -151,49 +151,67 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
     if (ok) { setNotice("✓ " + f.n + " যোগ হয়েছে (" + slotLabel + ")"); setKey(null); }
   };
 
-  return React.createElement(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose },
-    React.createElement("button", { onClick: back, style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN, marginBottom: "10px" } }, "← অন্য খাবার"),
-    React.createElement("div", { style: { padding: "8px 12px", borderRadius: "12px", border: "1px solid " + sc.border, background: sc.bg, color: st.level === "green" ? "#1F2D2A" : sc.text, fontSize: "13px", marginBottom: "10px" } },
-      React.createElement("b", null, st.icon + " " + st.label), st.reasons.length > 0 && " — " + st.reasons.join("; ")),
-    notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { padding: "8px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13px", lineHeight: 1.5, marginBottom: "8px" } }, "💊 " + n.text)),
+  // ---- পরিমাণ-ধাপের নতুন বিন্যাস: ফল (ক্যালরি+ম্যাক্রো) আগে → কতটুকু (মাপ-চিপ + বড় ± স্টেপার) → তথ্য ভাঁজে → স্থির বাটন ----
+  const h = React.createElement;
+  const circleBtn = (label, onClick, disabled, aria) => h("button", { type: "button", onClick, disabled, "aria-label": aria, style: { width: "52px", height: "52px", borderRadius: "50%", border: "none", background: "#E4ECE7", color: GREEN, fontSize: "26px", fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, flexShrink: 0 } }, label);
+  const hasMacro = !!entry && entry.p !== undefined;
 
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", margin: "6px 0" } }, "পরিমাণ ও মাপ"),
-    !unitMode && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" } },
-      ms.map((m) => React.createElement("button", { key: m.id, onClick: () => { setMeasureId(m.id); setQty(1); }, style: chip(measureId === m.id) }, "১ " + m.label + " ≈ " + bnNum(m.g) + " গ্রাম")),
-      React.createElement("button", { onClick: () => { setMeasureId("g"); if (entry && entry.grams) setGramsText(String(entry.grams)); }, style: chip(gramMode) }, "গ্রাম")),
+  return h(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose },
+    h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", marginBottom: "4px", justifyContent: "flex-start" } }, "← অন্য খাবার"),
+    // স্ট্যাটাস: সবুজ হলে কিছু দেখানো হয় না (শব্দ কমে); হলুদ/লাল হলে কারণসহ
+    st.level !== "green" && h("div", { style: { padding: "8px 12px", borderRadius: "12px", border: "1px solid " + sc.border, background: sc.bg, color: sc.text, fontSize: "13px", marginBottom: "8px" } },
+      h("b", null, st.icon + " " + st.label), st.reasons.length > 0 && " — " + st.reasons.join("; ")),
+    notes.map((n, i) => h("div", { key: "n" + i, style: { padding: "8px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13px", lineHeight: 1.5, marginBottom: "8px" } }, "💊 " + n.text)),
+
+    // ১) কতটুকু খাবেন (মাঝ-সারিতে)
+    h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 8px", textAlign: "center" } }, "কতটুকু খাবেন?"),
+    !unitMode && h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "12px" } },
+      ms.map((m) => h("button", { key: m.id, type: "button", onClick: () => { setMeasureId(m.id); setQty(1); }, "aria-pressed": measureId === m.id, style: { ...chip(measureId === m.id), flex: "0 0 auto", minHeight: "48px", lineHeight: 1.25, textAlign: "center" } },
+        h("span", { style: { display: "block", fontSize: "15px" } }, m.label),
+        h("span", { style: { display: "block", fontSize: "12px", fontWeight: 500, opacity: 0.85 } }, "≈ " + bnNum(m.g) + " গ্রাম"))),
+      h("button", { type: "button", onClick: () => { setMeasureId("g"); if (entry && entry.grams) setGramsText(String(entry.grams)); }, "aria-pressed": gramMode, style: { ...chip(gramMode), flex: "0 0 auto", minHeight: "48px", fontSize: "15px" } }, "গ্রাম")),
     gramMode
-      ? React.createElement("div", null,
-        React.createElement("label", { style: { display: "block", fontSize: "13px", color: MUTED, margin: "2px 0 4px" } }, "গ্রাম (১–২০০০)"),
-        React.createElement("input", { type: "number", inputMode: "decimal", min: 1, max: 2000, step: "any", value: gramsText, onChange: (e) => setGramsText(e.target.value), "aria-label": "গ্রাম", style: INPUT }))
-      : React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-        React.createElement("button", { onClick: () => step(-0.5), disabled: qty <= 0.5, "aria-label": "পরিমাণ কমান", style: { ...BTN, border: "none", background: "#E4ECE7", color: GREEN, opacity: qty <= 0.5 ? 0.4 : 1 } }, "−"),
-        React.createElement("span", { style: { minWidth: "56px", textAlign: "center", fontSize: "18px", fontWeight: 700, color: "#1F2D2A" } }, bnNum(qty)),
-        React.createElement("button", { onClick: () => step(0.5), disabled: !incOk, "aria-label": "পরিমাণ বাড়ান", style: { ...BTN, border: "none", background: "#E4ECE7", color: GREEN, opacity: !incOk ? 0.4 : 1 } }, "+"),
-        React.createElement("span", { style: { marginLeft: "auto", textAlign: "right", fontSize: "13px", color: MUTED } }, unitMode ? "ইউনিট: " + f.u : entry && entry.grams ? "নিট ওজন " : "", !unitMode && entry && entry.grams && React.createElement("b", { style: { display: "block", fontSize: "15px", color: "#1F2D2A" } }, bnNum(entry.grams) + " গ্রাম"))),
-    !unitMode && !gramMode && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "বাটি/কাপের আকার ঘরে ঘরে আলাদা। গ্রামে সরাসরি লিখলে আরও নিখুঁত হবে।"),
+      ? h("div", null,
+        h("label", { style: { display: "block", fontSize: "13px", color: MUTED, margin: "2px 0 4px" } }, "গ্রাম (১–২০০০)"),
+        h("input", { type: "number", inputMode: "decimal", min: 1, max: 2000, step: "any", value: gramsText, onChange: (e) => setGramsText(e.target.value), "aria-label": "গ্রাম", style: { ...INPUT, fontSize: "20px", fontWeight: 700, textAlign: "center" } }))
+      : h("div", null,
+        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "20px" } },
+          circleBtn("−", () => step(-0.5), qty <= 0.5, "পরিমাণ কমান"),
+          h("span", { style: { minWidth: "64px", textAlign: "center", fontSize: "28px", fontWeight: 800, color: "#1F2D2A" } }, bnNum(qty)),
+          circleBtn("+", () => step(0.5), !incOk, "পরিমাণ বাড়ান")),
+        h("div", { style: { textAlign: "center", fontSize: "14px", color: MUTED, marginTop: "6px" } },
+          unitMode ? "ইউনিট: " + f.u : (entry && entry.grams ? "মোট ≈ " + bnNum(entry.grams) + " গ্রাম" : ""))),
 
-    React.createElement("div", { style: { marginTop: "12px", padding: "12px", borderRadius: "14px", border: "1px solid #D5E0DA", background: "#F7FAF8" } },
+    // ২) ফল — "কতটুকু"-র ঠিক নিচে; পরিমাণ ঠিক করলে সাথে সাথে ক্যালরি/ম্যাক্রো বদলায়
+    h("div", { role: "status", "aria-live": "polite", style: { marginTop: "16px", padding: "12px 14px", borderRadius: "16px", background: "#F2F7F4", border: "1px solid #D5E0DA" } },
       entry
-        ? React.createElement("div", null,
-          React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: "6px" } },
-            React.createElement("span", { style: { fontSize: "28px", fontWeight: 800, color: GREEN } }, bnNum(entry.kcal)),
-            React.createElement("span", { style: { fontSize: "14px", color: GREEN, fontWeight: 600 } }, "কিলোক্যালরি (আনুমানিক)")),
-          entry.p !== undefined && MACROS.map(([label, k, color]) => React.createElement("div", { key: k, style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", fontSize: "14px" } },
-            React.createElement("span", { style: { width: "64px", color: "#1F2D2A" } }, label),
-            React.createElement("div", { style: { flex: 1, height: "8px", borderRadius: "6px", background: "#E3EBE6", overflow: "hidden" }, "aria-hidden": "true" },
-              React.createElement("div", { style: { width: (entry[k] / Math.max(entry.p, entry.c, entry.f, entry.fib, 1)) * 100 + "%", height: "100%", background: color } })),
-            React.createElement("b", { style: { minWidth: "70px", textAlign: "right", color: "#1F2D2A" } }, fmtMacro(entry[k]) + " গ্রাম"))),
-          p100 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "10px", lineHeight: 1.5 } },
-            "প্রতি ১০০ গ্রামে: " + bnNum(p100.kcal) + " কিলোক্যালরি · প্রোটিন " + fmtMacro(p100.p) + " · কার্ব " + fmtMacro(p100.c) + " · ফ্যাট " + fmtMacro(p100.f) + " · ফাইবার " + fmtMacro(p100.fib) + " গ্রাম",
-            React.createElement("br"),
-            nut && nut.src === "recipe" ? "গড় রেসিপি অনুযায়ী (±১০–১৫% বা বেশি তফাত হতে পারে)" : "প্রকাশিত খাদ্য-তালিকার সাধারণ মান (আনুমানিক)"),
-          unitMode && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "8px" } }, "১ " + f.u + " = " + bnNum(foodK(key)) + " কিলোক্যালরি" + (hasFoodOverride(key) ? " (আপনার নিজের দেওয়া মান)" : "") + " — ম্যাক্রো দেখানো হচ্ছে না।"))
-        : React.createElement("div", { style: { fontSize: "13px", color: "#7A1F14" } }, "পরিমাণ সঠিক নয় — গ্রাম ১–২০০০-এর মধ্যে দিন।")),
+        ? h("div", null,
+          h("div", { style: { display: "flex", alignItems: "baseline", gap: "6px" } },
+            h("span", { style: { fontSize: "30px", fontWeight: 800, color: GREEN, lineHeight: 1.1 } }, bnNum(entry.kcal)),
+            h("span", { style: { fontSize: "14px", color: GREEN, fontWeight: 600 } }, "কিলোক্যালরি · আনুমানিক")),
+          hasMacro && h("div", { style: { display: "flex", gap: "10px", marginTop: "10px" } },
+            MACROS.map(([label, k, color]) => h("div", { key: k, style: { flex: 1, minWidth: 0 } },
+              h("div", { style: { fontSize: "12px", color: MUTED } }, label),
+              h("div", { style: { fontSize: "16px", fontWeight: 800, color: "#1F2D2A", whiteSpace: "nowrap" } }, fmtMacro(entry[k])),
+              h("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: color, marginTop: "2px" } }))),
+            ),
+          hasMacro && h("div", { style: { fontSize: "12px", color: MUTED, marginTop: "4px" } }, "গ্রামে"),
+          !hasMacro && unitMode && h("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "এই খাবারের ম্যাক্রো দেখানো হচ্ছে না।"))
+        : h("div", { style: { fontSize: "14px", color: "#7A1F14" } }, "পরিমাণ সঠিক নয় — গ্রাম ১–২০০০-এর মধ্যে দিন।")),
+
+    // ৩) বাড়তি তথ্য ভাঁজে — ডিফল্টে বন্ধ
+    h("details", { style: { marginTop: "14px" } },
+      h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer", fontSize: "14px", fontWeight: 600, color: GREEN } }, "ℹ️ হিসাবের তথ্য"),
+      h("div", { style: { fontSize: "12px", color: MUTED, lineHeight: 1.6 } },
+        !unitMode && h("div", null, "বাটি/কাপের আকার ঘরে ঘরে আলাদা। গ্রামে সরাসরি লিখলে আরও নিখুঁত হবে।"),
+        p100 && h("div", null, "প্রতি ১০০ গ্রামে: " + bnNum(p100.kcal) + " কিলোক্যালরি · প্রোটিন " + fmtMacro(p100.p) + " · কার্ব " + fmtMacro(p100.c) + " · ফ্যাট " + fmtMacro(p100.f) + " · ফাইবার " + fmtMacro(p100.fib) + " গ্রাম"),
+        p100 && h("div", null, nut && nut.src === "recipe" ? "গড় রেসিপি অনুযায়ী (±১০–১৫% বা বেশি তফাত হতে পারে)" : "প্রকাশিত খাদ্য-তালিকার সাধারণ মান (আনুমানিক)"),
+        unitMode && h("div", null, "১ " + f.u + " = " + bnNum(foodK(key)) + " কিলোক্যালরি" + (hasFoodOverride(key) ? " (আপনার নিজের দেওয়া মান)" : "")))),
 
     st.level === "red" && Msg("⚠ এই খাবার আপনার জন্য এড়ানোর কথা। ডাক্তারের পরামর্শ প্রাধান্য পায়; তবু খেলে যোগ করতে পারেন।", "warn"),
     full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। আগের কোনোটি মুছুন।", "warn"),
     err && Msg(err, "err"),
-    // যোগ-বাটন স্থির (sticky) — লম্বা স্ক্রিনেও সবসময় নিচে দেখা যায়
-    React.createElement("div", { style: { position: "sticky", bottom: 0, display: "flex", gap: "8px", marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff" } },
+    // যোগ-বাটন স্থির (sticky) — উপরে পাতলা রেখা, লেখা তার নিচে ঢুকে যায় না
+    h("div", { style: { position: "sticky", bottom: 0, marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2" } },
       primaryBtn((st.level === "red" ? "তবু যোগ করুন" : "যোগ করুন") + " (" + slotLabel + ")", submit, busy, !entry || full)));
 }

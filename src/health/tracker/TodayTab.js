@@ -255,21 +255,27 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]),
               plannedFast && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "2px" } }, "🌙 আজ সিয়ামের দিন ছিল — দিনের খাবার লগ হওয়ায় ধরা হয়নি")))),
       fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।"),
-      // আজকের হিসাব: লেবেল-বাক্স নেই; একক "(গ্রাম)" ফাইবারের ডানে; পাতলা বিভাজক-রেখা
-      canLog && macros.withMacro > 0 && React.createElement("div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.18)" }, "aria-label": "আজকের হিসাব (গ্রাম)" },
-        React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
-          [["প্রোটিন", macros.p, "#8FE0B0", "p"], ["কার্ব", macros.c, "#FFC27A", "c"], ["ফ্যাট", macros.f, "#C9B9F5", "f"], ["ফাইবার", macros.fib, "#8EC5F5", "fib"]].map(([name, v, col, key], i) => {
-            const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
-            const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
-            return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
-              React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft } }, name),
-              React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: over ? "#FFB4A6" : T.onDark, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v), !mt && i === 3 && React.createElement("span", { style: { fontSize: "12px", fontWeight: 600, color: T.onDarkSoft } }, " (গ্রাম)")),
-              mt && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
-              React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? "rgba(255,255,255,0.18)" : col, marginTop: "2px" } },
-                tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#FF6A4D" : col } }) : null));
-          })),
-        mt && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "4px" } }, mt.note),
-        macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "4px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।"))),
+      // পুষ্টির হিসাব: হিরো-কার্ডের ভেতরেই, তবে আলাদা কার্ডের মতো হালকা ব্যাকগ্রাউন্ডের প্যানেলে (আগের "কিছু যোগ হয়নি" বার্তার জায়গায়)।
+      // খালি অবস্থায়ও থাকে (০ ও টার্গেট); ডেটা বদলায় না, শুধু দেখানো।
+    canLog && React.createElement("div", { style: { marginTop: "10px", padding: "10px 14px", borderRadius: "14px", background: "var(--hs-surface, #fff)", color: T.ink, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }, "aria-label": "আজকের হিসাব (গ্রাম)" },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" } },
+        React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.green } }, "🥗 পুষ্টির হিসাব"),
+        React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, "গ্রাম · আনুমানিক")),
+      React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
+        [["প্রোটিন", macros.p, "#2E9E5B", "p"], ["কার্ব", macros.c, "#E0892B", "c"], ["ফ্যাট", macros.f, "#8A6FD6", "f"], ["ফাইবার", macros.fib, "#3C86D6", "fib"]].map(([name, v, col, key]) => {
+          const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
+          const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
+          return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, name),
+            React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: over ? "#B3261E" : T.ink, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v)),
+            mt && React.createElement("div", { style: { fontSize: "12px", color: T.muted, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
+            React.createElement("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: tg ? T.border : col, marginTop: "3px" } },
+              tg ? React.createElement("div", { style: { height: "4px", borderRadius: "4px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
+        })),
+      mt && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, mt.note),
+      macros.total === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "6px" } }, "“খাবার” বাটনে যোগ করা খাবার থেকে হিসাব হয় 🙂"),
+      macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
+    ),
 
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [], onDiet: () => setDietOpen(true) }),
     dietOpen && React.createElement(Sheet, { title: "খাদ্য নির্দেশিকা", subtitle: (info.conds || []).map((c) => c.name).join(", ") || undefined, onClose: () => setDietOpen(false) },
@@ -280,12 +286,6 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
-    // খালি-অবস্থা: আজ কিছুই যোগ না হলে বন্ধুত্বপূর্ণ বার্তা (শুধু আজ; ডেটা বদলায় না)
-    isViewToday && oldReady && !onFast && !eaten && !glasses && !d.exerciseMin && !d.sleepMinutes && !d.steps && extras.length === 0 && React.createElement("div", { style: { ...CARD_STYLE, background: "#E4F0E9", borderColor: "#9CC5B4", display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px" } },
-      React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px" } }, "💧"),
-      React.createElement("div", null,
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.green } }, "আজ এখনো কিছু যোগ হয়নি 🙂"),
-        React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, waterTarget ? "প্রথম গ্লাস পানি দিয়ে শুরু করুন" : "নিচের যেকোনো একটি দিয়ে শুরু করুন"))),
 
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
