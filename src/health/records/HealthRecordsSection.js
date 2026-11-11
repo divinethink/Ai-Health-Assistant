@@ -24,7 +24,7 @@ import { takeQuickIntent } from "../../shared/quickIntent.js";
 // `selectedMemberId` parent (HealthRecordsPageSection)-এর কাছ থেকে prop
 // হিসেবে আসে — পেজের সব sub-tab একই সদস্য শেয়ার করে, ট্যাব পাল্টালে আর
 // নতুন করে বাছতে হয় না। কোনো schema/permission পরিবর্তন নেই।
-export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary, onUpload, onRecordAdded }) {
+export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary, onUpload, onMedChoice, onRecordAdded }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
   const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
@@ -66,6 +66,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),
         familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
+        onMedChoice: onMedChoice ? (k) => { setAdding(false); onMedChoice(k); } : undefined,
         editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
         onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); if (onRecordAdded) onRecordAdded(); },
       }),

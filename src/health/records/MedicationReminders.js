@@ -12,6 +12,7 @@
 import { ErrorBox } from "../../shared/ui.js";
 import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
+import { takeQuickIntent } from "../../shared/quickIntent.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
@@ -111,8 +112,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [todayOpen, setTodayOpen] = useState(true);
 
   // নতুন ওষুধ যোগের ফর্ম
-  const [addOpen, setAddOpen] = useState(false);
-  const [rxOpen, setRxOpen] = useState(false); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
+  const [startIntent] = useState(() => takeQuickIntent(["rx", "medmanual"])); // "যোগ করুন" প্যানেল থেকে সরাসরি আসা
+  const [addOpen, setAddOpen] = useState(startIntent === "medmanual");
+  const [rxOpen, setRxOpen] = useState(startIntent === "rx"); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
   const [rxFile, setRxFile] = useState(null);
   const [aName, setAName] = useState("");
   const [aMember, setAMember] = useState(selectedMemberId || callerMemberId);
@@ -354,9 +356,6 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
-    !addOpen && !rxOpen && h("div", { style: { display: "flex", gap: "8px", marginBottom: "10px" } },
-      h("button", { onClick: () => setAddOpen(true), style: { flex: 1, minHeight: "48px", padding: "12px", borderRadius: "14px", border: "1px dashed " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "➕ নতুন ওষুধ"),
-      h("button", { onClick: () => { setRxFile(null); setRxOpen(true); }, style: { flex: 1, minHeight: "48px", padding: "12px", borderRadius: "14px", border: "1px solid " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "📄 প্রেসক্রিপশন আপলোড")),
     rxOpen && h("div", { style: card },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
         h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ওষুধ"),
@@ -387,7 +386,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
         h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল"))),
 
     // ওষুধের তালিকা
-    shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: F } }, "কোনো সক্রিয় ওষুধ নেই। উপরের বাটনে চেপে যোগ করুন।"),
+    shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: F } }, "এখনো কোনো ওষুধ নেই — উপরের ＋ যোগ করুন চাপুন।"),
     shown.map((m) => {
       const ev = editValues[m.recordId] || { slots: [], endDate: "", mealTiming: "any" };
       const expired = isExpired(m);

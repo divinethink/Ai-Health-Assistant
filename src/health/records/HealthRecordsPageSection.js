@@ -109,6 +109,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   });
   const [timelineSub, setTimelineSub] = useState("diet");
   const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
+  const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
   const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "meds"));
   const counts = usePillCounts(familyId, isHealth ? selectedMemberId : null, addTick);
@@ -147,7 +148,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         React.createElement(HealthRecordsSection, {
           familyId, callerMemberId, selectedMemberId, section: recordSub === "records" ? "all" : "profile",
           onRecordAdded: () => setAddTick((n) => n + 1),
-          onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); },
+          onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
+          onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
           belowSummary: React.createElement("div", { key: "subs" },
             React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "6px", overflowX: "auto" } },
               RECORD_SUBS.map((sb) => React.createElement("button", {
@@ -160,7 +162,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
               }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")))),
             React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
         }),
-        recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick, familyId, callerMemberId, selectedMemberId }),
+        recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
         React.createElement("div", { role: "group", "aria-label": "ডাক্তার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },

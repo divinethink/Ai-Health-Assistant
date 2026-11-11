@@ -15,12 +15,13 @@ import { OBS_PRESETS } from "../quickadd/quickAddTargets.js";
 const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
 // ধাপ ৫: টাইল (resourceType, আইকন, নাম) — ওষুধও একই createHealthRecord পথে; রিমাইন্ডার-সময় পরে "ওষুধ" তালিকা থেকে
-const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "অ্যালার্জি"], ["medicationStatement", "💊", "ওষুধ"], ["observation", "📏", "পরিমাপ"]];
+const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "অ্যালার্জি"], ["medicationStatement", "💊", "ওষুধ/প্রেসক্রিপশন"], ["observation", "📏", "পরিমাপ"]];
+const tileStyle = { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" };
 const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
 // না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
-export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs, onUpload }) {
+export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs, onUpload, onMedChoice }) {
   const isEdit = !!editingRecord;
   const preset = !isEdit && presetObs ? OBS_PRESETS[presetObs] : null; // "+ দ্রুত যোগ": প্রেসার/সুগার — শুধু ধরন+একক আগে-থেকে-ভরা
   const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : preset ? "observation" : "condition");
@@ -47,6 +48,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [picked, setPicked] = useState(isEdit || !!preset); // ধাপ ৫: আগে ৪টা টাইল ("কী যোগ করবেন?"), বাছার পর ২–৩ ঘরের ফর্ম
+  const [medMenu, setMedMenu] = useState(false); // "ওষুধ/প্রেসক্রিপশন" টাইল → দুই বড় অপশন (আপলোড | হাতে লিখুন)
   const [more, setMore] = useState(!!editingRecord); // "আরও যোগ করুন" ভাঁজ — নতুন রেকর্ডে বন্ধ, edit-এ খোলা
 
   // edit-mode শুরু হলে (বা edit-target বদলালে) existing record-এর ভ্যালু দিয়ে fields prefill
@@ -198,18 +200,28 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   const closeBtn = React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
     style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", cursor: "pointer" } }, "✕");
+  const wrap = { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+  const bigBtn = (primary) => ({ minHeight: "64px", borderRadius: "16px", border: "1.5px solid " + (primary ? "var(--hs-primary, #0E4B43)" : "#9CC5B4"), background: primary ? "#E6F3EC" : "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" });
+  if (!isEdit && !picked && medMenu && onMedChoice) {
+    return React.createElement("div", { style: wrap },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
+        React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "💊 ওষুধ/প্রেসক্রিপশন"), closeBtn),
+      React.createElement("div", { style: { display: "grid", gap: "10px" } },
+        React.createElement("button", { onClick: () => onMedChoice("rx"), style: bigBtn(true) }, "📷 প্রেসক্রিপশন আপলোড (ওষুধ অটো-ফিল)"),
+        React.createElement("button", { onClick: () => onMedChoice("manual"), style: bigBtn(false) }, "✍️ হাতে লিখুন"),
+        React.createElement("button", { onClick: () => setMedMenu(false), style: { minHeight: "44px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "‹ বদলান")));
+  }
   if (!isEdit && !picked) {
-    return React.createElement("div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+    return React.createElement("div", { style: wrap },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
         React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
-        ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => pickType(type),
-          style: { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" } },
+        ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => (type === "medicationStatement" && onMedChoice ? setMedMenu(true) : pickType(type)),
+          style: tileStyle },
           React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label)),
-        // রিপোর্ট/প্রেসক্রিপশন আপলোড (ছবি বা PDF) — রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
-        onUpload && React.createElement("button", { onClick: onUpload,
-          style: { gridColumn: "1 / -1", minHeight: "64px", borderRadius: "16px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#E6F3EC", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px" } }, "📄"), "রিপোর্ট / প্রেসক্রিপশন আপলোড (ছবি বা PDF)")));
+        // ল্যাব রিপোর্ট — ল্যাব রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
+        onUpload && React.createElement("button", { key: "lab", onClick: onUpload, style: tileStyle },
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, "🧪"), "ল্যাব রিপোর্ট")));
   }
 
   return React.createElement(
