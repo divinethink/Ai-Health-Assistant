@@ -18,6 +18,7 @@ import { TextField, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
+import { renderRichText } from "../../shared/richText.js";
 import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
 
 const { useState, useEffect } = React;
@@ -152,7 +153,7 @@ export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
     response && React.createElement(
       "div", { style: { marginTop: "12px", background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, response)
+      React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, renderRichText(response))
     )
   );
 }

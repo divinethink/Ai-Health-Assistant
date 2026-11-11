@@ -7,6 +7,7 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType } from "docx";
 import { describeHealthRecord } from "../records/healthRecordsData.js";
 import { weeklySummaryRows } from "../tracker/weeklyTrend.js";
+import { stripBoldMarks } from "../../shared/richText.js";
 
 const FONT = "Hind Siliguri";
 
@@ -107,7 +108,7 @@ export async function exportAiHealthSummaryDocx(data) {
       ? [para("পরামর্শ: " + (data.recommendedAction.action || "—") + (data.recommendedAction.timeframe ? " — " + data.recommendedAction.timeframe : ""))]
       : []),
     heading("বিস্তারিত AI Guidance"),
-    ...data.guidanceText.split("\n").map((line) => para(line || " ")),
+    ...stripBoldMarks(data.guidanceText).split("\n").map((line) => para(line || " ")),
     new Paragraph({ spacing: { before: 300 }, alignment: AlignmentType.CENTER,
       children: [new TextRun({ text: "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — AI-generated guidance, চূড়ান্ত সিদ্ধান্তের জন্য ডাক্তারের পরামর্শ নিন।", size: 16, font: FONT, color: "888888" })] }),
   ];

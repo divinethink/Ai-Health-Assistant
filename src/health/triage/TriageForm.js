@@ -1,4 +1,5 @@
 import { t } from "../../shared/i18n.js";
+import { renderRichText } from "../../shared/richText.js";
 // Structured Trigger Layer UI (roadmap §10.3 স্তর-১) — member select + বয়স-গ্রুপ
 // অনুযায়ী red-flag checklist, সরাসরি deterministic triageEngine.js-এ input (free-text
 // নয়, skip-অযোগ্য নয়)। HealthTimeline.js/HealthRecordsSection.js-এর member-picker
@@ -456,7 +457,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
         "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0E4B43", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
-        React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, aiResponse)
+        React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, renderRichText(aiResponse))
       ),
       herbalNode: React.createElement(
         "div", { style: { fontSize: "14px", color: "#3E4E49" } },
@@ -482,7 +483,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
               padding: "8px", borderRadius: "10px",
             },
           },
-          React.createElement("b", null, m.role === "user" ? "আপনি: " : "AI: "), m.content
+          React.createElement("b", null, m.role === "user" ? "আপনি: " : "AI: "), renderRichText(m.content)
         ))
       ),
       // Re-triage nudge (§10.3 স্তর-৩) — নতুন/ভিন্ন উপসর্গে deterministic triage

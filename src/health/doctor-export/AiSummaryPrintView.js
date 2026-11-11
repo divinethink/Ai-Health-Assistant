@@ -2,6 +2,7 @@
 // DoctorExportPrintView.js-এর একই shell-pattern (window.print()-based PDF,
 // header/footer/style) — আলাদা ফাইল রাখা হয়েছে যাতে ইতিমধ্যে-verified Health
 // Profile view-তে কোনো ঝুঁকি না থাকে (Zero-Risk Discipline)।
+import { stripBoldMarks } from "../../shared/richText.js";
 const { useEffect } = React;
 
 function fmtDate(ms) {
@@ -45,7 +46,7 @@ export function AiSummaryPrintView({ data, onBack }) {
       ),
 
       React.createElement("h4", null, "বিস্তারিত AI Guidance"),
-      React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap" } }, data.guidanceText),
+      React.createElement("div", { style: { fontSize: "13px", whiteSpace: "pre-wrap" } }, stripBoldMarks(data.guidanceText)),
 
       React.createElement("p", { style: { fontSize: "10px", color: "#888", borderTop: "1px solid #ccc", marginTop: "16px", paddingTop: "6px", textAlign: "center" } },
         "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — AI-generated guidance, চূড়ান্ত সিদ্ধান্তের জন্য ডাক্তারের পরামর্শ নিন।")
