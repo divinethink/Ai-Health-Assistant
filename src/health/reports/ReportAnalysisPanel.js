@@ -57,7 +57,7 @@ function ocrNotesView(n, openManual) {
   return items.length > 0 ? React.createElement(React.Fragment, null, items.map((x, i) => React.cloneElement(x, { key: i }))) : null;
 }
 
-export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, presetFile, initialManual }) {
+export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, presetFile, preOcr, initialManual }) {
   const [handwrittenMode, setHandwrittenMode] = useState(!!initialManual);
   const [file, setFile] = useState(presetFile || null);
   const [savedCount, setSavedCount] = useState(0);
@@ -98,7 +98,9 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
       const dict = await fetchTestNameDictionary();
       const scoreText = (txt) => parseAndValidateReportText(txt, dict).length;
 
-      if (file.type === "application/pdf") {
+      if (preOcr && file === presetFile) { // ধাপ ৪-ঙ: আপলোডে আগেই পড়া — দুবার OCR নয়
+        rawText = preOcr.text; ocrResult = preOcr.ocr; method = preOcr.method;
+      } else if (file.type === "application/pdf") {
         setStage("extracting");
         const { hasTextLayer, text } = await extractPdfText(file);
         if (hasTextLayer) {
@@ -141,7 +143,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     } finally {
       setBusy(false);
     }
-  }, [file]);
+  }, [file, preOcr, presetFile]);
 
   useEffect(() => {
     if (presetFile) analyze();

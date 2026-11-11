@@ -13,6 +13,7 @@ import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
+import { DoctorCardPanel } from "../doctor-details/DoctorCardPanel.js";
 
 const { useState, useCallback, useEffect } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -25,15 +26,16 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
   useEffect(() => { if (takeQuickIntent(["report"])) setPanel({ mode: "add" }); }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
-  const startAnalyze = useCallback((file) => setPanel({ mode: "analyze", file, key: Date.now() }), []);
-  const startPrescription = useCallback((file) => setPanel({ mode: "prescription", file, key: Date.now() }), []);
+  const startAnalyze = useCallback((file, preOcr) => setPanel({ mode: "analyze", file, preOcr, key: Date.now() }), []);
+  const startPrescription = useCallback((file, preOcr) => setPanel({ mode: "prescription", file, preOcr, key: Date.now() }), []);
+  const startCard = useCallback((file, preOcr) => setPanel({ mode: "card", file, preOcr, key: Date.now() }), []);
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
 
   if (!targetMemberId) {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
   }
 
-  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট", prescription: "💊 প্রেসক্রিপশন থেকে ওষুধ" })[panel.mode];
+  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট", prescription: "💊 প্রেসক্রিপশন থেকে ওষুধ", card: "📇 ডাক্তারের কার্ড" })[panel.mode];
 
   return React.createElement(
     "div", { style: { marginTop: "12px" } },
@@ -58,15 +60,19 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
       panel.mode === "add" && React.createElement(DocumentUploadForm, {
         key: "upload-" + targetMemberId,
         familyId, targetMemberId, callerMemberId,
-        onUploaded: refresh, onAnalyze: startAnalyze, onManual: startManual, onPrescription: startPrescription,
+        onUploaded: refresh, onAnalyze: startAnalyze, onManual: startManual, onPrescription: startPrescription, onCard: startCard,
       }),
       panel.mode === "analyze" && React.createElement(ReportAnalysisPanel, {
         key: "analyze-" + targetMemberId + "-" + panel.key,
-        familyId, targetMemberId, callerMemberId, presetFile: panel.file,
+        familyId, targetMemberId, callerMemberId, presetFile: panel.file, preOcr: panel.preOcr,
       }),
       panel.mode === "prescription" && React.createElement(PrescriptionPanel, {
         key: "rx-" + targetMemberId + "-" + panel.key,
-        familyId, targetMemberId, callerMemberId, file: panel.file, onClose: () => setPanel(null),
+        familyId, targetMemberId, callerMemberId, file: panel.file, preOcr: panel.preOcr, onClose: () => setPanel(null),
+      }),
+      panel.mode === "card" && React.createElement(DoctorCardPanel, {
+        key: "card-" + targetMemberId + "-" + panel.key,
+        familyId, callerMemberId, file: panel.file, preOcr: panel.preOcr, onClose: () => setPanel(null),
       }),
       panel.mode === "manual" && React.createElement(ReportAnalysisPanel, {
         key: "manual-" + targetMemberId + "-" + panel.key,

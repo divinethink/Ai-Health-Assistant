@@ -9,13 +9,13 @@ import { assessOcr, QUALITY_MESSAGES } from "../reports/ocrQuality.js";
 import { AiAssistBar, AiBadge } from "../doc-ai/AiAssistBar.js";
 import { shouldTryAi, cardAiPatch } from "../doc-ai/aiAdapters.js";
 
-const { useState, useRef, useCallback } = React;
+const { useState, useRef, useCallback, useEffect } = React;
 
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", minHeight: "44px" };
 const rowStyle = { display: "flex", gap: "8px", marginTop: "10px", alignItems: "stretch" };
 const cell = { flex: 1, minWidth: 0 };
 
-export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardClick, cardLabel, showCategory = true, showAddress = true, allowEmptyCategory = false, file = null, familyId = null }) {
+export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardClick, cardLabel, showCategory = true, showAddress = true, allowEmptyCategory = false, file = null, familyId = null, preOcr = null, autoScan = false }) {
   const [open, setOpen] = useState(false);
   const v = value || {};
   const [filled, setFilled] = useState([]); // OCR থেকে ভরা ফিল্ড (ব্যবহারকারী বদলালে তালিকা থেকে বাদ)
@@ -35,7 +35,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
     try {
       const { ocrImageFile, ocrPdfPages } = await import("../reports/ocrExtraction.js");
       const onProgress = (p) => setScan((s) => ({ ...s, progress: p }));
-      const ocr = file.type === "application/pdf" ? await ocrPdfPages(file, onProgress) : await ocrImageFile(file, onProgress);
+      const ocr = preOcr || (file.type === "application/pdf" ? await ocrPdfPages(file, onProgress) : await ocrImageFile(file, onProgress)); // ধাপ ৪-ঙ: preOcr থাকলে দুবার OCR নয়
       const parsed = parseVisitingCard(ocr.text);
       const defaultCat = !allowEmptyCategory ? DOCTOR_CATEGORIES[0][0] : "";
       const isEmpty = (k) => !String(v[k] || "").trim() || (k === "specialtyCategory" && v[k] === defaultCat);
@@ -55,6 +55,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
       setScan({ busy: false, progress: 0, note: "কার্ড পড়া যায়নি — হাতে পূরণ করুন।" });
     }
   };
+  useEffect(() => { if (autoScan && preOcr && file) runScan(); }, []); // শুধু mount-এ একবার
   const onAiSettled = useCallback(({ result, message }) => {
     setAiJob(null);
     if (!(result && !result.empty)) { setAiNote(message ? "ℹ️ " + message : ""); return; } // "এখন নয়" বাছলে নীরব }

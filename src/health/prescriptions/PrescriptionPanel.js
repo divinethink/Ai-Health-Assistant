@@ -24,7 +24,7 @@ const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
 const note = (bg, color, text) => h("div", { style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: bg, color, fontSize: "14px", lineHeight: 1.5 } }, text);
 
-export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, onDone, onClose, closeLabel }) {
+export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, preOcr, onDone, onClose, closeLabel }) {
   const [stage, setStage] = useState("extracting"); // extracting | ocr | parsing | done | error
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
@@ -35,7 +35,8 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
     setErr(null); setRes(null); setSaved(null); setStage("extracting"); setProgress(0);
     try {
       let text = "", ocr = null;
-      if (file.type === "application/pdf") {
+      if (preOcr) { text = preOcr.text; ocr = preOcr.ocr; } // ধাপ ৪-ঙ: আপলোডে আগেই পড়া — দুবার OCR নয়
+      else if (file.type === "application/pdf") {
         const pdf = await extractPdfText(file);
         if (pdf.hasTextLayer) text = pdf.text;
         else { setStage("ocr"); ocr = await ocrPdfPages(file, setProgress); text = ocr.text; }
@@ -58,7 +59,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
         aiWanted: shouldTryAi("prescription", { text, itemsCount: items.length, suspectHandwriting }) }); // ধাপ ৪-ঘ
       setStage("done");
     } catch (e) { setErr(e.message || String(e)); setStage("error"); }
-  }, [file, familyId, targetMemberId]);
+  }, [file, preOcr, familyId, targetMemberId]);
 
   useEffect(() => { run(); }, []); // শুধু mount-এ একবার; ব্যর্থ হলে "আবার চেষ্টা"
 
