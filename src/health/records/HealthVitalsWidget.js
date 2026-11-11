@@ -28,6 +28,7 @@ function isWeightType(t) {
 export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, refreshTick, onSaved, embedded }) {
   const [latest, setLatest] = useState(null); // { heightCm, weightKg, bmi }
   const [heightInput, setHeightInput] = useState("");
+  const [unit, setUnit] = useState("cm"); // "cm" | "ftin" — একসাথে দুই ঘর নয়
   const [feetInput, setFeetInput] = useState("");
   const [inchInput, setInchInput] = useState("");
   const [weightInput, setWeightInput] = useState("");
@@ -52,13 +53,13 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
 
   const submit = useCallback(async () => {
     setErr(null);
-    const hasH = !!(heightInput.trim() || feetInput.trim() || inchInput.trim());
+    const hasH = unit === "cm" ? !!heightInput.trim() : !!(feetInput.trim() || inchInput.trim());
     const hasW = !!weightInput.trim();
     if (!hasH && !hasW) { setErr("উচ্চতা বা ওজন অন্তত একটা দিন।"); return; }
     // ft/in দিলে cm-এ রূপান্তর; সংরক্ষণ সবসময় ক্যানোনিকাল "height"/cm (owner-request: স্টোরেজ-unit অপরিবর্তিত)
     let heightCm = null, weightKg = null;
     if (hasH) {
-      const hr = checkHeightInput(heightInput.trim() ? heightInput : cmFromFtIn(feetInput, inchInput));
+      const hr = checkHeightInput(unit === "cm" ? heightInput : cmFromFtIn(feetInput, inchInput));
       if (hr.error) { setErr(hr.error); return; }
       heightCm = hr.value;
     }
@@ -79,7 +80,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
     } finally {
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, heightInput, feetInput, inchInput, weightInput, load, onSaved]);
+  }, [familyId, targetMemberId, callerMemberId, unit, heightInput, feetInput, inchInput, weightInput, load, onSaved]);
 
   return React.createElement(
     "div", { style: { marginTop: embedded ? "0" : "14px", marginBottom: embedded ? "10px" : 0, padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
@@ -87,47 +88,33 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
     latest && (latest.heightCm || latest.weightKg) && React.createElement(
       "div", { style: { fontSize: "14px", color: "#1F2D2A", margin: "8px 0" } },
       "সর্বশেষ: " +
-        (latest.heightCm ? latest.heightCm + " cm" : "উচ্চতা নেই") + " · " +
-        (latest.weightKg ? latest.weightKg + " kg" : "ওজন নেই") +
+        (latest.heightCm ? latest.heightCm + " সেমি" : "উচ্চতা নেই") + " · " +
+        (latest.weightKg ? latest.weightKg + " কেজি" : "ওজন নেই") +
         (latest.bmi ? " · BMI: " + latest.bmi : "")
     ),
-    React.createElement(VitalsLinkNote, { title: "এই একটা ইনপুট যেখানে যাবে (ট্র্যাকারেও ওজন দেওয়া যায়)" }),
+    React.createElement(VitalsLinkNote),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" } },
+      React.createElement("div", { role: "group", "aria-label": "উচ্চতার একক", style: { display: "flex", gap: "4px", padding: "3px", borderRadius: "999px", background: "#EEF3F0", width: "100%" } },
+        React.createElement("button", { type: "button", onClick: () => setUnit("cm"), "aria-pressed": unit === "cm", style: { minHeight: "44px", padding: "0 14px", border: "none", borderRadius: "999px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", background: unit === "cm" ? "#0E4B43" : "transparent", color: unit === "cm" ? "#fff" : "#3E4E49" } }, "সেমি"),
+        React.createElement("button", { type: "button", onClick: () => setUnit("ftin"), "aria-pressed": unit === "ftin", style: { minHeight: "44px", padding: "0 14px", border: "none", borderRadius: "999px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, cursor: "pointer", background: unit === "ftin" ? "#0E4B43" : "transparent", color: unit === "ftin" ? "#fff" : "#3E4E49" } }, "ফুট-ইঞ্চি")),
+      unit === "cm"
+        ? React.createElement("div", null,
+          React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "উচ্চতা (সেমি)"),
+          React.createElement("input", { type: "number", inputMode: "decimal", value: heightInput, onChange: (e) => setHeightInput(e.target.value), style: { display: "block", padding: "8px", minHeight: "44px", boxSizing: "border-box", border: "1px solid #D3E0D9", borderRadius: "10px", width: "110px" } }))
+        : React.createElement(React.Fragment, null,
+          React.createElement("div", null,
+            React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ফুট"),
+            React.createElement("input", { type: "number", inputMode: "numeric", value: feetInput, onChange: (e) => setFeetInput(e.target.value), style: { display: "block", padding: "8px", minHeight: "44px", boxSizing: "border-box", border: "1px solid #D3E0D9", borderRadius: "10px", width: "80px" } })),
+          React.createElement("div", null,
+            React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ইঞ্চি"),
+            React.createElement("input", { type: "number", inputMode: "decimal", value: inchInput, onChange: (e) => setInchInput(e.target.value), style: { display: "block", padding: "8px", minHeight: "44px", boxSizing: "border-box", border: "1px solid #D3E0D9", borderRadius: "10px", width: "80px" } }))),
       React.createElement(
         "div", null,
-        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "উচ্চতা (cm)"),
-        React.createElement("input", {
-          type: "number", value: heightInput, onChange: (e) => setHeightInput(e.target.value),
-          disabled: !!(feetInput.trim() || inchInput.trim()),
-          style: { display: "block", padding: "6px", border: "1px solid #D3E0D9", borderRadius: "10px", width: "100px" },
-        })
-      ),
-      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", alignSelf: "center" } }, "অথবা"),
-      React.createElement(
-        "div", null,
-        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ফুট"),
-        React.createElement("input", {
-          type: "number", value: feetInput, onChange: (e) => setFeetInput(e.target.value),
-          disabled: !!heightInput.trim(),
-          style: { display: "block", padding: "6px", border: "1px solid #D3E0D9", borderRadius: "10px", width: "70px" },
-        })
-      ),
-      React.createElement(
-        "div", null,
-        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ইঞ্চি"),
-        React.createElement("input", {
-          type: "number", value: inchInput, onChange: (e) => setInchInput(e.target.value),
-          disabled: !!heightInput.trim(),
-          style: { display: "block", padding: "6px", border: "1px solid #D3E0D9", borderRadius: "10px", width: "70px" },
-        })
-      ),
-      React.createElement(
-        "div", null,
-        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ওজন (kg)"),
+        React.createElement("label", { style: { fontSize: "14px", color: "#3E4E49" } }, "ওজন (কেজি)"),
         React.createElement("input", {
           type: "number", value: weightInput, onChange: (e) => setWeightInput(e.target.value),
-          style: { display: "block", padding: "6px", border: "1px solid #D3E0D9", borderRadius: "10px", width: "100px" },
+          inputMode: "decimal", style: { display: "block", padding: "8px", minHeight: "44px", boxSizing: "border-box", border: "1px solid #D3E0D9", borderRadius: "10px", width: "110px" },
         })
       ),
       PrimaryButton("সংরক্ষণ করুন", submit, busy)

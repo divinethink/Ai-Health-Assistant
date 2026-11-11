@@ -9,7 +9,8 @@
 // @param {{ unit: string, referenceRange: {low:number, high:number}|null, points: Array<{date:string, value:number}> }} props
 export function TrendChart({ unit, referenceRange, points, targetLine, height: heightProp }) {
   const width = 320, height = heightProp || 180;
-  const padding = { top: 16, right: 16, bottom: 24, left: 8 };
+  const padding = { top: 20, right: 16, bottom: 26, left: 8 };
+  const showAt = (i) => points.length <= 5 || i === 0 || i === points.length - 1 || i % Math.ceil(points.length / 4) === 0; // ১২px লেবেল ভিড় না করতে
   const plotW = width - padding.left - padding.right;
   const plotH = height - padding.top - padding.bottom;
 
@@ -42,7 +43,7 @@ export function TrendChart({ unit, referenceRange, points, targetLine, height: h
   const tLine = targetLine
     ? [
         React.createElement("line", { key: "tl", x1: padding.left, x2: padding.left + plotW, y1: yFor(targetLine.value), y2: yFor(targetLine.value), stroke: "#E8892B", strokeWidth: 1.5, strokeDasharray: "5 4" }),
-        React.createElement("text", { key: "tt", x: padding.left + plotW, y: yFor(targetLine.value) - 4, fontSize: 9, textAnchor: "end", fill: "#B5651B" }, targetLine.label),
+        React.createElement("text", { key: "tt", x: padding.left + plotW, y: yFor(targetLine.value) - 4, fontSize: 12, textAnchor: "end", fill: "#B5651B" }, targetLine.label),
       ]
     : null;
 
@@ -54,11 +55,11 @@ export function TrendChart({ unit, referenceRange, points, targetLine, height: h
       ...(tLine || []),
       React.createElement("polyline", { points: linePoints, fill: "none", stroke: "#0E4B43", strokeWidth: 2 }),
       ...points.map((p, i) => React.createElement("circle", { key: "dot" + i, cx: xFor(i), cy: yFor(p.value), r: 3, fill: "#0E4B43" })),
-      ...points.map((p, i) => React.createElement("text", {
-        key: "lbl" + i, x: xFor(i), y: height - 6, fontSize: 8, textAnchor: "middle", fill: "#888",
+      ...points.map((p, i) => !showAt(i) ? null : React.createElement("text", {
+        key: "lbl" + i, x: xFor(i), y: height - 7, fontSize: 12, textAnchor: "middle", fill: "#5F716C",
       }, String(p.date).slice(5))), // MM-DD
-      ...points.map((p, i) => React.createElement("text", {
-        key: "val" + i, x: xFor(i), y: yFor(p.value) - 6, fontSize: 8, textAnchor: "middle", fill: "#0E4B43",
+      ...points.map((p, i) => !showAt(i) ? null : React.createElement("text", {
+        key: "val" + i, x: xFor(i), y: yFor(p.value) - 6, fontSize: 12, textAnchor: "middle", fill: "#0E4B43",
       }, String(p.value)))
     ),
     referenceRange

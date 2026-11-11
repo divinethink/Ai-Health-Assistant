@@ -288,13 +288,13 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         const isToday = i === todayIdx;
         return React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px", borderRadius: "10px", background: isToday ? "#E4F0E9" : "transparent", borderBottom: !isToday && i < 6 ? "1px solid " + T.track : "1px solid transparent" } },
           React.createElement("div", { "aria-label": DAY_LABELS[i], style: { width: "44px", flexShrink: 0, fontSize: "13px", fontWeight: 700, color: isToday ? T.green : T.ink } },
-            SHORT_DAYS[i], plan.custom && plan.custom.includes(i) && React.createElement("span", { style: { display: "block", fontSize: "10px", fontWeight: 600, color: T.muted } }, "আমার")),
+            SHORT_DAYS[i], plan.custom && plan.custom.includes(i) && React.createElement("span", { style: { display: "block", fontSize: "12px", fontWeight: 600, color: T.muted } }, "আমার")),
           React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: "4px" } },
             items.length
               ? items.map((x, k) => React.createElement("span", { key: k, style: { padding: "2px 8px", borderRadius: "8px", background: isToday ? "#fff" : T.canvas, border: "1px solid " + T.border, fontSize: "12px", color: T.ink, lineHeight: 1.5 } }, x.label.split(" (")[0] + " " + bnNum(x.min) + " মি."))
               : React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, "বিশ্রাম")),
           isToday
-            ? React.createElement("span", { style: { flexShrink: 0, fontSize: "11px", fontWeight: 700, color: T.green, padding: "0 6px" } }, "আজ")
+            ? React.createElement("span", { style: { flexShrink: 0, fontSize: "12px", fontWeight: 700, color: T.green, padding: "0 6px" } }, "আজ")
             : (canEdit && React.createElement(EditIcon, { onClick: () => { setErr(null); setSheet({ kind: "day", idx: i }); }, disabled: busy, label: DAY_LABELS[i] + " বদলান", size: 36 })));
       })),
     React.createElement("div", { style: CARD },
@@ -344,6 +344,14 @@ function TrendTab({ info, familyId, memberId, onGoInput }) {
   const targetKg = !gate.blocked && goal && Number(goal.targetWeightKg) > 0 ? Number(goal.targetWeightKg) : null;
   const wPts = t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg }));
   const points = reviewPoints(t, bnNum);
+  // ১টা মাপে চার্ট অর্থহীন → মান-কার্ড; ২+ হলে চার্ট (ধাপ ২)
+  const lastW = wPts.length ? wPts[wPts.length - 1].value : null;
+  const gapKg = lastW !== null && targetKg ? Math.round(Math.abs(lastW - targetKg) * 10) / 10 : null;
+  const weightValueCard = wPts.length === 1 && React.createElement("div", null,
+    React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" } },
+      React.createElement("span", { style: { color: T.green, whiteSpace: "nowrap" } }, React.createElement("b", { style: { fontSize: "28px" } }, bnNum(lastW)), React.createElement("span", { style: { fontSize: "14px", color: T.muted, marginLeft: "4px" } }, "কেজি")),
+      targetKg && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "লক্ষ্য " + bnNum(targetKg))),
+    React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } }, (gapKg !== null ? (gapKg < 0.1 ? "লক্ষ্য ওজনে আছেন · " : "আরও " + bnNum(gapKg) + " কেজি বাকি · ") : "") + "আরেকটা মাপ যোগ হলে চার্ট দেখা যাবে"));
   // মাত্র ১ দিনের ডেটা হলে গ্রাফ অর্থবহ নয় — বার্তা + "দৈনিক ইনপুট" বাটন
   const fewData = t.loggedDays <= 1;
 
@@ -351,7 +359,7 @@ function TrendTab({ info, familyId, memberId, onGoInput }) {
     fewData && React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
       React.createElement("div", { style: { fontSize: "14px", color: T.green, fontWeight: 700 } }, "২ দিনের ডেটা দিলে গ্রাফ শুরু হবে"),
       onGoInput && React.createElement("button", { onClick: onGoInput, style: { marginTop: "8px", minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "হোমে তথ্য দিন")),
-    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
+    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length === 1 ? weightValueCard : wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
     // ক্যালরি ও ঘুম — এক লাইনে পাশাপাশি, আলাদা কার্ড (ক্যালরি-টার্গেট না থাকলে ঘুম পুরো প্রস্থে)
     React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch" } },
       calorieTarget && React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex" } },
@@ -534,7 +542,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       border: "1px solid " + (val ? "#9CC5B4" : T.border), background: val ? "#E4F0E9" : T.surface, color: T.ink, boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
     React.createElement("span", { "aria-hidden": "true", style: { width: "20px", height: "20px", boxSizing: "border-box", flexShrink: 0, borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700, lineHeight: 1, border: "2px solid " + T.green, background: val ? T.green : "#fff", color: "#fff" } }, val ? "✓" : ""),
     React.createElement("span", { style: { minWidth: 0, fontSize: "14px", fontWeight: 600, lineHeight: 1.3 } }, label,
-      locked && React.createElement("span", { style: { display: "block", fontSize: "11px", fontWeight: 400, color: T.muted } }, "প্রোফাইল থেকে")));
+      locked && React.createElement("span", { style: { display: "block", fontSize: "12px", fontWeight: 400, color: T.muted } }, "প্রোফাইল থেকে")));
   // ধাপ-কার্ড: ক্রমিক নম্বর + প্রশ্ন + উত্তর-ঘর
   const stepCard = (n, title, ...kids) => React.createElement("div", { style: CARD },
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },

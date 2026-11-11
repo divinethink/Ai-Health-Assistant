@@ -8,5 +8,5 @@ export function TrendBars({ labels, values, target, color, width }) {
   return React.createElement("svg", { width: "100%", viewBox: "0 0 " + w + " " + h, role: "img", "aria-label": "সাপ্তাহিক বার-চার্ট" },
     ...values.map((v, i) => v ? React.createElement("rect", { key: "b" + i, x: pad.l + i * bw + bw * 0.15, y: y(v), width: bw * 0.7, height: pad.t + plotH - y(v), rx: 3, fill: color }) : null),
     target ? React.createElement("line", { key: "t", x1: pad.l, x2: w - pad.r, y1: y(target), y2: y(target), stroke: "#5F716C", strokeDasharray: "4 3", strokeWidth: 1 }) : null,
-    ...labels.map((l, i) => React.createElement("text", { key: "l" + i, x: pad.l + i * bw + bw / 2, y: h - 6, fontSize: 9, textAnchor: "middle", fill: "#5F716C" }, l)));
+    ...labels.map((l, i) => React.createElement("text", { key: "l" + i, x: pad.l + i * bw + bw / 2, y: h - 6, fontSize: 12, textAnchor: "middle", fill: "#5F716C" }, l)));
 }

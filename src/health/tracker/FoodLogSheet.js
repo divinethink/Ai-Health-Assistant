@@ -113,7 +113,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
       quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
         style: { ...chip(false), flex: "0 0 auto", textAlign: "left", opacity: busy ? 0.5 : 1, lineHeight: 1.3 } },
         React.createElement("span", { style: { display: "block", fontSize: "14px" } }, "＋ " + e.name),
-        React.createElement("span", { style: { display: "block", fontSize: "11.5px", fontWeight: 500, color: MUTED } }, (entryAmountText(e) ? entryAmountText(e) + " · " : "") + bnNum(e.kcal) + " কিলো")))));
+        React.createElement("span", { style: { display: "block", fontSize: "12px", fontWeight: 500, color: MUTED } }, (entryAmountText(e) ? entryAmountText(e) + " · " : "") + bnNum(e.kcal) + " কিলো")))));
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {

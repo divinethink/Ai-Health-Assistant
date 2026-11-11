@@ -15,6 +15,9 @@ import { TrendChart } from "./TrendChart.js";
 
 const { useState, useEffect, useMemo } = React;
 
+// শুধু দেখানোর নাম (ধাপ ১): সংরক্ষিত type অপরিবর্তিত; অজানা নাম যেমন আছে তেমনই
+const TYPE_BN = { height: "উচ্চতা", weight: "ওজন" };
+
 export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
   const [records, setRecords] = useState(null);
   const [dict, setDict] = useState([]);
@@ -47,7 +50,7 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
   if (typeOptions.length === 0) {
     return React.createElement(
       "div", { style: { marginTop: "20px" } },
-      React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43" } }, "Trend Chart"),
+      React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43" } }, "ট্রেন্ড"),
       React.createElement("p", { style: { color: "#888", fontSize: "14px" } },
         "এখনো কোনো যাচাই-করা পরিমাপ নেই — রিপোর্ট বিশ্লেষণ বা হাতে লিখে অন্তত একটা মান সংরক্ষণ ও যাচাই করুন।")
     );
@@ -64,8 +67,8 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
 
   return React.createElement(
     "div", { style: { marginTop: "20px" } },
-    React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43", margin: "0 0 6px" } }, "Trend Chart"),
-    SelectField("", selectedType, setSelectedType, typeOptions.map((t) => { const nm = t.charAt(0).toUpperCase() + t.slice(1); return [t, t === selectedType ? nm + " (Change)" : nm]; })),
+    React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43", margin: "0 0 6px" } }, "ট্রেন্ড"),
+    SelectField("", selectedType, setSelectedType, typeOptions.map((t) => { const nm = TYPE_BN[String(t).trim().toLowerCase()] || (t.charAt(0).toUpperCase() + t.slice(1)); return [t, t === selectedType ? nm + " (পরিবর্তন)" : nm]; })),
     points.length < 2
       ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "ধারা (ট্রেন্ড) দেখাতে অন্তত ২টা তারিখসহ যাচাই-করা মান দরকার।")
       : React.createElement(TrendChart, { unit, referenceRange: dictEntry ? dictEntry.referenceRange : null, points })

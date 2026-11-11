@@ -317,8 +317,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const card = { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
   return h("div", null,
-    h("div", { style: { fontSize: "13px", color: "#5F716C", marginBottom: "8px", lineHeight: 1.5 } },
-      "🔔 অ্যাপ খোলা থাকলে রিমাইন্ডার বাজবে। অ্যাপ বন্ধ থাকলেও পেতে ওষুধ খুলে \"📅 Calendar\" বাটন চাপুন।"),
+    h("details", { style: { background: "#FFF6DD", border: "1px solid #E8D08A", borderRadius: "12px", padding: "0 12px", marginBottom: "10px", color: "#7A5B00" } },
+      h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 700 } }, h("span", { "aria-hidden": "true" }, "ⓘ"), "রিমাইন্ডার পেতে অ্যাপ খোলা রাখুন"),
+      h("div", { style: { fontSize: "13px", lineHeight: 1.5, padding: "0 0 10px" } }, "অ্যাপ খোলা থাকলে ওষুধের সময়ে রিমাইন্ডার আসবে। অ্যাপ বন্ধ থাকলেও পেতে চাইলে ওষুধের কার্ডে \"📅 Calendar\" চাপুন।")),
     permission !== "granted" && permission !== "unsupported" && h("button", { onClick: requestPermission, style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid " + GREEN, borderRadius: "10px", background: "#fff", color: GREEN, fontSize: F, cursor: "pointer" } }, "🔔 নোটিফিকেশন চালু করুন"),
     permission === "unsupported" && h("div", { style: { fontSize: F, color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজারে Notification সাপোর্ট নেই।"),
 

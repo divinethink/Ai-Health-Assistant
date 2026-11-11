@@ -29,9 +29,9 @@ export const EX_ICON = { walk: "🚶", run: "🏃", cycling: "🚴", gym: "🏋�
 const GREEN = "#0E4B43";
 const MUTED = "#5F716C";
 export const BTN = { minHeight: "44px", minWidth: "44px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 700 };
-const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "11px", fontWeight: 700 };
-const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#B3261E", border: "1px solid #B3261E", color: "#fff", fontSize: "11px", fontWeight: 700 };
-const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "11px", fontWeight: 700 };
+const TAG_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#FFF0D6", border: "1px solid #EBD9B4", color: "#7A5200", fontSize: "12px", fontWeight: 700 };
+const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#B3261E", border: "1px solid #B3261E", color: "#fff", fontSize: "12px", fontWeight: 700 };
+const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "#0E4B43", fontSize: "12px", fontWeight: 700 };
 export const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
 export function Sheet({ title, subtitle, onClose, children }) {
@@ -110,7 +110,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout }) {
               n ? "প্রতি ১০০ গ্রামে · প্রোটিন " + fmtMacro(n.p) + " · কার্ব " + fmtMacro(n.c) + " · ফ্যাট " + fmtMacro(n.f) : "১ " + f.u + "-এ")),
           React.createElement("span", { style: { textAlign: "right", flexShrink: 0 } },
             React.createElement("b", { style: { display: "block", fontSize: "16px" } }, bnNum(n ? n.kcal : foodK(key))),
-            React.createElement("span", { style: { fontSize: "11px", color: MUTED } }, "কিলোক্যালরি")));
+            React.createElement("span", { style: { fontSize: "12px", color: MUTED } }, "কিলোক্যালরি")));
       })) :
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
       found.map(({ key, f, allergy }) => { const st = foodStatus(key, f, { allergyTags, ctx: avoidCtx }); const sc = STATUS_COLORS[st.level]; return React.createElement("span", { key, style: { display: "inline-flex", alignItems: "center" } }, React.createElement("button", {

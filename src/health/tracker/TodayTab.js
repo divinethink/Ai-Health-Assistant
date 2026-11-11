@@ -47,15 +47,15 @@ function Ring({ pct, size, stroke, color, track, children, label, redFrom }) {
 }
 
 // ধাপ ৩: ট্যাপ করলে ইনপুট-শিট খোলে (role=button); ডানকোণে ছোট ＋ হিন্ট।
-function MiniRing({ value, pct, color, caption, label, onTap }) {
+function MiniRing({ value, pct, color, caption, label, onTap, empty }) { // empty: আজ এখনো কিছু নেই → "০%" নয়, "–" ও বন্ধুত্বপূর্ণ লেখা
   const key = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTap(); } };
   return React.createElement("div", { role: "button", tabIndex: 0, "aria-label": label + " যোগ/বদলান", onClick: onTap, onKeyDown: key,
     style: { ...CARD_STYLE, position: "relative", flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", cursor: "pointer" } },
     React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", top: "6px", right: "6px", width: "22px", height: "22px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 } }, "＋"),
     React.createElement(Ring, { pct, size: 44, stroke: 6, color, track: T.track, label },
-      React.createElement("span", { style: { fontSize: "10.5px", fontWeight: 700, color: T.ink } }, bnNum(Math.round(Math.min(pct, 999))) + "%")),
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, textAlign: "center", lineHeight: 1.25 } }, value),
-    React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, textAlign: "center", lineHeight: 1.3, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, caption));
+      React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, color: T.ink } }, empty ? "–" : bnNum(Math.round(Math.min(pct, 999))) + "%")),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, textAlign: "center", lineHeight: 1.25 } }, empty ? label : value),
+    React.createElement("div", { style: { fontSize: "12px", color: T.muted, textAlign: "center", lineHeight: 1.3, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, empty ? "এখনো নেই" : caption));
 }
 
 // হোমের উপরের সতর্ক-সারি: এলার্জি (লাল) + চলমান অসুস্থতা। এলার্জি-রেকর্ড না থাকলে "নেই" বা সবুজ নয়,
@@ -232,17 +232,17 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     calc && React.createElement("div", { style: { ...CARD_STYLE, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 10px", marginBottom: "6px" } },
         React.createElement("span", { style: { fontSize: "21px", fontWeight: 800, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, info.member && info.member.name ? info.member.name : "আমার"),
-        info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, String(info.age) + " yrs"),
+        info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, bnNum(info.age) + " বছর"),
         // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
         React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 4px", borderRadius: "999px", border: "none", background: "transparent", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" } },
           bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎")),
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "12px", opacity: 0.75 } }, "✎")),
         dateChip),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
         React.createElement(Ring, { pct: onFast ? 0 : (eaten > calc.calorieTarget ? 100 : pctOf(eaten, calc.calorieTarget)), redFrom: !onFast && eaten > calc.calorieTarget ? (calc.calorieTarget / eaten) * 100 : undefined, size: 96, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
           // রিংয়ের ভেতরের ব্যাস ≈ ৭৮px: সংখ্যা ১৬px + লেবেল ১০.৫px (nowrap) এর ভেতরেই ধরে
           React.createElement("span", { style: { fontSize: "16px", fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap" } }, bnNum(eaten)),
-          React.createElement("span", { style: { fontSize: "10.5px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, "কিলোক্যালরি")),
+          React.createElement("span", { style: { fontSize: "12px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, "কিলোক্যালরি")),
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           onFast
             ? React.createElement(React.Fragment, null,
@@ -263,13 +263,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
             return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
               React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft } }, name),
-              React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: over ? "#FFB4A6" : T.onDark, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v), !mt && i === 3 && React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, color: T.onDarkSoft } }, " (গ্রাম)")),
-              mt && React.createElement("div", { style: { fontSize: "11px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
+              React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: over ? "#FFB4A6" : T.onDark, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v), !mt && i === 3 && React.createElement("span", { style: { fontSize: "12px", fontWeight: 600, color: T.onDarkSoft } }, " (গ্রাম)")),
+              mt && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
               React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? "rgba(255,255,255,0.18)" : col, marginTop: "2px" } },
                 tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#FF6A4D" : col } }) : null));
           })),
-        mt && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, mt.note),
-        macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।"))),
+        mt && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "4px" } }, mt.note),
+        macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "4px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।"))),
 
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [], onDiet: () => setDietOpen(true) }),
     dietOpen && React.createElement(Sheet, { title: "খাদ্য নির্দেশিকা", subtitle: (info.conds || []).map((c) => c.name).join(", ") || undefined, onClose: () => setDietOpen(false) },
@@ -280,17 +280,24 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
+    // খালি-অবস্থা: আজ কিছুই যোগ না হলে বন্ধুত্বপূর্ণ বার্তা (শুধু আজ; ডেটা বদলায় না)
+    isViewToday && oldReady && !onFast && !eaten && !glasses && !d.exerciseMin && !d.sleepMinutes && !d.steps && extras.length === 0 && React.createElement("div", { style: { ...CARD_STYLE, background: "#E4F0E9", borderColor: "#9CC5B4", display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px" } },
+      React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px" } }, "💧"),
+      React.createElement("div", null,
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.green } }, "আজ এখনো কিছু যোগ হয়নি 🙂"),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, waterTarget ? "প্রথম গ্লাস পানি দিয়ে শুরু করুন" : "নিচের যেকোনো একটি দিয়ে শুরু করুন"))),
+
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-      React.createElement(MiniRing, { value: bnNum(d.exerciseMin || 0) + "/" + bnNum(exTarget), pct: pctOf(d.exerciseMin, exTarget), color: T.orange, caption: "ব্যায়াম (মি.)", label: "ব্যায়াম", onTap: () => openIn("exercise") }),
-      React.createElement(MiniRing, { value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "ঘুম · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
-      stTarget && React.createElement(MiniRing, { value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
+      React.createElement(MiniRing, { empty: !d.exerciseMin, value: bnNum(d.exerciseMin || 0) + "/" + bnNum(exTarget), pct: pctOf(d.exerciseMin, exTarget), color: T.orange, caption: "ব্যায়াম (মি.)", label: "ব্যায়াম", onTap: () => openIn("exercise") }),
+      React.createElement(MiniRing, { empty: !d.sleepMinutes, value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "ঘুম · লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
+      stTarget && React.createElement(MiniRing, { empty: !d.steps, value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: "স্টেপ / " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
       // হিরো না থাকলে (উপবাস/টার্গেট-ব্লক) BMI কার্ড এখানে ফেরে — নইলে ওজন দেওয়ার পথ থাকত না
       !calc && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
         style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer" } },
         React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1.2 } }, "⚖️"),
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bmiVal ? bnNum(Math.round(bmiVal * 10) / 10) : "—"),
-        React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, bmiVal && info.weightKg ? "BMI · " + bnNum(info.weightKg) + " কেজি" : "ওজন দিন"))),
+        React.createElement("div", { style: { fontSize: "12px", color: T.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, bmiVal && info.weightKg ? "BMI · " + bnNum(info.weightKg) + " কেজি" : "ওজন দিন"))),
 
     // পানি (৩/৪) + খাবার-যোগ (১/৪) এক সারিতে — আলাদা কার্ড। খাবার-কার্ড শুধু লগ-যোগ্য হলে; নইলে পানি পুরো প্রস্থে।
     (waterTarget || canLog) && React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
@@ -301,10 +308,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px" }, "aria-hidden": "true" },
           Array.from({ length: Math.max(waterTarget, Math.min(glasses, 16)) }, (_, i) => React.createElement("div", { key: i, style: { width: "13px", height: "14px", borderRadius: "3px 3px 5px 5px", background: i < glasses ? "linear-gradient(180deg, #6BB1EE, " + T.blue + ")" : T.blueSoft } }))),
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
-          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: busy || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "34px", borderRadius: "10px", border: "none", background: busy ? "#9BB9D6" : "linear-gradient(135deg, #4C9CE4, " + T.blue + ")", color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: busy ? "none" : "0 4px 10px rgba(59,142,216,0.28)" } }, "＋ গ্লাস"),
-          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: busy || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "34px", borderRadius: "10px", border: "1.5px solid " + T.blue, background: T.surface, color: T.blue, fontSize: "18px", fontWeight: 700, lineHeight: 1, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−"))),
-      canLog && React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flex: 1, minWidth: 0, borderRadius: "16px", border: "none", background: "linear-gradient(160deg, #FFD68E, #F2A23A)", color: "#4A3200", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px 4px", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 18px rgba(232,137,43,0.32)" } },
-        React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", fontWeight: 700, lineHeight: 1 } }, "＋"),
+          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: busy || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "34px", borderRadius: "10px", border: "none", background: busy ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: busy ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, "＋ ১ গ্লাস"),
+          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: busy || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "34px", borderRadius: "10px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "18px", fontWeight: 700, lineHeight: 1, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−"))),
+      canLog && React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flex: 1, minWidth: 0, borderRadius: "16px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px 4px", cursor: "pointer", fontFamily: "inherit" } },
+        React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", fontWeight: 700, lineHeight: 1 } }, "＋"),
         React.createElement("span", { style: { fontSize: "14px", fontWeight: 800 } }, "খাবার"))),
 
     err && ErrorBox(err),
@@ -330,7 +337,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
           const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
           const canPick = inRange(x.date, today), isSel = x.date === viewDate;
           return React.createElement("button", { key: x.date, type: "button", disabled: !canPick, onClick: () => pickDay(x.date), "aria-pressed": isSel, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: 1, minHeight: "44px", padding: 0, border: "none", background: "none", fontFamily: "inherit", cursor: canPick ? "pointer" : "default" } },
-            React.createElement("span", { style: { fontSize: "11px", color: T.muted } }, SHORT_DAYS[i]),
+            React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, SHORT_DAYS[i]),
             React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : isFast ? " সিয়াম/ফাস্টিং-এর দিন" : isToday ? " আজ" : ""), style: { width: "26px", height: "26px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
               background: hit ? T.green : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || isToday ? T.onDark : T.muted,
               boxShadow: isSel ? "0 0 0 2px " + T.sand + ", 0 0 0 4px " + T.green : "none",

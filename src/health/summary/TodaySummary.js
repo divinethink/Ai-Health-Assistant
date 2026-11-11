@@ -170,9 +170,12 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
       upcoming.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0" } }, "আগামী ৩০ দিনে টিকা বা অ্যাপয়েন্টমেন্ট নেই।")
         : upcoming.map((e, i) => h("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: i === upcoming.length - 1 ? "none" : "1px solid " + T.track } },
-          h(Tile, null, EVENT_ICON[e.eventType] || "📅"),
-          h("div", { style: { minWidth: 0 } },
+          // তারিখ বড় (সংখ্যা + মাস), আইকন ছোট — ধাপ ২
+          h("div", { "aria-hidden": "true", style: { width: "56px", height: "56px", flexShrink: 0, borderRadius: "14px", background: T.green, color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1.1 } },
+            h("span", { style: { fontSize: "22px", fontWeight: 800 } }, bnNum(new Date(e.date + "T00:00:00").getDate())),
+            h("span", { style: { fontSize: "12px" } }, new Date(e.date + "T00:00:00").toLocaleDateString("bn-BD", { month: "short" }))),
+          h("div", { style: { minWidth: 0, flex: 1 } },
             h("div", { style: { fontSize: "17px", fontWeight: 700, color: T.ink } }, e.title),
-            h("div", { style: { fontSize: "14px", color: T.muted } }, new Date(e.date + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" }) + " · " + whenLabel(e)))))),
+            h("div", { style: { fontSize: "14px", color: T.muted } }, h("span", { "aria-hidden": "true", style: { fontSize: "13px" } }, (EVENT_ICON[e.eventType] || "📅") + " "), whenLabel(e)))))),
     !onlyMeds && h("p", { style: { fontSize: "12px", color: T.muted, margin: "10px 2px 0" } }, "এটা শুধু আপনার দেওয়া তথ্যের সারাংশ; চিকিৎসা পরামর্শ নয়।"));
 }
