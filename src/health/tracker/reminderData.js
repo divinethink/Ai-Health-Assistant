@@ -1,7 +1,7 @@
 // ট্র্যাকার রিমাইন্ডার — pure functions (ধাপ ৩)। সেটিং goal-ডকের `reminders` ফিল্ডে (rules-এ আগেই allowlisted)।
 // expandReminders() গোটা দিনের [{id,time,title,body}] তালিকা দেয় — এখন ব্রাউজার-নোটিফিকেশন চালায়,
 // ধাপ ০-র পর native Local Notification-ও এই একই তালিকা থেকে schedule করবে (স্ক্রিন/ডেটা বদলাবে না)।
-// ঔষধ-রিমাইন্ডার আলাদা (MedicationReminders) — এখানে নয়।
+// ওষুধের সময়-তালিকা (dueMedDoses) medReminderCalc.js-এ; এখানে শুধু চালু/বন্ধ সেটিং (medicine.on)।
 
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, bdDayIndex } from "./exercisePlanData.js";
@@ -22,6 +22,7 @@ export const DEFAULT_REMINDERS = {
   exercise: { on: false, time: "17:00" },
   sleep: { on: false, time: "22:30" },
   calendar: { on: false, daysBefore: 1 }, // ক্যালেন্ডারের টিকা/অ্যাপয়েন্টমেন্ট: N দিন আগে ও সেই দিন
+  medicine: { on: true }, // ওষুধ: সময় Health → ওষুধ থেকে; ডিফল্ট চালু (আগে সবসময় আসত — পুরনো ব্যবহারকারীর আচরণ বদলায় না)
 };
 export const CAL_DAYS_BEFORE = [1, 2, 3, 7];
 
@@ -41,6 +42,7 @@ export function normalizeReminders(raw) {
     water: { on: !!(r.water && r.water.on), everyHours: Number.isInteger(eh) && eh >= 1 && eh <= 6 ? eh : D.water.everyHours, from, to: to > from ? to : D.water.to > from ? D.water.to : "23:00" },
     exercise: { on: !!(r.exercise && r.exercise.on), time: okTime(r.exercise && r.exercise.time, D.exercise.time) },
     sleep: { on: !!(r.sleep && r.sleep.on), time: okTime(r.sleep && r.sleep.time, D.sleep.time) },
+    medicine: { on: r.medicine && typeof r.medicine.on === "boolean" ? r.medicine.on : D.medicine.on },
     calendar: { on: !!(r.calendar && r.calendar.on), daysBefore: CAL_DAYS_BEFORE.includes(Number(r.calendar && r.calendar.daysBefore)) ? Number(r.calendar.daysBefore) : D.calendar.daysBefore },
   };
 }

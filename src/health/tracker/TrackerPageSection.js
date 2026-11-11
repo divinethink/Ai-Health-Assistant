@@ -414,20 +414,11 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   );
 }
 
-// ---------- ট্রেন্ড ও রিমাইন্ডার (ট্রেন্ড | রিমাইন্ডার) ----------
-function TrendReminderTab(props) {
-  const [sub, setSub] = useState("trend");
-  const { info, familyId, callerMemberId, memberId, onSaved, onGoHome } = props;
-  return React.createElement("div", null,
-    Pills([["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"]], sub, setSub),
-    sub === "trend" && React.createElement(TrendTab, { info, familyId, memberId, onGoInput: onGoHome }),
-    sub === "reminder" && React.createElement(ReminderSettings, { info, familyId, memberId, callerMemberId, onSaved }));
-}
 
 // ---------- লক্ষ্য ও প্ল্যান (লক্ষ্য সেট করুন | মিল প্ল্যান | ব্যায়াম প্ল্যান) ----------
 // লক্ষ্য না থাকলে প্রথমে "আমার লক্ষ্য", থাকলে "মিল প্ল্যান"।
 function GoalPlanTab(props) {
-  const [sub, setSub] = useState(props.info.goal ? "meal" : "goal");
+  const [sub, setSub] = useState("goal"); // ট্র্যাকার নেভে ঢুকলে সবসময় "আমার লক্ষ্য"
   return React.createElement("div", null,
     Pills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
     sub === "goal" && React.createElement(GoalTab, props),
@@ -613,7 +604,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 // ---------- মূল পেজ ----------
 // টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
 export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome }) {
-  // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান + ট্রেন্ড ও রিমাইন্ডার)
+  // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান | ট্রেন্ড | রিমাইন্ডার)
   const isToday = mode === "today";
   const [tab, setTab] = useState(isToday ? "today" : "plan");
   const [data, setData] = useState(null);
@@ -656,7 +647,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড ও রিমাইন্ডার"]];
+  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
     !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
@@ -667,7 +658,8 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && !isToday && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && !isToday && tab === "trend" && React.createElement(TrendReminderTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onGoHome })
+      data && !isToday && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, onGoInput: onGoHome }),
+      data && !isToday && tab === "reminder" && React.createElement(ReminderSettings, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, callerMemberId, onSaved: load })
     )
   );
 }

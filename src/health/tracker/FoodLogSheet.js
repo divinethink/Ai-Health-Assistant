@@ -31,6 +31,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const [notice, setNotice] = useState(null);
   const [own, setOwn] = useState(null); // null = বন্ধ; অবজেক্ট = "নিজে যোগ করুন" ফর্ম
   const [ownErr, setOwnErr] = useState(null);
+  const [showInfo, setShowInfo] = useState(false); // "হিসাবের তথ্য" ভাঁজ
   const slotList = slots || MEAL_SLOTS;
   const slotLabel = (slotList.find((s) => s.id === slot) || {}).label;
   const full = count >= MAX_LIST;
@@ -157,14 +158,16 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const hasMacro = !!entry && entry.p !== undefined;
 
   return h(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose },
-    h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", marginBottom: "4px", justifyContent: "flex-start" } }, "← অন্য খাবার"),
+    h("div", { style: { position: "relative", display: "flex", alignItems: "center", minHeight: "44px", marginBottom: "4px" } },
+      h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto" } }, "← অন্য খাবার"),
+      // "কতটুকু খাবেন?" — "অন্য খাবার"-এর একই লাইনে, মাঝ-বরাবর, বড় ফন্টে
+      h("div", { style: { position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A", pointerEvents: "none" } }, "কতটুকু খাবেন?")),
     // স্ট্যাটাস: সবুজ হলে কিছু দেখানো হয় না (শব্দ কমে); হলুদ/লাল হলে কারণসহ
     st.level !== "green" && h("div", { style: { padding: "8px 12px", borderRadius: "12px", border: "1px solid " + sc.border, background: sc.bg, color: sc.text, fontSize: "13px", marginBottom: "8px" } },
       h("b", null, st.icon + " " + st.label), st.reasons.length > 0 && " — " + st.reasons.join("; ")),
     notes.map((n, i) => h("div", { key: "n" + i, style: { padding: "8px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13px", lineHeight: 1.5, marginBottom: "8px" } }, "💊 " + n.text)),
 
-    // ১) কতটুকু খাবেন (মাঝ-সারিতে)
-    h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A", margin: "12px 0 8px", textAlign: "center" } }, "কতটুকু খাবেন?"),
+    // ১) কতটুকু খাবেন — শিরোনাম উপরের "অন্য খাবার" লাইনে
     !unitMode && h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "12px" } },
       ms.map((m) => h("button", { key: m.id, type: "button", onClick: () => { setMeasureId(m.id); setQty(1); }, "aria-pressed": measureId === m.id, style: { ...chip(measureId === m.id), flex: "0 0 auto", minHeight: "48px", lineHeight: 1.25, textAlign: "center" } },
         h("span", { style: { display: "block", fontSize: "15px" } }, m.label),
@@ -200,18 +203,18 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
         : h("div", { style: { fontSize: "14px", color: "#7A1F14" } }, "পরিমাণ সঠিক নয় — গ্রাম ১–২০০০-এর মধ্যে দিন।")),
 
     // ৩) বাড়তি তথ্য ভাঁজে — ডিফল্টে বন্ধ
-    h("details", { style: { marginTop: "14px" } },
-      h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer", fontSize: "14px", fontWeight: 600, color: GREEN } }, "ℹ️ হিসাবের তথ্য"),
-      h("div", { style: { fontSize: "12px", color: MUTED, lineHeight: 1.6 } },
+    showInfo && h("div", { style: { marginTop: "10px", fontSize: "12px", color: MUTED, lineHeight: 1.6 } },
         !unitMode && h("div", null, "বাটি/কাপের আকার ঘরে ঘরে আলাদা। গ্রামে সরাসরি লিখলে আরও নিখুঁত হবে।"),
         p100 && h("div", null, "প্রতি ১০০ গ্রামে: " + bnNum(p100.kcal) + " কিলোক্যালরি · প্রোটিন " + fmtMacro(p100.p) + " · কার্ব " + fmtMacro(p100.c) + " · ফ্যাট " + fmtMacro(p100.f) + " · ফাইবার " + fmtMacro(p100.fib) + " গ্রাম"),
         p100 && h("div", null, nut && nut.src === "recipe" ? "গড় রেসিপি অনুযায়ী (±১০–১৫% বা বেশি তফাত হতে পারে)" : "প্রকাশিত খাদ্য-তালিকার সাধারণ মান (আনুমানিক)"),
-        unitMode && h("div", null, "১ " + f.u + " = " + bnNum(foodK(key)) + " কিলোক্যালরি" + (hasFoodOverride(key) ? " (আপনার নিজের দেওয়া মান)" : "")))),
+        unitMode && h("div", null, "১ " + f.u + " = " + bnNum(foodK(key)) + " কিলোক্যালরি" + (hasFoodOverride(key) ? " (আপনার নিজের দেওয়া মান)" : ""))),
 
     st.level === "red" && Msg("⚠ এই খাবার আপনার জন্য এড়ানোর কথা। ডাক্তারের পরামর্শ প্রাধান্য পায়; তবু খেলে যোগ করতে পারেন।", "warn"),
     full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। আগের কোনোটি মুছুন।", "warn"),
     err && Msg(err, "err"),
     // যোগ-বাটন স্থির (sticky) — উপরে পাতলা রেখা, লেখা তার নিচে ঢুকে যায় না
-    h("div", { style: { position: "sticky", bottom: 0, marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2" } },
+    // "হিসাবের তথ্য" বামে, "যোগ করুন" একই লাইনে সর্ব ডানে
+    h("div", { style: { position: "sticky", bottom: 0, marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2", display: "flex", alignItems: "center", gap: "10px" } },
+      h("button", { type: "button", onClick: () => setShowInfo((v) => !v), "aria-expanded": showInfo, style: { minHeight: "48px", padding: "0 4px", border: "none", background: "transparent", color: GREEN, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flex: "0 0 auto" } }, "ℹ️ হিসাবের তথ্য"),
       primaryBtn((st.level === "red" ? "তবু যোগ করুন" : "যোগ করুন") + " (" + slotLabel + ")", submit, busy, !entry || full)));
 }

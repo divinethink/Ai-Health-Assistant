@@ -77,7 +77,8 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
   useEffect(() => {
     const settings = data ? normalizeReminders(data.goal && data.goal.reminders) : null;
     const trackerOn = !!(settings && anyReminderOn(settings));
-    if (!trackerOn && !medData.length) return undefined;
+    const medOn = !settings || settings.medicine.on; // সেটিং লোড হওয়ার আগে/না থাকলে ডিফল্ট চালু
+    if (!trackerOn && !(medOn && medData.length)) return undefined;
     const member = (members || []).find((m) => m.id === memberId) || null;
 
     // ডোজের সময়ে সর্বশেষ "খেয়েছি" অবস্থা সার্ভার থেকে দেখে নেওয়া; পড়া না গেলে (অফলাইন) রিমাইন্ডার দেওয়াই নিরাপদ।
@@ -106,6 +107,7 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
           try { new Notification(c.title, { body: c.body }); } catch (e) { /* ignore */ }
         });
       }
+      if (!medOn) return;
       dueMedDoses(medData, now, today).forEach((d) => { if (!alreadyShown(d.id)) fireDose(d, today); });
       endingSoonMeds(medData, today).forEach((w) => {
         if (endWarnShown(w.recordId, today)) return;

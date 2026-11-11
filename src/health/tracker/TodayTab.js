@@ -257,10 +257,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।"),
       // পুষ্টির হিসাব: হিরো-কার্ডের ভেতরেই, তবে আলাদা কার্ডের মতো হালকা ব্যাকগ্রাউন্ডের প্যানেলে (আগের "কিছু যোগ হয়নি" বার্তার জায়গায়)।
       // খালি অবস্থায়ও থাকে (০ ও টার্গেট); ডেটা বদলায় না, শুধু দেখানো।
-    canLog && React.createElement("div", { style: { marginTop: "10px", padding: "10px 14px", borderRadius: "14px", background: "var(--hs-surface, #fff)", color: T.ink, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }, "aria-label": "আজকের হিসাব (গ্রাম)" },
-      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" } },
-        React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.green } }, "🥗 পুষ্টির হিসাব"),
-        React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, "গ্রাম · আনুমানিক")),
+    canLog && React.createElement("div", { style: { marginTop: "10px", padding: "8px 14px", borderRadius: "14px", background: "var(--hs-surface, #fff)", color: T.ink, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }, "aria-label": "আজকের পুষ্টির হিসাব (গ্রাম, আনুমানিক)" },
       React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
         [["প্রোটিন", macros.p, "#2E9E5B", "p"], ["কার্ব", macros.c, "#E0892B", "c"], ["ফ্যাট", macros.f, "#8A6FD6", "f"], ["ফাইবার", macros.fib, "#3C86D6", "fib"]].map(([name, v, col, key]) => {
           const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
@@ -272,7 +269,6 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: tg ? T.border : col, marginTop: "3px" } },
               tg ? React.createElement("div", { style: { height: "4px", borderRadius: "4px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
-      mt && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, mt.note),
       macros.total === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "6px" } }, "“খাবার” বাটনে যোগ করা খাবার থেকে হিসাব হয় 🙂"),
       macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
     ),
