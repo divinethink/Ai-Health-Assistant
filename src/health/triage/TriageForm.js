@@ -13,10 +13,12 @@ import { t } from "../../shared/i18n.js";
 // Rate-Limit (429) Mitigation (§10.2.2) — askAI()-এর retry-callback দিয়ে
 // non-alarming "একটু অপেক্ষা করুন" note দেখানো হয়, raw error না।
 
+import { bnNum } from "../../shared/dates.js";
 import { ErrorBox, SelectField, TextField, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS, CARDIAC_BYSTANDER_QUESTIONS, getAgeInYears } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
+import { groupChecklistItems } from "./triageGroups.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 import { createEpisode, saveTriageResult, addMessage, archiveEpisode } from "../episodes/episodesData.js";
@@ -334,32 +336,29 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       "বয়স-গ্রুপ: " + (AGE_GROUP_LABELS[ageGroup] || ageGroup)
     ),
 
+    // ধাপ ৩: ২–৩ গ্রুপ, বড় টাচ-সারি (≥৫৬px, পুরো সারি ট্যাপযোগ্য)। আইটেম/id/triage-নিয়ম অপরিবর্তিত — শুধু সাজানো।
     checklistItems.length > 0 && React.createElement(
-      "div", { style: { marginTop: "12px", background: "#FFF7E6", padding: "12px", borderRadius: "14px", border: "1px solid #E8C46B" } },
-      React.createElement(
-        "div", { style: { fontSize: "14px", fontWeight: 600, color: "#7A5B00", marginBottom: "8px" } },
-        "নিচের কোনোটা এখন প্রযোজ্য কিনা মিলিয়ে দেখুন (জরুরি সতর্কতা-চেকলিস্ট):"
-      ),
-      checklistItems.map((it) =>
-        React.createElement(
-          "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", padding: "6px 0", cursor: "pointer" } },
-          React.createElement("input", { type: "checkbox", checked: !!checklist[it.id], onChange: () => toggleItem(it.id) }),
-          it.label
+      "div", { style: { marginTop: "12px" } },
+      React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginBottom: "4px" } }, "এখন প্রযোজ্য কোনটা? মিলিয়ে দেখুন"),
+      groupChecklistItems(checklistItems, isPediatricAgeGroup(ageGroup)).map((g) => React.createElement(
+        React.Fragment, { key: g.key },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", margin: "14px 0 6px", fontSize: "16px", fontWeight: 700, color: "#0E4B43" } },
+          React.createElement("span", { "aria-hidden": "true" }, g.icon), g.title),
+        g.items.map((it) => {
+          const on = !!checklist[it.id];
+          return React.createElement(
+            "label", { key: it.id, style: { display: "flex", alignItems: "center", gap: "12px", minHeight: "56px", boxSizing: "border-box", padding: "10px 14px", marginBottom: "8px", borderRadius: "14px", cursor: "pointer", fontSize: "15px", lineHeight: 1.4, color: "#1F2D2A", border: "1.5px solid " + (on ? "#0E4B43" : "#D9E5DE"), background: on ? "#E4F0E9" : "#fff" } },
+            React.createElement("input", { type: "checkbox", checked: on, onChange: () => toggleItem(it.id), style: { width: "26px", height: "26px", flexShrink: 0, accentColor: "#0E4B43", margin: 0 } }),
+            it.label
+          );
+        }),
+        // বুকে ব্যথা বাছলে অতিরিক্ত প্রশ্ন ঠিক ওই গ্রুপের নিচে (Arch B §5.4.1.1; আগের মতোই শুধু chestPain বাছলে)
+        g.key === "chest" && checklist.chestPain && React.createElement(
+          "div", { style: { marginTop: "4px", marginBottom: "8px", padding: "8px 14px", borderRadius: "14px", background: "#FFF7E6", border: "1px solid #E8C46B" } },
+          React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "#7A5B00", marginBottom: "4px" } }, "বুকে ব্যথা সংক্রান্ত অতিরিক্ত প্রশ্ন (bystander-aspirin বিবেচনার জন্য):"),
+          CARDIAC_BYSTANDER_QUESTIONS.map((q) => checkboxLine(q.label, !!cardiacAnswers[q.id], () => toggleCardiacAnswer(q.id)))
         )
-      )
-    ),
-
-    // Cardiac-pattern sub-checklist — শুধু adult "বুকে ব্যথা/চাপ/অস্বস্তি" checkbox
-    // select হলেই দেখানো হয় (Architecture Plan Part B §5.4.1.1)।
-    checklist.chestPain && React.createElement(
-      "div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #E8C46B" } },
-      React.createElement(
-        "div", { style: { fontSize: "14px", fontWeight: 600, color: "#7A5B00", marginBottom: "6px" } },
-        "বুকে ব্যথা সংক্রান্ত অতিরিক্ত প্রশ্ন (bystander-aspirin বিবেচনার জন্য):"
-      ),
-      CARDIAC_BYSTANDER_QUESTIONS.map((q) =>
-        checkboxLine(q.label, !!cardiacAnswers[q.id], () => toggleCardiacAnswer(q.id))
-      )
+      ))
     ),
 
     ageGroup && isPediatricAgeGroup(ageGroup) && React.createElement(
@@ -392,7 +391,14 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       )
     ),
 
-    checklistItems.length > 0 && PrimaryButton("চেক করুন", runCheck),
+    // স্থির বার: কয়টা বেছেছেন + "চেক করুন" (স্ক্রল করলেও নিচে থাকে)
+    checklistItems.length > 0 && React.createElement(
+      "div", { style: { position: "sticky", bottom: "-12px", zIndex: 2, margin: "12px -12px -12px", padding: "8px 12px 12px", background: "linear-gradient(180deg, rgba(241,246,242,0), #F1F6F2 28%)" } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#5F716C" } },
+        React.createElement("b", { style: { color: "#0E4B43" } }, bnNum(checklistItems.filter((it) => checklist[it.id]).length) + "টি বেছেছেন"),
+        React.createElement("span", null, "না বাছলেও চেক করা যায়")),
+      PrimaryButton("চেক করুন", runCheck)
+    ),
 
     result && React.createElement(TriageResultView, { result }),
     result && aspirinCheck && React.createElement(BystanderAspirinCard, { check: aspirinCheck }),
