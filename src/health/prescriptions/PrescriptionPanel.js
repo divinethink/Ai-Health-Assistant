@@ -24,7 +24,7 @@ const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
 const note = (bg, color, text) => h("div", { style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: bg, color, fontSize: "14px", lineHeight: 1.5 } }, text);
 
-export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, preOcr, onDone, onClose, closeLabel }) {
+export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, preOcr, docId, onDone, onClose, closeLabel }) {
   const [stage, setStage] = useState("extracting"); // extracting | ocr | parsing | done | error
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
@@ -99,6 +99,6 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
           note("#FFF6E5", "#8A5A00", "কোনো ওষুধ শনাক্ত করা যায়নি। স্বাস্থ্য প্রোফাইল → ওষুধ অংশে হাতে যোগ করুন।"),
           res.text.trim() && h("details", { style: { marginTop: "8px", fontSize: "13px", color: "#5F716C" } }, h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", cursor: "pointer" } }, "মেশিন যা পড়েছে দেখুন"), h("pre", { style: { whiteSpace: "pre-wrap", overflowWrap: "anywhere" } }, res.text)))
       : h("div", null,
-          h(PrescriptionReviewForm, { familyId, targetMemberId, callerMemberId, items: res.items, allergies: res.ctx.allergies, records: res.ctx.records, ocrPercent: res.ocrPercent, onDone, onSaved: setSaved }),
+          h(PrescriptionReviewForm, { familyId, targetMemberId, callerMemberId, items: res.items, allergies: res.ctx.allergies, records: res.ctx.records, ocrPercent: res.ocrPercent, docId, onDone, onSaved: setSaved }),
           saved && h(PrescriptionNextSteps, { familyId, targetMemberId, callerMemberId, saved, followUp: res.followUp })));
 }

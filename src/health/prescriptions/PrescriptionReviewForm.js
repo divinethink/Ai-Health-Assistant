@@ -84,7 +84,7 @@ function card(r, idx, update) {
  * @param {number|null} [props.ocrPercent]
  * @param {(s: {res: object, finals: Array<object>}) => void} [props.onSaved] - সেভের পর (প্রস্তাব-কার্ডের জন্য)
  */
-export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberId, items, allergies, records, ocrPercent, onDone, onSaved }) {
+export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberId, items, allergies, records, ocrPercent, onDone, onSaved, docId }) {
   const [rows, setRows] = useState(() => items.map((it) => rowFrom(it, allergies, records, localISO())));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -102,7 +102,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
     if (bad) { setErr(bad.error); return; }
     setBusy(true);
     try {
-      const res = await saveApprovedMedications(familyId, targetMemberId, callerMemberId, finals);
+      const res = await saveApprovedMedications(familyId, targetMemberId, callerMemberId, finals, docId);
       setResult(res);
       onDone && onDone(res);
       onSaved && onSaved({ res, finals }); // ধাপ ১০: "এরপর কী?" প্রস্তাবের জন্য

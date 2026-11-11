@@ -27,7 +27,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
   const startAnalyze = useCallback((file, preOcr) => setPanel({ mode: "analyze", file, preOcr, key: Date.now() }), []);
-  const startPrescription = useCallback((file, preOcr) => setPanel({ mode: "prescription", file, preOcr, key: Date.now() }), []);
+  const startPrescription = useCallback((file, preOcr, docId) => setPanel({ mode: "prescription", file, preOcr, docId, key: Date.now() }), []);
   const startCard = useCallback((file, preOcr) => setPanel({ mode: "card", file, preOcr, key: Date.now() }), []);
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
 
@@ -68,7 +68,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
       }),
       panel.mode === "prescription" && React.createElement(PrescriptionPanel, {
         key: "rx-" + targetMemberId + "-" + panel.key,
-        familyId, targetMemberId, callerMemberId, file: panel.file, preOcr: panel.preOcr, onClose: () => setPanel(null),
+        familyId, targetMemberId, callerMemberId, file: panel.file, preOcr: panel.preOcr, docId: panel.docId, onClose: () => setPanel(null),
       }),
       panel.mode === "card" && React.createElement(DoctorCardPanel, {
         key: "card-" + targetMemberId + "-" + panel.key,

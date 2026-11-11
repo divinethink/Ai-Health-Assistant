@@ -88,13 +88,13 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     if (!file) { setErr("একটা ফাইল বেছে নিন।"); return; }
     setBusy(true);
     try {
-      await uploadDocument(familyId, targetMemberId, callerMemberId, file, { docType: vaultType, date, source });
+      const up = await uploadDocument(familyId, targetMemberId, callerMemberId, file, { docType: vaultType, date, source });
       const f = file, p = pre;
       setFile(null); setSource("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       onUploaded && onUploaded();
       if (andNext) {
-        if (kind === "prescription" && onPrescription) onPrescription(f, p);
+        if (kind === "prescription" && onPrescription) onPrescription(f, p, up && up.id);
         else if (kind === "lab-report" && onAnalyze) onAnalyze(f, p);
         else if (kind === "visiting-card" && onCard) onCard(f, p);
       }

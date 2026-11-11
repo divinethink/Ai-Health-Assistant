@@ -25,7 +25,7 @@ function endDateFor(days) {
  * @param {Array<{name, days, meal, pattern, patternRaw, perDay, prn}>} items - ব্যবহারকারী-অনুমোদিত (সম্পাদিত) ওষুধ
  * @returns {Promise<{saved: string[], skipped: string[], failed: Array<{name: string, message: string}>, details: Array<{id: string, name: string, times: string[]}>}>}
  */
-export async function saveApprovedMedications(familyId, targetMemberId, callerMemberId, items) {
+export async function saveApprovedMedications(familyId, targetMemberId, callerMemberId, items, prescriptionDocId) {
   const known = (await listHealthRecords(familyId, targetMemberId, { fresh: true })).slice();
   const today = localISO();
   const out = { saved: [], skipped: [], failed: [], details: [] };
@@ -35,7 +35,7 @@ export async function saveApprovedMedications(familyId, targetMemberId, callerMe
       const endDate = endDateFor(it.days);
       const id = await createHealthRecord(familyId, targetMemberId, callerMemberId, "medicationStatement", {
         name: it.name, tier: "requires-consult", status: "active", date: today,
-        frequency: frequencyText(it) || "", durationDays: it.days || "",
+        frequency: frequencyText(it) || "", durationDays: it.days || "", prescriptionDocId: prescriptionDocId || null,
       });
       const times = reminderTimesFor(it);
       await setMedicationReminderTimes(familyId, id, callerMemberId, times, { endDate, mealTiming: it.meal || "any" });

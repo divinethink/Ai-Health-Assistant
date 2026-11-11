@@ -116,6 +116,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [addOpen, setAddOpen] = useState(startIntent === "medmanual");
   const [rxOpen, setRxOpen] = useState(startIntent === "rx"); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
   const [rxFile, setRxFile] = useState(null);
+  const [rxDocId, setRxDocId] = useState(null);
   const [aName, setAName] = useState("");
   const [aMember, setAMember] = useState(selectedMemberId || callerMemberId);
   const [aCount, setACount] = useState(3);
@@ -143,7 +144,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             if (!pastMap[k]) pastMap[k] = { key: k, memberId: member.id, memberName: member.name, name: r.genericName, times: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], meal: r.mealTiming || "after", days: r.durationDays ? Number(r.durationDays) : 0 };
           }
           if (r.status !== "active") return;
-          flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], createdMs: r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : 0 });
+          flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], fromRx: !!r.prescriptionDocId, createdMs: r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : 0 });
         });
       });
       setMeds(flat);
@@ -360,8 +361,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
         h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ওষুধ"),
         h("button", { onClick: () => { setRxOpen(false); setRxFile(null); }, "aria-label": "বন্ধ করুন", style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C", minWidth: "44px", minHeight: "44px" } }, "✕")),
-      !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f) => setRxFile(f) }),
-      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান" })),
+      !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f, _p, id) => { setRxDocId(id || null); setRxFile(f); } }),
+      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান" })),
     addOpen && h("div", { style: card },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
@@ -396,7 +397,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       return h("div", { key: m.recordId, style: { ...card, padding: 0, overflow: "hidden", opacity: expired ? 0.7 : 1 } },
         h("div", { onClick: () => setOpenId(open ? null : m.recordId), style: { padding: "11px 12px", cursor: "pointer", display: "flex", gap: "8px", alignItems: "flex-start" } },
           h("div", { style: { flex: 1, minWidth: 0 } },
-            h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "💊 " + m.genericName, members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
+            h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "💊 " + m.genericName, m.fromRx && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · 📄 প্রেসক্রিপশন থেকে"), members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
             h("div", { style: { fontSize: "13px", color: "#4B5C57", marginTop: "3px", lineHeight: 1.5 } },
               m.reminderTimes.length > 0 ? "⏰ " + m.reminderTimes.map(bnTime).join(", ") : "⏰ সময় সেট করা হয়নি",
               m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "",

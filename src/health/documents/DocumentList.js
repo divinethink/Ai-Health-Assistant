@@ -39,7 +39,7 @@ function chipStyle(active) {
   };
 }
 
-export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd, onlyType, excludeType, emptyText }) {
+export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd, onlyType, excludeType, emptyText, medsByDoc }) {
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -112,7 +112,8 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
             React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } },
               (isRx ? "প্রেসক্রিপশন" : (DOC_TYPE_LABELS[d.docType] || d.docType)) + (isPdf ? " · PDF" : "")),
             React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", wordBreak: "break-all" } }, d.fileName),
-            meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta)
+            meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta),
+            isRx && medsByDoc && medsByDoc[d.id] && medsByDoc[d.id].length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, "এই প্রেসক্রিপশনের ওষুধ: " + medsByDoc[d.id].join(", "))
           ),
           React.createElement("button", {
             onClick: () => { setMenuId(menuId === d.id ? null : d.id); setConfirmId(null); },

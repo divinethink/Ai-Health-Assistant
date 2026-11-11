@@ -1,6 +1,7 @@
 // ওষুধ-পিলের নিচে ভাঁজ করা "📄 প্রেসক্রিপশন (n)" — জমা প্রেসক্রিপশন-নথি (তারিখ, ডাক্তার, নাম)।
 // শুধু বিদ্যমান DocumentList (docType = prescription) দেখায়; ডেটা/schema অপরিবর্তিত।
 
+import { useMemberHealth } from "./useMemberHealth.js";
 import { DocumentList } from "../documents/DocumentList.js";
 
 const { useState } = React;
@@ -10,6 +11,9 @@ const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
 
 export function PrescriptionFold({ familyId, callerMemberId, selectedMemberId, count, refreshTick, onDeleted }) {
   const [open, setOpen] = useState(false);
+  const { records } = useMemberHealth(familyId, selectedMemberId);
+  const medsByDoc = {};
+  (records || []).forEach((r) => { if (r.resourceType === "medicationStatement" && r.prescriptionDocId && r.genericName) (medsByDoc[r.prescriptionDocId] = medsByDoc[r.prescriptionDocId] || []).push(r.genericName); });
   return h("div", { style: { marginTop: "14px" } },
     h("button", {
       onClick: () => setOpen((o) => !o), "aria-expanded": open,
@@ -17,6 +21,6 @@ export function PrescriptionFold({ familyId, callerMemberId, selectedMemberId, c
     }, h("span", null, "📄 প্রেসক্রিপশন" + (count == null ? "" : " (" + bn(count) + ")")), h("span", { "aria-hidden": "true" }, open ? "▲" : "▼")),
     open && h(DocumentList, {
       familyId, targetMemberId: selectedMemberId, callerMemberId, refreshTick, onDeleted,
-      onlyType: "prescription", emptyText: "এখনো প্রেসক্রিপশন নেই — ＋ যোগ করুন",
+      onlyType: "prescription", medsByDoc, emptyText: "এখনো প্রেসক্রিপশন নেই — ＋ যোগ করুন",
     }));
 }
