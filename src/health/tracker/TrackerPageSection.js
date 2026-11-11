@@ -406,7 +406,7 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement(MealTab, common),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
       React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
-      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: Health → টাইমলাইন।")));
+      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: Health → খাদ্যাভ্যাস ও টাইমলাইন → 🍽️ খাদ্য।")));
 }
 
 // ---------- ট্রেন্ড ও রিমাইন্ডার (ট্রেন্ড | দৈনিক ইনপুট | রিমাইন্ডার) ----------
