@@ -93,15 +93,31 @@ const BASE = [
   ["dinner", "roti", 2], ["dinner", "veg", 1], ["dinner", "chicken", 1], ["dinner", "salad", 1],
 ];
 
-// বাড়ানো-কমানোর ধাপ (ঘুরে ঘুরে): [স্লট, খাবার, ধাপ, ন্যূনতম, সর্বোচ্চ]
+// বেলা-ভিত্তিক বরাদ্দ = আজকের ক্যালরি-টার্গেটের নির্দিষ্ট শতাংশ (সকাল ৩০, স্ন্যাকস ১০, দুপুর ৩০, বিকাল ১০, রাত ২০ = ১০০%)।
+// শেষ বেলা (রাত) = টার্গেট − বাকিগুলো, তাই যোগফল সবসময় টার্গেটের সমান। শুধু দেখানোর জন্য — কিছু সেভ হয় না।
+export const SLOT_SHARES = { breakfast: 30, snack1: 10, lunch: 30, snack2: 10, dinner: 20 };
+export function slotTargets(target) {
+  const t = Number(target);
+  if (!Number.isFinite(t) || t <= 0) return null;
+  const ids = Object.keys(SLOT_SHARES);
+  const out = {};
+  let used = 0;
+  ids.slice(0, -1).forEach((id) => { out[id] = Math.round((t * SLOT_SHARES[id]) / 100); used += out[id]; });
+  out[ids[ids.length - 1]] = Math.round(t) - used;
+  return out;
+}
+
+// বাড়ানো-কমানোর ধাপ: [স্লট, খাবার, ধাপ, ন্যূনতম, সর্বোচ্চ]। প্রতি বেলা নিজের বরাদ্দের (slotTargets) কাছাকাছি আনা হয়;
+// প্রতি বেলায় মোটা ধাপ আগে, সূক্ষ্ম ধাপ পরে — তাই বেলার ত্রুটি ≈ সূক্ষ্মতম ধাপের অর্ধেকের মধ্যে।
 const KNOBS = [
-  ["lunch", "rice", 0.5, 0.5, 3],
-  ["dinner", "roti", 1, 1, 5],
-  ["breakfast", "roti", 1, 1, 4],
-  ["lunch", "dal", 0.5, 0.5, 2],
-  ["snack1", "banana", 1, 1, 2],
-  ["snack2", "muri", 1, 1, 2],
+  ["breakfast", "roti", 1, 1, 6], ["breakfast", "veg", 0.5, 0.5, 3],
+  ["snack1", "banana", 1, 1, 3],
+  ["lunch", "rice", 0.5, 0.5, 3], ["lunch", "dal", 0.5, 0.5, 2], ["lunch", "veg", 0.5, 0.5, 3],
+  ["snack2", "muri", 0.5, 0.5, 2.5],
+  ["dinner", "roti", 1, 1, 6], ["dinner", "veg", 0.5, 0.5, 3], ["dinner", "salad", 0.5, 0.5, 3],
 ];
+// প্রতি বেলার সর্বোচ্চ বরাদ্দ (যোগফল ২৫৬৫) — অতি-বড় টার্গেটেও প্ল্যান আগের সীমা (~২৬০০) পার করে না
+const SLOT_CAP = { breakfast: 760, snack1: 270, lunch: 760, snack2: 255, dinner: 520 };
 
 export const kcalOf = (key, qty) => foodK(key) * qty;
 const totalOf = (rows) => rows.reduce((s, r) => s + kcalOf(r[1], r[2]), 0);
@@ -125,14 +141,17 @@ export function buildMealPlan(calorieTarget, allergyTags, prefs) {
   const tags = new Set(allergyTags || []);
   const rows = BASE.map((r) => [...r]);
 
-  // টার্গেটের কাছাকাছি আনা (±ধাপের অর্ধেক পর্যন্ত)
+  // প্রতি বেলাকে নিজের বরাদ্দের কাছাকাছি আনা (±ধাপের অর্ধেক পর্যন্ত)। বরাদ্দ = টার্গেটের ৩০/১০/৩০/১০/২০%।
+  const tg = slotTargets(Math.max(Number(calorieTarget) || 0, 1100)) || {}; // ১১০০ = প্ল্যানের ন্যূনতম মোট (আগের সীমা)
+  Object.keys(tg).forEach((k) => { tg[k] = Math.min(tg[k], SLOT_CAP[k]); });
   let guard = 0;
   let moved = true;
-  while (moved && guard++ < 60) {
+  while (moved && guard++ < 80) {
     moved = false;
     for (const [slot, key, step, min, max] of KNOBS) {
       const row = rows.find((r) => r[0] === slot && r[1] === key);
-      const diff = calorieTarget - totalOf(rows);
+      if (!row || tg[slot] === undefined) continue;
+      const diff = tg[slot] - totalOf(rows.filter((r) => r[0] === slot));
       const stepKcal = foodK(key) * step;
       if (diff >= stepKcal / 2 && row[2] + step <= max) { row[2] += step; moved = true; }
       else if (diff <= -stepKcal / 2 && row[2] - step >= min) { row[2] -= step; moved = true; }

@@ -6,7 +6,7 @@ import { nutritionOf } from "./foodNutrition.js";
 import { extraMeasuresFor } from "./foodMeasures.js";
 import { bnNum } from "../../shared/dates.js";
 import { MAX_GRAMS, MAX_KCAL, MAX_MACRO, MAX_QTY, sanitizeExtraFoods, checkExtraFood } from "./planPrefs.js";
-import { FOODS, MEAL_SLOTS, FAST_SLOT_IDS, foodK, hasFoodOverride } from "./mealPlanData.js";
+import { FOODS, MEAL_SLOTS, FAST_SLOT_IDS, foodK, hasFoodOverride, slotTargets } from "./mealPlanData.js";
 
 export const MIN_GRAMS = 1;
 export const MAX_MEASURE_QTY = 100;
@@ -90,19 +90,7 @@ export function slotForNow(now = new Date()) {
 
 // বেলা-ভিত্তিক ক্যালরি (শুধু তথ্য, ব্লক নয়): planned = কার্যকর প্ল্যানের বেলা-ক্যালরি;
 // eaten = ওই বেলার নিজে-যোগ-করা খাবার + (টিক থাকলে) প্ল্যানের বেলা — caloriesForDay-এর একই সূত্র।
-// বেলা-ভিত্তিক বরাদ্দ = আজকের ক্যালরি-টার্গেটের নির্দিষ্ট শতাংশ (সকাল ৩০, স্ন্যাকস ১০, দুপুর ৩০, বিকাল ১০, রাত ২০ = ১০০%)।
-// শেষ বেলা (রাত) = টার্গেট − বাকিগুলো, তাই যোগফল সবসময় টার্গেটের সমান। শুধু দেখানোর জন্য — কিছু সেভ হয় না।
-export const SLOT_SHARES = { breakfast: 30, snack1: 10, lunch: 30, snack2: 10, dinner: 20 };
-export function slotTargets(target) {
-  const t = Number(target);
-  if (!Number.isFinite(t) || t <= 0) return null;
-  const ids = Object.keys(SLOT_SHARES);
-  const out = {};
-  let used = 0;
-  ids.slice(0, -1).forEach((id) => { out[id] = Math.round((t * SLOT_SHARES[id]) / 100); used += out[id]; });
-  out[ids[ids.length - 1]] = Math.round(t) - used;
-  return out;
-}
+export { SLOT_SHARES, slotTargets } from "./mealPlanData.js";
 
 // target দিলে planned = বরাদ্দ (slotTargets); না দিলে (সিয়ামের দিন ইত্যাদি) আগের মতো প্ল্যানের বেলা-ক্যালরি।
 export function slotBudgets(plan, eatenIds, extras, target) {
