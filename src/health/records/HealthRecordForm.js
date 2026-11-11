@@ -14,6 +14,8 @@ import { buildCandidates, suggestDoctors, pickPatch, isDuplicate } from "../doct
 import { OBS_PRESETS } from "../quickadd/quickAddTargets.js";
 const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
+// ধাপ ৫: টাইল (resourceType, আইকন, নাম) — ওষুধও একই createHealthRecord পথে; রিমাইন্ডার-সময় পরে "ওষুধ" তালিকা থেকে
+const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "অ্যালার্জি"], ["medicationStatement", "💊", "ওষুধ"], ["observation", "📏", "পরিমাপ"]];
 const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
@@ -44,16 +46,20 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [picked, setPicked] = useState(isEdit || !!preset); // ধাপ ৫: আগে ৪টা টাইল ("কী যোগ করবেন?"), বাছার পর ২–৩ ঘরের ফর্ম
   const [more, setMore] = useState(!!editingRecord); // "আরও যোগ করুন" ভাঁজ — নতুন রেকর্ডে বন্ধ, edit-এ খোলা
 
   // edit-mode শুরু হলে (বা edit-target বদলালে) existing record-এর ভ্যালু দিয়ে fields prefill
   useEffect(() => {
     if (!editingRecord) {
       // edit বাতিল/সম্পন্ন হয়ে create-mode-এ ফিরলে আগের edit-value থেকে যাওয়া ঠেকাতে reset
-      setResourceType("condition"); resetFields(); setErr(null); setMore(false);
+      setResourceType(preset ? "observation" : "condition"); resetFields(); setErr(null); setMore(false);
+      if (preset) { setObsType(preset.type); setUnit(preset.unit); } // "+ দ্রুত যোগ": ধরন+একক আগে-থেকে-ভরা থাকে
+      setPicked(!!preset);
       return;
     }
     const r = editingRecord;
+    setPicked(true);
     setMore(true);
     setResourceType(r.resourceType);
     setName(r.name || r.genericName || r.substance || "");
@@ -85,6 +91,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const changeResourceType = useCallback((v) => {
     setResourceType(v); resetFields(); setErr(null); setMore(false);
   }, [resetFields]);
+  const pickType = (v) => { changeResourceType(v); setPicked(true); };
 
   const submit = useCallback(async () => {
     setErr(null);
@@ -189,18 +196,28 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     style: { width: "100%", minHeight: "44px", margin: "8px 0 4px", borderRadius: "12px", border: "1px dashed #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
   }, (more ? "কম দেখান ▲" : "আরও যোগ করুন ▼")) : null;
 
+  const closeBtn = React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
+    style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" } }, "✕");
+  if (!isEdit && !picked) {
+    return React.createElement("div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
+        React.createElement("h4", { style: { fontSize: "18px", color: "#0E4B43", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
+        ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => pickType(type),
+          style: { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" } },
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label))));
+  }
+
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
       React.createElement("h4", { style: { fontSize: "14px", color: "#0E4B43", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
-      React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
-        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "#0E4B43", fontSize: "18px", cursor: "pointer" } }, "✕")),
+      closeBtn),
     isEdit
       ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } }, t("f.type") + ": " + t("type." + resourceType) + " " + t("f.typeFixed"))
-      : SelectField(t("f.type"), resourceType, changeResourceType, [
-          ["condition", t("type.condition")], ["observation", t("type.observation")],
-          ["allergy", t("type.allergy")], // ওষুধ যোগ হয় "ওষুধ ও রিমাইন্ডার" সাব-পিল থেকে (ধাপ ৩)
-        ]),
+      : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", margin: "8px 0 0" } },
+          React.createElement("span", { style: { fontSize: "16px", fontWeight: 700, color: "#0E4B43" } }, (ADD_TILES.find((x) => x[0] === resourceType) || [])[1] + " " + (ADD_TILES.find((x) => x[0] === resourceType) || [])[2]),
+          React.createElement("button", { onClick: () => { resetFields(); setErr(null); setMore(false); setPicked(false); }, disabled: busy, style: { minHeight: "44px", padding: "0 12px", border: "none", background: "none", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "‹ বদলান")),
     ...typeFields,
     moreToggle,
     ...(more ? moreFields : []),

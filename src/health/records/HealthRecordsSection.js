@@ -61,7 +61,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),
         style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
-      }, "+ বর্তমান স্বাস্থ্যের অবস্থা যুক্ত করুন"),
+      }, "＋ কী যোগ করবেন?"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),
         familyId, targetMemberId, callerMemberId, presetObs,
