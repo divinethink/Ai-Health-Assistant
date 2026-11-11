@@ -45,7 +45,7 @@ const DICT = {
     "tab.today": "আজ", "tab.profile": "প্রোফাইল", "tab.healthProfile": "স্বাস্থ্য প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
     "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "খাদ্যাভ্যাস ও টাইমলাইন",
     "tab.symptom": "🩺 লক্ষণ যাচাই", "tab.medsci": "⚕️ আধুনিক চিকিৎসা", "tab.herbal": "🌿 ভেষজ", "tab.homeo": "💧 হোমিওপ্যাথি",
-    "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তারের জন্য",
+    "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তার",
 
     "top.role": "ভূমিকা", "top.familyCode": "পরিবারের কোড", "top.generalChat": "🌐 সাধারণ চ্যাট",
     "top.logout": "🚪 লগ-আউট", "top.member": "সদস্য",
@@ -87,7 +87,7 @@ const DICT = {
     "tab.today": "Today", "tab.profile": "Profile", "tab.records": "Health Info", "tab.diet": "Diet Guide",
     "tab.medication": "Medicines & Reminders", "tab.timeline": "Diet & Timeline",
     "tab.symptom": "🩺 Symptom Check", "tab.medsci": "⚕️ Medical Science", "tab.herbal": "🌿 Herbal", "tab.homeo": "💧 Homeopathy",
-    "tab.nutrition": "🥗 Nutrition", "tab.fitness": "🏃 Fitness", "tab.upload": "📁 My Documents", "tab.export": "🩺 For Doctor",
+    "tab.nutrition": "🥗 Nutrition", "tab.fitness": "🏃 Fitness", "tab.upload": "📁 My Documents", "tab.export": "🩺 Doctor",
 
     "top.role": "Role", "top.familyCode": "Family code", "top.generalChat": "🌐 General Chat",
     "top.logout": "🚪 Log out", "top.member": "Member",

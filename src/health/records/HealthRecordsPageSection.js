@@ -44,6 +44,7 @@ import { TodaySummary } from "../summary/TodaySummary.js";
 import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
+import { DoctorDetailsSection } from "../doctor-details/DoctorDetailsSection.js";
 
 const { useState } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
@@ -77,7 +78,7 @@ function sectionHead(icon, text) {
   return React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#0E4B43", margin: "18px 2px 6px", paddingTop: "10px", borderTop: "1px solid #D9E5DE" } }, icon + " " + text);
 }
 
-export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
+export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
   const isHealth = mode === "health";
   const TABS = isHealth ? HEALTH_TABS : [];
   const hk = isHealth ? "health-" : "home-";
@@ -141,7 +142,10 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
           React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
-      isHealth && activeTab === "docs" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
+      isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
+        React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
+        // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode
+        React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
