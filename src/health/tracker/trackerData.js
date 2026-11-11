@@ -10,6 +10,7 @@ import { createHealthRecord, updateHealthRecord, listHealthRecords } from "../re
 import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
 import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
 import { sanitizeTaken } from "../records/medTaken.js";
+import { monthDatesISO } from "./dateNav.js";
 
 function col(familyId) {
   return db.collection("families").doc(familyId).collection("healthTracker");
@@ -131,6 +132,14 @@ export async function saveDaily(familyId, memberId, callerMemberId, date, fields
 export async function getWeekDaily(familyId, memberId, dates) {
   const snap = await col(familyId).where("memberId", "==", memberId).where("date", "in", dates).get();
   return snap.docs.map((d) => d.data()).filter((x) => x.type === "daily");
+}
+
+// একটা মাসের দৈনিক ডক (ক্যালেন্ডারের ডটের জন্য, যেকোনো পুরনো মাস)। `in` সর্বোচ্চ ৩০ → ≤৩১ দিন দুই ভাগে।
+// একই equality-ধরন query, নতুন index/rules লাগে না। month ০–১১।
+export async function getMonthDaily(familyId, memberId, year, month) {
+  const dates = monthDatesISO(year, month);
+  const parts = await Promise.all([dates.slice(0, 30), dates.slice(30)].filter((c) => c.length).map((c) => getWeekDaily(familyId, memberId, c)));
+  return parts.flat();
 }
 
 // "ওষুধ খেয়েছি" লগ (ধাপ ২)। daily-ডকের `medTaken` map: key = doseKey(), মান true। সব ডিভাইসে মেলে, ডাক্তার-এক্সপোর্টের

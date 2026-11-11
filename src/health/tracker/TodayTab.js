@@ -1,14 +1,15 @@
 // "আজ" ট্যাব (ধাপ C) — হিরো (ক্যালরি রিং + আজকের হিসাব), পানি ও খাবার, সাপ্তাহিক সারাংশ। শুধু UI;
 // হিসাব todaySummary.js/trackerCalc.js-এ, লেখা saveDaily দিয়ে (নির্দিষ্ট ডক-ID, set+merge)।
-// তারিখ-নেভিগেশন: হিরোর "📅" বাটন / সপ্তাহের বৃত্ত / সোয়াইপ — গত ৩০ দিন (dateNav.js); আজ ছাড়া অন্য দিনেও একই সেভ-পথ।
+// তারিখ-নেভিগেশন: হিরোর "📅" বাটন / সপ্তাহের বৃত্ত / সোয়াইপ — যেকোনো পুরনো দিন (dateNav.js); গত ৩০ দিনের বাইরের দিনের ডক আলাদা লোড (শেষ না হওয়া পর্যন্ত লেখা বন্ধ); আজ ছাড়া অন্য দিনেও একই সেভ-পথ।
 
 import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
-import { saveDaily, todayISO } from "./trackerData.js";
+import { saveDaily, todayISO, getDaily, getMonthDaily } from "./trackerData.js";
+import { macroTargets } from "./macroTargets.js";
 import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { T, GRADIENT_HERO, CARD_STYLE, MAX_WATER, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
-import { ringDash, pctOf, weekSummary } from "./todaySummary.js";
+import { ringDash, pctOf, weekSummary, last30DatesISO } from "./todaySummary.js";
 import { buildMealPlan } from "./mealPlanData.js";
 import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
@@ -17,7 +18,7 @@ import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
 import { TodayDateSheet } from "./TodayDateSheet.js";
-import { shiftISO, inRange, clampISO, swipeDelta } from "./dateNav.js";
+import { shiftISO, inRange, clampISO, swipeDelta, hasDayRecord } from "./dateNav.js";
 
 const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -70,7 +71,7 @@ function AlertStrip({ allergies, conds }) {
     conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"));
 }
 
-export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, homeExtra }) {
+export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra }) {
   const { daily, goal, age, flags, gate, recent } = info;
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
@@ -78,7 +79,26 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const [selDate, setSelDate] = useState(today);
   const viewDate = clampISO(selDate, today);
   const isViewToday = viewDate === today;
-  const dayDoc = isViewToday ? daily : ((info.recent || []).find((x) => x && x.date === viewDate) || null);
+  // গত ৩০ দিন = `recent`-এ লোড-করা; তার আগের দিন আলাদা getDaily (একই equality-query, নতুন index নয়)
+  const inWindow = viewDate >= last30DatesISO()[0];
+  const [old, setOld] = useState({ date: null, doc: null, loading: false, err: null });
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (inWindow) return undefined;
+    let dead = false;
+    setOld({ date: viewDate, doc: null, loading: true, err: null });
+    getDaily(familyId, memberId, viewDate)
+      .then((doc) => { if (!dead) setOld({ date: viewDate, doc, loading: false, err: null }); })
+      .catch(() => { if (!dead) setOld({ date: viewDate, doc: null, loading: false, err: "এই দিনের তথ্য লোড হয়নি।" }); });
+    return () => { dead = true; };
+  }, [viewDate, inWindow, familyId, memberId, retry]);
+  // পুরনো দিনের ডক পুরোপুরি লোড না হওয়া পর্যন্ত লেখা বন্ধ (ভুল মান/ডেটা-নষ্ট এড়াতে)
+  const oldReady = inWindow || (old.date === viewDate && !old.loading && !old.err);
+  const onSaved = async () => {
+    await onSavedProp();
+    if (!inWindow) { try { setOld({ date: viewDate, doc: await getDaily(familyId, memberId, viewDate), loading: false, err: null }); } catch (_e) { setOld({ date: viewDate, doc: null, loading: false, err: "এই দিনের তথ্য লোড হয়নি।" }); } }
+  };
+  const dayDoc = isViewToday ? daily : inWindow ? ((info.recent || []).find((x) => x && x.date === viewDate) || null) : (old.date === viewDate ? old.doc : null);
   const d = dayDoc || {};
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
   const [sMin, sMax] = sleepTargetHours(age);
@@ -91,7 +111,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const onFast = fastOnDate(viewDate, fastDays, dayDoc);
   const fastWarn = plannedFast && fastModeGate({ age, flags }).warn;
   const week = weekSummary(recent, weekDatesISO(), today, ctx);
-  const [busy, setBusy] = useState(false);
+  const [busyS, setBusy] = useState(false);
+  const busy = busyS || !oldReady;
   const [err, setErr] = useState(null);
   const [foodOpen, setFoodOpen] = useState(false);
   const [foodSlot, setFoodSlot] = useState(null); // বেলার "＋" থেকে খুললে সেই বেলা আগে থেকে বাছা
@@ -111,6 +132,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const extras = sanitizeExtraFoods(d.extraFoods);
   const canLog = !!calc;
   const macros = sumNutrition(extras);
+  const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সেভ হয় না)
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
   const writeExtras = async (next) => {
@@ -169,7 +191,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     if (n) goDay(n);
   };
   const dateText = isViewToday ? "" : new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" });
-  const markedDates = new Set((info.recent || []).filter((x) => x && x.date && ((x.caloriesIn || 0) > 0 || (x.waterGlasses || 0) > 0 || (x.steps || 0) > 0 || (x.exerciseMin || 0) > 0 || (x.sleepMinutes || 0) > 0 || (x.weightKg || 0) > 0 || (Array.isArray(x.extraFoods) && x.extraFoods.length > 0))).map((x) => x.date));
+  const markedDates = new Set((info.recent || []).filter(hasDayRecord).map((x) => x.date));
   const shortDate = new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "short" });
   // হিরোতে BMI-এর ডানে ছোট তারিখ-বাটন; অন্য দিনে কমলা + "আজ ↩"। ট্যাপ-এরিয়া ৪৪px (ভিজ্যুয়াল ছোট)।
   const pill = (bg, fg) => ({ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" });
@@ -230,11 +252,17 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       // আজকের হিসাব: লেবেল-বাক্স নেই; একক "(গ্রাম)" ফাইবারের ডানে; পাতলা বিভাজক-রেখা
       canLog && macros.withMacro > 0 && React.createElement("div", { style: { marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.18)" }, "aria-label": "আজকের হিসাব (গ্রাম)" },
         React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
-          [["প্রোটিন", macros.p, "#8FE0B0"], ["কার্ব", macros.c, "#FFC27A"], ["ফ্যাট", macros.f, "#C9B9F5"], ["ফাইবার", macros.fib, "#8EC5F5"]].map(([name, v, col], i) =>
-            React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
+          [["প্রোটিন", macros.p, "#8FE0B0", "p"], ["কার্ব", macros.c, "#FFC27A", "c"], ["ফ্যাট", macros.f, "#C9B9F5", "f"], ["ফাইবার", macros.fib, "#8EC5F5", "fib"]].map(([name, v, col, key], i) => {
+            const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
+            const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
+            return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
               React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft } }, name),
-              React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.onDark, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v), i === 3 && React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, color: T.onDarkSoft } }, " (গ্রাম)")),
-              React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: col, marginTop: "2px" } })))),
+              React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: over ? "#FFB4A6" : T.onDark, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v), !mt && i === 3 && React.createElement("span", { style: { fontSize: "11px", fontWeight: 600, color: T.onDarkSoft } }, " (গ্রাম)")),
+              mt && React.createElement("div", { style: { fontSize: "11px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
+              React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? "rgba(255,255,255,0.18)" : col, marginTop: "2px" } },
+                tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#FF6A4D" : col } }) : null));
+          })),
+        mt && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, mt.note),
         macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।"))),
 
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
@@ -281,9 +309,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       onSave: (fields) => writeIn(fields, true), onClose: closeIn,
     }),
 
-    calOpen && React.createElement(TodayDateSheet, { selected: viewDate, today, marked: markedDates, onPick: pickDay, onClose: () => setCalOpen(false) }),
+    calOpen && React.createElement(TodayDateSheet, { selected: viewDate, today, marked: markedDates, onPick: pickDay, onClose: () => setCalOpen(false), loadMonth: (y, m) => getMonthDaily(familyId, memberId, y, m) }),
+    !oldReady && React.createElement(Notice, { tone: old.err ? "warn" : "info" }, old.err ? [old.err + " ", React.createElement("button", { key: "r", type: "button", onClick: () => setRetry((n) => n + 1), style: { minHeight: "44px", padding: "0 12px", borderRadius: "12px", border: "1.5px solid " + T.green, background: "#fff", color: T.green, fontFamily: "inherit", fontWeight: 700, cursor: "pointer" } }, "আবার চেষ্টা")] : "এই দিনের তথ্য লোড হচ্ছে… (শেষ না হওয়া পর্যন্ত লেখা বন্ধ)"),
 
-    // সাপ্তাহিক সারাংশ — বৃত্তে ট্যাপ করলে সেই দিনের পাতা (আজ বা গত ৩০ দিনের ভেতরে)
+    // সাপ্তাহিক সারাংশ — বৃত্তে ট্যাপ করলে সেই দিনের পাতা
     React.createElement("div", { style: { ...CARD_STYLE, background: T.sand, borderColor: T.sandBorder, padding: "8px 12px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "এই সপ্তাহ"),

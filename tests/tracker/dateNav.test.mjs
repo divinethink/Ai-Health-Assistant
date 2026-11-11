@@ -8,15 +8,16 @@ test("shiftISO: মাস/বছর পার", () => {
   assert.equal(shiftISO("2026-03-01", -1), "2026-02-28");
 });
 test("পরিসীমা: আজসহ ৩০ দিন", () => {
-  assert.equal(minDateISO("2026-11-11"), "2026-10-13");
+  assert.equal(minDateISO("2026-11-11"), "1990-01-01");
   assert.ok(inRange("2026-11-11", "2026-11-11"));
-  assert.ok(inRange("2026-10-13", "2026-11-11"));
-  assert.ok(!inRange("2026-10-12", "2026-11-11"));
+  assert.ok(inRange("2016-11-11", "2026-11-11"));
+  assert.ok(!inRange("1989-12-31", "2026-11-11"));
   assert.ok(!inRange("2026-11-12", "2026-11-11"));
 });
 test("clampISO", () => {
   assert.equal(clampISO("2026-12-01", "2026-11-11"), "2026-11-11");
-  assert.equal(clampISO("2025-01-01", "2026-11-11"), "2026-10-13");
+  assert.equal(clampISO("2025-01-01", "2026-11-11"), "2025-01-01");
+  assert.equal(clampISO("1980-01-01", "2026-11-11"), "1990-01-01");
   assert.equal(clampISO("2026-11-05", "2026-11-11"), "2026-11-05");
 });
 test("monthGrid: নভেম্বর ২০২৬ (১ তারিখ রবিবার, শনি-শুরু)", () => {

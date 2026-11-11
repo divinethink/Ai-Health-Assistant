@@ -1,9 +1,6 @@
 // আজ-ট্যাবের তারিখ-নেভিগেশন (pure functions — React/Firestore নেই)।
-// পরিসীমা: গত ৩০ দিন (আজসহ) = TrackerPageSection-এর `recent` যে ৩০ দিন লোড করে। এর বাইরে ডক লোড থাকে না,
-// তাই সেখানে লিখলে (ওজন/ব্যায়াম যোগফল ইত্যাদি) ভুল মান বসতে পারত — zero-data-loss নিয়মে সীমা ৩০ দিন।
-// ভবিষ্যৎ তারিখে লেখা নয়।
-
-import { STREAK_MAX } from "./todaySummary.js";
+// পরিসীমা: ১৯৯০-০১-০১ থেকে আজ পর্যন্ত। গত ৩০ দিনের বাইরের দিনের ডক TodayTab আলাদা করে লোড করে
+// (শেষ না হওয়া পর্যন্ত লেখা বন্ধ — ভুল মান বসার ঝুঁকি নেই)। ভবিষ্যৎ তারিখে লেখা নয়।
 
 const p2 = (n) => String(n).padStart(2, "0");
 const toISO = (d) => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
@@ -15,20 +12,33 @@ export function shiftISO(iso, n) {
   return toISO(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n));
 }
 
-// সবচেয়ে পুরনো নির্বাচনযোগ্য তারিখ (আজসহ ৩০ দিন → আজ − ২৯)
-export function minDateISO(todayISO) {
-  return shiftISO(todayISO, -(STREAK_MAX - 1));
+export const MIN_DATE_ISO = "1990-01-01";
+export const MIN_YEAR = 1990;
+
+// সবচেয়ে পুরনো নির্বাচনযোগ্য তারিখ
+export function minDateISO(_todayISO) {
+  return MIN_DATE_ISO;
 }
 
 export function inRange(iso, todayISO) {
-  return iso <= todayISO && iso >= minDateISO(todayISO);
+  return iso <= todayISO && iso >= MIN_DATE_ISO;
+}
+
+// দিনে কোনো রেকর্ড আছে কিনা (ক্যালেন্ডারের সবুজ ডট)
+export function hasDayRecord(x) {
+  return !!(x && x.date && ((x.caloriesIn || 0) > 0 || (x.waterGlasses || 0) > 0 || (x.steps || 0) > 0 || (x.exerciseMin || 0) > 0 || (x.sleepMinutes || 0) > 0 || (x.weightKg || 0) > 0 || (Array.isArray(x.extraFoods) && x.extraFoods.length > 0)));
+}
+
+// মাসের সব তারিখ (ISO) — month ০–১১
+export function monthDatesISO(year, month) {
+  const n = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: n }, (_, i) => toISO(new Date(year, month, i + 1)));
 }
 
 // সীমার বাইরে গেলে সীমার ভেতরে টেনে আনে
 export function clampISO(iso, todayISO) {
-  const min = minDateISO(todayISO);
   if (iso > todayISO) return todayISO;
-  if (iso < min) return min;
+  if (iso < MIN_DATE_ISO) return MIN_DATE_ISO;
   return iso;
 }
 
