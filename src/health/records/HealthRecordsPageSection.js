@@ -49,11 +49,13 @@ const { useState } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
 import { peekQuickIntent, takeQuickIntent } from "../../shared/quickIntent.js";
 
-// স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
+// স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
+// id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
 const RECORD_SUBS = [
-  { id: "records", label: "📋 রেকর্ড" },
-  { id: "meds", label: "💊 ওষুধ/প্রেসক্রিপশন" },
-  { id: "docs", label: "📁 ল্যাব রিপোর্ট" }, // জমা নথি/রিপোর্ট (আগে আলাদা ট্যাবে ছিল)
+  { id: "all", label: "সব", hint: "অসুখ, ওষুধ ও রিপোর্ট — সব এক জায়গায়" },
+  { id: "records", label: "অসুখ", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
+  { id: "meds", label: "ওষুধ", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
+  { id: "docs", label: "রিপোর্ট", hint: "ল্যাব রিপোর্ট ও প্রেসক্রিপশন" }, // জমা নথি/রিপোর্ট
 ];
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
@@ -72,6 +74,10 @@ const HEALTH_TABS = [
   { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
 ];
 
+function sectionHead(icon, text) {
+  return React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#0E4B43", margin: "18px 2px 6px", paddingTop: "10px", borderTop: "1px solid #D9E5DE" } }, icon + " " + text);
+}
+
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
   const isHealth = mode === "health";
   const TABS = isHealth ? HEALTH_TABS : [];
@@ -82,7 +88,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
     return peekQuickIntent(["bp", "sugar", "medicine", "report"]) ? "records" : "profile";
   });
   const [timelineSub, setTimelineSub] = useState("diet");
-  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "records"));
+  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "all"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
   histBind(hk + "rec", recordSub, setRecordSub);
@@ -113,15 +119,25 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
       !isHealth && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
       isHealth && activeTab === "profile" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "profile" }),
       isHealth && activeTab === "records" && React.createElement(React.Fragment, null,
-        React.createElement("div", { style: { display: "flex", gap: "6px", marginBottom: "10px" } },
+        React.createElement("h3", { style: { fontSize: "20px", fontWeight: 800, color: "#0E4B43", margin: "4px 2px 2px" } }, "আমার স্বাস্থ্য"),
+        React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "0 2px 10px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint),
+        React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           RECORD_SUBS.map((sb) => React.createElement("button", {
             key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
             style: {
-              flex: 1, minHeight: "44px", padding: "6px 8px", borderRadius: "14px", fontSize: "14px", fontWeight: 600, cursor: "pointer",
+              flex: "1 0 auto", minHeight: "44px", padding: "6px 16px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
               border: recordSub === sb.id ? "1px solid #0E4B43" : "1px solid #C3D2CA",
               background: recordSub === sb.id ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
             },
           }, sb.label))),
+        // "সব": তিনটি তালিকা একসাথে, প্রতিটির ছোট শিরোনামসহ; আলাদা চিপে চাপলে শুধু সেটা
+        recordSub === "all" && React.createElement(React.Fragment, null,
+          sectionHead("🩺", "অসুখ ও পরিমাপ"),
+          React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
+          sectionHead("💊", "ওষুধ"),
+          React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
+          sectionHead("📁", "রিপোর্ট"),
+          React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
         recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
         recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
