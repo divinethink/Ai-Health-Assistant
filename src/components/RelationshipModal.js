@@ -9,7 +9,7 @@ import { createStructuralGrant, cancelStructuralGrant } from "../legacy/accessGr
 const { useState, useCallback } = React;
 
 export const RELATIONSHIP_OPTIONS = [
-  ["", "— নির্বাচন করুন —"],
+  ["", "— বেছে নিন —"],
   ["husband", "স্বামী"], ["wife", "স্ত্রী"], ["father", "বাবা"], ["mother", "মা"],
   ["son", "ছেলে"], ["daughter", "মেয়ে"], ["sibling", "ভাই/বোন"],
   ["grandparent", "দাদা/দাদি/নানা/নানি"], ["grandchild", "নাতি/নাতনি"],

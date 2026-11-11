@@ -75,7 +75,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
   const submit = useCallback(async () => {
     setErr(null);
     const toSave = rows.filter((r) => r.include);
-    if (toSave.length === 0) { setErr("অন্তত একটা মান নির্বাচন করুন।"); return; }
+    if (toSave.length === 0) { setErr("অন্তত একটা মান বেছে নিন।"); return; }
     setBusy(true);
     let count = 0;
     const savedObs = [];
@@ -102,7 +102,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
       onSaved && onSaved(count, buildLabAlerts(savedObs, dict));
     } catch (e) {
       setErr(e.code === "permission-denied"
-        ? "এই সদস্যের জন্য Health Record যোগ করার অনুমতি আপনার নেই।"
+        ? "এই সদস্যের জন্য স্বাস্থ্য রেকর্ড যোগ করার অনুমতি আপনার নেই।"
         : (e.message || String(e)));
     } finally {
       setBusy(false);

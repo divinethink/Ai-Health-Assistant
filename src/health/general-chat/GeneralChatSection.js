@@ -549,7 +549,7 @@ export function GeneralChatSection({ familyId, onExit }) {
       React.createElement(
         "div", { style: { display: "flex", gap: "8px", justifyContent: "flex-end" } },
         React.createElement("button", { onClick: () => setEditingProject(null), style: { padding: "8px 14px", border: "1px solid #D3E0D9", background: "#fff", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } }, "বাতিল"),
-        React.createElement("button", { onClick: saveProject, style: { padding: "8px 14px", border: "none", background: "#0E4B43", color: "#fff", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } }, "সেভ করুন")
+        React.createElement("button", { onClick: saveProject, style: { padding: "8px 14px", border: "none", background: "#0E4B43", color: "#fff", borderRadius: "10px", cursor: "pointer", fontSize: "14px" } }, "সংরক্ষণ করুন")
       )
     )
   );

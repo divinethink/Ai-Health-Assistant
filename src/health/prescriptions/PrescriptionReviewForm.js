@@ -55,7 +55,7 @@ function card(r, idx, update) {
     it.confusions.length > 0 && h("div", { style: { fontSize: "14px", color: RED, margin: "4px 0" } },
       "⚠️ অক্ষর-ডিজিট গোলমাল হতে পারে (অ্যাপ বদলায়নি): ",
       it.confusions.map((c, i) => h("span", { key: i }, h("mark", { style: { background: "#FFE08A", padding: "0 4px", borderRadius: "4px" } }, c.raw), " → \"" + c.suggestion + "\"  "))),
-    r.allergy && h("div", { style: { margin: "6px 0", padding: "8px 10px", borderRadius: "10px", background: "#FDE7E4", color: RED, fontSize: "14px" } }, "⚠️ এলার্জি রেকর্ডে ", h("b", null, r.allergy), " আছে। ডাক্তারকে জানান; টিক না দিলে যোগ হবে না।"),
+    r.allergy && h("div", { style: { margin: "6px 0", padding: "8px 10px", borderRadius: "10px", background: "#FDE7E4", color: RED, fontSize: "14px" } }, "⚠️ অ্যালার্জি রেকর্ডে ", h("b", null, r.allergy), " আছে। ডাক্তারকে জানান; টিক না দিলে যোগ হবে না।"),
     r.duplicate && h("div", { style: { margin: "6px 0", padding: "8px 10px", borderRadius: "10px", background: "#EEF1EF", color: "#3E4E49", fontSize: "14px" } }, "ℹ️ এই ওষুধ আগে থেকেই চলমান তালিকায় আছে — টিক দিলেও ডুপ্লিকেট যোগ হবে না।"),
     !warn && it.flags.filter((f) => f !== "ocr-confusable").length > 0 && h("div", { style: { fontSize: "14px", color: AMBER, margin: "4px 0" } }, it.flags.filter((f) => f !== "ocr-confusable").map((f) => "⚠ " + FLAG_LABELS_BN[f]).join(" · ")),
     it.clear && !warn && h("div", { style: { fontSize: "13px", color: G, margin: "4px 0" } }, "✓ স্পষ্ট"),
@@ -109,7 +109,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
       h("h4", { style: { margin: 0, fontSize: "16px", color: G } }, "💊 প্রেসক্রিপশন থেকে শনাক্ত"),
       ocrPercent != null && h("span", { style: { fontSize: "13px", fontWeight: 600, color: G, background: "#E4F0E9", borderRadius: "999px", padding: "2px 10px" } }, "OCR " + bn(ocrPercent) + "%")),
     h("div", { style: { margin: "8px 0 12px", padding: "10px 12px", borderRadius: "12px", background: "#FFF6E5", color: AMBER, fontSize: "14px", lineHeight: 1.5 } },
-      bn(items.length) + "টি ওষুধ পাওয়া গেছে। যাচাই করে টিক দিন; ", h("b", null, "আপনি অনুমোদন না দিলে কিছুই সেভ হবে না।"), " কাটা (strike) ওষুধ থাকলে টিক তুলে দিন।"),
+      bn(items.length) + "টি ওষুধ পাওয়া গেছে। যাচাই করে টিক দিন; ", h("b", null, "আপনি অনুমোদন না দিলে কিছুই সংরক্ষণ হবে না।"), " কাটা (strike) ওষুধ থাকলে টিক তুলে দিন।"),
     rows.map((r, i) => card(r, i, update)),
     err && ErrorBox(err),
     result
@@ -117,7 +117,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
           result.saved.length > 0 && h("div", null, "✓ " + bn(result.saved.length) + "টি ওষুধ যোগ হয়েছে: " + result.saved.join(", ") + " — রিমাইন্ডার দেখতে স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট।"),
           result.skipped.length > 0 && h("div", null, "ℹ️ আগে থেকেই ছিল, বাদ: " + result.skipped.join(", ")),
           result.failed.length > 0 && h("div", { style: { color: RED } }, "❌ যোগ হয়নি: " + result.failed.map((f) => f.name + " (" + f.message + ")").join(", ")))
-      : PrimaryButton("অনুমোদন করে " + bn(selected.length) + "টি ঔষধ যোগ করুন", approve, busy),
+      : PrimaryButton("অনুমোদন করে " + bn(selected.length) + "টি ওষুধ যোগ করুন", approve, busy),
     h("div", { style: { fontSize: "13px", color: MUTED, margin: "8px 2px", lineHeight: 1.5 } },
-      "প্রেসক্রিপশনে যা লেখা শুধু সেটাই নেওয়া হয়; অ্যাপ নিজে ডোজ বানায় না। শুরুর তারিখ আজ ধরা হবে। এলার্জি-মিল শুধু নামে ধরা পড়ে — ব্র্যান্ড-নামে নাও পড়তে পারে।"));
+      "প্রেসক্রিপশনে যা লেখা শুধু সেটাই নেওয়া হয়; অ্যাপ নিজে ডোজ বানায় না। শুরুর তারিখ আজ ধরা হবে। অ্যালার্জি-মিল শুধু নামে ধরা পড়ে — ব্র্যান্ড-নামে নাও পড়তে পারে।"));
 }

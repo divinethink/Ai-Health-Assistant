@@ -49,7 +49,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     listHealthRecords(familyId, targetMemberId)
       .then(setRecords)
       .catch((e) => setErr(e.code === "permission-denied"
-        ? "এই সদস্যের Health Record দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
+        ? "এই সদস্যের স্বাস্থ্য রেকর্ড দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
         : (e.message || String(e))));
   }, [familyId, targetMemberId, refreshTick]);
 
@@ -60,7 +60,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
       setConfirmId(null);
       onDeleted && onDeleted();
     } catch (e) {
-      setErr(e.code === "permission-denied" ? "এই record মুছার অনুমতি আপনার নেই।" : (e.message || String(e)));
+      setErr(e.code === "permission-denied" ? "এই রেকর্ড মোছার অনুমতি আপনার নেই।" : (e.message || String(e)));
     } finally {
       setBusyId(null);
     }
@@ -149,6 +149,6 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   return React.createElement("div", { style: { marginTop: "4px" } },
     React.createElement(LabAlertBox, { alerts: labAlerts }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(conditionCard))),
-    allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "এলার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
+    allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
 }

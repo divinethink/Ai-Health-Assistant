@@ -94,7 +94,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
         description: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Health Assistant অ্যাপ থেকে যোগ হয়েছে",
       });
       try { localStorage.setItem(syncedKey(e.id), "1"); } catch (err) { /* storage বন্ধ থাকলে শুধু dedupe হবে না */ }
-      setCalMsg({ id: e.id, ok: true, text: "✓ Google Calendar-এ যুক্ত হয়েছে (আগের দিন সকাল ৯টায় রিমাইন্ডার)" });
+      setCalMsg({ id: e.id, ok: true, text: "✓ Google ক্যালেন্ডারে যুক্ত হয়েছে (আগের দিন সকাল ৯টায় রিমাইন্ডার)" });
     } catch (err) {
       setCalMsg({ id: e.id, ok: false, text: err.message || String(err) });
     } finally {
@@ -180,11 +180,11 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
       ),
       menuFor === e.id && h(
         "div", { style: { marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" } },
-        h("a", { href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer", style: menuBtn }, "📅 Google Calendar-এ যোগ (নিজে নিশ্চিত করবেন)"),
+        h("a", { href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer", style: menuBtn }, "📅 Google ক্যালেন্ডারে যোগ (নিজে নিশ্চিত করবেন)"),
         !done && h("button", {
           onClick: () => handleAutoAdd(e), disabled: calBusy === e.id || isSynced(e.id),
           style: { ...menuBtn, opacity: isSynced(e.id) ? 0.6 : 1 },
-        }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 Calendar-এ যুক্ত ✓" : "📅 সরাসরি Calendar-এ যুক্ত করুন (আগের দিন ৯টায় রিমাইন্ডার)")),
+        }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 ক্যালেন্ডারে যুক্ত ✓" : "📅 সরাসরি ক্যালেন্ডারে যুক্ত করুন (আগের দিন ৯টায় রিমাইন্ডার)")),
         h("button", { onClick: () => handleDelete(e.id), style: { ...menuBtn, color: "#C0392B", border: "1px solid #E5A29A" } }, "🗑 মুছুন")
       ),
       calMsg && calMsg.id === e.id && h("div", { style: { fontSize: "13px", marginTop: "6px", color: calMsg.ok ? "#0E4B43" : "#B3261E" } }, calMsg.text)

@@ -62,7 +62,7 @@ function ComparisonView({ herbal, homeo }) {
   if (useCases.length === 0) {
     return React.createElement(
       "p", { style: { color: "#5F716C", fontSize: "14px" } },
-      "এখনো কোনো verified remedy নেই — pharmacist/physician review-এর অপেক্ষায়।"
+      "এখনো কোনো যাচাইকৃত প্রতিকার নেই — ফার্মাসিস্ট/চিকিৎসকের পর্যালোচনার অপেক্ষায়।"
     );
   }
   return React.createElement(
@@ -100,7 +100,7 @@ function RemedyGroup({ title, list }) {
     list.length === 0
       ? React.createElement(
           "p", { style: { color: "#5F716C", fontSize: "14px" } },
-          "এখনো কোনো verified remedy নেই — pharmacist/physician review-এর অপেক্ষায়।"
+          "এখনো কোনো যাচাইকৃত প্রতিকার নেই — ফার্মাসিস্ট/চিকিৎসকের পর্যালোচনার অপেক্ষায়।"
         )
       : React.createElement(
           "div", { style: { display: "flex", flexDirection: "column", gap: "8px" } },
@@ -147,7 +147,7 @@ export function RemedySection({ familyId, selectedMemberId, mode }) {
 
   if (loadErr) return ErrorBox(loadErr);
   if (herbal === null || homeo === null) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "Remedy তালিকা লোড হচ্ছে...");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "প্রতিকারের তালিকা লোড হচ্ছে...");
   }
 
   return React.createElement(

@@ -46,7 +46,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   useEffect(() => { if (editingRecord && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [editingRecord]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
   }
 
   return React.createElement(

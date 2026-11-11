@@ -72,7 +72,7 @@ export function HealthProfileModal({ familyId, targetMember, onClose, onSaved })
 
         React.createElement(
           "p", { style: { color: "#5F716C", fontSize: "14px", marginTop: "10px" } },
-          "উচ্চতা/ওজন এখানে নেই — সেগুলো নিচের Health Records-এ Observation হিসেবে যোগ করুন (সময়ের সাথে বদলায় বলে trend হিসেবে রাখা হয়)।"
+          "উচ্চতা/ওজন এখানে নেই — সেগুলো নিচের স্বাস্থ্য রেকর্ডে পরিমাপ হিসেবে যোগ করুন (সময়ের সাথে বদলায় বলে ধারা হিসেবে রাখা হয়)।"
         ),
 
         err && ErrorBox(err),

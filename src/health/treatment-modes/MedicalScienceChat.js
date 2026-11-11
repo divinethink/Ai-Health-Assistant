@@ -71,7 +71,7 @@ export function MedicalScienceChat({ familyId, selectedMemberId }) {
     }
   }
 
-  if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, React.createElement("div", { style: { color: "#C0392B", fontSize: "14px" } }, "সদস্য তালিকা লোড ব্যর্থ: " + loadErr));
+  if (loadErr) return React.createElement("div", { style: { marginTop: "14px" } }, React.createElement("div", { style: { color: "#C0392B", fontSize: "14px" } }, "সদস্যদের তালিকা আনা যায়নি: " + loadErr));
   if (!members || !targetMemberId) return null;
 
   return React.createElement(

@@ -47,7 +47,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
         }
       })
       .catch((err) => {
-        setErrorMsg("চেক করতে ব্যর্থ হয়েছে — আবার চেষ্টা করুন।" + (err && err.code ? ` [${err.code}]` : ""));
+        setErrorMsg("চেক করা যায়নি — আবার চেষ্টা করুন।" + (err && err.code ? ` [${err.code}]` : ""));
         setStage("idle");
       });
   }, [onSuccess]);
@@ -75,7 +75,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
         }
       })
       .catch((err) => {
-        setErrorMsg("সাইন-ইন ব্যর্থ হয়েছে, আবার চেষ্টা করুন।" + (err && err.code ? ` [${err.code}]` : ""));
+        setErrorMsg("সাইন-ইন করা যায়নি। আবার চেষ্টা করুন।" + (err && err.code ? ` [${err.code}]` : ""));
         setStage("idle");
       });
   }, [onSuccess]);
@@ -105,11 +105,11 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
           "name-required": "নাম লিখুন।",
           "dob-required": "জন্ম-তারিখ দিন।",
         };
-        setErrorMsg((res && msgMap[res.reason]) || "সম্পন্ন করতে ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
+        setErrorMsg((res && msgMap[res.reason]) || "কাজটি সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।");
         setStage("new-user-form");
       })
       .catch((err) => {
-        setErrorMsg(err.message || "সম্পন্ন করতে ব্যর্থ হয়েছে, আবার চেষ্টা করুন।");
+        setErrorMsg(err.message || "কাজটি সম্পন্ন করা যায়নি। আবার চেষ্টা করুন।");
         setStage("new-user-form");
       });
   }, [inviteFamilyId, inviteToken, familyCode, name, dob, sex, onSuccess]);

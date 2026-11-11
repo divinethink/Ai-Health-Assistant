@@ -60,9 +60,9 @@ export async function exportHealthProfileDocx(data) {
       ["উচ্চতা / ওজন / BMI", (m.heightCm || "—") + " cm / " + (m.weightKg || "—") + " kg" + (m.bmi ? " / BMI " + m.bmi : "")],
       ["রক্তের গ্রুপ", m.bloodGroup || "—"],
     ]),
-    heading("⚠ এলার্জি ও সতর্কতা", "C0392B"),
+    heading("⚠ অ্যালার্জি ও সতর্কতা", "C0392B"),
     ...(data.allergies.length === 0
-      ? [para("কোনো জানা এলার্জি নেই।")]
+      ? [para("কোনো জানা অ্যালার্জি নেই।")]
       : data.allergies.map((a) => para("• " + describeHealthRecord(a)))),
   ];
 

@@ -26,7 +26,7 @@ export function AiSummaryPrintView({ data, onBack }) {
     React.createElement(
       "div", { className: "no-print", style: { display: "flex", gap: "8px", marginBottom: "12px" } },
       React.createElement("button", { onClick: onBack, style: { padding: "8px 14px", borderRadius: "8px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 600 } }, "← ফিরে যান"),
-      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "#0E4B43", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সেভ করুন")
+      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "#0E4B43", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সংরক্ষণ করুন")
     ),
 
     React.createElement("div", { style: { color: "#111", maxWidth: "720px", margin: "0 auto" } },

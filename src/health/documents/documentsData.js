@@ -52,7 +52,7 @@ async function getIdToken() {
 export async function uploadDocument(familyId, targetMemberId, callerMemberId, file, { docType, date, source }) {
   const err = validateFile(file);
   if (err) throw new Error(err);
-  if (!WORKER_URL) throw new Error("Media server configure করা নেই (VITE_MEDIA_WORKER_URL missing) — owner-কে জানান।");
+  if (!WORKER_URL) throw new Error("ছবি/ফাইল আপলোডের সেবা এখনো চালু হয়নি — অ্যাডমিনকে জানান।");
 
   const now = firebase.firestore.FieldValue.serverTimestamp();
   const metaRef = db.collection("families").doc(familyId).collection("documents").doc();
@@ -80,7 +80,7 @@ export async function uploadDocument(familyId, targetMemberId, callerMemberId, f
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken, familyId, docId }),
     });
-    if (!authRes.ok) throw new Error("আপলোড-অনুমতি নেওয়া যায়নি (permission বা network সমস্যা)।");
+    if (!authRes.ok) throw new Error("আপলোডের অনুমতি পাওয়া যায়নি (অনুমতি বা ইন্টারনেটের সমস্যা)।");
     const { cloudName, apiKey, timestamp, signature, publicId, folder } = await authRes.json();
 
     const form = new FormData();
@@ -95,7 +95,7 @@ export async function uploadDocument(familyId, targetMemberId, callerMemberId, f
       method: "POST",
       body: form,
     });
-    if (!uploadRes.ok) throw new Error("ফাইল আপলোড ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+    if (!uploadRes.ok) throw new Error("ফাইল আপলোড করা যায়নি — আবার চেষ্টা করুন।");
     const result = await uploadRes.json();
 
     await metaRef.update({
@@ -140,7 +140,7 @@ export function getDownloadUrl(cloudinaryUrl) {
 // Firestore doc delete করে (hasDeleteAccess() verify-সহ), client শুধু
 // notification পাঠায় (Admin-override হলে)।
 export async function deleteDocument(familyId, docId, targetMemberId, callerMemberId) {
-  if (!WORKER_URL) throw new Error("Media server configure করা নেই।");
+  if (!WORKER_URL) throw new Error("ছবি/ফাইল আপলোডের সেবা এখনো চালু হয়নি।");
   const idToken = await getIdToken();
   const res = await fetch(`${WORKER_URL}/delete`, {
     method: "POST",
@@ -150,8 +150,8 @@ export async function deleteDocument(familyId, docId, targetMemberId, callerMemb
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error === "forbidden" || body.error === "not-found-or-forbidden"
-      ? "এই Document মুছার অনুমতি আপনার নেই।"
-      : "মুছতে ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+      ? "এই নথি মোছার অনুমতি আপনার নেই।"
+      : "মোছা যায়নি — আবার চেষ্টা করুন।");
   }
   if (targetMemberId !== callerMemberId) {
     await notifyMember(familyId, targetMemberId, "document-deleted",

@@ -82,7 +82,7 @@ export function ManualReportEntryForm({ familyId, targetMemberId, callerMemberId
       onSaved && onSaved(count);
     } catch (e) {
       setErr(e.code === "permission-denied"
-        ? "এই সদস্যের জন্য Health Record যোগ করার অনুমতি আপনার নেই।"
+        ? "এই সদস্যের জন্য স্বাস্থ্য রেকর্ড যোগ করার অনুমতি আপনার নেই।"
         : (e.message || String(e)));
     } finally {
       setBusy(false);

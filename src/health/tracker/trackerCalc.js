@@ -41,8 +41,8 @@ export function safetyGate({ age, flags }) {
 export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, targetWeightKg, weeks, flags }) {
   const gate = safetyGate({ age, flags });
   if (gate.blocked) return { blocked: true, reason: gate.reason };
-  if (!GOAL_LABELS[goalType]) return { error: "লক্ষ্য বাছুন।" };
-  if (!ACTIVITY_FACTOR[activity]) return { error: "কার্যকলাপ বাছুন।" };
+  if (!GOAL_LABELS[goalType]) return { error: "লক্ষ্য বেছে নিন।" };
+  if (!ACTIVITY_FACTOR[activity]) return { error: "কার্যকলাপ বেছে নিন।" };
   if (sex !== "male" && sex !== "female") return { error: "প্রোফাইলে লিঙ্গ (পুরুষ/মহিলা) দিন।" };
   if (!heightCm || heightCm <= 0) return { error: "প্রোফাইলে উচ্চতা যোগ করুন (Health → প্রোফাইল)।" };
   if (!weightKg || weightKg <= 0) return { error: "প্রোফাইলে ওজন যোগ করুন (Health → প্রোফাইল)।" };
@@ -153,7 +153,7 @@ export function activeFastDays(goal, { age, flags }) {
 }
 // সেভের আগে যাচাই: ত্রুটি-বার্তা অথবা null। খালি তালিকা (মোড বন্ধ করা) সবসময় বৈধ।
 export function checkFastDaysInput(raw, { age, flags }) {
-  if (!Array.isArray(raw)) return "সিয়াম/ফাস্টিং-এর দিন বাছুন।";
+  if (!Array.isArray(raw)) return "সিয়াম/ফাস্টিং-এর দিন বেছে নিন।";
   if (raw.length === 0) return null;
   if (raw.length > MAX_FAST_DAYS) return "সর্বোচ্চ " + MAX_FAST_DAYS + " দিন বাছা যায়।";
   if (sanitizeFastDays(raw).length !== raw.length) return "অবৈধ দিন।";

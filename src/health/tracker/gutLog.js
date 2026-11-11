@@ -40,7 +40,7 @@ export const entriesOn = (entries, date) => (Array.isArray(entries) ? entries : 
 
 // যোগ করার আগে যাচাই; ত্রুটি-বার্তা অথবা null
 export function checkGutAdd(score, countToday) {
-  if (cleanScore(score) === null) return "ব্রিস্টল স্কেল ১ থেকে ৭-এর মধ্যে বাছুন।";
+  if (cleanScore(score) === null) return "ব্রিস্টল স্কেল ১ থেকে ৭-এর মধ্যে বেছে নিন।";
   if (countToday >= MAX_GUT_PER_DAY) return "একদিনে সর্বোচ্চ " + MAX_GUT_PER_DAY + "টি এন্ট্রি রাখা যায়।";
   return null;
 }

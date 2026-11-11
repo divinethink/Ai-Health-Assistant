@@ -25,7 +25,7 @@ test("পড়ার পথ: সংরক্ষিত fastDays সবার জ
   assert.deepEqual(activeFastDays(null, OK), []);
   assert.deepEqual(activeFastDays({ fastDays: "x" }, OK), []);
 });
-test("সেভ-যাচাই: গেট, সীমা, ধরন; খালি সবসময় বৈধ", () => {
+test("সংরক্ষণ-যাচাই: গেট, সীমা, ধরন; খালি সবসময় বৈধ", () => {
   assert.equal(checkFastDaysInput([], { age: 10, flags: {} }), null); // বন্ধ করা সবসময় চলে
   assert.equal(checkFastDaysInput([1], OK), null);
   assert.equal(checkFastDaysInput([1, 4], OK), null);

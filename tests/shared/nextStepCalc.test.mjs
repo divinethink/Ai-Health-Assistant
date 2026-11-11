@@ -47,7 +47,7 @@ test("ফলো-আপ: ওষুধের লাইনের তারিখ �
   assert.equal(extractFollowUpDate(t, TODAY).date, "2026-11-20");
 });
 
-test("courseEndPlan: ≥৪ দিন ও সেভ-হওয়া ওষুধ; শেষের ২ দিন আগে; আজ+(দিন−১) সূত্র", () => {
+test("courseEndPlan: ≥৪ দিন ও সংরক্ষণ-হওয়া ওষুধ; শেষের ২ দিন আগে; আজ+(দিন−১) সূত্র", () => {
   const plan = courseEndPlan([{ name: "Pantoprazole", days: 7 }, { name: "Napa", days: 3 }, { name: "X", days: null }, { name: "Skipped", days: 10 }], ["Pantoprazole", "Napa", "X"], TODAY);
   assert.equal(plan.length, 1);
   assert.deepEqual(plan[0], { name: "Pantoprazole", days: 7, endDate: "2026-11-16", remindDate: "2026-11-14" });

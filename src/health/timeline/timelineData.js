@@ -21,7 +21,7 @@ const RECORD_LABELS_BN = {
   condition: "রোগ/সমস্যা",
   observation: "পরিমাপ/টেস্ট",
   medicationStatement: "ওষুধ",
-  allergy: "এলার্জি",
+  allergy: "অ্যালার্জি",
 };
 const RECORD_CATEGORIES = {
   condition: "illness",

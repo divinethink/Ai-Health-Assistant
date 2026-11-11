@@ -40,7 +40,7 @@ export function DoctorExportPrintView({ data, onBack }) {
     React.createElement(
       "div", { className: "no-print", style: { display: "flex", gap: "8px", marginBottom: "12px" } },
       React.createElement("button", { onClick: onBack, style: { padding: "8px 14px", borderRadius: "8px", border: "1px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 600 } }, "← ফিরে যান"),
-      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "#0E4B43", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সেভ করুন")
+      React.createElement("button", { onClick: () => window.print(), style: { padding: "8px 14px", borderRadius: "8px", border: "none", background: "#0E4B43", color: "#fff", fontWeight: 600 } }, "প্রিন্ট / PDF সংরক্ষণ করুন")
     ),
 
     React.createElement("div", { style: { color: "#111", maxWidth: "720px", margin: "0 auto" } },
@@ -63,9 +63,9 @@ export function DoctorExportPrintView({ data, onBack }) {
       ),
 
       React.createElement("div", { style: { background: "#FDEEEE", border: "1px solid #E57373", borderRadius: "6px", padding: "8px", marginTop: "12px" } },
-        React.createElement("b", null, "⚠ এলার্জি ও সতর্কতা"),
+        React.createElement("b", null, "⚠ অ্যালার্জি ও সতর্কতা"),
         data.allergies.length === 0
-          ? React.createElement("p", { style: { fontSize: "12px", margin: "4px 0 0" } }, "কোনো জানা এলার্জি নেই।")
+          ? React.createElement("p", { style: { fontSize: "12px", margin: "4px 0 0" } }, "কোনো জানা অ্যালার্জি নেই।")
           : React.createElement("ul", { style: { margin: "6px 0 0", paddingLeft: "18px" } },
               data.allergies.map((a) => React.createElement("li", { key: a.id, style: { fontSize: "12px" } }, describeHealthRecord(a))))
       ),

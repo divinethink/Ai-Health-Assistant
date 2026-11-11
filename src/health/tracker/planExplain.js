@@ -26,7 +26,7 @@ export function explainMeal({ goal, age, weightKg, heightCm, allergyTags }) {
   (calc.notes || []).forEach((n) => lines.push(n));
   lines.push("টার্গেট: " + bnNum(calc.calorieTarget) + " কিলোক্যালরি/দিন");
   lines.push("মেনু: স্থির বাংলাদেশি বেস-মেনু থেকে ভাত, রুটি, ডাল, কলা, মুড়ির পরিমাণ ধাপে ধাপে বাড়িয়ে-কমিয়ে টার্গেটের কাছে আনা হয়েছে; ক্যালরি আনুমানিক।");
-  if (allergyTags && allergyTags.length) lines.push("প্রোফাইলের এলার্জি অনুযায়ী মিলে যাওয়া খাবার বদলানো/বাদ দেওয়া হয়েছে।");
+  if (allergyTags && allergyTags.length) lines.push("প্রোফাইলের অ্যালার্জি অনুযায়ী মিলে যাওয়া খাবার বদলানো/বাদ দেওয়া হয়েছে।");
   return lines;
 }
 

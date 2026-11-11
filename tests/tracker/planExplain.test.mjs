@@ -17,11 +17,11 @@ test("explainMeal: BMR/TDEE/গুণক/কম খাওয়া/টার্�
   assert.ok(t.includes("১.৫৫"), "গুণক");
   assert.ok(t.includes("৩০৫") && t.includes("কম"), "৩০৫ কম");
   assert.ok(t.includes("নোট-১"));
-  assert.ok(!t.includes("এলার্জি"));
+  assert.ok(!t.includes("অ্যালার্জি"));
 });
-test("explainMeal: এলার্জি-ট্যাগ থাকলে এলার্জির লাইন; প্রোফাইল-ফিল্ড না থাকলে ভাঙে না", () => {
+test("explainMeal: অ্যালার্জি-ট্যাগ থাকলে অ্যালার্জির লাইন; প্রোফাইল-ফিল্ড না থাকলে ভাঙে না", () => {
   const l = explainMeal({ goal, age: null, weightKg: null, heightCm: null, allergyTags: ["egg"] });
-  assert.ok(l.join("\n").includes("এলার্জি"));
+  assert.ok(l.join("\n").includes("অ্যালার্জি"));
   assert.ok(!l.some((x) => x.startsWith("প্রোফাইল:")));
 });
 test("explainMeal: gain-লক্ষ্যে 'বেশি'", () => {

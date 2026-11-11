@@ -104,7 +104,7 @@ export function DoctorDocumentPicker({ familyId, targetMemberId, memberName, onG
     React.createElement("button", {
       onClick: toggleAll,
       style: { border: "none", background: "none", color: "#0E4B43", fontWeight: 600, fontSize: "14px", padding: "0 0 6px", cursor: "pointer" },
-    }, chosen.length === docs.length ? "সব বাদ দিন" : "সব বাছুন"),
+    }, chosen.length === docs.length ? "সব বাদ দিন" : "সব বেছে নিন"),
     docs.map((d) => React.createElement(
       "label", { key: d.id, style: { display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #EAF1ED", fontSize: "14px", cursor: "pointer" } },
       React.createElement("input", { type: "checkbox", checked: !!picked[d.id], onChange: () => toggle(d.id), style: { width: "20px", height: "20px" } }),

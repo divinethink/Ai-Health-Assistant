@@ -63,7 +63,7 @@ export const ADULT_EMERGENCY_SIGNS = [
   { id: "facialDroop", label: "মুখ একপাশে বেঁকে গেছে (FAST)" },
   { id: "severeBleeding", label: "তীব্র/অনিয়ন্ত্রিত রক্তক্ষরণ" },
   { id: "unresponsive", label: "অজ্ঞান/ডাকে সাড়া দিচ্ছে না" },
-  { id: "severeAllergicReaction", label: "মুখ/গলা ফুলে যাওয়া + শ্বাসকষ্ট (তীব্র এলার্জিক প্রতিক্রিয়া)" },
+  { id: "severeAllergicReaction", label: "মুখ/গলা ফুলে যাওয়া + শ্বাসকষ্ট (তীব্র অ্যালার্জিক প্রতিক্রিয়া)" },
 ];
 
 export function getChecklistForAgeGroup(ageGroup) {

@@ -46,7 +46,7 @@ export function TodayDateSheet({ selected, today, marked, onPick, onClose, loadM
   const arrow = (n, label, ch) => React.createElement("button", { type: "button", onClick: () => move(n), disabled: !anyIn(n), "aria-label": label,
     style: { ...BTN, width: "44px", border: "none", background: T.track, color: T.green, fontSize: "20px", opacity: anyIn(n) ? 1 : 0.35 } }, ch);
 
-  return React.createElement(Sheet, { title: "তারিখ বাছুন", subtitle: "যেকোনো পুরনো দিনের তথ্য দেখা ও যোগ করা যায়", onClose },
+  return React.createElement(Sheet, { title: "তারিখ বেছে নিন", subtitle: "যেকোনো পুরনো দিনের তথ্য দেখা ও যোগ করা যায়", onClose },
     React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
       arrow(-1, "আগের মাস", "‹"),
       React.createElement("div", { style: { textAlign: "center", lineHeight: 1.3 } },

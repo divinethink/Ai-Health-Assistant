@@ -45,7 +45,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
       else if (andAnalyze && onAnalyze) onAnalyze(uploadedFile);
     } catch (e) {
       setErr(e.code === "permission-denied"
-        ? "এই সদস্যের জন্য Document আপলোড করার অনুমতি আপনার নেই।"
+        ? "এই সদস্যের জন্য নথি আপলোড করার অনুমতি আপনার নেই।"
         : (e.message || String(e)));
     } finally {
       setBusy(false);
@@ -77,7 +77,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     err && ErrorBox(err),
     docType === "prescription" && onPrescription
       ? React.createElement(React.Fragment, null,
-          PrimaryButton("সংরক্ষণ + ঔষধ শনাক্ত", () => submit("rx"), busy),
+          PrimaryButton("সংরক্ষণ + ওষুধ শনাক্ত", () => submit("rx"), busy),
           SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy))
     : docType === "lab-report" && onAnalyze
       ? React.createElement(React.Fragment, null,

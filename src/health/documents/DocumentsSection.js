@@ -30,10 +30,10 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
   }
 
-  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট", prescription: "💊 প্রেসক্রিপশন থেকে ঔষধ" })[panel.mode];
+  const panelTitle = panel && ({ add: "📎 নতুন নথি যোগ করুন", analyze: "🔬 রিপোর্ট বিশ্লেষণ", manual: "✍️ হাতে-লেখা রিপোর্ট", prescription: "💊 প্রেসক্রিপশন থেকে ওষুধ" })[panel.mode];
 
   return React.createElement(
     "div", { style: { marginTop: "12px" } },

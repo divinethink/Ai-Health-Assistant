@@ -37,7 +37,7 @@ function Step({ step }) {
   const yes = useCallback(async () => {
     if (state === "busy" || state === "done") return; // double-tap রোধ
     if (step.details) { setOpen((o) => !o); return; }
-    if (step.date && !(date >= step.date.min)) { setErr("আজ বা পরের একটা তারিখ বাছুন।"); return; }
+    if (step.date && !(date >= step.date.min)) { setErr("আজ বা পরের একটা তারিখ বেছে নিন।"); return; }
     setErr(null); setState("busy");
     try { setMsg(await step.run(date)); setState("done"); window.dispatchEvent(new Event(REMINDERS_CHANGED_EVENT)); /* রানার নতুন ইভেন্ট পড়ে */ }
     catch (e) { setErr(e.code === "permission-denied" ? "ক্যালেন্ডারে যোগ করার অনুমতি নেই।" : (e.message || String(e))); setState("idle"); }
@@ -80,7 +80,7 @@ function Shell({ steps }) {
 export function PrescriptionNextSteps({ familyId, targetMemberId, callerMemberId, saved, followUp }) {
   const today = localISO();
   const names = saved.res.saved || [];
-  if (names.length === 0) return null; // কিছু সেভ না হলে "এরপর"-ও নেই
+  if (names.length === 0) return null; // কিছু সংরক্ষণ না হলে "এরপর"-ও নেই
   const steps = [];
 
   if (followUp) {

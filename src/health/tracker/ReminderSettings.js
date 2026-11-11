@@ -29,7 +29,7 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
   const [perm, setPerm] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
 
   if (memberId !== callerMemberId) {
-    return h("div", { style: { ...CARD, background: "#E4F0E9", color: "#0E4B43", fontSize: "14px" } }, "রিমাইন্ডার শুধু নিজের প্রোফাইলের জন্য। উপরে নিজের নাম বাছুন।");
+    return h("div", { style: { ...CARD, background: "#E4F0E9", color: "#0E4B43", fontSize: "14px" } }, "রিমাইন্ডার শুধু নিজের প্রোফাইলের জন্য। উপরে নিজের নাম বেছে নিন।");
   }
   const set = (key, patch) => { setOk(false); setS((p) => ({ ...p, [key]: { ...p[key], ...patch } })); };
 
@@ -40,14 +40,14 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
       await saveReminders(familyId, memberId, callerMemberId, s, goal);
       window.dispatchEvent(new Event(REMINDERS_CHANGED_EVENT));
       setOk(true); onSaved();
-    } catch (x) { setErr(x.code === "permission-denied" ? "সংরক্ষণের অনুমতি নেই।" : (x.message || String(x))); } finally { setBusy(false); }
+    } catch (x) { setErr(x.code === "permission-denied" ? "এই তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); } finally { setBusy(false); }
   };
 
   return h("div", null,
     perm !== "granted" && h("div", { style: { ...CARD, background: "#FFF6DD", borderColor: "#E8D08A", color: "#7A5B00", fontSize: "14px", lineHeight: 1.5 } },
       perm === "denied" ? "ব্রাউজারে নোটিফিকেশন বন্ধ করা আছে। ব্রাউজারের সেটিং থেকে চালু করুন।" : perm === "unsupported" ? "এই ব্রাউজারে নোটিফিকেশন চলে না।" : "নোটিফিকেশন পেতে অনুমতি দিন।",
       perm === "default" && h("button", { onClick: askPermission, style: { display: "block", marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid #0E4B43", background: "#fff", color: "#0E4B43", fontWeight: 700, cursor: "pointer" } }, "অনুমতি দিন")),
-    h("div", { style: { fontSize: "12px", color: "#5F716C", marginBottom: "10px" } }, "এখন অ্যাপ/ট্যাব খোলা থাকলে তবেই নোটিফিকেশন আসবে। ঔষধের রিমাইন্ডার আলাদা — Health → স্বাস্থ্য তথ্য ট্যাবে।"),
+    h("div", { style: { fontSize: "12px", color: "#5F716C", marginBottom: "10px" } }, "এখন অ্যাপ/ট্যাব খোলা থাকলে তবেই নোটিফিকেশন আসবে। ওষুধের রিমাইন্ডার আলাদা — Health → স্বাস্থ্য তথ্য ট্যাবে।"),
     Row({ title: "খাবার", on: s.meal.on, onToggle: (v) => set("meal", { on: v }), note: "মিল-প্ল্যান থাকলে নোটিফিকেশনে খাবারের নামও আসে।",
       children: MEAL_SLOTS.map((slot) => h("div", { key: slot.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "4px 0" } },
         h("span", { style: { fontSize: "14px", color: "#1F2D2A" } }, MEAL_TITLES[slot.id]),

@@ -18,14 +18,14 @@ function parseNum(v) {
 
 export function checkWeightInput(v) {
   const n = parseNum(v);
-  if (n === null || Number.isNaN(n) || n < WEIGHT_MIN || n > WEIGHT_MAX) return { error: "ওজন সঠিক সংখ্যা দিন।" };
+  if (n === null || Number.isNaN(n) || n < WEIGHT_MIN || n > WEIGHT_MAX) return { error: "ওজন ঠিকভাবে লিখুন (যেমন ৬৮.৫)।" };
   return { value: Math.round(n * 10) / 10 };
 }
 
 // উচ্চতা (সেমি): ৩০–২৫০, এক দশমিক পর্যন্ত। ফুট/ইঞ্চি → সেমি: cmFromFtIn।
 export function checkHeightInput(v) {
   const n = parseNum(v);
-  if (n === null || Number.isNaN(n) || n < HEIGHT_MIN || n > HEIGHT_MAX) return { error: "উচ্চতা সঠিক সংখ্যা দিন (" + HEIGHT_MIN + "–" + HEIGHT_MAX + " সেমি)।" };
+  if (n === null || Number.isNaN(n) || n < HEIGHT_MIN || n > HEIGHT_MAX) return { error: "উচ্চতা ঠিকভাবে লিখুন (" + HEIGHT_MIN + "–" + HEIGHT_MAX + " সেমি)।" };
   return { value: Math.round(n * 10) / 10 };
 }
 export function cmFromFtIn(ft, inch) {
@@ -37,7 +37,7 @@ export function cmFromFtIn(ft, inch) {
 
 export function checkStepsInput(v) {
   const n = parseNum(v);
-  if (n === null || Number.isNaN(n) || n < 0 || n > STEPS_MAX || !Number.isInteger(n)) return { error: "স্টেপ সঠিক সংখ্যা দিন।" };
+  if (n === null || Number.isNaN(n) || n < 0 || n > STEPS_MAX || !Number.isInteger(n)) return { error: "স্টেপ ঠিকভাবে লিখুন (শুধু পূর্ণ সংখ্যা)।" };
   return { value: n };
 }
 

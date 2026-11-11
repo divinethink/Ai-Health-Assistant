@@ -53,7 +53,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
     listDocuments(familyId, targetMemberId)
       .then(setDocs)
       .catch((e) => setErr(e.code === "permission-denied"
-        ? "এই সদস্যের Document দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
+        ? "এই সদস্যের নথি দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
         : (e.message || String(e))));
   }, [familyId, targetMemberId, refreshTick]);
 

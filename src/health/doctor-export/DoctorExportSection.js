@@ -90,7 +90,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
   }
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+  if (!members || !targetMemberId) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
 
   const memberName = (members.find((m) => m.id === targetMemberId) || {}).name;
   return React.createElement(

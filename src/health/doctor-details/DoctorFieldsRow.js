@@ -65,7 +65,7 @@ export function DoctorFieldsRow({ value, onChange, suggestions, onPick, onCardCl
     file && React.createElement("div", { style: { marginTop: "8px" } },
       React.createElement("button", { type: "button", onClick: runScan, disabled: scan.busy, style: { width: "100%", minHeight: "44px", border: "1px dashed #9CC5B4", borderRadius: "12px", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: scan.busy ? "default" : "pointer", fontFamily: "inherit" } },
         scan.busy ? "কার্ড পড়া হচ্ছে… " + Math.round(scan.progress * 100) + "%" : "🔍 কার্ড থেকে পূরণ করুন"),
-      filled.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#8A6D00", marginTop: "6px" } }, "OCR থেকে — যাচাই করুন (হলুদ ঘরগুলো)। সেভ করার আগে ঠিক আছে কিনা দেখুন।"),
+      filled.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#8A6D00", marginTop: "6px" } }, "OCR থেকে — যাচাই করুন (হলুদ ঘরগুলো)। সংরক্ষণ করার আগে ঠিক আছে কিনা দেখুন।"),
       scan.note && React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "6px" } }, scan.note)),
     // সারি ২
     React.createElement("div", { style: rowStyle },

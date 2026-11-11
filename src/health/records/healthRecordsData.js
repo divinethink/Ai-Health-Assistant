@@ -16,10 +16,10 @@ import { isDuplicate } from "../doctor-details/doctorSuggest.js";
 import { getMemberRecords, invalidateMemberHealth } from "./memberHealthStore.js";
 
 export const RESOURCE_TYPE_LABELS = {
-  condition: "Condition (রোগ/সমস্যা)",
-  observation: "Observation (পরিমাপ/টেস্ট)",
-  medicationStatement: "Medication (ওষুধ)",
-  allergy: "Allergy (এলার্জি)",
+  condition: "রোগ/সমস্যা",
+  observation: "পরিমাপ/পরীক্ষা",
+  medicationStatement: "ওষুধ",
+  allergy: "অ্যালার্জি",
 };
 
 // resourceType-নির্দিষ্ট field-সেট আলাদা করা হলো (Architecture Plan §2 schema অনুযায়ী) —

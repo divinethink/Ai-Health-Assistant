@@ -64,9 +64,9 @@ function AlertStrip({ allergies, conds, onDiet }) { // onDiet: রোগ থা�
   if (!allergies.length && !conds.length) return null; // কিছু না থাকলে কার্ডই নেই; রেকর্ড দিলে অটো আসবে
   const chip = (key, text, bg, fg) => React.createElement("span", { key, style: { padding: "5px 12px", borderRadius: "999px", background: bg, color: fg, fontSize: "14px", fontWeight: 700 } }, text);
   const shown = conds.slice(0, 3);
-  return React.createElement("div", { style: { ...CARD_STYLE, padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "এলার্জি ও চলমান অসুস্থতা" },
+  return React.createElement("div", { style: { ...CARD_STYLE, padding: "8px 12px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "অ্যালার্জি ও চলমান অসুস্থতা" },
     allergies.length
-      ? chip("al", "⚠️ এলার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
+      ? chip("al", "⚠️ অ্যালার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
       : null,
     shown.map((c, i) => chip("c" + i, "🩺 " + c.name, "#E4F0E9", T.green)),
     conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"),
@@ -136,7 +136,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const extras = sanitizeExtraFoods(d.extraFoods);
   const canLog = !!calc;
   const macros = sumNutrition(extras);
-  const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সেভ হয় না)
+  const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সংরক্ষণ হয় না)
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
   const budgetTarget = calc && !onFast ? calc.calorieTarget : null; // সিয়ামের দিনে টার্গেট স্থগিত → আগের প্ল্যান-ভিত্তিক সংখ্যা
@@ -204,7 +204,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const hitBtn = { minHeight: "44px", margin: "-8px 0", padding: "0 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center" };
   const dateChip = React.createElement("span", { style: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "2px" } },
     !isViewToday && React.createElement("button", { type: "button", onClick: () => pickDay(today), "aria-label": "আজকের দিনে ফিরুন", style: hitBtn }, React.createElement("span", { style: pill("rgba(255,255,255,0.18)", T.onDark) }, "আজ ↩")),
-    React.createElement("button", { type: "button", onClick: () => setCalOpen(true), "aria-label": "তারিখ বাছুন, এখন " + shortDate, style: hitBtn },
+    React.createElement("button", { type: "button", onClick: () => setCalOpen(true), "aria-label": "তারিখ বেছে নিন, এখন " + shortDate, style: hitBtn },
       React.createElement("span", { style: pill(isViewToday ? "#F3E6CC" : T.orange, isViewToday ? T.green : T.onDark) }, React.createElement("span", { "aria-hidden": "true" }, "📅"), shortDate)));
 
   const glasses = d.waterGlasses || 0;

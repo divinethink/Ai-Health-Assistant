@@ -37,10 +37,10 @@ export function useLang() {
 
 const DICT = {
   bn: {
-    "nav.home": "হোম", "nav.aichat": "এআই চ্যাট", "nav.blog": "ব্লগ", "nav.tracker": "ট্র্যাকার", "nav.docs": "নথিপত্র", "nav.health": "Health", "nav.menu": "মেনু",
+    "nav.home": "হোম", "nav.aichat": "এআই চ্যাট", "nav.blog": "ব্লগ", "nav.tracker": "ট্র্যাকার", "nav.docs": "নথি", "nav.health": "Health", "nav.menu": "মেনু",
 
     "title.home": "🏠 স্বাস্থ্য রেকর্ড", "title.aichat": "🩺 এআই চ্যাট", "title.blog": "🌿 স্বাস্থ্য ব্লগ", "title.tracker": "📈 হেলথ ট্র্যাকার",
-    "title.docs": "📁 নথিপত্র", "title.menu": "☰ মেনু",
+    "title.docs": "📁 নথি", "title.menu": "☰ মেনু",
 
     "tab.today": "আজ", "tab.profile": "প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
     "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "খাদ্যাভ্যাস ও টাইমলাইন",
@@ -62,20 +62,20 @@ const DICT = {
     "f.new": "নতুন স্বাস্থ্য রেকর্ড যোগ করুন", "f.edit": "স্বাস্থ্য রেকর্ড সম্পাদনা করুন",
     "f.type": "ধরন", "f.typeFixed": "(সম্পাদনায় বদলানো যায় না)",
     "type.condition": "অসুস্থতা", "type.observation": "পরিমাপ (সুগার, ওজন ইত্যাদি)",
-    "type.medicationStatement": "ওষুধ", "type.allergy": "এলার্জি",
+    "type.medicationStatement": "ওষুধ", "type.allergy": "অ্যালার্জি",
     "f.name": "নাম", "f.category": "বিভাগ", "f.status": "অবস্থা", "f.onset": "শুরুর তারিখ (ঐচ্ছিক)",
     "f.date": "তারিখ (ঐচ্ছিক)", "f.startDate": "শুরুর তারিখ (ঐচ্ছিক)",
     "f.notes": "সংক্ষিপ্ত বিবরণ (ঐচ্ছিক, ১-২ লাইন)", "f.chronic": "এটা কি দীর্ঘমেয়াদি সমস্যা? (যেমন: ডায়াবেটিস, উচ্চ রক্তচাপ, থাইরয়েড, কিডনি রোগ)",
     "f.physician": "চিকিৎসক যোগাযোগ (ঐচ্ছিক)",
     "f.obsType": "কীসের পরিমাপ", "f.value": "মান", "f.unit": "একক",
     "f.medName": "ওষুধের নাম", "f.freq": "কয় বেলা / কীভাবে খাবেন", "f.days": "কতদিন খেতে হবে (দিন)",
-    "f.tier": "ওষুধের ধরন", "f.substance": "যে জিনিসে এলার্জি", "f.reaction": "কী সমস্যা হয়", "f.severity": "কতটা গুরুতর",
+    "f.tier": "ওষুধের ধরন", "f.substance": "যে জিনিসে অ্যালার্জি", "f.reaction": "কী সমস্যা হয়", "f.severity": "কতটা গুরুতর",
     "st.active": "চলছে", "st.resolved": "সেরে গেছে", "st.chronic": "দীর্ঘমেয়াদি", "st.stopped": "বন্ধ",
     "tier.otc-self-care": "সাধারণ (নিজে খাওয়া যায়)", "tier.requires-consult": "ডাক্তারের পরামর্শ লাগবে",
     "sev.mild": "হালকা", "sev.moderate": "মাঝারি", "sev.severe": "গুরুতর",
     "btn.save": "সংরক্ষণ করুন", "btn.update": "হালনাগাদ করুন", "btn.cancel": "বাতিল",
     "err.condition": "অসুস্থতার নাম লিখুন।", "err.observation": "কীসের পরিমাপ ও মান লিখুন।",
-    "err.medicine": "ওষুধের নাম লিখুন।", "err.allergy": "কীসে এলার্জি তা লিখুন।",
+    "err.medicine": "ওষুধের নাম লিখুন।", "err.allergy": "কীসে অ্যালার্জি তা লিখুন।",
     "err.denied": "এই সদস্যের স্বাস্থ্য রেকর্ডে পরিবর্তন করার অনুমতি আপনার নেই।",
   },
   en: {

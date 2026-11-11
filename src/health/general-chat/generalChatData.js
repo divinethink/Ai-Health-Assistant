@@ -34,7 +34,7 @@ export function validateGeneralChatImage(file) {
 export async function uploadGeneralChatImage(familyId, file) {
   const err = validateGeneralChatImage(file);
   if (err) throw new Error(err);
-  if (!WORKER_URL) throw new Error("Media server configure করা নেই (VITE_MEDIA_WORKER_URL missing)।");
+  if (!WORKER_URL) throw new Error("ছবি/ফাইল আপলোডের সেবা এখনো চালু হয়নি — অ্যাডমিনকে জানান।");
 
   const idToken = await getIdToken();
   const authRes = await fetch(`${WORKER_URL}/general-chat-upload-auth`, {
@@ -44,7 +44,7 @@ export async function uploadGeneralChatImage(familyId, file) {
   });
   if (!authRes.ok) {
     const body = await authRes.json().catch(() => ({}));
-    throw new Error(body.error === "forbidden-admin-only" ? "শুধু Admin General Chat ব্যবহার করতে পারবেন।" : "আপলোড-অনুমতি নেওয়া যায়নি।");
+    throw new Error(body.error === "forbidden-admin-only" ? "শুধু Admin General Chat ব্যবহার করতে পারবেন।" : "আপলোডের অনুমতি পাওয়া যায়নি।");
   }
   const { cloudName, apiKey, timestamp, signature, publicId, folder } = await authRes.json();
 
@@ -57,7 +57,7 @@ export async function uploadGeneralChatImage(familyId, file) {
   form.append("folder", folder);
 
   const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: form });
-  if (!uploadRes.ok) throw new Error("ছবি আপলোড ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+  if (!uploadRes.ok) throw new Error("ছবি আপলোড করা যায়নি — আবার চেষ্টা করুন।");
   const result = await uploadRes.json();
 
   return { secureUrl: result.secure_url, publicId: result.public_id, resourceType: result.resource_type || "image" };

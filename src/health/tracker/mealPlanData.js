@@ -167,10 +167,10 @@ export function buildMealPlan(calorieTarget, allergyTags, prefs) {
       const [altKey, ratio] = f.swap;
       const alt = FOODS[altKey];
       if (alt.al && tags.has(alt.al)) {
-        notes.push(f.n + " বাদ দেওয়া হয়েছে (এলার্জি)।");
+        notes.push(f.n + " বাদ দেওয়া হয়েছে (অ্যালার্জি)।");
         return;
       }
-      notes.push(f.n + " এর বদলে " + alt.n + " রাখা হয়েছে (এলার্জি)।");
+      notes.push(f.n + " এর বদলে " + alt.n + " রাখা হয়েছে (অ্যালার্জি)।");
       final.push([slot, altKey, qty * ratio, true]);
     } else final.push([slot, key, qty, false]);
   });

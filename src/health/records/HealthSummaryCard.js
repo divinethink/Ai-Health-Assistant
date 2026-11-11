@@ -157,7 +157,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     // এলার্জি | অসুস্থতা
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px", marginTop: "10px" } },
       tile({
-        icon: "⚠️", label: "এলার্জি", tone: allergies.length ? "red" : null,
+        icon: "⚠️", label: "অ্যালার্জি", tone: allergies.length ? "red" : null,
         lines: allergies.length === 0 ? [{ t: "নেই", muted: true }] : [
           { t: allergies[0].substance, strong: true, color: "#B3261E" },
           (allergies[0].reaction || allergies[0].severity) && { t: allergies[0].reaction || t("sev." + allergies[0].severity), muted: true },
@@ -176,7 +176,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     // চলমান ঔষধ (পুরো প্রস্থ)
     React.createElement("div", { style: { marginTop: "8px" } },
       tile({
-        icon: "💊", label: "চলমান ঔষধ" + (activeMeds.length ? " (" + bn(activeMeds.length) + ")" : ""),
+        icon: "💊", label: "চলমান ওষুধ" + (activeMeds.length ? " (" + bn(activeMeds.length) + ")" : ""),
         lines: activeMeds.length === 0 ? [{ t: "নেই", muted: true }] : [
           ...activeMeds.slice(0, 3).map((m) => ({ t: m.genericName, strong: true, sub: (m.frequency || null) })),
           activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট", muted: true },

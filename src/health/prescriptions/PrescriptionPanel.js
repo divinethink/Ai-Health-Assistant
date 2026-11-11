@@ -25,7 +25,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
   const [res, setRes] = useState(null); // { items, ctx, notes, ocrPercent, text, followUp }
-  const [saved, setSaved] = useState(null); // সেভের পর { res, finals } — "এরপর কী?" কার্ডের জন্য
+  const [saved, setSaved] = useState(null); // সংরক্ষণের পর { res, finals } — "এরপর কী?" কার্ডের জন্য
 
   const run = useCallback(async () => {
     setErr(null); setRes(null); setSaved(null); setStage("extracting"); setProgress(0);

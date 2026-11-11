@@ -16,7 +16,7 @@ test("মিল-প্ল্যান: ন্যূনতমের নিচে 
   assert.ok(buildMealPlan(900, []).total >= 1100);
   assert.ok(buildMealPlan(3500, []).total <= 2600);
 });
-test("এলার্জি: ডিম/মাছ/গম/দুধ বদলায়, দুটোই এলার্জি হলে বাদ", () => {
+test("অ্যালার্জি: ডিম/মাছ/গম/দুধ বদলায়, দুটোই অ্যালার্জি হলে বাদ", () => {
   const names = (p) => p.slots.flatMap((s) => s.items.map((i) => i.key));
   assert.ok(!names(buildMealPlan(1650, ["egg"])).includes("egg"));
   assert.ok(!names(buildMealPlan(1650, ["wheat"])).includes("roti"));
@@ -25,7 +25,7 @@ test("এলার্জি: ডিম/মাছ/গম/দুধ বদলা�
   assert.ok(!names(both).includes("fish") && !names(both).includes("chicken"));
   assert.ok(both.notes.length >= 2);
 });
-test("এলার্জি-ট্যাগ চেনা (বাংলা/ইংরেজি)", () => {
+test("অ্যালার্জি-ট্যাগ চেনা (বাংলা/ইংরেজি)", () => {
   assert.deepEqual(allergyTagsOf(["চিংড়ি", "Egg", "বাদাম"]), ["egg"]);
   assert.deepEqual(allergyTagsOf(["Gluten", "দুধ"]).sort(), ["dairy", "wheat"]);
   assert.deepEqual(allergyTagsOf([]), []);

@@ -80,7 +80,7 @@ export function CareEscalationDirectory() {
 
   if (loadErr) return ErrorBox(loadErr);
   if (entries === null) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "Directory লোড হচ্ছে...");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "তালিকা লোড হচ্ছে...");
   }
   if (entries.length === 0) {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো entry নেই।");

@@ -65,7 +65,7 @@ export async function listDoctors(familyId) {
 export async function uploadDoctorCardImage(familyId, doctorId, file) {
   const v = validateCardImage(file);
   if (v) throw new Error(v);
-  if (!WORKER_URL) throw new Error("Media server configure করা নেই (VITE_MEDIA_WORKER_URL missing) — owner-কে জানান।");
+  if (!WORKER_URL) throw new Error("ছবি/ফাইল আপলোডের সেবা এখনো চালু হয়নি — অ্যাডমিনকে জানান।");
 
   const idToken = await getIdToken();
   const authRes = await fetch(`${WORKER_URL}/doctor-upload-auth`, {
@@ -73,7 +73,7 @@ export async function uploadDoctorCardImage(familyId, doctorId, file) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken, familyId, doctorId }),
   });
-  if (!authRes.ok) throw new Error("আপলোড-অনুমতি নেওয়া যায়নি (permission বা network সমস্যা)।");
+  if (!authRes.ok) throw new Error("আপলোডের অনুমতি পাওয়া যায়নি (অনুমতি বা ইন্টারনেটের সমস্যা)।");
   const { cloudName, apiKey, timestamp, signature, publicId, folder } = await authRes.json();
 
   const form = new FormData();
@@ -85,7 +85,7 @@ export async function uploadDoctorCardImage(familyId, doctorId, file) {
   form.append("folder", folder);
 
   const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, { method: "POST", body: form });
-  if (!uploadRes.ok) throw new Error("ছবি আপলোড ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+  if (!uploadRes.ok) throw new Error("ছবি আপলোড করা যায়নি — আবার চেষ্টা করুন।");
   const result = await uploadRes.json();
 
   await db.collection("families").doc(familyId).collection("doctors").doc(doctorId).update({
@@ -146,7 +146,7 @@ export async function updateDoctorFields(familyId, doctorId, callerMemberId, fie
 // পারিবারিক reference-directory entry; creator/Admin যে কেউ মুছতে পারবেন
 // (firestore.rules-এ guard, delete করার আগে UI-তেই ২-ধাপ confirm আছে)।
 export async function deleteDoctor(familyId, doctorId) {
-  if (!WORKER_URL) throw new Error("Media server configure করা নেই।");
+  if (!WORKER_URL) throw new Error("ছবি/ফাইল আপলোডের সেবা এখনো চালু হয়নি।");
   const idToken = await getIdToken();
   const res = await fetch(`${WORKER_URL}/doctor-delete`, {
     method: "POST",
@@ -156,7 +156,7 @@ export async function deleteDoctor(familyId, doctorId) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error === "forbidden" || body.error === "not-found-or-forbidden"
-      ? "এই ডাক্তারের তথ্য মুছার অনুমতি আপনার নেই।"
-      : "মুছতে ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+      ? "এই ডাক্তারের তথ্য মোছার অনুমতি আপনার নেই।"
+      : "মোছা যায়নি — আবার চেষ্টা করুন।");
   }
 }

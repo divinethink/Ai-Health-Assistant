@@ -218,7 +218,7 @@ export function applyMealPrefs(plan, prefs, allergyTags) {
     const items = p.meal[s.id].map((r) => {
       const f = FOODS[r.food];
       const allergy = !!(f.al && tags.has(f.al));
-      if (allergy) notes.push("⚠ " + f.n + " আপনার প্রোফাইলের এলার্জির সাথে মিলতে পারে — সতর্ক থাকুন।");
+      if (allergy) notes.push("⚠ " + f.n + " আপনার প্রোফাইলের অ্যালার্জির সাথে মিলতে পারে — সতর্ক থাকুন।");
       return { key: r.food, qty: r.qty, swapped: false, custom: true, allergy, text: itemText(r.food, r.qty), kcal: Math.round(kcalOf(r.food, r.qty)) };
     });
     return { ...s, items, kcal: items.reduce((a, i) => a + i.kcal, 0) };

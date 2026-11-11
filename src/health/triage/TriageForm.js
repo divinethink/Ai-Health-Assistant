@@ -454,11 +454,11 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       ),
       herbalNode: React.createElement(
         "div", { style: { fontSize: "14px", color: "#3E4E49" } },
-        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified herbal remedy দেখুন।"
+        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" অংশে যাচাইকৃত ভেষজ প্রতিকার দেখুন।"
       ),
       homeopathyNode: React.createElement(
         "div", { style: { fontSize: "14px", color: "#3E4E49" } },
-        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" section-এ verified homeopathy remedy দেখুন।"
+        "নিচের \"Herbal / Homeopathy — Evidence-Level Reference\" অংশে যাচাইকৃত হোমিওপ্যাথি প্রতিকার দেখুন।"
       ),
     }),
 

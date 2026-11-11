@@ -117,7 +117,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
       .catch((e) => {
         if (!alive) return;
         setEntriesErr(e.code === "permission-denied"
-          ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
+          ? "এই সদস্যের টাইমলাইন দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
           : (e.message || String(e)));
       });
     return () => { alive = false; };
@@ -129,7 +129,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
   }, [entries, filter]);
 
   if (!targetMemberId) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য নির্বাচন করুন।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
   }
 
   const shown = rows.slice(0, visible);
@@ -166,10 +166,10 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
       }, f.label))
     ),
 
-    (entriesErr || recErr) && ErrorBox(entriesErr || (recErr.code === "permission-denied" ? "এই সদস্যের timeline দেখার অনুমতি আপনার নেই।" : (recErr.message || String(recErr)))),
+    (entriesErr || recErr) && ErrorBox(entriesErr || (recErr.code === "permission-denied" ? "এই সদস্যের টাইমলাইন দেখার অনুমতি আপনার নেই।" : (recErr.message || String(recErr)))),
     !entriesErr && !recErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
     !entriesErr && entries && rows.length === 0 &&
-      React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, entries.length === 0 ? "এখনো কোনো রেকর্ড/ডকুমেন্ট নেই।" : "এই ফিল্টারে কোনো এন্ট্রি নেই।"),
+      React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, entries.length === 0 ? "এখনো কোনো রেকর্ড/নথি নেই।" : "এই ফিল্টারে কোনো এন্ট্রি নেই।"),
 
     !entriesErr && entries && rows.length > 0 && React.createElement(
       "div", { style: { marginTop: "10px", borderLeft: "2px solid #D3E0D9", paddingLeft: "14px" } }, nodes

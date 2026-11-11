@@ -65,7 +65,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
   }, [familyId, targetMemberId]);
 
   if (loadErr) return ErrorBox(loadErr);
-  if (!targetMemberId) return React.createElement("div", null, "সদস্য নির্বাচন করুন।");
+  if (!targetMemberId) return React.createElement("div", null, "সদস্য বেছে নিন।");
 
   const F = "14px";
   const bullets = (items, sources) => React.createElement("ul", { style: { margin: 0, paddingLeft: "20px", fontSize: F, color: "#1F2D2A", lineHeight: 1.6 } },

@@ -6,11 +6,11 @@ test("সাধারণ খাবার সবুজ", () => {
   const s = foodStatus("rice", { n: "ভাত" });
   assert.equal(s.level, "green"); assert.equal(s.icon, "✓"); assert.deepEqual(s.reasons, []);
 });
-test("এলার্জি মিললে লাল, কারণসহ", () => {
+test("অ্যালার্জি মিললে লাল, কারণসহ", () => {
   const s = foodStatus("egg", { al: "egg" }, { allergyTags: ["egg"] });
   assert.equal(s.level, "red"); assert.equal(s.icon, "✕"); assert.equal(s.reasons.length, 1);
 });
-test("এলার্জি না মিললে লাল নয়", () => {
+test("অ্যালার্জি না মিললে লাল নয়", () => {
   assert.equal(foodStatus("egg", { al: "egg" }, { allergyTags: ["fish"] }).level, "green");
 });
 test("সতর্কতা-ট্যাগে হলুদ", () => {

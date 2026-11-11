@@ -58,7 +58,7 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
       }
       onSaved();
     } catch (e) {
-      setErr(e.code === "permission-denied" ? "এই তথ্য যোগ/এডিট করার অনুমতি আপনার নেই।" : (e.message || String(e)));
+      setErr(e.code === "permission-denied" ? "এই তথ্য যোগ/বদলানোর অনুমতি আপনার নেই।" : (e.message || String(e)));
     } finally {
       submitting.current = false;
       setBusy(false);

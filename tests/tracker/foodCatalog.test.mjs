@@ -14,7 +14,7 @@ test("ক্যাটালগ: ৫০+ খাবার, কোর-কী-র �
   CORE.forEach((k) => assert.ok(!(k in CATALOG_FOODS), k));
   assert.equal(Object.keys(FOODS).length, CORE.length + Object.keys(CATALOG_FOODS).length);
 });
-test("প্রতিটি খাবার: নাম/ইউনিট, কিলোক্যালরি ০–১০০০ পূর্ণসংখ্যা, বৈধ গ্রুপ ও এলার্জি-ট্যাগ", () => {
+test("প্রতিটি খাবার: নাম/ইউনিট, কিলোক্যালরি ০–১০০০ পূর্ণসংখ্যা, বৈধ গ্রুপ ও অ্যালার্জি-ট্যাগ", () => {
   Object.entries(FOODS).forEach(([k, f]) => {
     assert.ok(f.n && f.n.length <= 30 && f.u, k);
     assert.ok(Number.isInteger(f.k) && f.k >= 0 && f.k <= 1000, k);
@@ -26,15 +26,15 @@ test("বেস-প্ল্যান অপরিবর্তিত: ১৬৫�
   const p = buildMealPlan(1650, []);
   assert.ok(Math.abs(p.total - 1650) <= 80);
 });
-test("সার্চ: নাম, গ্রুপ, এলার্জি-সতর্কতা (বাদ নয়), সীমা", () => {
+test("সার্চ: নাম, গ্রুপ, অ্যালার্জি-সতর্কতা (বাদ নয়), সীমা", () => {
   assert.deepEqual(searchFoods(FOODS, { query: "ইলিশ" }).map((x) => x.key).sort(), ["hilshaBhaja", "hilshaJhol"]);
-  assert.ok(searchFoods(FOODS, { query: "ইলিশ", allergyTags: ["fish"] }).every((x) => x.allergy === true), "এলার্জি-খাবার বাদ নয়, চিহ্নিত");
+  assert.ok(searchFoods(FOODS, { query: "ইলিশ", allergyTags: ["fish"] }).every((x) => x.allergy === true), "অ্যালার্জি-খাবার বাদ নয়, চিহ্নিত");
   assert.ok(searchFoods(FOODS, { group: "fruit" }).every((x) => x.f.g === "fruit"));
   assert.equal(searchFoods(FOODS, { limit: 5 }).length, 5);
   assert.equal(searchFoods(FOODS, { query: "zzz" }).length, 0);
   assert.ok(searchFoods(FOODS, { allergyTags: TAGS, limit: 500 }).every((x) => x.allergy === !!x.f.al));
 });
-test("নতুন খাবার প্ল্যানে: সংরক্ষণ-যাচাই পাস, ক্যালরি ঠিক, এলার্জিতে বাদ নয় (সতর্কতা)", () => {
+test("নতুন খাবার প্ল্যানে: সংরক্ষণ-যাচাই পাস, ক্যালরি ঠিক, অ্যালার্জিতে বাদ নয় (সতর্কতা)", () => {
   const prefs = { meal: { lunch: [{ food: "hilshaBhaja", qty: 1 }, { food: "rice", qty: 1.5 }, { food: "bogus", qty: 1 }] } };
   const s = sanitizePlanPrefs(prefs);
   assert.deepEqual(s.meal.lunch.map((r) => r.food), ["hilshaBhaja", "rice"]);
@@ -42,8 +42,8 @@ test("নতুন খাবার প্ল্যানে: সংরক্ষ�
   const plan = applyMealPrefs(base, prefs, []);
   assert.equal(plan.slots.find((x) => x.id === "lunch").kcal, 200 + 300);
   const blocked = applyMealPrefs(base, prefs, ["fish"]);
-  assert.equal(blocked.slots.find((x) => x.id === "lunch").kcal, 500, "এলার্জিতেও খাবার থাকে");
-  assert.ok(blocked.notes.some((n) => n.includes("এলার্জি")));
+  assert.equal(blocked.slots.find((x) => x.id === "lunch").kcal, 500, "অ্যালার্জিতেও খাবার থাকে");
+  assert.ok(blocked.notes.some((n) => n.includes("অ্যালার্জি")));
   assert.ok(mealOptions(["fish"]).find((o) => o.key === "hilshaBhaja").allergy === true);
   assert.equal(draftKcal(addDraftFood([], "mango")), 130);
   assert.equal(itemText("pauruti", 2), "২ স্লাইস পাউরুটি");
@@ -64,7 +64,7 @@ test("নতুন ৪৫টি খাবার আছে, কোরের স�
   assert.deepEqual(s.meal.lunch.map((r) => r.food), ["mugDal", "kathBadam"]);
   assert.equal(draftKcal(addDraftFood([], "redRice")), 190);
 });
-test("ট্যাগ: শুধু বৈধ ট্যাগ-কী; ট্যাগ কিছু ব্লক করে না; এলার্জি শুধু সতর্কতা", () => {
+test("ট্যাগ: শুধু বৈধ ট্যাগ-কী; ট্যাগ কিছু ব্লক করে না; অ্যালার্জি শুধু সতর্কতা", () => {
   Object.entries(FOODS).forEach(([k, f]) => (f.tg || []).forEach((t) => assert.ok(WARN_TAGS[t], k + " ট্যাগ")));
   assert.ok(Object.values(WARN_TAGS).every(([short, msg]) => short && msg));
   assert.deepEqual(tagsOf(FOODS.kathBadam), ["choke"]);
@@ -73,7 +73,7 @@ test("ট্যাগ: শুধু বৈধ ট্যাগ-কী; ট্য�
   assert.ok(searchFoods(FOODS, { query: "ডিমের", allergyTags: ["egg"] }).some((x) => x.key === "eggYolk" && x.allergy));
   assert.ok(searchFoods(FOODS, { query: "দুধ", allergyTags: ["dairy"] }).some((x) => x.key === "tonedMilk" && x.allergy));
 });
-test("ওষুধের এলার্জি: ব্লক নয়, allergyWarning ফ্ল্যাগ; বাকি নিয়ম অপরিবর্তিত", async () => {
+test("ওষুধের অ্যালার্জি: ব্লক নয়, allergyWarning ফ্ল্যাগ; বাকি নিয়ম অপরিবর্তিত", async () => {
   const { resolveDoseForMember } = await import("../../src/legacy/doseEnforcement.js");
   const entry = { genericName: "Paracetamol", tier: "otc-self-care", dosingRules: [{ ageMin: 12, ageMax: null, fixedDose: "500 mg", frequency: "৬ ঘণ্টা পরপর" }] };
   const ok = resolveDoseForMember({ medicineEntry: entry, ageYears: 30, allergySubstances: [] });

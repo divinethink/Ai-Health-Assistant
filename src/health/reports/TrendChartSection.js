@@ -49,7 +49,7 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
       "div", { style: { marginTop: "20px" } },
       React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43" } }, "Trend Chart"),
       React.createElement("p", { style: { color: "#888", fontSize: "14px" } },
-        "এখনো কোনো verified Observation নেই — রিপোর্ট বিশ্লেষণ/manual-entry করে অন্তত একটা মান save+verify করুন।")
+        "এখনো কোনো যাচাই-করা পরিমাপ নেই — রিপোর্ট বিশ্লেষণ বা হাতে লিখে অন্তত একটা মান সংরক্ষণ ও যাচাই করুন।")
     );
   }
 
@@ -67,7 +67,7 @@ export function TrendChartSection({ familyId, targetMemberId, refreshTick }) {
     React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43", margin: "0 0 6px" } }, "Trend Chart"),
     SelectField("", selectedType, setSelectedType, typeOptions.map((t) => { const nm = t.charAt(0).toUpperCase() + t.slice(1); return [t, t === selectedType ? nm + " (Change)" : nm]; })),
     points.length < 2
-      ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "Trend দেখানোর জন্য অন্তত ২টা তারিখ-সহ verified মান দরকার।")
+      ? React.createElement("p", { style: { color: "#888", fontSize: "14px" } }, "ধারা (ট্রেন্ড) দেখাতে অন্তত ২টা তারিখসহ যাচাই-করা মান দরকার।")
       : React.createElement(TrendChart, { unit, referenceRange: dictEntry ? dictEntry.referenceRange : null, points })
   );
 }

@@ -93,12 +93,12 @@ function untilUtc(endDate) {
 // ঔষধ: প্রতি বেলার জন্য একটা daily recurring event (endDate-এ শেষ), popup reminder ঠিক সময়ে।
 // endDate বাধ্যতামূলক (অসীম daily event তৈরি এড়াতে)। ফেরত: তৈরি event-ID-র array।
 export async function createMedicationCalendarEvents({ memberName, genericName, mealTimingLabel, times, startDate, endDate }) {
-  if (!endDate) throw new Error("Calendar-এ যোগ করতে \"কত তারিখ পর্যন্ত খাবেন\" দিন।");
+  if (!endDate) throw new Error("ক্যালেন্ডারে যোগ করতে \"কত তারিখ পর্যন্ত খাবেন\" দিন।");
   if (!times || times.length === 0) throw new Error("অন্তত একটা বেলার সময় দিন।");
   const now = new Date();
   const today = localDateStr(now);
   const startDay = startDate && startDate > today ? startDate : today;
-  if (endDate < startDay) throw new Error("শেষ তারিখ আজকের আগে — Calendar-এ যোগ করা যাবে না।");
+  if (endDate < startDay) throw new Error("শেষ তারিখ আজকের আগে — ক্যালেন্ডারে যোগ করা যাবে না।");
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const summary = "💊 " + (memberName ? memberName + " — " : "") + genericName + (mealTimingLabel ? " (" + mealTimingLabel + ")" : "");
   const ids = [];

@@ -215,7 +215,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     try { await setMedDoseTaken(familyId, memberId, callerMemberId, todayStr(), key, want); }
     catch (e) {
       apply(!want);
-      setTakenErr(e && e.code === "permission-denied" ? "এই সদস্যের ওষুধে চিহ্ন দেওয়ার অনুমতি আপনার নেই।" : "চিহ্ন সেভ হয়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন।");
+      setTakenErr(e && e.code === "permission-denied" ? "এই সদস্যের ওষুধে চিহ্ন দেওয়ার অনুমতি আপনার নেই।" : "চিহ্ন সংরক্ষণ হয়নি — ইন্টারনেট ঠিক আছে কিনা দেখে আবার চেষ্টা করুন।");
     }
   }
 
@@ -247,7 +247,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       });
       await setMedicationCalendarEvents(familyId, m.recordId, callerMemberId, ids);
       setMeds((prev) => prev.map((x) => (x.recordId === m.recordId ? { ...x, calendarEventIds: ids } : x)));
-      setCalMsg({ recordId: m.recordId, ok: true, text: "✓ Google Calendar-এ যুক্ত হয়েছে (" + bn(ids.length) + "টি বেলা, প্রতিদিন)" });
+      setCalMsg({ recordId: m.recordId, ok: true, text: "✓ Google ক্যালেন্ডারে যুক্ত হয়েছে (" + bn(ids.length) + "টি বেলা, প্রতিদিন)" });
     } catch (e) { setCalMsg({ recordId: m.recordId, ok: false, text: e.message || String(e) }); }
     finally { setCalBusy(null); }
   }
@@ -269,7 +269,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     setAErr(null);
     const name = aName.trim();
     if (!name) { setAErr("ওষুধের নাম লিখুন।"); return; }
-    if (!aMember) { setAErr("সদস্য বাছুন।"); return; }
+    if (!aMember) { setAErr("সদস্য বেছে নিন।"); return; }
     if (meds.some((m) => m.memberId === aMember && !(m.endDate && todayStr() > m.endDate) && m.genericName.trim().toLowerCase() === name.toLowerCase())) { setAErr("এই ওষুধ এই সদস্যের তালিকায় আগেই আছে।"); return; }
     const times = [...new Set(aSlots)].sort();
     const start = todayStr();
@@ -357,7 +357,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("button", { onClick: () => { setRxFile(null); setRxOpen(true); }, style: { flex: 1, minHeight: "48px", padding: "12px", borderRadius: "14px", border: "1px solid " + GREEN, background: "#fff", color: GREEN, fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, "📷 প্রেসক্রিপশন থেকে")),
     rxOpen && h("div", { style: card },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-        h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ঔষধ"),
+        h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ওষুধ"),
         h("button", { onClick: () => { setRxOpen(false); setRxFile(null); }, "aria-label": "বন্ধ করুন", style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C", minWidth: "44px", minHeight: "44px" } }, "✕")),
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f) => setRxFile(f) }),
       rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, onDone: () => loadMeds() })),
@@ -381,7 +381,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")]),
       aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr),
       h("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
-        h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, padding: "11px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সেভ হচ্ছে..." : "সেভ করুন"),
+        h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, padding: "11px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
         h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল"))),
 
     // ওষুধের তালিকা
@@ -414,8 +414,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
           lblEl("কত তারিখ পর্যন্ত খাবেন"),
           h("input", { type: "date", value: ev.endDate || "", onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }), style: { padding: "9px 10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: F, background: "#fff" } }),
           h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "14px", alignItems: "center" } },
-            h("button", { onClick: () => saveSchedule(m.recordId), style: { padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, "সেভ করুন"),
-            h("button", { onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #4285F4", background: "#fff", color: "#4285F4", fontSize: F, cursor: "pointer" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সেভ করে Calendar-এ যোগ")),
+            h("button", { onClick: () => saveSchedule(m.recordId), style: { padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, "সংরক্ষণ করুন"),
+            h("button", { onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #4285F4", background: "#fff", color: "#4285F4", fontSize: F, cursor: "pointer" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সংরক্ষণ করে ক্যালেন্ডারে যোগ করুন")),
             m.calendarEventIds.length > 0 && h("button", { onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", fontSize: F, cursor: "pointer" } }, "Calendar থেকে সরান"),
             savedFlash === m.recordId && h("span", { style: { fontSize: F, color: GREEN } }, "✓ সংরক্ষিত")),
           delConfirm === m.recordId
