@@ -12,7 +12,9 @@ import { sanitizeTaken } from "../records/medTaken.js";
 import { ageYears, bmiOf, safetyGate, waterTargetFor, detectFlagsFromConditions, effectivePregnant } from "../tracker/trackerCalc.js";
 import { T } from "../tracker/trackerTheme.js";
 import { bnNum, localISO } from "../../shared/dates.js";
-import { buildTodayDoses, progressPct, headlineOf, upcomingEvents, whenLabel, bnClock } from "./todaySummaryCalc.js";
+import { buildTodayDoses, progressPct, headlineOf, upcomingEvents, whenLabel } from "./todaySummaryCalc.js";
+import { DoseGrid } from "./DoseGrid.js";
+import { homeVisibleDoses } from "./doseGroups.js";
 
 const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
@@ -24,7 +26,6 @@ const SEC = { fontSize: "17px", fontWeight: 700, color: T.green, margin: "16px 2
 function numOf(r) { const n = r ? parseFloat(r.value) : NaN; return Number.isNaN(n) ? null : n; }
 function isType(r, names) { return r.resourceType === "observation" && names.includes((r.type || "").trim().toLowerCase()); }
 const nowHHMM = () => new Date().toTimeString().slice(0, 5);
-const dayIcon = (hhmm) => { const hh = Number(hhmm.slice(0, 2)); return hh < 12 ? "🌅" : hh < 18 ? "☀️" : "🌙"; };
 const EVENT_ICON = { vaccination: "💉", appointment: "🩺" };
 
 function Bar({ pct, color }) {
@@ -42,28 +43,6 @@ function Stat({ icon, title, big, small, pct, color }) {
     pct !== undefined && h(Bar, { pct, color }));
 }
 
-function Tile({ children }) {
-  return h("div", { "aria-hidden": "true", style: { width: "48px", height: "48px", flexShrink: 0, borderRadius: "14px", background: T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" } }, children);
-}
-
-function DoseRow({ d, busy, onToggle, last }) {
-  const label = d.taken ? "✓ খেয়েছি" : "খেয়েছি";
-  const btn = d.taken
-    ? { border: "none", background: "none", color: T.green }
-    : d.due
-      ? { border: "1.5px solid " + T.green, background: T.green, color: "#fff" }
-      : { border: "1.5px solid " + T.green, background: "none", color: T.green };
-  return h("div", { style: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: last ? "none" : "1px solid " + T.track } },
-    h(Tile, null, dayIcon(d.time)),
-    h("div", { style: { flex: 1, minWidth: 0 } },
-      h("div", { style: { fontSize: "17px", fontWeight: 700, color: T.ink, overflow: "hidden", textOverflow: "ellipsis" } }, d.name),
-      h("div", { style: { fontSize: "14px", color: T.muted } }, bnClock(d.time) + (d.meal ? " · " + d.meal : ""))),
-    h("button", {
-      onClick: onToggle, disabled: busy, "aria-pressed": d.taken, "aria-label": d.name + " " + bnClock(d.time) + (d.taken ? " — খাওয়া হয়েছে, বাতিল করতে চাপুন" : " খেয়েছি চিহ্নিত করুন"),
-      style: { flexShrink: 0, minHeight: "44px", minWidth: "96px", padding: "0 16px", borderRadius: "999px", fontSize: "15px", fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit", ...btn },
-    }, label));
-}
-
 export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyMeds }) {
   const { records, loading, error } = useMemberHealth(familyId, selectedMemberId);
   const [aux, setAux] = useState(null); // { member, goal, daily, events }
@@ -72,6 +51,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
   const [now, setNow] = useState(nowHHMM());
   const [busyKey, setBusyKey] = useState(null);
   const [doseErr, setDoseErr] = useState(null);
+  const [showAllDoses, setShowAllDoses] = useState(false);
 
   const load = useCallback(async () => {
     if (!familyId || !selectedMemberId) return;
@@ -134,6 +114,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
 
   const { doses, noTimeCount } = buildTodayDoses(member || { id: selectedMemberId, name: "" }, records, today, now, sanitizeTaken(d.medTaken));
   const taken = doses.filter((x) => x.taken).length;
+  const homeDoses = homeVisibleDoses(doses);
   const pct = progressPct({ doses, water, waterTarget });
   const upcoming = upcomingEvents(events, selectedMemberId, today);
   const dateLine = new Date(today + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" });
@@ -159,10 +140,17 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
     (!onlyMeds || doses.length > 0) && h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
       h("div", { style: SEC }, "আজকের ওষুধ"), doses.length > 0 && h("div", { style: { fontSize: "13px", color: T.muted } }, "সব ডিভাইসে মিলবে")),
     doseErr && ErrorBox(doseErr),
-    (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: "4px 14px" } },
+    (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: "12px 12px" } },
       doses.length === 0
-        ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ ওষুধ।")
-        : doses.map((x, i) => h(DoseRow, { key: x.key, d: x, busy: busyKey !== null, onToggle: () => toggle(x), last: i === doses.length - 1 }))),
+        ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "2px 2px", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ ওষুধ।")
+        : h(React.Fragment, null,
+            // হোমে (onlyMeds): শুধু দেরি-হওয়া + পরের বেলার ডোজ; "সব দেখুন"-এ পুরোটা
+            (!onlyMeds || showAllDoses || homeDoses.length > 0)
+              ? h(DoseGrid, { doses: onlyMeds && !showAllDoses ? homeDoses : doses, busyKey, onToggle: toggle })
+              : h("div", { style: { fontSize: "15px", fontWeight: 600, color: T.green, padding: "2px" } }, "✓ আজকের সব ওষুধ খাওয়া হয়েছে"),
+            onlyMeds && doses.length > homeDoses.length && h("button", { type: "button", onClick: () => setShowAllDoses((v) => !v), "aria-expanded": showAllDoses,
+              style: { marginTop: "10px", width: "100%", minHeight: "44px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: "none", color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } },
+              showAllDoses ? "কম দেখান" : "সব দেখুন (" + bnNum(doses.length) + "টি)"))),
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 
     (!onlyMeds || upcoming.length > 0) && h("div", { style: SEC }, "আসন্ন"),
