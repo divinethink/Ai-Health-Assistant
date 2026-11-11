@@ -7,8 +7,7 @@ name: deploy-worker
 #   Secrets (আগের deploy.yml-এর মতোই): CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 #     ⚠ টোকেনে "Workers Scripts: Edit" অনুমতি লাগবে (শুধু Pages অনুমতি থাকলে Worker deploy ব্যর্থ হবে)।
 #   Variables (গোপন নয়): FIREBASE_PROJECT_ID, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY
-#     ঐচ্ছিক Variables: ALLOWED_ORIGIN (না দিলে *), MISTRAL_MODEL, CEREBRAS_MODEL, OPENROUTER_MODEL,
-#                        GENERAL_CHAT_TEXT_MODEL, GENERAL_CHAT_VISION_MODEL
+#     ঐচ্ছিক Variables: ALLOWED_ORIGIN (না দিলে *), MISTRAL_MODEL, CEREBRAS_MODEL, OPENROUTER_MODEL
 #     → মানগুলো deploy-এর সময় --var দিয়ে বসে, তাই wrangler.toml-এর REPLACE_WITH_… placeholder কখনো live হয় না।
 #   ঐচ্ছিক Secrets (থাকলে Worker-এ সেট হয়; না থাকলে Worker-এর বিদ্যমান secret অপরিবর্তিত):
 #     WORKER_CLOUDINARY_API_SECRET, WORKER_GROQ_API_KEY, WORKER_MISTRAL_API_KEY,
@@ -45,8 +44,6 @@ jobs:
       MISTRAL_MODEL: ${{ vars.MISTRAL_MODEL }}
       CEREBRAS_MODEL: ${{ vars.CEREBRAS_MODEL }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
-      GENERAL_CHAT_TEXT_MODEL: ${{ vars.GENERAL_CHAT_TEXT_MODEL }}
-      GENERAL_CHAT_VISION_MODEL: ${{ vars.GENERAL_CHAT_VISION_MODEL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           args=(--var "FIREBASE_PROJECT_ID:$FIREBASE_PROJECT_ID" --var "CLOUDINARY_CLOUD_NAME:$CLOUDINARY_CLOUD_NAME" --var "CLOUDINARY_API_KEY:$CLOUDINARY_API_KEY" --var "ALLOWED_ORIGIN:${ALLOWED_ORIGIN:-*}")
-          for v in MISTRAL_MODEL CEREBRAS_MODEL OPENROUTER_MODEL GENERAL_CHAT_TEXT_MODEL GENERAL_CHAT_VISION_MODEL; do
+          for v in MISTRAL_MODEL CEREBRAS_MODEL OPENROUTER_MODEL; do
             [ -z "${!v}" ] || args+=(--var "$v:${!v}")
           done
           npx wrangler deploy --keep-vars "${args[@]}"
