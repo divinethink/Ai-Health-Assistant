@@ -179,7 +179,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         icon: "💊", label: "চলমান ওষুধ" + (activeMeds.length ? " (" + bn(activeMeds.length) + ")" : ""),
         lines: activeMeds.length === 0 ? [{ t: "নেই", muted: true }] : [
           ...activeMeds.slice(0, 3).map((m) => ({ t: m.genericName, strong: true, sub: (m.frequency || null) })),
-          activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট", muted: true },
+          activeMeds.length > 3 && { t: "আরও " + bn(activeMeds.length - 3) + "টি — স্বাস্থ্য তথ্য → ওষুধ", muted: true },
         ],
         inline: true,
       })),

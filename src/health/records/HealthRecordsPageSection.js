@@ -41,7 +41,7 @@ import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
-import { Skeleton, TabPills } from "../../shared/ui.js";
+import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 
@@ -51,8 +51,9 @@ import { peekQuickIntent, takeQuickIntent } from "../../shared/quickIntent.js";
 
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
-  { id: "records", label: "📋 স্বাস্থ্য রেকর্ড" },
+  { id: "records", label: "📋 রেকর্ড" },
   { id: "meds", label: "💊 ওষুধ" },
+  { id: "docs", label: "📁 নথি" }, // জমা নথি/রিপোর্ট (আগে আলাদা ট্যাবে ছিল)
 ];
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
@@ -68,23 +69,20 @@ const HEALTH_TABS = [
   { id: "profile", label: "tab.profile" },
   { id: "records", label: "tab.records" },
   { id: "timeline", label: "tab.timeline" },
-  { id: "docs", label: "nav.docs" },
+  { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
 ];
-const DOC_SUBS = [["upload", "tab.upload"], ["doctor-export", "tab.export"]];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
   const isHealth = mode === "health";
   const TABS = isHealth ? HEALTH_TABS : [];
   const hk = isHealth ? "health-" : "home-";
-  const [docSub, setDocSub] = useState("upload");
   // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; রিপোর্ট → নথিপত্র; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
   const [activeTab, setActiveTab] = useState(() => {
     if (!isHealth) return "today";
-    if (peekQuickIntent(["report"])) return "docs";
-    return peekQuickIntent(["bp", "sugar", "medicine"]) ? "records" : "profile";
+    return peekQuickIntent(["bp", "sugar", "medicine", "report"]) ? "records" : "profile";
   });
   const [timelineSub, setTimelineSub] = useState("diet");
-  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : "records"));
+  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "records"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
   histBind(hk + "rec", recordSub, setRecordSub);
@@ -125,11 +123,9 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, selectedMem
             },
           }, sb.label))),
         recordSub === "records" && React.createElement(HealthRecordsSection, { familyId, callerMemberId, selectedMemberId, section: "records" }),
-        recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId })),
-      isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
-        TabPills(DOC_SUBS.map(([i, k]) => [i, t(k)]), docSub, setDocSub, null, "health-docs"),
-        docSub === "upload" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId }),
-        docSub === "doctor-export" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => setDocSub("upload") })),
+        recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
+        recordSub === "docs" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
+      isHealth && activeTab === "docs" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "records", setActiveTab); setRecordSub("docs"); } }),
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(

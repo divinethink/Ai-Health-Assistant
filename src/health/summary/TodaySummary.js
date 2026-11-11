@@ -161,7 +161,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
     doseErr && ErrorBox(doseErr),
     (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: "4px 14px" } },
       doses.length === 0
-        ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ প্রেসক্রিপশন/রিপোর্ট।")
+        ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ ওষুধ।")
         : doses.map((x, i) => h(DoseRow, { key: x.key, d: x, busy: busyKey !== null, onToggle: () => toggle(x), last: i === doses.length - 1 }))),
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 

@@ -114,7 +114,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
     err && ErrorBox(err),
     result
       ? h("div", { role: "status", style: { marginTop: "12px", padding: "12px", borderRadius: "12px", background: "#E4F0E9", color: G, fontSize: "14px", lineHeight: 1.6 } },
-          result.saved.length > 0 && h("div", null, "✓ " + bn(result.saved.length) + "টি ওষুধ যোগ হয়েছে: " + result.saved.join(", ") + " — রিমাইন্ডার দেখতে স্বাস্থ্য তথ্য → প্রেসক্রিপশন/রিপোর্ট।"),
+          result.saved.length > 0 && h("div", null, "✓ " + bn(result.saved.length) + "টি ওষুধ যোগ হয়েছে: " + result.saved.join(", ") + " — রিমাইন্ডার দেখতে স্বাস্থ্য তথ্য → ওষুধ।"),
           result.skipped.length > 0 && h("div", null, "ℹ️ আগে থেকেই ছিল, বাদ: " + result.skipped.join(", ")),
           result.failed.length > 0 && h("div", { style: { color: RED } }, "❌ যোগ হয়নি: " + result.failed.map((f) => f.name + " (" + f.message + ")").join(", ")))
       : PrimaryButton("অনুমোদন করে " + bn(selected.length) + "টি ওষুধ যোগ করুন", approve, busy),
