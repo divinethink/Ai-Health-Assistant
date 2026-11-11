@@ -1,5 +1,6 @@
 // "আজ" ট্যাব (ধাপ C) — হিরো (ক্যালরি রিং + আজকের হিসাব), পানি ও খাবার, সাপ্তাহিক সারাংশ। শুধু UI;
 // হিসাব todaySummary.js/trackerCalc.js-এ, লেখা saveDaily দিয়ে (নির্দিষ্ট ডক-ID, set+merge)।
+// তারিখ-নেভিগেশন: হিরোর "📅" বাটন / সপ্তাহের বৃত্ত / সোয়াইপ — গত ৩০ দিন (dateNav.js); আজ ছাড়া অন্য দিনেও একই সেভ-পথ।
 
 import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
@@ -15,8 +16,10 @@ import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries
 import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet } from "./PlanEditSheets.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
+import { TodayDateSheet } from "./TodayDateSheet.js";
+import { shiftISO, inRange, clampISO, swipeDelta } from "./dateNav.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
@@ -27,13 +30,17 @@ function Notice({ children, tone }) {
 }
 
 // SVG রিং — ১২ o'clock থেকে ঘড়ির কাঁটার দিকে ভরে
-function Ring({ pct, size, stroke, color, track, children, label }) {
+function Ring({ pct, size, stroke, color, track, children, label, redFrom }) {
   const r = (size - stroke) / 2;
   const { circ, dash } = ringDash(pct, r);
+  // redFrom (০–১০০): টার্গেট ছাড়ালে রিংয়ের শেষ অংশ লাল (সম্পূর্ণ রিং = মোট খাওয়া; অ্যাম্বার = টার্গেট পর্যন্ত)
+  const over = typeof redFrom === "number" && redFrom > 0 && redFrom < 100;
+  const cap = over ? "butt" : "round";
   return React.createElement("div", { style: { position: "relative", width: size + "px", height: size + "px", flexShrink: 0 }, role: "img", "aria-label": label },
     React.createElement("svg", { width: size, height: size, viewBox: "0 0 " + size + " " + size, style: { transform: "rotate(-90deg)" }, "aria-hidden": "true" },
       React.createElement("circle", { cx: size / 2, cy: size / 2, r, fill: "none", stroke: track, strokeWidth: stroke }),
-      dash > 0 && React.createElement("circle", { cx: size / 2, cy: size / 2, r, fill: "none", stroke: color, strokeWidth: stroke, strokeLinecap: "round", strokeDasharray: dash + " " + circ })),
+      dash > 0 && React.createElement("circle", { cx: size / 2, cy: size / 2, r, fill: "none", stroke: color, strokeWidth: stroke, strokeLinecap: cap, strokeDasharray: dash + " " + circ }),
+      over && React.createElement("circle", { cx: size / 2, cy: size / 2, r, fill: "none", stroke: "#FF6A4D", strokeWidth: stroke, strokeLinecap: "butt", strokeDasharray: ringDash(100 - redFrom, r).dash + " " + circ, strokeDashoffset: -(circ * redFrom / 100) })),
     React.createElement("div", { style: { position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" } }, children));
 }
 
@@ -49,8 +56,6 @@ function MiniRing({ value, pct, color, caption, label, onTap }) {
     React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, textAlign: "center", lineHeight: 1.3, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, caption));
 }
 
-const COND_LABEL = { active: "চলছে", chronic: "দীর্ঘমেয়াদি" };
-
 // হোমের উপরের সতর্ক-সারি: এলার্জি (লাল) + চলমান অসুস্থতা। এলার্জি-রেকর্ড না থাকলে "নেই" বা সবুজ নয়,
 // শুধু "তথ্য দেওয়া হয়নি" — যাতে "নেই" মানে "নিরাপদ" মনে না হয় (safe-default)।
 function AlertStrip({ allergies, conds }) {
@@ -61,24 +66,29 @@ function AlertStrip({ allergies, conds }) {
     allergies.length
       ? chip("al", "⚠️ এলার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
       : null,
-    shown.map((c, i) => chip("c" + i, "🩺 " + c.name + (COND_LABEL[c.status] ? " (" + COND_LABEL[c.status] + ")" : ""), "#E4F0E9", T.green)),
+    shown.map((c, i) => chip("c" + i, "🩺 " + c.name, "#E4F0E9", T.green)),
     conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"));
 }
 
 export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, homeExtra }) {
   const { daily, goal, age, flags, gate, recent } = info;
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
-  const d = daily || {};
+  // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
+  const today = todayISO();
+  const [selDate, setSelDate] = useState(today);
+  const viewDate = clampISO(selDate, today);
+  const isViewToday = viewDate === today;
+  const dayDoc = isViewToday ? daily : ((info.recent || []).find((x) => x && x.date === viewDate) || null);
+  const d = dayDoc || {};
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
   const [sMin, sMax] = sleepTargetHours(age);
   const exTarget = exerciseTargetMinPerDay(age);
   const stTarget = stepsTarget(age);
   const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget);
-  const today = todayISO();
   const ctx = { calorieTarget: calc ? calc.calorieTarget : null, exTarget, waterTarget, sleepMinH: sMin, fastDays };
   // পরিকল্পিত সিয়ামের দিন বনাম বাস্তব: দিনের বেলার খাবার লগ হলে onFast=false (fastDay.js)। সতর্কতা সবার জন্য খোলা (Approved Deviation)।
-  const plannedFast = isFastDate(today, fastDays);
-  const onFast = fastOnDate(today, fastDays, daily);
+  const plannedFast = isFastDate(viewDate, fastDays);
+  const onFast = fastOnDate(viewDate, fastDays, dayDoc);
   const fastWarn = plannedFast && fastModeGate({ age, flags }).warn;
   const week = weekSummary(recent, weekDatesISO(), today, ctx);
   const [busy, setBusy] = useState(false);
@@ -92,7 +102,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const setWater = async (next) => {
     if (busy || next < 0 || next > MAX_WATER) return;
     setErr(null); setBusy(true);
-    try { await saveDaily(familyId, memberId, callerMemberId, today, { waterGlasses: next }, daily); await onSaved(); }
+    try { await saveDaily(familyId, memberId, callerMemberId, viewDate, { waterGlasses: next }, dayDoc); await onSaved(); }
     catch (x) { setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
     finally { setBusy(false); }
   };
@@ -106,7 +116,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const writeExtras = async (next) => {
     if (busy || !plan) return false;
     setFoodErr(null); setBusy(true);
-    try { await saveDaily(familyId, memberId, callerMemberId, today, { extraFoods: next, caloriesIn: caloriesForDay(plan, eatenIds, next) }, daily); await onSaved(); return true; }
+    try { await saveDaily(familyId, memberId, callerMemberId, viewDate, { extraFoods: next, caloriesIn: caloriesForDay(plan, eatenIds, next) }, dayDoc); await onSaved(); return true; }
     catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
     finally { setBusy(false); }
   };
@@ -127,7 +137,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   const writeIn = async (fields, closeAfter) => {
     if (busy) return;
     setInErr(null); setBusy(true);
-    try { await saveDaily(familyId, memberId, callerMemberId, today, fields, daily); await onSaved(); if (closeAfter) setInKind(null); }
+    try { await saveDaily(familyId, memberId, callerMemberId, viewDate, fields, dayDoc); await onSaved(); if (closeAfter) setInKind(null); }
     catch (x) { setInErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
     finally { setBusy(false); }
   };
@@ -140,12 +150,43 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
   };
   const removeExLog = (i) => writeExLog(exLog.filter((_, k) => k !== i), EXERCISE_TYPES[exLog[i].type].counted ? -exLog[i].min : 0);
 
+  // তারিখ-নেভিগেশন: ক্যালেন্ডার-শিট, সোয়াইপ। শিট খোলা থাকলে সোয়াইপ বন্ধ (ইনপুটে টান দিয়ে দিন বদলে না যায়)।
+  const [calOpen, setCalOpen] = useState(false);
+  const touch = useRef(null);
+  const pickDay = (iso) => { if (inRange(iso, today)) { setSelDate(iso); setFoodOpen(false); setInKind(null); setCalOpen(false); } };
+  const goDay = (n) => pickDay(shiftISO(viewDate, n));
+  const swipeOk = !(foodOpen || inKind || calOpen);
+  const onTouchStart = (e) => {
+    const t = e.touches && e.touches[0];
+    const blocked = !swipeOk || !t || e.touches.length !== 1 || (e.target && e.target.closest && e.target.closest("input,textarea,select,[role=dialog]"));
+    touch.current = blocked ? null : { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e) => {
+    const s0 = touch.current; touch.current = null;
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!s0 || !t) return;
+    const n = swipeDelta(t.clientX - s0.x, t.clientY - s0.y);
+    if (n) goDay(n);
+  };
+  const dateText = isViewToday ? "" : new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" });
+  const markedDates = new Set((info.recent || []).filter((x) => x && x.date && ((x.caloriesIn || 0) > 0 || (x.waterGlasses || 0) > 0 || (x.steps || 0) > 0 || (x.exerciseMin || 0) > 0 || (x.sleepMinutes || 0) > 0 || (x.weightKg || 0) > 0 || (Array.isArray(x.extraFoods) && x.extraFoods.length > 0))).map((x) => x.date));
+  const shortDate = new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "short" });
+  // হিরোতে BMI-এর ডানে ছোট তারিখ-বাটন; অন্য দিনে কমলা + "আজ ↩"। ট্যাপ-এরিয়া ৪৪px (ভিজ্যুয়াল ছোট)।
+  const pill = (bg, fg) => ({ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" });
+  const hitBtn = { minHeight: "44px", margin: "-8px 0", padding: "0 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center" };
+  const dateChip = React.createElement("span", { style: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "2px" } },
+    !isViewToday && React.createElement("button", { type: "button", onClick: () => pickDay(today), "aria-label": "আজকের দিনে ফিরুন", style: hitBtn }, React.createElement("span", { style: pill("rgba(255,255,255,0.18)", T.onDark) }, "আজ ↩")),
+    React.createElement("button", { type: "button", onClick: () => setCalOpen(true), "aria-label": "তারিখ বাছুন, এখন " + shortDate, style: hitBtn },
+      React.createElement("span", { style: pill(isViewToday ? "#F3E6CC" : T.orange, isViewToday ? T.green : T.onDark) }, React.createElement("span", { "aria-hidden": "true" }, "📅"), shortDate)));
+
   const glasses = d.waterGlasses || 0;
   const bmiVal = bmiOf(info.weightKg, info.heightCm);
   const eaten = d.caloriesIn || 0;
   const left = calc ? calc.calorieTarget - eaten : 0;
 
-  return React.createElement(React.Fragment, null,
+  return React.createElement("div", { onTouchStart, onTouchEnd },
+    // হিরো না থাকলে (গেট/উপবাস) তারিখ-বাটন আলাদা সারিতে
+    !calc && React.createElement("div", { style: { display: "flex", marginBottom: "6px" } }, dateChip),
     gate.blocked && React.createElement(Notice, null,
       React.createElement("b", null, "ক্যালরি-টার্গেটের জন্য তথ্য লাগবে"), React.createElement("br"), gate.reason,
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।"),
@@ -167,11 +208,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
         // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
         React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 4px", borderRadius: "999px", border: "none", background: "transparent", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" } },
           bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎"))),
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎")),
+        dateChip),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
-        React.createElement(Ring, { pct: onFast ? 0 : pctOf(eaten, calc.calorieTarget), size: 70, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
-          React.createElement("span", { style: { fontSize: "17px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(eaten)),
-          React.createElement("span", { style: { fontSize: "11px", color: T.onDarkSoft } }, "কিলোক্যালরি")),
+        React.createElement(Ring, { pct: onFast ? 0 : (eaten > calc.calorieTarget ? 100 : pctOf(eaten, calc.calorieTarget)), redFrom: !onFast && eaten > calc.calorieTarget ? (calc.calorieTarget / eaten) * 100 : undefined, size: 96, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
+          // রিংয়ের ভেতরের ব্যাস ≈ ৭৮px: সংখ্যা ১৬px + লেবেল ১০.৫px (nowrap) এর ভেতরেই ধরে
+          React.createElement("span", { style: { fontSize: "16px", fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap" } }, bnNum(eaten)),
+          React.createElement("span", { style: { fontSize: "10.5px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, "কিলোক্যালরি")),
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           onFast
             ? React.createElement(React.Fragment, null,
@@ -179,7 +222,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
               React.createElement("div", { style: { fontSize: "21px", fontWeight: 800, lineHeight: 1.2 } }, "🌙 সিয়াম/ফাস্টিং"),
               React.createElement("div", { style: { fontSize: "12.5px", color: T.onDarkSoft, marginTop: "2px", lineHeight: 1.4 } }, "ক্যালরি-টার্গেট স্থগিত · সেহরি/ইফতার লগ করুন"))
             : React.createElement(React.Fragment, null,
-              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজকের টার্গেট"),
+              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, isViewToday ? "আজকের টার্গেট" : dateText + "-এর টার্গেট"),
               React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]),
               plannedFast && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "2px" } }, "🌙 আজ সিয়ামের দিন ছিল — দিনের খাবার লগ হওয়ায় ধরা হয়নি")))),
@@ -197,7 +240,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
-      slots: slotsForDay(plannedFast), initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      dateText, slots: slotsForDay(plannedFast), initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
@@ -232,13 +275,15 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
 
-    inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", initialType: "walk", entries: exLog, recent: recentExerciseEntries(info.recent), busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
+    inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", dateText, initialType: "walk", entries: exLog, recent: recentExerciseEntries(info.recent), busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
     (inKind === "sleep" || inKind === "steps" || inKind === "weight") && React.createElement(DailyInputSheet, {
-      key: inKind, kind: inKind, daily, latestWeight: info.latestWeight, stepsTarget: stTarget, busy, err: inErr,
+      key: inKind, dateText, kind: inKind, daily: dayDoc, latestWeight: info.latestWeight, stepsTarget: stTarget, busy, err: inErr,
       onSave: (fields) => writeIn(fields, true), onClose: closeIn,
     }),
 
-    // সাপ্তাহিক সারাংশ
+    calOpen && React.createElement(TodayDateSheet, { selected: viewDate, today, marked: markedDates, onPick: pickDay, onClose: () => setCalOpen(false) }),
+
+    // সাপ্তাহিক সারাংশ — বৃত্তে ট্যাপ করলে সেই দিনের পাতা (আজ বা গত ৩০ দিনের ভেতরে)
     React.createElement("div", { style: { ...CARD_STYLE, background: T.sand, borderColor: T.sandBorder, padding: "8px 12px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "এই সপ্তাহ"),
@@ -246,10 +291,12 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
         week.days.map((x, i) => {
           const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
-          return React.createElement("div", { key: x.date, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: 1 } },
+          const canPick = inRange(x.date, today), isSel = x.date === viewDate;
+          return React.createElement("button", { key: x.date, type: "button", disabled: !canPick, onClick: () => pickDay(x.date), "aria-pressed": isSel, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: 1, minHeight: "44px", padding: 0, border: "none", background: "none", fontFamily: "inherit", cursor: canPick ? "pointer" : "default" } },
             React.createElement("span", { style: { fontSize: "11px", color: T.muted } }, SHORT_DAYS[i]),
             React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : isFast ? " সিয়াম/ফাস্টিং-এর দিন" : isToday ? " আজ" : ""), style: { width: "26px", height: "26px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
               background: hit ? T.green : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || isToday ? T.onDark : T.muted,
+              boxShadow: isSel ? "0 0 0 2px " + T.sand + ", 0 0 0 4px " + T.green : "none",
               border: hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : isToday ? "আজ" : isFast ? "🌙" : ""));
         }))),
 
@@ -259,7 +306,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved, ho
     // আজকের খাবার-লগ — বেলা-ভিত্তিক কার্ড (আইকন, বেলার যোগফল ও ম্যাক্রো, খালি বেলাও দেখায়)। যোগ করা হয় শুধু উপরের "＋ খাবার" থেকে।
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
     canLog && React.createElement("div", { style: { ...CARD_STYLE, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, "🍽 আজকের খাবার-লগ"),
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, isViewToday ? "🍽 আজকের খাবার-লগ" : "🍽 " + dateText + "-এর খাবার-লগ"),
       React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি (প্ল্যানের টিকসহ)"),
       foodErr && !foodOpen && ErrorBox(foodErr)),
     canLog && slotsForDay(plannedFast).map((sl) => {

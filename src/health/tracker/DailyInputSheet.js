@@ -22,7 +22,7 @@ const STEP_PRESETS = [2000, 5000, 8000, 10000];
 const LAB = { fontSize: "13px", fontWeight: 600, color: "#1F2D2A", display: "block", margin: "10px 0 4px" };
 const SM = { ...BTN, border: "1.5px solid " + T.green, background: "#fff", color: T.green, minHeight: "40px", fontSize: "13px" };
 
-export function DailyInputSheet({ kind, daily, latestWeight, stepsTarget, busy, err, onSave, onClose }) {
+export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarget, busy, err, onSave, onClose }) {
   const d = daily || {};
   const [weight, setWeight] = useState(d.weightKg ? String(d.weightKg) : "");
   const [steps, setSteps] = useState(d.steps !== undefined ? String(d.steps) : "");
@@ -47,7 +47,7 @@ export function DailyInputSheet({ kind, daily, latestWeight, stepsTarget, busy, 
       React.createElement("button", { onClick: () => { setLocalErr(null); setter(shiftTime(value, -15, fallback)); }, "aria-label": label + " ১৫ মিনিট আগে", style: { ...SM, flex: 1 } }, "−১৫"),
       React.createElement("button", { onClick: () => { setLocalErr(null); setter(shiftTime(value, 15, fallback)); }, "aria-label": label + " ১৫ মিনিট পরে", style: { ...SM, flex: 1 } }, "+১৫")));
 
-  return React.createElement(Sheet, { title: TITLES[kind], subtitle: SUBS[kind], onClose },
+  return React.createElement(Sheet, { title: TITLES[kind], subtitle: (dateText ? dateText + " · " : "") + SUBS[kind], onClose },
     kind === "weight" && React.createElement("div", null,
       React.createElement("label", { style: LAB }, "ওজন (কেজি)"),
       React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "center" } },

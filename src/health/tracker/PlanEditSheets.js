@@ -267,12 +267,12 @@ export function ExerciseEditSheet({ dayLabel, items, isCustom, busy, err, onSave
 
 // ---------- ব্যায়াম: "আজ আসলে কী করলেন?" ----------
 // props: initialType, entries (আজকের exerciseLog), busy, err, onAdd(type, min), onRemove(i), onClose
-export function ExerciseLogSheet({ initialType, entries, recent, busy, err, onAdd, onRemove, onClose }) {
+export function ExerciseLogSheet({ dateText, initialType, entries, recent, busy, err, onAdd, onRemove, onClose }) {
   const [type, setType] = useState(initialType || "other");
   const [min, setMin] = useState(30);
   const [q, setQ] = useState("");
   const list = searchExercises(q);
-  return React.createElement(Sheet, { title: "আজ আসলে কী করলেন?", subtitle: "শুধু আজকের হিসাবে যোগ হবে", onClose },
+  return React.createElement(Sheet, { title: "আজ আসলে কী করলেন?", subtitle: dateText ? "শুধু " + dateText + "-এর হিসাবে যোগ হবে" : "শুধু আজকের হিসাবে যোগ হবে", onClose },
     entries.length > 0 && React.createElement("div", { style: { marginBottom: "8px" } },
       entries.map((x, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderBottom: "1px solid #EEF3F0" } },
         React.createElement("div", { style: { flex: 1, fontSize: "14px", color: "#1F2D2A" } }, (EX_ICON[x.type] || "") + " " + EXERCISE_TYPES[x.type].label + " · " + bnNum(x.min) + " মিনিট"),

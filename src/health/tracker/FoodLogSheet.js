@@ -21,7 +21,7 @@ const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
 // props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), recent (ঐচ্ছিক, foodCalc.recentFoodEntries), busy, err, onAdd(entry) → Promise<boolean>, onClose
-export function FoodLogSheet({ slots, initialSlot, allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
+export function FoodLogSheet({ dateText, slots, initialSlot, allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
   const [slot, setSlot] = useState(initialSlot || slotForNow());
   const [key, setKey] = useState(null);
   const [measureId, setMeasureId] = useState(null); // measure id | "g" (গ্রাম)
@@ -84,7 +84,7 @@ export function FoodLogSheet({ slots, initialSlot, allergyTags, avoidCtx, active
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
-    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
+    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: (dateText ? dateText + " · " : "") + "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
       TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot),
       budget && React.createElement("div", { style: { fontSize: "13px", color: MUTED, margin: "-6px 0 10px" } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি (প্ল্যানের তথ্য; বেশি হলেও বাধা নেই)"),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
