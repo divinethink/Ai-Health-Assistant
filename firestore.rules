@@ -232,11 +232,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /generalChatQuickLinks/{linkId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
     // ============================================================
     // FAMILY-SCOPED DATA
     // ============================================================
@@ -558,20 +553,6 @@ service cloud.firestore {
         allow delete: if request.auth != null
           && isFamilyMember(familyId)
           && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
-      }
-
-      match /generalChatSessions/{sessionId} {
-        allow read, create, update, delete: if request.auth != null && isAdminOfFamily(familyId);
-
-        match /messages/{messageId} {
-          allow read, create: if request.auth != null && isAdminOfFamily(familyId);
-          allow update: if false;
-          allow delete: if request.auth != null && isAdminOfFamily(familyId);
-        }
-      }
-
-      match /generalChatProjects/{projectId} {
-        allow read, create, update, delete: if request.auth != null && isAdminOfFamily(familyId);
       }
     }
   }

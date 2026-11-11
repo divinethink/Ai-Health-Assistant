@@ -877,7 +877,7 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
-  describe('11. Global reference DB ও General Chat', () => {
+  describe('11. Global reference DB', () => {
     it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {
       await seed(async (db) => {
         await setDoc(doc(db, 'medicineDatabase', 'good'), { genericName: 'A', status: 'verified' });
@@ -901,12 +901,6 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'dietGuidanceRules', 'd1')));
       await assertFails(setDoc(doc(dbAs('uidA'), 'dietGuidanceRules', 'z'), { status: 'verified' }));
       await assertFails(setDoc(doc(dbAs(ADMIN_UID), 'dietGuidanceRules', 'z'), { status: 'verified' }));
-    });
-
-    it('11b. General Chat শুধু Admin-এর', async () => {
-      await seedOwned('mA', 'uidA');
-      await assertSucceeds(setDoc(famDoc(dbAs(ADMIN_UID), 'generalChatSessions', 's1'), { title: 'x' }));
-      await assertFails(setDoc(famDoc(dbAs('uidA'), 'generalChatSessions', 's2'), { title: 'y' }));
     });
   });
 });
