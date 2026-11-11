@@ -10,6 +10,7 @@
 
 import { db } from "../../legacy/firebaseConfig.js";
 import { staticFoodGroups, mergeFoodGuidance } from "./foodGuidance.js";
+import { compactGuidance } from "./foodCompact.js";
 
 // পুরো তালিকা (draft সহ — মালিকের সিদ্ধান্ত ২০২৬-১১-১০: শুধু সতর্কবার্তা, verify-গেট নেই) — ছোট collection বলে ১ read।
 export async function listDietGuidanceRules() {
@@ -21,7 +22,7 @@ export async function listDietGuidanceRules() {
 // ctx: { records, age, goal } — না দিলে শুধু Firestore-নিয়ম (আগের মতো)।
 export function matchFoodGuidance(allRules, tagValues, ctx) {
   const base = matchDietGuidanceForTags(allRules, tagValues);
-  return ctx ? mergeFoodGuidance(base, staticFoodGroups(ctx)) : base;
+  return compactGuidance(ctx ? mergeFoodGuidance(base, staticFoodGroups(ctx)) : base); // একই ধরনের বাক্য এক লাইনে (foodCompact.js)
 }
 
 // Member-এর relevantConditions/relevantAllergies (healthContextEngine.js-এর
