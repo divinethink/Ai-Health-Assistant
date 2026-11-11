@@ -135,6 +135,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সেভ হয় না)
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
+  const budgetTarget = calc && !onFast ? calc.calorieTarget : null; // সিয়ামের দিনে টার্গেট স্থগিত → আগের প্ল্যান-ভিত্তিক সংখ্যা
+  const budgets = plan ? slotBudgets(plan, eatenIds, extras, budgetTarget) : {};
   const writeExtras = async (next) => {
     if (busy || !plan) return false;
     setFoodErr(null); setBusy(true);
@@ -142,7 +144,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
     finally { setBusy(false); }
   };
-  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : fastDefaultSlot(plannedFast)); setFoodOpen(true); };
+  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
 
   // ধাপ ৩: ব্যায়াম/ঘুম/স্টেপ/ওজন শিট। saveDaily একই (নির্দিষ্ট ডক-ID + merge); busy লক = double-tap নিরাপদ।
   const [inKind, setInKind] = useState(null); // "exercise" | "sleep" | "steps" | "weight" | null
@@ -268,8 +270,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
-      dateText, slots: slotsForDay(plannedFast), initialSlot: foodSlot, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
-      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
+      dateText, slots: slotsForDay(plannedFast), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
     // ব্যায়াম / ঘুম / স্টেপ — ছোট রিং
@@ -341,13 +343,14 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     canLog && slotsForDay(plannedFast).map((sl) => {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sl.id);
       const sm = sumNutrition(mine);
-      const head = [bnNum(sm.kcal) + " কিলোক্যালরি"].concat(sm.withMacro > 0 ? ["প্রো " + bnNum(Math.round(sm.p)), "কার্ব " + bnNum(Math.round(sm.c)), "ফ্যাট " + bnNum(Math.round(sm.f))] : []).join(" · ");
+      const bud = budgets[sl.id];
+      const head = [bud ? bnNum(bud.eaten) + " / " + bnNum(bud.planned) + " কিলোক্যালরি" : bnNum(sm.kcal) + " কিলোক্যালরি"].concat(sm.withMacro > 0 ? ["প্রো " + bnNum(Math.round(sm.p)), "কার্ব " + bnNum(Math.round(sm.c)), "ফ্যাট " + bnNum(Math.round(sm.f))] : []).join(" · ");
       return React.createElement("div", { key: sl.id, style: { ...CARD_STYLE, padding: "8px 10px", opacity: mine.length ? 1 : 0.8 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
           React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "10px", background: SLOT_TINT[sl.id], display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", flexShrink: 0 } }, SLOT_ICON[sl.id]),
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, sl.label),
-            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted } }, mine.length ? head : "এখনও কিছু যোগ হয়নি")),
+            React.createElement("div", { style: { fontSize: "12.5px", color: bud && bud.eaten > bud.planned ? "#B26A00" : T.muted, fontWeight: bud && bud.eaten > bud.planned ? 700 : 400 } }, mine.length ? head : bud ? "এখনও কিছু যোগ হয়নি · " + bnNum(bud.eaten) + " / " + bnNum(bud.planned) + " কিলোক্যালরি" : "এখনও কিছু যোগ হয়নি")),
           React.createElement("button", { type: "button", onClick: () => openFood(sl.id), "aria-label": sl.label + "-এ খাবার যোগ করুন", style: { flexShrink: 0, width: "44px", height: "44px", margin: "-6px -6px -6px 0", padding: 0, border: "none", background: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" } },
             React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "20px", fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } }, "＋"))),
         mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border, marginTop: "6px" } },
