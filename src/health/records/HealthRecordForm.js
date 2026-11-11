@@ -20,7 +20,7 @@ const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", ph
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
 // না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
-export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs }) {
+export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs, onUpload }) {
   const isEdit = !!editingRecord;
   const preset = !isEdit && presetObs ? OBS_PRESETS[presetObs] : null; // "+ দ্রুত যোগ": প্রেসার/সুগার — শুধু ধরন+একক আগে-থেকে-ভরা
   const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : preset ? "observation" : "condition");
@@ -205,7 +205,11 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
         ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => pickType(type),
           style: { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "#0E4B43", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" } },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label))));
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label)),
+        // রিপোর্ট/প্রেসক্রিপশন আপলোড (ছবি বা PDF) — রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
+        onUpload && React.createElement("button", { onClick: onUpload,
+          style: { gridColumn: "1 / -1", minHeight: "64px", borderRadius: "16px", border: "1.5px solid #0E4B43", background: "#E6F3EC", color: "#0E4B43", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" } },
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px" } }, "📄"), "রিপোর্ট / প্রেসক্রিপশন আপলোড (ছবি বা PDF)")));
   }
 
   return React.createElement(

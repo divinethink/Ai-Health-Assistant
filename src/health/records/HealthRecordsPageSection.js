@@ -48,7 +48,7 @@ import { DoctorDetailsSection } from "../doctor-details/DoctorDetailsSection.js"
 
 const { useState } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
-import { peekQuickIntent, takeQuickIntent } from "../../shared/quickIntent.js";
+import { peekQuickIntent, takeQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 
 // স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
 // id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
@@ -88,6 +88,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
     return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
   });
   const [timelineSub, setTimelineSub] = useState("diet");
+  const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
   const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "all"));
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
@@ -122,6 +123,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
       isHealth && activeTab === "profile" && React.createElement(React.Fragment, null,
         React.createElement(HealthRecordsSection, {
           familyId, callerMemberId, selectedMemberId, section: recordSub === "all" || recordSub === "records" ? "all" : "profile",
+          onRecordAdded: () => setAddTick((n) => n + 1),
+          onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); },
           belowSummary: React.createElement("div", { key: "subs" },
             React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "6px", overflowX: "auto" } },
               RECORD_SUBS.map((sb) => React.createElement("button", {
@@ -137,11 +140,11 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         // "সব": অসুখ-পরিমাপের নিচে ওষুধ ও রিপোর্ট (অসুখ-তালিকা উপরের "all" instance-এ)
         recordSub === "all" && React.createElement(React.Fragment, null,
           sectionHead("💊", "ওষুধ"),
-          React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
+          React.createElement(MedicationReminders, { key: "med-" + addTick, familyId, callerMemberId, selectedMemberId }),
           sectionHead("📁", "রিপোর্ট"),
-          React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
-        recordSub === "meds" && React.createElement(MedicationReminders, { familyId, callerMemberId, selectedMemberId }),
-        recordSub === "docs" && React.createElement(DocumentsSection, { familyId, callerMemberId, selectedMemberId })),
+          React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
+        recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick, familyId, callerMemberId, selectedMemberId }),
+        recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
         React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
         // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode

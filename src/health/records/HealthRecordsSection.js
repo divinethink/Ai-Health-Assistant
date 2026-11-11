@@ -24,7 +24,7 @@ import { takeQuickIntent } from "../../shared/quickIntent.js";
 // `selectedMemberId` parent (HealthRecordsPageSection)-এর কাছ থেকে prop
 // হিসেবে আসে — পেজের সব sub-tab একই সদস্য শেয়ার করে, ট্যাব পাল্টালে আর
 // নতুন করে বাছতে হয় না। কোনো schema/permission পরিবর্তন নেই।
-export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary }) {
+export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary, onUpload, onRecordAdded }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
   const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
@@ -58,16 +58,16 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     }),
     (section === "all" || section === "profile") && React.createElement(PregnancyStatusCard, { key: "preg-" + targetMemberId, familyId, selectedMemberId: targetMemberId, callerMemberId }),
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
-    (section === "all" || section === "records") && React.createElement("div", { ref: formRef },
+    (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),
         style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
       }, "＋ কী যোগ করবেন?"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),
-        familyId, targetMemberId, callerMemberId, presetObs,
+        familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
         editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
-        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); },
+        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); if (onRecordAdded) onRecordAdded(); },
       }),
       ),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {
