@@ -32,7 +32,7 @@ import { AvoidCard } from "./AvoidCard.js";
 import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
-  GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
+  GOAL_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
   sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -103,7 +103,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
 
   if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথি → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
-  if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘লক্ষ্য সেট করুন’-এ ক্যালরির টার্গেট ঠিক করুন।");
+  if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।");
 
   const base = buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs);
   const plan = applyMealPrefs(base, goal.planPrefs, allergyTags);
@@ -417,11 +417,11 @@ function TrendReminderTab(props) {
 }
 
 // ---------- লক্ষ্য ও প্ল্যান (লক্ষ্য সেট করুন | মিল প্ল্যান | ব্যায়াম প্ল্যান) ----------
-// লক্ষ্য না থাকলে প্রথমে "লক্ষ্য সেট করুন", থাকলে "মিল প্ল্যান"।
+// লক্ষ্য না থাকলে প্রথমে "আমার লক্ষ্য", থাকলে "মিল প্ল্যান"।
 function GoalPlanTab(props) {
   const [sub, setSub] = useState(props.info.goal ? "meal" : "goal");
   return React.createElement("div", null,
-    Pills([["goal", "লক্ষ্য সেট করুন"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
+    Pills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
     sub === "goal" && React.createElement(GoalTab, props),
     sub === "meal" && React.createElement(MealPlanTab, props),
     sub === "exercise" && React.createElement(ExerciseTab, props));
@@ -477,6 +477,11 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
     PrimaryButton("সংরক্ষণ", submit, busy));
 }
 
+const WEEK_CHOICES = [4, 8, 12, 20];
+const GOAL_HINTS = { lose: "ধীরে ও নিরাপদে ওজন কমানো", gain: "ধীরে ও সুস্থভাবে ওজন বাড়ানো", fit: "এখনকার ওজন ও সুস্থতা ধরে রাখা", muscle: "ব্যায়ামের সাথে শক্তি ও পেশি বাড়ানো" };
+// ACTIVITY_LABELS-এর মান (low/medium/high) অপরিবর্তিত; শুধু বোঝানোর লেখা
+const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
+
 // ---------- লক্ষ্য ----------
 function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const { goal, age, member, heightCm, weightKg, detected } = info;
@@ -530,10 +535,23 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     React.createElement("span", { "aria-hidden": "true", style: { width: "20px", height: "20px", boxSizing: "border-box", flexShrink: 0, borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 700, lineHeight: 1, border: "2px solid " + T.green, background: val ? T.green : "#fff", color: "#fff" } }, val ? "✓" : ""),
     React.createElement("span", { style: { minWidth: 0, fontSize: "14px", fontWeight: 600, lineHeight: 1.3 } }, label,
       locked && React.createElement("span", { style: { display: "block", fontSize: "11px", fontWeight: 400, color: T.muted } }, "প্রোফাইল থেকে")));
-  // এক সারির ছোট কার্ড: লেবেল উপরে, ঘর নিচে
-  const mini = (label, control) => React.createElement("div", { style: { ...CARD, flex: 1, minWidth: 0, padding: "8px 10px" } },
-    React.createElement("label", { style: { fontSize: "12px", fontWeight: 600, color: T.ink, display: "block", margin: "0 0 4px" } }, label), control);
-  const MIN = { ...INPUT, padding: "9px 6px", fontSize: "14px", borderRadius: "10px" };
+  // ধাপ-কার্ড: ক্রমিক নম্বর + প্রশ্ন + উত্তর-ঘর
+  const stepCard = (n, title, ...kids) => React.createElement("div", { style: CARD },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+      React.createElement("span", { "aria-hidden": "true", style: { width: "24px", height: "24px", borderRadius: "50%", background: T.green, color: "#fff", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, n),
+      React.createElement("b", { style: { fontSize: "15px", color: T.ink } }, title)),
+    ...kids);
+  const HINT = { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 };
+  // সপ্তাহে কত কেজি — শুধু দেখানোর হিসাব; আসল হিসাব/গেট computeGoal-এ অপরিবর্তিত
+  const paceText = (() => {
+    const tw = parseFloat(target), wk = parseFloat(weeks);
+    if (!weightKg || !(tw > 0) || !(wk > 0)) return null;
+    const rate = Math.abs(weightKg - tw) / wk; const r = bnNum(Math.round(rate * 100) / 100);
+    if (goalType === "lose" && tw >= weightKg) return { ok: false, text: "লক্ষ্য ওজন এখনকার ওজনের চেয়ে কম হতে হবে।" };
+    if (goalType === "gain" && tw <= weightKg) return { ok: false, text: "লক্ষ্য ওজন এখনকার ওজনের চেয়ে বেশি হতে হবে।" };
+    const max = goalType === "lose" ? 0.5 : 0.25;
+    return rate <= max ? { ok: true, text: "সপ্তাহে প্রায় " + r + " কেজি — নিরাপদ গতি ✓" } : { ok: false, text: "সপ্তাহে প্রায় " + r + " কেজি — একটু দ্রুত; সময় বাড়ান।" };
+  })();
 
   return React.createElement("div", null,
     React.createElement("div", { style: CARD },
@@ -541,33 +559,46 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } },
         (age !== null ? bnNum(age) + " বছর" : "বয়স নেই") + " · " + (heightCm ? "উচ্চতা " + bnNum(heightCm) + " সেমি" : "উচ্চতা নেই") + " · " + (weightKg ? "ওজন " + bnNum(weightKg) + " কেজি" : "ওজন নেই") + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "")),
       (!heightCm || !weightKg) && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, "হিসাবের জন্য Health → প্রোফাইলে উচ্চতা ও ওজন যোগ করুন।")),
-    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: T.ink, margin: "4px 2px 6px" } }, "প্রযোজ্য হলে টিক দিন"),
-    React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "8px" } },
-      tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
-      tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
-    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: Health ▸ প্রোফাইল।"),
-    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে Health ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
     gate.blocked
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেটের জন্য তথ্য লাগবে"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
       : React.createElement("div", null,
         gate.warn && React.createElement(Notice, null, gate.reason),
-        React.createElement("div", { style: CARD },
-          React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: T.ink, marginBottom: "6px" } }, "লক্ষ্য বেছে নিন"),
+        stepCard("১", "আপনার লক্ষ্য কী?",
           React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } },
             Object.entries(GOAL_LABELS).map(([id, lbl]) => { const on = id === goalType; return React.createElement("button", { key: id, onClick: () => setGoalType(id), "aria-pressed": on,
-              style: { minHeight: "42px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); }))),
-        React.createElement("div", { style: { display: "flex", gap: "8px" } },
-          mini("কার্যকলাপ", React.createElement("select", { value: activity, "aria-label": "কার্যকলাপ", onChange: (e) => setActivity(e.target.value), style: MIN }, Object.entries(ACTIVITY_LABELS).map(([v, l]) => React.createElement("option", { key: v, value: v }, l)))),
-          needsTarget && mini("ওজন", React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", placeholder: "কেজি", "aria-label": "লক্ষ্য ওজন (কেজি)", value: target, onChange: (e) => setTarget(e.target.value), style: MIN })),
-          needsTarget && mini("কত সপ্তাহে", React.createElement("input", { type: "number", inputMode: "numeric", "aria-label": "কত সপ্তাহে", value: weeks, onChange: (e) => setWeeks(e.target.value), style: MIN })))),
-    React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved }),
+              style: { minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); })),
+          goalType && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType])),
+        needsTarget && stepCard("২", "কত কেজিতে যেতে চান?",
+          React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", placeholder: "লক্ষ্য ওজন (কেজি)", "aria-label": "লক্ষ্য ওজন (কেজি)", value: target, onChange: (e) => setTarget(e.target.value), style: INPUT }),
+          React.createElement("div", { style: HINT }, weightKg ? "এখন আপনার ওজন " + bnNum(weightKg) + " কেজি" : "আগে Health ▸ প্রোফাইলে ওজন যোগ করুন")),
+        needsTarget && stepCard("৩", "কত সপ্তাহে?",
+          React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+            WEEK_CHOICES.map((w) => { const on = String(w) === String(weeks); return React.createElement("button", { key: w, onClick: () => setWeeks(String(w)), "aria-pressed": on,
+              style: { flex: "1 1 60px", minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: on ? "#fff" : "#2B3A36" } }, bnNum(w) + " সপ্তাহ"); })),
+          React.createElement("input", { type: "number", inputMode: "numeric", placeholder: "অন্য সংখ্যা লিখুন", "aria-label": "কত সপ্তাহে", value: weeks, onChange: (e) => setWeeks(e.target.value), style: { ...INPUT, marginTop: "8px" } }),
+          paceText && React.createElement("div", { style: { ...HINT, color: paceText.ok ? T.green : "#7A5B00", fontWeight: 600 } }, paceText.text)),
+        stepCard(needsTarget ? "৪" : "২", "দৈনিক কাজকর্ম কেমন?",
+          React.createElement("div", { style: { display: "grid", gap: "6px" } },
+            Object.entries(ACTIVITY_CHOICES).map(([v, [name, eg]]) => { const on = v === activity; return React.createElement("button", { key: v, onClick: () => setActivity(v), "aria-pressed": on,
+              style: { minHeight: "48px", borderRadius: "14px", textAlign: "left", padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: on ? "#E4F0E9" : "#fff", color: T.ink } },
+              React.createElement("b", { style: { fontSize: "14px" } }, (on ? "● " : "○ ") + name), React.createElement("span", { style: { display: "block", fontSize: "12px", color: T.muted } }, eg)); })))),
+    stepCard(needsTarget ? "৫" : "৩", "স্বাস্থ্য-নিরাপত্তা",
+      React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "ডায়াবেটিস বা কিডনি রোগ আছে? (ওজন কমানোর নিরাপদ সীমা ঠিক করতে লাগে)"),
+      React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+        tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
+        tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney))),
+    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: Health ▸ প্রোফাইল।"),
+    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে Health ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
+    React.createElement("details", { style: { marginBottom: "8px" } },
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
+      React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
     result && !result.blocked && React.createElement(Notice, { tone: "info" },
       "দৈনিক টার্গেট: ", React.createElement("b", null, bnNum(result.calorieTarget) + " কিলোক্যালরি"),
       result.weeklyRateKg ? " · প্রতি সপ্তাহে প্রায় " + bnNum(result.weeklyRateKg) + " কেজি" : "",
       result.notes.map((n, i) => React.createElement("div", { key: i, style: { marginTop: "6px" } }, n))),
-    PrimaryButton(gate.blocked ? "সংরক্ষণ" : "টার্গেট হিসাব করুন", submit, busy)
+    PrimaryButton(gate.blocked ? "সংরক্ষণ" : "প্ল্যান বানান", submit, busy)
   );
 }
 

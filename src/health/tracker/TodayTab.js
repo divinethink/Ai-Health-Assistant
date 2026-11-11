@@ -220,7 +220,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।"),
     // গেট শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — হিরো ও খাবার-লগ খোলা
     gate.warn && React.createElement(Notice, null, gate.reason),
-    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘লক্ষ্য সেট করুন’-এ যান।"),
+    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ যান।"),
 
     // উপবাস-দিন (পার্ট ১০): ক্যালরি-টার্গেট স্থগিত
     onFast && !calc && React.createElement("div", { style: { ...CARD_STYLE, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },
