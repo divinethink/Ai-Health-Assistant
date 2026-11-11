@@ -15,7 +15,8 @@ import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
 import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
-import { ExerciseLogSheet } from "./PlanEditSheets.js";
+import { ExerciseLogSheet, Sheet } from "./PlanEditSheets.js";
+import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
 import { TodayDateSheet } from "./TodayDateSheet.js";
 import { shiftISO, inRange, clampISO, swipeDelta, hasDayRecord } from "./dateNav.js";
@@ -59,7 +60,7 @@ function MiniRing({ value, pct, color, caption, label, onTap }) {
 
 // হোমের উপরের সতর্ক-সারি: এলার্জি (লাল) + চলমান অসুস্থতা। এলার্জি-রেকর্ড না থাকলে "নেই" বা সবুজ নয়,
 // শুধু "তথ্য দেওয়া হয়নি" — যাতে "নেই" মানে "নিরাপদ" মনে না হয় (safe-default)।
-function AlertStrip({ allergies, conds }) {
+function AlertStrip({ allergies, conds, onDiet }) { // onDiet: রোগ থাকলে "ট্রিগার খাবার দেখুন ›" বাটন (নিচ থেকে শিট; নতুন ডেটা নেই)
   if (!allergies.length && !conds.length) return null; // কিছু না থাকলে কার্ডই নেই; রেকর্ড দিলে অটো আসবে
   const chip = (key, text, bg, fg) => React.createElement("span", { key, style: { padding: "5px 12px", borderRadius: "999px", background: bg, color: fg, fontSize: "14px", fontWeight: 700 } }, text);
   const shown = conds.slice(0, 3);
@@ -68,7 +69,9 @@ function AlertStrip({ allergies, conds }) {
       ? chip("al", "⚠️ এলার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
       : null,
     shown.map((c, i) => chip("c" + i, "🩺 " + c.name, "#E4F0E9", T.green)),
-    conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"));
+    conds.length > shown.length && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "+" + bnNum(conds.length - shown.length) + "টি"),
+    conds.length > 0 && onDiet && React.createElement("button", { type: "button", onClick: onDiet, "aria-label": "রোগ অনুযায়ী ট্রিগার ও এড়ানোর খাবার দেখুন",
+      style: { marginLeft: "auto", minHeight: "36px", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "14px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer" } }, "ট্রিগার খাবার দেখুন ›"));
 }
 
 export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra }) {
@@ -77,6 +80,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
   const today = todayISO();
   const [selDate, setSelDate] = useState(today);
+  const [dietOpen, setDietOpen] = useState(false);
   const viewDate = clampISO(selDate, today);
   const isViewToday = viewDate === today;
   // গত ৩০ দিন = `recent`-এ লোড-করা; তার আগের দিন আলাদা getDaily (একই equality-query, নতুন index নয়)
@@ -267,7 +271,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         mt && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, mt.note),
         macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "11.5px", color: T.onDarkSoft, marginTop: "4px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।"))),
 
-    React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [] }),
+    React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [], onDiet: () => setDietOpen(true) }),
+    dietOpen && React.createElement(Sheet, { title: "খাদ্য নির্দেশিকা", subtitle: (info.conds || []).map((c) => c.name).join(", ") || undefined, onClose: () => setDietOpen(false) },
+      React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId })),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       dateText, slots: slotsForDay(plannedFast), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
