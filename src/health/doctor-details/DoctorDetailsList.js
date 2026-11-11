@@ -36,58 +36,54 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
   if (!doctors) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
   const filtered = !category || category === "all" ? doctors : doctors.filter((d) => d.specialtyCategory === category);
-  if (doctors.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি।");
-  if (filtered.length === 0) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এই ক্যাটেগরিতে এখনো কোনো ডাক্তার যোগ হয়নি।");
+  const empty = (icon, text) => React.createElement("div", { style: { marginTop: "10px", padding: "22px 14px", textAlign: "center", background: "#fff", border: "1.5px dashed #B9CDC2", borderRadius: "16px", color: "#5F716C", fontSize: "14px" } },
+    React.createElement("div", { style: { fontSize: "30px", marginBottom: "4px" } }, icon), text);
+  if (doctors.length === 0) return empty("🩺", "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি। উপরের বাটনে চেপে প্রথম ডাক্তার যোগ করুন।");
+  if (filtered.length === 0) return empty("🔎", "এই বিভাগে এখনো কোনো ডাক্তার যোগ হয়নি।");
+
+  const pill = (color, bg) => ({ minHeight: "40px", padding: "0 14px", borderRadius: "999px", border: "1px solid " + color, background: bg, color, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", textDecoration: "none" });
 
   return React.createElement(
-    "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" } },
+    "div", { style: { marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" } },
     filtered.map((d) => {
       const canEdit = !!callerMemberId && d.lastEditedByMemberId === callerMemberId;
       const canDelete = isAdmin || canEdit;
+      const telMatch = d.phone ? String(d.phone).match(/\+?\d[\d\s-]{6,}/) : null;
+      const telHref = telMatch ? "tel:" + telMatch[0].replace(/[\s-]/g, "") : null;
+      const initial = Array.from(String(d.name || "?").replace(/^(ডাঃ|ডা\.?|Dr\.?)\s*/i, "").trim())[0] || "🩺";
+      const line = (icon, text, color) => React.createElement("div", { style: { fontSize: "14px", color: color || "#3E4E49", display: "flex", gap: "6px", lineHeight: 1.4 } },
+        React.createElement("span", { "aria-hidden": "true", style: { flexShrink: 0 } }, icon), React.createElement("span", { style: { minWidth: 0, overflowWrap: "anywhere" } }, text));
       return React.createElement(
-        "div", { key: d.id, style: { display: "flex", gap: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px" } },
-        d.visitingCardImageUrl && React.createElement("img", {
-          src: String(d.visitingCardImageUrl).replace(/\.pdf$/i, ".jpg"),
-          onError: (e) => { e.target.style.display = "none"; },
-          style: { width: "64px", height: "64px", objectFit: "cover", borderRadius: "10px", flexShrink: 0 },
-        }),
-        React.createElement(
-          "div", { style: { flex: 1, minWidth: 0 } },
-          React.createElement("div", { style: { fontWeight: 600, color: "#0E4B43", fontSize: "14px" } }, "🩺 " + d.name),
-          React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory),
-          d.area && React.createElement("div", { style: { fontSize: "14px", color: "#0E4B43", fontWeight: 600 } }, "📍 " + d.area),
-          d.hospital && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, d.hospital),
-          d.chamberAddress && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, d.chamberAddress),
-          d.phone && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49" } }, "📞 " + d.phone),
-          d.status === "pending" && React.createElement(
-            "div", { style: { fontSize: "14px", color: "#B8860B" } },
-            "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে ডিলিট করে আবার যোগ করুন।"
-          ),
-          (canEdit || canDelete) && React.createElement(
-            "div", { style: { display: "flex", gap: "10px", marginTop: "6px" } },
-            canEdit && React.createElement("button", {
-              onClick: () => onEdit(d),
-              style: { fontSize: "14px", border: "none", background: "none", color: "#0E4B43", cursor: "pointer", padding: 0, fontWeight: 600 },
-            }, "✎ এডিট"),
-            canDelete && (confirmId === d.id
-              ? React.createElement(
-                  React.Fragment, null,
-                  React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
-                  React.createElement("button", {
-                    onClick: () => doDelete(d), disabled: busyId === d.id,
-                    style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
-                  }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-                  React.createElement("button", {
-                    onClick: () => setConfirmId(null),
-                    style: { fontSize: "14px", border: "none", background: "none", color: "#5F716C", cursor: "pointer", padding: 0 },
-                  }, "না")
-                )
-              : React.createElement("button", {
-                  onClick: () => setConfirmId(d.id),
-                  style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
-                }, "🗑 Delete"))
-          )
-        )
+        "div", { key: d.id, style: { background: "#fff", border: "1px solid #D3E0D9", borderLeft: "5px solid #17705F", borderRadius: "16px", boxShadow: "0 3px 10px rgba(14,75,67,0.08)", padding: "12px" } },
+        React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "center" } },
+          d.visitingCardImageUrl
+            ? React.createElement("img", {
+                src: String(d.visitingCardImageUrl).replace(/\.pdf$/i, ".jpg"),
+                onError: (e) => { e.target.style.display = "none"; },
+                style: { width: "56px", height: "56px", objectFit: "cover", borderRadius: "12px", flexShrink: 0, border: "1px solid #D3E0D9" },
+              })
+            : React.createElement("div", { "aria-hidden": "true", style: { width: "48px", height: "48px", flexShrink: 0, borderRadius: "50%", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: 800 } }, initial),
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontWeight: 800, color: "#0E4B43", fontSize: "16px", lineHeight: 1.25, overflowWrap: "anywhere" } }, d.name),
+            React.createElement("span", { style: { display: "inline-block", marginTop: "4px", padding: "1px 10px", borderRadius: "999px", background: "#DDF0E5", color: "#0E4B43", fontSize: "12.5px", fontWeight: 700 } }, CATEGORY_LABELS[d.specialtyCategory] || d.specialtyCategory))),
+        React.createElement("div", { style: { marginTop: "8px", display: "flex", flexDirection: "column", gap: "2px" } },
+          d.area && line("📍", d.area, "#0E4B43"),
+          d.hospital && line("🏥", d.hospital),
+          d.chamberAddress && line("🚪", d.chamberAddress, "#5F716C"),
+          d.phone && line("📞", d.phone),
+          d.status === "pending" && React.createElement("div", { style: { fontSize: "14px", color: "#B8860B" } }, "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে ডিলিট করে আবার যোগ করুন।")),
+        (telHref || canEdit || canDelete) && React.createElement(
+          "div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "10px" } },
+          telHref && React.createElement("a", { href: telHref, style: pill("#fff", "#0E4B43") }, "📞 কল করুন"),
+          canEdit && React.createElement("button", { onClick: () => onEdit(d), style: pill("#0E4B43", "#fff") }, "✎ এডিট"),
+          canDelete && (confirmId === d.id
+            ? React.createElement(
+                React.Fragment, null,
+                React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
+                React.createElement("button", { onClick: () => doDelete(d), disabled: busyId === d.id, style: pill("#fff", "#C0392B") }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
+                React.createElement("button", { onClick: () => setConfirmId(null), style: pill("#5F716C", "#fff") }, "না")
+              )
+            : React.createElement("button", { onClick: () => setConfirmId(d.id), style: pill("#C0392B", "#fff") }, "🗑 মুছুন")))
       );
     })
   );

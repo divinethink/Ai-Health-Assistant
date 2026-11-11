@@ -24,7 +24,7 @@ function AddDoctorButton({ onClick }) {
   return React.createElement(
     "button", {
       onClick,
-      style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #0E4B43", background: "#0E4B43", color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
+      style: { fontSize: "14px", minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "1px solid #0E4B43", background: "linear-gradient(135deg, #0E4B43, #17705F)", color: "#fff", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 3px 8px rgba(14,75,67,0.25)", fontFamily: "inherit" },
     },
     "+ নতুন ডাক্তার যোগ করুন"
   );
@@ -84,16 +84,22 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
       "div", { style: { marginTop: "20px" } },
       React.createElement(
         "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" } },
-        React.createElement("h3", { style: { fontSize: "15px", color: "#0E4B43", margin: 0 } }, "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"),
+        React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "#0E4B43", margin: 0 } }, "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"),
         !showForm && !editingDoctor && React.createElement(AddDoctorButton, { onClick: () => { setEditingDoctor(null); setShowForm(true); } })
       ),
+      !showForm && !editingDoctor && React.createElement("div", { role: "group", "aria-label": "বিভাগ", style: { display: "flex", gap: "6px", overflowX: "auto", marginTop: "10px", paddingBottom: "2px" } },
+        [["all", "সব"], ...DOCTOR_CATEGORIES].map(([catId, label]) => React.createElement("button", {
+          key: catId, onClick: () => setCategory(catId), "aria-pressed": category === catId,
+          style: { flexShrink: 0, minHeight: "40px", padding: "0 14px", borderRadius: "999px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+            border: category === catId ? "1px solid #0E4B43" : "1px solid #C3D2CA", background: category === catId ? "linear-gradient(135deg, #0E4B43, #17705F)" : "#fff", color: category === catId ? "#fff" : "#2B3A36" },
+        }, label))),
       (showForm || editingDoctor) && React.createElement(DoctorDetailsForm, {
         familyId, callerMemberId, editingDoctor,
         onSaved: handleSaved,
         onCancel: () => { setShowForm(false); setEditingDoctor(null); },
       }),
       React.createElement(DoctorDetailsList, {
-        key: "doctor-list" + refreshTick, familyId, refreshTick, callerMemberId, isAdmin,
+        key: "doctor-list" + refreshTick, familyId, category, refreshTick, callerMemberId, isAdmin,
         onEdit: (d) => { setShowForm(false); setEditingDoctor(d); },
         onDeleted: () => setRefreshTick((t) => t + 1),
       })
