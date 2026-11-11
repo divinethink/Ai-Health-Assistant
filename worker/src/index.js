@@ -19,6 +19,7 @@
 //   POST /doctor-upload-auth { idToken, familyId, doctorId } -> same shape (Doctor Details visiting-card)
 //   POST /doctor-delete       { idToken, familyId, doctorId } -> { ok: true }
 //   POST /ai-chat        { idToken, familyId, payload, conversationHistory, ageYears? } -> { content, blocked, usage }
+//   POST /doc-extract    { idToken, familyId, docType, text } -> { data, provider }  (OCR-টেক্সট → কঠোর JSON; ধাপ ৪-গ)
 
 import { jwtVerify, createRemoteJWKSet } from "jose";
 
@@ -966,6 +967,118 @@ async function callGeneralChatLLM(env, messages, { useWebSearch, hasImages, proj
   throw primaryErr;
 }
 
+// ============================================================
+// Doc Extract (ধাপ ৪-গ) — OCR-টেক্সট → কঠোর JSON (প্রেসক্রিপশন / ল্যাব / ভিজিটিং কার্ড)
+// ============================================================
+// শুধু **টেক্সট** (ছবি নয়); ক্লায়েন্ট আগে PII মাস্ক করে পাঠায়, এখানে দ্বিতীয় স্তর হিসেবে
+// ইমেইল/ফোন/লম্বা-ID আবার মুছে ফেলা হয়। কিছু লগ বা সংরক্ষণ করা হয় না। /ai-chat-এর কোনো
+// কোড/আচরণ বদলায়নি — আলাদা, স্বাধীন route। AI-র ফল ক্লায়েন্টে আবার grounding-যাচাই হয়,
+// তাই এখানে শুধু "কঠোর JSON-ফরম্যাট" নিশ্চিত করা হয়।
+
+const DOC_EXTRACT_TYPES = ["prescription", "lab-report", "visiting-card"];
+const DOC_EXTRACT_MAX_CHARS = 12000;
+const DOC_EXTRACT_MIN_CHARS = 20;
+const DOC_EXTRACT_TIMEOUT_MS = 20000;
+const DOC_EXTRACT_DAILY_LIMIT = 30; // ব্যবহারকারী-প্রতি দিনে সর্বোচ্চ কল
+
+const DOC_EXTRACT_COMMON =
+  "You extract structured data from noisy OCR text of a medical document (English and/or Bengali). " +
+  "Use ONLY what is literally written in the text. NEVER invent, guess, complete or correct any drug name, dose, " +
+  "frequency, duration, test value, phone number or name. If a field is not clearly present, use null. " +
+  "Fix nothing silently: copy values exactly as written (convert Bengali digits to English digits only). " +
+  "Reply with ONE JSON object and nothing else (no markdown, no explanation).";
+
+const DOC_EXTRACT_PROMPTS = {
+  prescription:
+    DOC_EXTRACT_COMMON +
+    ' Schema: {"medicines":[{"name":string,"strength":string|null,"pattern":string|null,"days":integer|null,"meal":"before"|"after"|null}]}. ' +
+    '"strength" like "500 mg" only if written next to the drug. "pattern" like "1+0+1" only if that exact pattern is written. ' +
+    '"days" only if a duration is written. List only medicines (not advice, tests or diagnosis). Max 30 items.',
+  "lab-report":
+    DOC_EXTRACT_COMMON +
+    ' Schema: {"results":[{"name":string,"value":number,"unit":string|null}]}. ' +
+    "One item per test line that has a numeric result. Do not include reference ranges as values. Max 40 items.",
+  "visiting-card":
+    DOC_EXTRACT_COMMON +
+    ' Schema: {"name":string|null,"specialtyCategory":string|null,"phone":string|null,"area":string|null,"hospital":string|null,"chamberAddress":string|null}. ' +
+    '"name" is the doctor\'s name with title as printed; "phone" is one number as printed.',
+};
+
+// দ্বিতীয়-স্তর PII মুছে ফেলা (ক্লায়েন্ট-মাস্কের পরেও নিরাপত্তার জন্য)
+function docExtractScrub(text) {
+  return String(text)
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[মাস্ক]")
+    .replace(/(?<![\d০-৯])(?:\+?[8৮][8৮][0০]|[0০])\s*[1১][3-9৩-৯][\d০-৯\s-]{8,11}(?![\d০-৯])/g, "[মাস্ক]")
+    .replace(/(?<![\d০-৯.,])[\d০-৯]{9,}(?![\d০-৯])/g, "[মাস্ক]");
+}
+
+// দৈনিক সীমা — KV বাইন্ড করা থাকলে (env.DOC_EXTRACT_KV) নির্ভরযোগ্য; না থাকলে শুধু isolate-মেমরিতে
+// (best-effort: Worker রিস্টার্ট হলে গণনা শূন্য হতে পারে)। দুই ক্ষেত্রেই কোনো secret/নতুন সেটআপ বাধ্যতামূলক নয়।
+const docExtractMemCount = new Map();
+async function docExtractUnderLimit(env, uid) {
+  const key = `docx:${uid}:${new Date().toISOString().slice(0, 10)}`;
+  if (env.DOC_EXTRACT_KV) {
+    const cur = Number(await env.DOC_EXTRACT_KV.get(key)) || 0;
+    if (cur >= DOC_EXTRACT_DAILY_LIMIT) return false;
+    await env.DOC_EXTRACT_KV.put(key, String(cur + 1), { expirationTtl: 172800 });
+    return true;
+  }
+  if (docExtractMemCount.size > 2000) docExtractMemCount.clear();
+  const cur = docExtractMemCount.get(key) || 0;
+  if (cur >= DOC_EXTRACT_DAILY_LIMIT) return false;
+  docExtractMemCount.set(key, cur + 1);
+  return true;
+}
+
+async function docExtractCallOpenAICompat(url, apiKey, model, system, text, extra = {}) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), DOC_EXTRACT_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model, temperature: 0, max_tokens: 1800,
+        messages: [{ role: "system", content: system }, { role: "user", content: "OCR TEXT:\n" + text }],
+        ...extra,
+      }),
+      signal: ctl.signal,
+    });
+    if (!res.ok) { const e = new Error(`llm-${res.status}`); e.status = res.status; throw e; }
+    const data = await res.json();
+    return cleanLLMContent(data.choices?.[0]?.message?.content || "");
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Groq (primary) → Mistral (secondary, শুধু MISTRAL_API_KEY থাকলে) — বিদ্যমান চেইনের মতোই।
+async function docExtractCallLLM(env, system, text) {
+  try {
+    const out = await docExtractCallOpenAICompat("https://api.groq.com/openai/v1/chat/completions", env.GROQ_API_KEY,
+      "qwen/qwen3.8-27b", system, text, { reasoning_effort: "none", reasoning_format: "hidden" });
+    return { content: out, provider: "groq" };
+  } catch (primaryErr) {
+    if (!env.MISTRAL_API_KEY) throw primaryErr;
+    try {
+      const out = await docExtractCallOpenAICompat("https://api.mistral.ai/v1/chat/completions", env.MISTRAL_API_KEY,
+        env.MISTRAL_MODEL || "mistral-small-latest", system, text);
+      return { content: out, provider: "mistral" };
+    } catch (e) {
+      throw primaryErr;
+    }
+  }
+}
+
+// উত্তর থেকে প্রথম JSON অবজেক্ট বের করা; না পেলে null
+function docExtractParseJson(raw) {
+  let s = String(raw || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  try { const v = JSON.parse(s); return v && typeof v === "object" && !Array.isArray(v) ? v : null; } catch (e) { /* নিচে */ }
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { const v = JSON.parse(s.slice(a, b + 1)); return v && typeof v === "object" && !Array.isArray(v) ? v : null; } catch (e) { return null; } }
+  return null;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders(env) });
@@ -1164,6 +1277,33 @@ export default {
           // suppressed-response-এর সাথে কোনো আংশিক তথ্যও যেন না যায়।
           sources: blocked ? [] : sources || [],
         });
+      }
+
+      if (request.method === "POST" && url.pathname === "/doc-extract") {
+        const { idToken, familyId, docType, text } = await request.json();
+        if (!idToken || !familyId || typeof text !== "string" || !DOC_EXTRACT_TYPES.includes(docType)) {
+          return json(env, { error: "missing-params" }, 400);
+        }
+        let uid;
+        try { uid = await verifyFirebaseIdToken(env, idToken); } catch (e) { return json(env, { error: "invalid-token" }, 401); }
+        if (!uid) return json(env, { error: "invalid-token" }, 401);
+        if (!(await verifyFamilyMembership(env, idToken, familyId, uid))) return json(env, { error: "forbidden" }, 403);
+
+        const clean = docExtractScrub(text.trim().slice(0, DOC_EXTRACT_MAX_CHARS));
+        if (clean.length < DOC_EXTRACT_MIN_CHARS) return json(env, { error: "text-too-short" }, 400);
+        if (!env.GROQ_API_KEY) return json(env, { error: "ai-not-configured" }, 503);
+        if (!(await docExtractUnderLimit(env, uid))) return json(env, { error: "daily-limit" }, 429);
+
+        let out;
+        try {
+          out = await docExtractCallLLM(env, DOC_EXTRACT_PROMPTS[docType], clean);
+        } catch (e) {
+          const rate = e && e.status === 429;
+          return json(env, { error: rate ? "429" : e && e.name === "AbortError" ? "timeout" : "ai-unavailable" }, rate ? 429 : 502);
+        }
+        const data = docExtractParseJson(out.content);
+        if (!data) return json(env, { error: "bad-json" }, 502);
+        return json(env, { data, provider: out.provider });
       }
 
       // --- General Chat routes (Admin-only, উপরে বিস্তারিত কমেন্ট) ---
