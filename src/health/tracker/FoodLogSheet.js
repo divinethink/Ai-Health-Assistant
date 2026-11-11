@@ -36,23 +36,32 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const full = count >= MAX_LIST;
   const budget = slotBudgets && slotBudgets[slot];
 
-  const pick = (k) => {
+  // pre (ঐচ্ছিক) = সাম্প্রতিক এন্ট্রি: আগের বারের মাপ/পরিমাণ/গ্রাম আগে থেকে বসে; অবৈধ হলে ডিফল্ট।
+  const pick = (k, pre) => {
     const ms = measuresOf(k);
-    setKey(k); setNotice(null); setQty(1);
-    setMeasureId(ms.length && !hasFoodOverride(k) ? ms[0].id : null);
-    setGramsText(ms.length ? String(ms[0].g) : "");
+    const unit = !ms.length || hasFoodOverride(k);
+    let mId = unit ? null : ms[0].id, q = 1, gt = ms.length ? String(ms[0].g) : "";
+    if (pre) {
+      const pq = Number(pre.qty);
+      if (unit) { if (pq > 0) q = pq; }
+      else if (pre.measure && ms.some((m) => m.id === pre.measure) && pq > 0) { mId = pre.measure; q = pq; }
+      else if (Number(pre.grams) > 0) { mId = "g"; gt = String(pre.grams); }
+    }
+    setKey(k); setNotice(null); setQty(q); setMeasureId(mId); setGramsText(gt);
   };
   const back = () => { setKey(null); };
 
-  // সাম্প্রতিক খাবার: ✕ (এড়ানো/এলার্জি) স্ট্যাটাসের খাবার ১-ট্যাপে দেওয়া হয় না — খুঁজে সতর্কতাসহ যোগ করতে হবে।
+  // সাম্প্রতিক খাবার: ✕ (এড়ানো/এলার্জি) স্ট্যাটাসের খাবার এখানে আসে না — খুঁজে সতর্কতাসহ যোগ করতে হবে।
+  // তালিকার খাবার ট্যাপে পরিমাণ-ধাপ খোলে (আগের মাপ বসানো, কয়টি/কত গ্রাম দেখে "যোগ করুন"); শুধু নিজে-যোগ-করা (key নেই) খাবার সরাসরি যোগ হয়।
   const quick = (Array.isArray(recent) ? recent : []).filter((e) => {
     const f0 = e.key && FOODS[e.key];
     return !f0 || foodStatus(e.key, f0, { allergyTags, ctx: avoidCtx }).level !== "red";
   });
+  const openQuick = (e) => { if (e.key && FOODS[e.key]) pick(e.key, e); else quickAdd(e); };
   const quickAdd = async (e) => {
     if (busy || full) return;
     const ok = await onAdd({ ...e, slot });
-    if (ok) setNotice("✓ " + e.name + " যোগ হয়েছে (" + slotLabel + ")");
+    if (ok) setNotice("✓ " + e.name + (entryAmountText(e) ? " · " + entryAmountText(e) : "") + " · " + bnNum(e.kcal) + " কিলোক্যালরি — " + slotLabel + "-এ যোগ হয়েছে। ভুল হলে আজকের তালিকা থেকে ✕ দিয়ে মুছুন।");
   };
 
   // ---------- নিজে যোগ করুন (খাবার ডেটায় না পেলে) ----------
@@ -97,19 +106,23 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
       }));
   }
 
+  // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
+  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "8px 0" } },
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · পরিমাণ দেখে " + slotLabel + "-এ যোগ"),
+    React.createElement("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" } },
+      quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
+        style: { ...chip(false), flex: "0 0 auto", textAlign: "left", opacity: busy ? 0.5 : 1, lineHeight: 1.3 } },
+        React.createElement("span", { style: { display: "block", fontSize: "14px" } }, "＋ " + e.name),
+        React.createElement("span", { style: { display: "block", fontSize: "11.5px", fontWeight: 500, color: MUTED } }, (entryAmountText(e) ? entryAmountText(e) + " · " : "") + bnNum(e.kcal) + " কিলো")))));
+
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
-    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: (dateText ? dateText + " · " : "") + "কোন বেলায়? · আনুমানিক, গড় রেসিপি অনুযায়ী", onClose },
+    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose },
       TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot),
       budget && React.createElement("div", { style: { fontSize: "13px", color: MUTED, margin: "-6px 0 10px" } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি (বরাদ্দ; বেশি হলেও বাধা নেই)"),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
-      quick.length > 0 && React.createElement("div", { style: { marginBottom: "10px" } },
-        React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · ১ ট্যাপে " + slotLabel + "-এ যোগ"),
-        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-          quick.map((e) => React.createElement("button", { key: e.name, onClick: () => quickAdd(e), disabled: busy || full, "aria-label": e.name + " " + slotLabel + "-এ যোগ করুন", style: { ...chip(false), opacity: busy || full ? 0.5 : 1 } },
-            "＋ " + e.name + (entryAmountText(e) ? " (" + entryAmountText(e) + ")" : "") + " · " + bnNum(e.kcal))))),
-      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list", between: recentRow }),
       React.createElement("button", { onClick: () => { setNotice(null); setOwn({ name: "", kcal: "", grams: "", p: "", c: "", f: "", fib: "" }); }, disabled: full,
         style: { ...BTN, width: "100%", marginTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 14px", border: "none", background: "#E4F0E9", color: GREEN, opacity: full ? 0.5 : 1 } },
         React.createElement("span", { style: { fontWeight: 500, color: MUTED } }, "খুঁজে পাচ্ছেন না?"), React.createElement("span", null, "নিজে যোগ করুন →")),
