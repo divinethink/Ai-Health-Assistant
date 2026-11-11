@@ -16,6 +16,7 @@ const h = React.createElement;
 const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", AMBER = "#8A5A00", MUTED = "#5F716C", LINE = "#D3E0D9";
 const BN = "০১২৩৪৫৬৭৮৯";
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
+const PATTERN_CHIPS = ["1+0+1", "1+1+1", "0+0+1", "1+0+0", "0+1+0"];
 const MEALS = [["before", "খাবারের আগে"], ["after", "খাবারের পরে"], ["", "উল্লেখ নেই"]];
 
 function rowFrom(it, allergies, records, today) {
@@ -68,7 +69,11 @@ function card(r, idx, update) {
     it.clear && !warn && h("div", { style: { fontSize: "13px", color: G, margin: "4px 0" } }, "✓ স্পষ্ট"),
     lbl("নাম"), h("input", { type: "text", value: r.name, onChange: (e) => update(idx, { name: e.target.value }), style: inputStyle }),
     h("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } },
-      h("div", null, lbl("কয় বেলা (যেমন ১+০+১)"), h("input", { type: "text", value: r.pattern, onChange: (e) => update(idx, { pattern: e.target.value }), style: { ...inputStyle, ...aiRing(it, "patternRaw", r.pattern) } })),
+      h("div", null, lbl("কয় বেলা (যেমন ১+০+১)"), h("input", { type: "text", value: r.pattern, onChange: (e) => update(idx, { pattern: e.target.value }), style: { ...inputStyle, ...aiRing(it, "patternRaw", r.pattern) } }),
+        // দ্রুত বাছাই: সচরাচর কয় বেলার ধরন (ট্যাপে ঘরে বসে; পরে নিজে বদলানো যায়)
+        h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" } },
+          PATTERN_CHIPS.map((pc) => h("button", { key: pc, type: "button", onClick: () => update(idx, { pattern: pc }), "aria-pressed": r.pattern.trim() === pc,
+            style: { minHeight: "36px", padding: "4px 10px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", border: r.pattern.trim() === pc ? "1px solid " + G : "1px solid #C3D2CA", background: r.pattern.trim() === pc ? G : "#fff", color: r.pattern.trim() === pc ? "#fff" : "#2B3A36" } }, bn(pc))))),
       h("div", null, lbl("কতদিন"), h("input", { type: "number", inputMode: "numeric", min: 1, max: 365, value: r.days, onChange: (e) => update(idx, { days: e.target.value }), style: { ...inputStyle, ...aiRing(it, "days", r.days) } }))),
     lbl("খাবারের সাথে"),
     h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },

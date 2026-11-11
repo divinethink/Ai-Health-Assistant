@@ -111,6 +111,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [takenErr, setTakenErr] = useState(null);
   const [tick, setTick] = useState(0);
   const [todayOpen, setTodayOpen] = useState(true);
+  const [menuId, setMenuId] = useState(null); // "⋯" মেনু খোলা ওষুধের recordId
   const [listOpen, setListOpen] = useState(null); // null = অটো (আজকের ডোজ না থাকলে বা সদ্য-যোগ থাকলে খোলা)
 
   // নতুন ওষুধ যোগের ফর্ম
@@ -338,7 +339,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     endingSoon.length > 0 && h("div", { style: { ...card, background: "#FFF6E5", border: "1px solid #F0D9A8" } },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#8A5A00", marginBottom: "6px" } }, "⚠️ ওষুধ শেষ হতে চলেছে"),
       endingSoon.map((m) => h("div", { key: m.recordId, style: { fontSize: F, color: "#5B3B00", marginBottom: "3px" } }, "• " + m.genericName + (members.length > 1 ? " (" + m.memberName + ")" : "") + " — " + (daysLeft(m.endDate) === 0 ? "আজ শেষ দিন" : "আর " + bn(daysLeft(m.endDate)) + " দিন"))),
-      h("div", { style: { fontSize: "12px", color: "#8A5A00", marginTop: "4px" } }, "চালিয়ে যেতে হলে ডাক্তারের পরামর্শ নিন ও ওষুধ কিনে রাখুন।")),
+      h("div", { style: { fontSize: "13px", color: "#8A5A00", marginTop: "4px" } }, "চালিয়ে যেতে হলে ডাক্তারের পরামর্শ নিন ও ওষুধ কিনে রাখুন।")),
 
     // আজকের ওষুধ
     doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
@@ -398,9 +399,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
               m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "",
               m.calendarEventIds.length > 0 ? " · 📅" : "")),
           h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 } },
-            h("span", { style: { fontSize: "12px", fontWeight: 600, padding: "3px 9px", borderRadius: "999px", color: badge[1], background: badge[2] } }, badge[0]),
-            isNew(m) && h("span", { style: { fontSize: "12px", fontWeight: 700, padding: "3px 9px", borderRadius: "999px", color: "#fff", background: GREEN, marginLeft: "6px" } }, "🆕 এইমাত্র"),
-            h("span", { style: { color: "#6B7B76", fontSize: "12px" } }, open ? "▲" : "▼"))),
+            h("span", { style: { fontSize: "13px", fontWeight: 600, padding: "3px 9px", borderRadius: "999px", color: badge[1], background: badge[2] } }, badge[0]),
+            isNew(m) && h("span", { style: { fontSize: "13px", fontWeight: 700, padding: "3px 9px", borderRadius: "999px", color: "#fff", background: GREEN, marginLeft: "6px" } }, "🆕 এইমাত্র"),
+            h("span", { style: { color: "#6B7B76", fontSize: "13px" } }, open ? "▲" : "▼"))),
 
         open && h("div", { style: { padding: "0 12px 14px", borderTop: "1px solid #EEF3F0", background: "#F7FAF9" } },
           lblEl("কয় বেলা"),
@@ -411,18 +412,21 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
           h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip((ev.mealTiming || "any") === k, MEAL_LABELS[k], () => setEdit(m.recordId, { mealTiming: k }), k))),
           lblEl("কত তারিখ পর্যন্ত খাবেন"),
           h("input", { type: "date", value: ev.endDate || "", onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }), style: { padding: "9px 10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: F, background: "#fff" } }),
-          h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "14px", alignItems: "center" } },
-            h("button", { onClick: () => saveSchedule(m.recordId), style: { padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, "সংরক্ষণ করুন"),
-            h("button", { onClick: () => handleCalendarSync(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #4285F4", background: "#fff", color: "#4285F4", fontSize: F, cursor: "pointer" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সংরক্ষণ করে ক্যালেন্ডারে যোগ করুন")),
-            m.calendarEventIds.length > 0 && h("button", { onClick: () => handleCalendarRemove(m), disabled: calBusy === m.recordId, style: { padding: "10px 14px", borderRadius: "12px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", fontSize: F, cursor: "pointer" } }, "Calendar থেকে সরান"),
-            savedFlash === m.recordId && h("span", { style: { fontSize: F, color: GREEN } }, "✓ সংরক্ষিত")),
-          delConfirm === m.recordId
-            ? h("div", { style: { marginTop: "12px" } },
-                h("div", { style: { fontSize: F, color: "#B3261E", marginBottom: "6px" } }, "নিশ্চিত মুছবেন? রিমাইন্ডারও বন্ধ হবে।"),
-                h("div", { style: { display: "flex", gap: "8px" } },
-                  h("button", { onClick: () => handleDelete(m), disabled: delBusy, style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#FDF0EE", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, delBusy ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-                  h("button", { onClick: () => setDelConfirm(null), style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: F, cursor: "pointer" } }, "না")))
-            : h("button", { onClick: () => setDelConfirm(m.recordId), style: { marginTop: "12px", width: "100%", minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#fff", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, "🗑 ওষুধ মুছুন"),
+          h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" } },
+            h("span", { style: { fontSize: "13px", color: "#5F716C" } }, ev.endDate ? "শেষ তারিখ: " + ev.endDate : "ফাঁকা = নিয়মিত (শেষ তারিখ নেই)"),
+            ev.endDate && h("button", { type: "button", onClick: () => setEdit(m.recordId, { endDate: "" }), style: { minHeight: "36px", padding: "0 10px", borderRadius: "999px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: "13px", cursor: "pointer" } }, "তারিখ মুছুন")),
+          h("div", { style: { display: "flex", gap: "8px", marginTop: "14px", alignItems: "center" } },
+            h("button", { onClick: () => saveSchedule(m.recordId), style: { flex: 1, minHeight: "48px", padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, savedFlash === m.recordId ? "✓ সংরক্ষিত" : "সংরক্ষণ করুন"),
+            h("button", { type: "button", onClick: () => setMenuId(menuId === m.recordId ? null : m.recordId), "aria-label": "আরও অপশন", "aria-expanded": menuId === m.recordId, style: { minWidth: "48px", minHeight: "48px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "⋯")),
+          menuId === m.recordId && h("div", { style: { marginTop: "8px", border: "1px solid #D3E0D9", borderRadius: "12px", background: "#fff", overflow: "hidden" } },
+            h("button", { onClick: () => { setMenuId(null); handleCalendarSync(m); }, disabled: calBusy === m.recordId, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", borderBottom: "1px solid #EEF3F0", background: "none", color: "#2B3A36", fontSize: F, cursor: "pointer", fontFamily: "inherit" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সংরক্ষণ করে ক্যালেন্ডারে যোগ করুন")),
+            m.calendarEventIds.length > 0 && h("button", { onClick: () => { setMenuId(null); handleCalendarRemove(m); }, disabled: calBusy === m.recordId, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", borderBottom: "1px solid #EEF3F0", background: "none", color: "#B3261E", fontSize: F, cursor: "pointer", fontFamily: "inherit" } }, "Calendar থেকে সরান"),
+            h("button", { onClick: () => { setMenuId(null); setDelConfirm(m.recordId); }, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", background: "none", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "🗑 ওষুধ মুছুন")),
+          delConfirm === m.recordId && h("div", { style: { marginTop: "12px" } },
+            h("div", { style: { fontSize: F, color: "#B3261E", marginBottom: "6px" } }, "নিশ্চিত মুছবেন? রিমাইন্ডারও বন্ধ হবে।"),
+            h("div", { style: { display: "flex", gap: "8px" } },
+              h("button", { onClick: () => handleDelete(m), disabled: delBusy, style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#FDF0EE", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, delBusy ? "মুছছে..." : "হ্যাঁ, মুছুন"),
+              h("button", { onClick: () => setDelConfirm(null), style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: F, cursor: "pointer" } }, "না"))),
           calMsg && calMsg.recordId === m.recordId && h("div", { style: { fontSize: F, marginTop: "8px", color: calMsg.ok ? GREEN : "#B3261E" } }, calMsg.text)));
     })
   );

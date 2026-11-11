@@ -116,7 +116,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
             : h("div", { style: { width: "56px", height: "56px", borderRadius: "12px", background: "#fff", border: "1px solid #C9D9D1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "26px", flexShrink: 0 } }, "📄"),
           h("div", { style: { minWidth: 0, flex: 1 } },
             h("div", { style: { fontSize: "14px", fontWeight: 700, color: G, overflowWrap: "anywhere" } }, file.name),
-            h("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "2px" } }, fmtSize(file.size) + " · অন্য ফাইল নিতে ট্যাপ করুন")))
+            h("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "2px" } }, fmtSize(file.size) + " · অন্য ফাইল নিতে ট্যাপ করুন")))
       : h("div", null,
           h("div", { style: { fontSize: "34px", lineHeight: 1 } }, "📎"),
           h("div", { style: { fontSize: "15px", fontWeight: 700, color: G, marginTop: "8px" } }, "ছবি বা PDF বাছুন"),
