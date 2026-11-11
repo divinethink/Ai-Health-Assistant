@@ -49,9 +49,8 @@ const { useState, useEffect, useCallback } = React;
 // WellnessGuideSection/DocumentsPageSection) আগে থেকেই নিজস্ব fixed-full-screen
 // overlay ছিল — top-bar (44px) ও bottom-nav (56px)-এর জন্য জায়গা রাখতে সেই
 // ফাইলগুলোতে top/bottom clearance যোগ হয়েছে (ওই ৪ ফাইলে কোনো logic-পরিবর্তন
-// নেই)। Doctor Details ও General Chat আগের মতোই স্বতন্ত্র full-screen overlay
-// (General Chat: Profile-pill dropdown থেকে trigger; Doctor Details: Menu-এর
-// "নেভিগেশন" গ্রুপ থেকে) — bottom-nav-এর ট্যাব না, mockup §১-এর সাথে সংগতিপূর্ণ।
+// নেই)। Doctor Details আগের মতোই স্বতন্ত্র full-screen overlay
+// (Menu-এর "নেভিগেশন" গ্রুপ থেকে) — bottom-nav-এর ট্যাব না, mockup §১-এর সাথে সংগতিপূর্ণ।
 //
 // P11 সংযোজন (Design Tokens + Tablet/Desktop pass, mockup §৬/§৯): TopBar/
 // BottomNav-এর আগের কৃত্রিম maxWidth:480px cap সরানো হয়েছে (tab-content আগে
@@ -444,7 +443,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   const setShowDoctorDetails = (v) => (v ? navigate({ dd: true }) : closeOverlay("dd"));
   const [members, setMembers] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
-  // General Chat / Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
+  // Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
   // full-screen overlay (এখন Menu ট্যাব থেকে trigger হয়, আগে flat-dashboard-
   // এর বাটন থেকে হতো — শুধু entry-point বদলেছে, component/rules অপরিবর্তিত)।
 
@@ -475,7 +474,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
 
-  // স্থির TopBar নেই — প্রোফাইল-চিপ (নাম ▾) শুধু মেনু-পেজে (সদস্য-বদল, সাধারণ চ্যাট, লগআউট এখানেই); অন্য পেজের পিল-সারিতে নেই।
+  // স্থির TopBar নেই — প্রোফাইল-চিপ (নাম ▾) শুধু মেনু-পেজে (সদস্য-বদল, লগআউট এখানেই); অন্য পেজের পিল-সারিতে নেই।
   // নির্বাচিত সদস্য ডিফল্টে সবসময় নিজে (selectedMemberId শুরুতে memberId)।
   const topOffsetPx = 0;
   const chip = React.createElement(ProfileChip, {

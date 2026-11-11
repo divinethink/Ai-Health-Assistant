@@ -1,9 +1,8 @@
 // Wellness Guide Section — ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা।
 //
-// আপডেট (owner-request, ২০২৬-০৯-১৩): এখন General Chat-এর মতোই একটা full-screen
+// আপডেট (owner-request, ২০২৬-০৯-১৩): এখন একটা full-screen
 // special-mode — normal বাটনে ক্লিক করলে খোলে (app.js-এ showHealthBlog toggle),
-// ভেতরে category-sidebar (mobile-এ drawer, GeneralChatSection.js-এর হুবহু একই
-// overlay-pattern reuse) + পোস্ট-লিস্ট। ডেটা-লেয়ার (wellnessGuideData.js) ও
+// ভেতরে category-sidebar (mobile-এ drawer) + পোস্ট-লিস্ট। ডেটা-লেয়ার (wellnessGuideData.js) ও
 // PostCard/WellnessGuideForm অপরিবর্তিত — শুধু layout/wrapper নতুন।
 // কোনো AI/dose/triage logic নেই — শুধু owner-curated reference content।
 
@@ -109,8 +108,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
   const [editingPost, setEditingPost] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [pendingDelete, setPendingDelete] = useState(null); // ২-ধাপ confirm (existing app-wide delete pattern)
-  // Desktop-এ ডিফল্টে sidebar খোলা, mobile-এ বন্ধ (GeneralChatSection.js-এর
-  // হুবহু একই mount-time viewport-check প্যাটার্ন, item consistency-র জন্য)।
+  // Desktop-এ ডিফল্টে sidebar খোলা, mobile-এ বন্ধ (mount-time viewport-check)।
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
