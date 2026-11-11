@@ -64,23 +64,23 @@ const BMI_CHIP = {
   obese: { text: "স্থূলতা", bg: "#FFD3CD", fg: "#8A1C12" },
 };
 const SOFT = "rgba(255,255,255,0.82)";
-const GLASS = { background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: "14px", padding: "10px 12px", minWidth: 0, boxSizing: "border-box" };
+const GLASS = { background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: "12px", padding: "6px 9px", minWidth: 0, boxSizing: "border-box" };
 
 // হিরোর ভেতরের সংখ্যা-টাইল (উচ্চতা/ওজন/BMI)
 function stat(label, big, unit, chip) {
   return h("div", { style: GLASS },
-    h("div", { style: { fontSize: "12.5px", color: SOFT } }, label),
-    h("div", { style: { marginTop: "2px", whiteSpace: "nowrap", lineHeight: 1.15 } },
-      h("span", { style: { fontSize: "24px", fontWeight: 800, color: "#fff" } }, big),
-      unit && h("span", { style: { fontSize: "13px", color: SOFT } }, " " + unit)),
-    chip && h("span", { style: { display: "inline-block", marginTop: "5px", padding: "1px 8px", borderRadius: "999px", fontSize: "11.5px", fontWeight: 700, background: chip.bg, color: chip.fg } }, chip.text));
+    h("div", { style: { fontSize: "11.5px", color: SOFT } }, label),
+    h("div", { style: { marginTop: "1px", whiteSpace: "nowrap", lineHeight: 1.15 } },
+      h("span", { style: { fontSize: "18px", fontWeight: 800, color: "#fff" } }, big),
+      unit && h("span", { style: { fontSize: "12px", color: SOFT } }, " " + unit)),
+    chip && h("span", { style: { display: "inline-block", marginTop: "3px", padding: "0 7px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, background: chip.bg, color: chip.fg } }, chip.text));
 }
 
 // "এক নজরে" প্যানেলের একটি লাইন: আইকন + লেবেল বামে, মান ডানে
 function glance(icon, label, value, tone) {
-  return h("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", padding: "6px 0" } },
-    h("span", { style: { fontSize: "13.5px", color: "#5F716C", flexShrink: 0 } }, icon + " " + label),
-    h("span", { style: { fontSize: "14.5px", fontWeight: 700, textAlign: "right", overflowWrap: "anywhere", color: tone === "red" ? "#B3261E" : tone === "muted" ? "#5F716C" : "#1F2D2A" } }, value));
+  return h("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", padding: "3px 0" } },
+    h("span", { style: { fontSize: "13px", color: "#5F716C", flexShrink: 0 } }, icon + " " + label),
+    h("span", { style: { fontSize: "14px", fontWeight: 700, textAlign: "right", overflowWrap: "anywhere", color: tone === "red" ? "#B3261E" : tone === "muted" ? "#5F716C" : "#1F2D2A" } }, value));
 }
 
 export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, refreshTick, onVitalsSaved }) {
@@ -141,16 +141,16 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   const allergyText = allergies.length === 0 ? "নেই" : a0.substance + (a0.reaction ? " (" + a0.reaction + ")" : "") + (allergies.length > 1 ? " +" + bn(allergies.length - 1) : "");
 
   // হিরো-কার্ড: হোম-পেজের মতোই সবুজ গ্রেডিয়েন্ট। অসুখ/ওষুধ এখানে নয় — নিচের তালিকায় (ডুপ্লিকেট এড়াতে)।
-  return h("div", { style: { background: GRADIENT_HERO, color: "#fff", borderRadius: "20px", padding: "14px", marginBottom: "12px", boxShadow: "0 6px 18px rgba(14,75,67,0.22)" } },
-    h("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
-      h("div", { "aria-hidden": "true", style: { width: "48px", height: "48px", flexShrink: 0, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", fontWeight: 800 } }, initial),
+  return h("div", { style: { background: GRADIENT_HERO, color: "#fff", borderRadius: "16px", padding: "10px", marginBottom: "8px", boxShadow: "0 3px 10px rgba(14,75,67,0.2)" } },
+    h("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+      h("div", { "aria-hidden": "true", style: { width: "38px", height: "38px", flexShrink: 0, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800 } }, initial),
       h("div", { style: { flex: 1, minWidth: 0 } },
-        h("h3", { style: { fontSize: "21px", fontWeight: 800, margin: 0, lineHeight: 1.2, overflowWrap: "anywhere" } }, member ? member.name : "সদস্য"),
-        h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "2px" } },
+        h("h3", { style: { fontSize: "18px", fontWeight: 800, margin: 0, lineHeight: 1.2, overflowWrap: "anywhere" } }, member ? member.name : "সদস্য"),
+        h("div", { style: { fontSize: "12.5px", color: SOFT, marginTop: "1px" } },
           birthYear ? (ageYears != null ? "বয়স " + bn(Math.floor(ageYears)) + " বছর · " : "") + "জন্ম " + bn(birthYear) : "জন্মতারিখ যোগ করা হয়নি")),
       h("button", {
         onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
-        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.35)", background: editing ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.14)", color: "#fff", fontSize: "18px", cursor: "pointer" },
+        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", margin: "-4px 0", border: "1px solid rgba(255,255,255,0.35)", background: editing ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.14)", color: "#fff", fontSize: "18px", cursor: "pointer" },
       }, editing ? "✕" : "✎")),
 
     // ফর্মটি হালকা রঙের জন্য বানানো — তাই সাদা প্যানেলের ভেতরে
@@ -160,15 +160,15 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         onSaved: () => { setEditing(false); onVitalsSaved && onVitalsSaved(); },
       })),
 
-    h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px", marginTop: "12px" } },
+    h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px", marginTop: "8px" } },
       stat("উচ্চতা", heightCm ? String(Math.round(heightCm * 10) / 10) : "—", heightCm ? "cm" : ""),
       stat("ওজন", weightKg ? String(weightKg) : "—", weightKg ? "kg" : ""),
       stat("BMI", bmi ? bmi.toFixed(1) : "—", "", chip)),
-    adviceLine && h("div", { style: { fontSize: "13px", lineHeight: 1.5, color: SOFT, marginTop: "8px", padding: "0 2px" } }, adviceLine),
+    adviceLine && h("div", { style: { fontSize: "12.5px", lineHeight: 1.4, color: SOFT, marginTop: "6px", padding: "0 2px" } }, adviceLine),
     (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
     // এক নজরে: অ্যালার্জি (সবসময় — নিরাপত্তা-তথ্য, "নেই"-ও দেখানো হয়) + যা আছে (পরবর্তী অ্যাপয়েন্টমেন্ট, ল্যাব সতর্কতা, টিকা)
-    h("div", { style: { marginTop: "10px", padding: "4px 14px", borderRadius: "14px", background: "var(--hs-surface, #fff)", color: "#1F2D2A", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" } },
+    h("div", { style: { marginTop: "8px", padding: "2px 12px", borderRadius: "12px", background: "var(--hs-surface, #fff)", color: "#1F2D2A", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" } },
       glance("⚠️", "অ্যালার্জি", allergyText, allergies.length ? "red" : "muted"),
       nextAppt && glance("📅", "পরবর্তী", nextAppt.title + " · " + bnDate(nextAppt.date) + (nextAppt.time ? " " + nextAppt.time : "")),
       labAlerts.length > 0 && glance("🔴", "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : ""), "red"),
