@@ -18,7 +18,7 @@ import { DoctorCardPanel } from "../doctor-details/DoctorCardPanel.js";
 const { useState, useCallback, useEffect } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 
-export function DocumentsSection({ familyId, callerMemberId, selectedMemberId }) {
+export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, excludeType, hideAdd, emptyText }) {
   const [refreshTick, setRefreshTick] = useState(0);
   // panel: null | { mode: "add" } | { mode: "analyze", file } | { mode: "manual" }
   const [panel, setPanel] = useState(null);
@@ -42,7 +42,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
     React.createElement(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" } },
       React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, t("h.docs")),
-      !panel && React.createElement("button", {
+      !panel && !hideAdd && React.createElement("button", {
         onClick: () => setPanel({ mode: "add" }),
         style: { minHeight: "42px", padding: "8px 16px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 8px rgba(14,75,67,0.25)" },
       }, "＋ নতুন যোগ করুন")
@@ -81,7 +81,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId })
     ),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
-      onDeleted: refresh, onAdd: () => setPanel({ mode: "add" }),
+      onDeleted: refresh, onAdd: hideAdd ? undefined : () => setPanel({ mode: "add" }), excludeType, emptyText,
     })
   );
 }

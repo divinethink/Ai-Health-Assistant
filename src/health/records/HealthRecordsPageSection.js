@@ -46,6 +46,7 @@ import { DocumentsSection } from "../documents/DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 import { DoctorDetailsSection } from "../doctor-details/DoctorDetailsSection.js";
 import { useMemberHealth } from "./useMemberHealth.js";
+import { PrescriptionFold } from "./PrescriptionFold.js";
 import { listDocuments } from "../documents/documentsData.js";
 
 const { useState, useEffect } = React;
@@ -74,12 +75,15 @@ function usePillCounts(familyId, memberId, tick) {
     listDocuments(familyId, memberId).then((d) => { if (alive) setDocs(d); }).catch(() => { if (alive) setDocs(null); });
     return () => { alive = false; };
   }, [familyId, memberId, tick]);
-  if (!records) return { meds: null, records: null, docs: docs ? docs.length : null };
+  const lab = docs ? docs.filter((d) => d.docType !== "prescription").length : null; // ল্যাব রিপোর্ট-পিলে প্রেসক্রিপশন নয় (ওষুধ-পিলে ভাঁজ)
+  const rx = docs ? docs.length - lab : null;
+  if (!records) return { meds: null, records: null, docs: lab, rx };
   const today = localTodayStr();
   return {
     meds: records.filter((r) => r.resourceType === "medicationStatement" && !(r.endDate && today > r.endDate)).length,
     records: records.filter((r) => r.resourceType === "condition" || r.resourceType === "allergy").length,
-    docs: docs ? docs.length : null,
+    docs: lab,
+    rx,
   };
 }
 
@@ -163,7 +167,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
         }),
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
-        recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
+        recordSub === "meds" && React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) }),
+        recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
         React.createElement("div", { role: "group", "aria-label": "ডাক্তার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           [["summary", "📋 সারাংশ"], ["doctors", "🩺 আমার ডাক্তার"]].map(([id, label]) => React.createElement("button", {

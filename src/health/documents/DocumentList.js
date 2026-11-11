@@ -39,7 +39,7 @@ function chipStyle(active) {
   };
 }
 
-export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd }) {
+export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd, onlyType, excludeType, emptyText }) {
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -51,11 +51,11 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
     setDocs(null);
     setErr(null);
     listDocuments(familyId, targetMemberId)
-      .then(setDocs)
+      .then((all) => setDocs(all.filter((d) => (!onlyType || d.docType === onlyType) && (!excludeType || d.docType !== excludeType))))
       .catch((e) => setErr(e.code === "permission-denied"
         ? "এই সদস্যের নথি দেখার অনুমতি আপনার নেই (অ্যাডমিনের অনুমতি ছাড়া অন্য সদস্যের তথ্য দেখা যায় না)।"
         : (e.message || String(e))));
-  }, [familyId, targetMemberId, refreshTick]);
+  }, [familyId, targetMemberId, refreshTick, onlyType, excludeType]);
 
   const doDelete = useCallback(async (d) => {
     setBusyId(d.id);
@@ -76,8 +76,8 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   if (docs.length === 0) {
     return React.createElement("div", { style: { textAlign: "center", padding: "28px 16px", border: "1px dashed #B9CFC4", borderRadius: "16px", background: "#fff", color: "#5F716C", fontSize: "14px" } },
       React.createElement("div", { style: { fontSize: "40px" } }, "🗂️"),
-      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "6px 0 4px" } }, "এখনো কোনো নথি নেই"),
-      React.createElement("div", null, "Prescription, ল্যাব রিপোর্ট বা ছবি/PDF এক জায়গায় নিরাপদে রাখুন।"),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "6px 0 4px" } }, emptyText || "এখনো কোনো নথি নেই"),
+      React.createElement("div", null, emptyText ? "" : "Prescription, ল্যাব রিপোর্ট বা ছবি/PDF এক জায়গায় নিরাপদে রাখুন।"),
       onAdd && React.createElement("button", {
         onClick: onAdd,
         style: { marginTop: "14px", minHeight: "44px", padding: "8px 20px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer" },
@@ -99,7 +99,8 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
       chips.map(([id, label]) => React.createElement("button", { key: id, onClick: () => setFilter(id), style: chipStyle(id === activeFilter) }, label))
     ),
     shown.map((d) => {
-      const meta = [d.date, d.source, formatSize(d.sizeBytes)].filter(Boolean).join(" • ");
+      const isRx = d.docType === "prescription";
+      const meta = (isRx ? [d.date, d.source ? "ডাক্তার: " + d.source : null] : [d.date, d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
       const isPdf = d.originalContentType === "application/pdf";
       return React.createElement(
         "div", { key: d.id, style: { padding: "12px", marginBottom: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", background: "#fff", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
@@ -109,7 +110,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           React.createElement(
             "div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } },
-              (DOC_TYPE_LABELS[d.docType] || d.docType) + (isPdf ? " · PDF" : "")),
+              (isRx ? "প্রেসক্রিপশন" : (DOC_TYPE_LABELS[d.docType] || d.docType)) + (isPdf ? " · PDF" : "")),
             React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", wordBreak: "break-all" } }, d.fileName),
             meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta)
           ),
