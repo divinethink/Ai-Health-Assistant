@@ -360,10 +360,12 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     return React.createElement(
       "div", { style: wrapStyle },
       React.createElement("div", { style: { display: "flex", marginBottom: "4px" } }, chip),
-      React.createElement("button", {
-        onClick: () => setSub(null),
-        style: { border: "none", background: "none", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", padding: "6px 0", minHeight: "40px" },
-      }, t("menu.back")),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+        React.createElement("button", {
+          onClick: () => setSub(null),
+          style: { border: "none", background: "none", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", padding: "6px 0", minHeight: "44px" },
+        }, t("menu.back")),
+        React.createElement("button", { type: "button", onClick: () => setSub(null), "aria-label": "বন্ধ করুন", style: { minWidth: "44px", minHeight: "44px", border: "none", borderRadius: "12px", background: "var(--hs-chip-bg)", color: "var(--hs-primary)", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "✕")),
       React.createElement("h3", { style: { fontSize: "18px", color: "var(--hs-primary)", margin: "2px 0 12px" } }, titles[sub][0] + " " + titles[sub][1]),
       body
     );

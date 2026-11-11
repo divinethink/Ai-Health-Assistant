@@ -24,7 +24,7 @@ const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
 const note = (bg, color, text) => h("div", { style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: bg, color, fontSize: "14px", lineHeight: 1.5 } }, text);
 
-export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, preOcr, docId, onDone, onClose, closeLabel }) {
+export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, file, preOcr, docId, onDone, onClose, closeLabel, onStageChange }) {
   const [stage, setStage] = useState("extracting"); // extracting | ocr | parsing | done | error
   const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
@@ -80,6 +80,7 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
   const savedOk = !!(saved && saved.res.saved.length > 0); // কিছু সংরক্ষিত হলেই ৩/৩ স্ক্রিন
   const step = savedOk ? 3 : (stage === "done" ? 2 : 1);
   const bar = h(StepIndicator, { step });
+  useEffect(() => { if (onStageChange) onStageChange(stage + ":" + step); }, [stage, step]); // শিটের স্ক্রল ওপরে ফেরাতে (ঐচ্ছিক)
   if (stage === "error") return h("div", null, bar, ErrorBox(err), SecondaryButton("আবার চেষ্টা করুন", run, false));
   if (stage !== "done" || !res) {
     const label = { extracting: "ফাইল পড়া হচ্ছে...", ocr: "OCR চলছে... (" + Math.round(progress * 100) + "%)", parsing: "ওষুধ শনাক্ত করা হচ্ছে..." }[stage];

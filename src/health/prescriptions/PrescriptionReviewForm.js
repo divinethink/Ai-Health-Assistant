@@ -117,6 +117,10 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
       ocrPercent != null && h("span", { style: { fontSize: "13px", fontWeight: 600, color: G, background: "#E4F0E9", borderRadius: "999px", padding: "2px 10px" } }, "OCR " + bn(ocrPercent) + "%")),
     h("div", { style: { margin: "8px 0 12px", padding: "10px 12px", borderRadius: "12px", background: "#FFF6E5", color: AMBER, fontSize: "14px", lineHeight: 1.5 } },
       bn(items.length) + "টি ওষুধ পাওয়া গেছে। যাচাই করে টিক দিন; ", h("b", null, "আপনি অনুমোদন না দিলে কিছুই সংরক্ষণ হবে না।"), " কাটা (strike) ওষুধ থাকলে টিক তুলে দিন।"),
+    // শুধু অ্যালার্জি-মিল ও আগে-থেকে-চলমান বাদে বাকি সব টিক/আনটিক (AI-বসানোও — যাচাই-ব্যাজ ও সম্পাদনা থাকে; সেভ শুধু অনুমোদনে)
+    !result && rows.length > 1 && h("button", { type: "button", onClick: () => { const pickable = rows.filter((r) => !r.allergy && !r.duplicate); const allOn = pickable.length > 0 && pickable.every((r) => r.include); setRows((prev) => prev.map((r) => (r.allergy || r.duplicate ? r : { ...r, include: !allOn }))); },
+      style: { minHeight: "44px", padding: "6px 14px", marginBottom: "10px", borderRadius: "999px", border: "1px solid " + G, background: "#fff", color: G, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } },
+      rows.filter((r) => !r.allergy && !r.duplicate).every((r) => r.include) ? "সব টিক সরান" : "সবগুলো বাছুন"),
     rows.map((r, i) => card(r, i, update)),
     err && ErrorBox(err),
     result
@@ -124,7 +128,7 @@ export function PrescriptionReviewForm({ familyId, targetMemberId, callerMemberI
           result.saved.length > 0 && h("div", null, "✓ " + bn(result.saved.length) + "টি ওষুধ যোগ হয়েছে: " + result.saved.join(", ") + " — রিমাইন্ডার দেখতে স্বাস্থ্য তথ্য → ওষুধ।"),
           result.skipped.length > 0 && h("div", null, "ℹ️ আগে থেকেই ছিল, বাদ: " + result.skipped.join(", ")),
           result.failed.length > 0 && h("div", { style: { color: RED } }, "❌ যোগ হয়নি: " + result.failed.map((f) => f.name + " (" + f.message + ")").join(", ")))
-      : PrimaryButton("অনুমোদন করে " + bn(selected.length) + "টি ওষুধ যোগ করুন", approve, busy),
+      : PrimaryButton(selected.length === 0 ? "অন্তত একটা ওষুধে টিক দিন" : "অনুমোদন করে " + bn(selected.length) + "টি ওষুধ যোগ করুন", approve, busy, selected.length === 0),
     h("div", { style: { fontSize: "13px", color: MUTED, margin: "8px 2px", lineHeight: 1.5 } },
       "প্রেসক্রিপশনে যা লেখা শুধু সেটাই নেওয়া হয়; অ্যাপ নিজে ডোজ বানায় না। শুরুর তারিখ আজ ধরা হবে। অ্যালার্জি-মিল শুধু নামে ধরা পড়ে — ব্র্যান্ড-নামে নাও পড়তে পারে।"));
 }

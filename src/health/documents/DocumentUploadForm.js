@@ -107,8 +107,8 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
     }
   }, [familyId, targetMemberId, callerMemberId, file, vaultType, date, source, pre, kind, onUploaded, onAnalyze, onPrescription, onCard]);
 
-  const dropzone = h("label", { style: { display: "block", marginTop: "10px", padding: file ? "12px" : "22px 14px", border: "2px dashed " + (file ? "#7FBBA6" : "#9CC5B4"), borderRadius: "18px", background: "linear-gradient(160deg, #F6FBF8 0%, #EAF4EF 100%)", textAlign: file ? "left" : "center", cursor: "pointer" } },
-    h("input", { ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange, style: { position: "absolute", width: "1px", height: "1px", opacity: 0 }, "aria-label": "ফাইল বাছুন" }),
+  const dropzone = h("label", { style: { display: "block", position: "relative", marginTop: "10px", padding: file ? "12px" : "22px 14px", border: "2px dashed " + (file ? "#7FBBA6" : "#9CC5B4"), borderRadius: "18px", background: "linear-gradient(160deg, #F6FBF8 0%, #EAF4EF 100%)", textAlign: file ? "left" : "center", cursor: "pointer" } },
+    h("input", { ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange, style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", fontSize: "16px" }, "aria-label": "ফাইল বাছুন" }),
     file
       ? h("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
           isImage
@@ -150,7 +150,8 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
         h("label", { style: { fontSize: "14px", color: "#1F2D2A", display: "block", marginBottom: "4px" } }, "উৎস (যেমন: ল্যাবের নাম)"),
         h("input", { type: "text", value: source, onChange: (e) => setSource(e.target.value), style: { width: "100%", boxSizing: "border-box", padding: "10px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", minHeight: "44px" } }))),
     err && ErrorBox(err),
-    PrimaryButton(primaryLabel, () => submit(hasNext), busy || (reading && choice === AUTO)),
-    hasNext && SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy || (reading && choice === AUTO)),
+    !file && h("div", { style: { marginTop: "10px", fontSize: "13px", color: "#5F716C", textAlign: "center" } }, "আগে একটা ছবি বা PDF বাছুন।"),
+    PrimaryButton(primaryLabel, () => submit(hasNext), busy || (reading && choice === AUTO), !file),
+    hasNext && SecondaryButton("শুধু সংরক্ষণ", () => submit(false), busy || (reading && choice === AUTO) || !file),
     onManual && SecondaryButton("✍️ হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", onManual, false));
 }

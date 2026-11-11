@@ -9,7 +9,7 @@
 // অবস্থায় (বা background tab, ব্রাউজার বন্ধ না থাকলে) reminder কাজ করবে। App সম্পূর্ণ
 // বন্ধ থাকলে notification আসবে না। এটাই honest সীমা, UI-তে স্পষ্ট করে বলা আছে।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, SheetFrame } from "../../shared/ui.js";
 import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -117,6 +117,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [rxOpen, setRxOpen] = useState(startIntent === "rx"); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
   const [rxFile, setRxFile] = useState(null);
   const [rxDocId, setRxDocId] = useState(null);
+  const [rxStage, setRxStage] = useState("");
   const [aName, setAName] = useState("");
   const [aMember, setAMember] = useState(selectedMemberId || callerMemberId);
   const [aCount, setACount] = useState(3);
@@ -350,21 +351,19 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             h("div", { style: { fontSize: "12px", color: "#5F716C" } }, bnTime(d.time) + (members.length > 1 ? " · " + d.m.memberName : "") + (d.m.mealTiming && d.m.mealTiming !== "any" ? " · " + MEAL_LABELS[d.m.mealTiming] : "") + (late ? " · ⏰ সময় পার" : ""))),
           h("button", { onClick: () => toggleTaken(d.key, d.m.memberId), style: { padding: "7px 12px", minHeight: "36px", borderRadius: "10px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid " + GREEN, background: done ? GREEN : "#fff", color: done ? "#fff" : GREEN, flexShrink: 0 } }, done ? "✔ খেয়েছি" : "খেয়েছি?"));
       })),
-      todayOpen && h("div", { style: { fontSize: "12px", color: "#6B7B76", marginTop: "2px" } }, "(এই চিহ্ন শুধু এই ফোনে থাকে)")),
+      null),
 
     // নতুন ওষুধ যোগ
     !addOpen && pastShown.length > 0 && h("div", { style: { marginBottom: "10px" } },
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
-    rxOpen && h("div", { style: card },
-      h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-        h("span", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "💊 প্রেসক্রিপশন থেকে ওষুধ"),
-        h("button", { onClick: () => { setRxOpen(false); setRxFile(null); }, "aria-label": "বন্ধ করুন", style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C", minWidth: "44px", minHeight: "44px" } }, "✕")),
+    rxOpen && h(SheetFrame, { title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f, _p, id) => { setRxDocId(id || null); setRxFile(f); } }),
-      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান" })),
-    addOpen && h("div", { style: card },
-      h("div", { style: { fontSize: "15px", fontWeight: 700, color: GREEN } }, "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)"),
+      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান", onStageChange: setRxStage })),
+    addOpen && h(SheetFrame, { title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
+        h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, minHeight: "48px", padding: "11px", borderRadius: "12px", border: "none", background: aBusy ? "#8FAFA9" : GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
+        h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { minHeight: "48px", padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল")) },
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
       lblEl("ওষুধের নাম"),
       h("div", { style: { position: "relative" } },
@@ -381,10 +380,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip(aMeal === k, MEAL_LABELS[k], () => setAMeal(k), k))),
       lblEl("কতদিন খাবেন"),
       h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")]),
-      aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr),
-      h("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
-        h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, padding: "11px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
-        h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল"))),
+      aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr)),
 
     // ওষুধের তালিকা
     shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: F } }, "এখনো কোনো ওষুধ নেই — উপরের ＋ যোগ করুন চাপুন।"),

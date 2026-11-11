@@ -27,10 +27,12 @@ export function TextField(label, value, onChange, placeholder) {
   );
 }
 
-export function PrimaryButton(label, onClick, busy) {
+// disabled (ঐচ্ছিক ৪র্থ আর্গ): বাটন অচল ও ধূসর, কিন্তু লেখা বদলায় না (busy হলে "অপেক্ষা করুন...")
+export function PrimaryButton(label, onClick, busy, disabled) {
+  const off = !!busy || !!disabled;
   return React.createElement("button", {
-    onClick, disabled: busy,
-    style: { marginTop: "16px", width: "100%", minHeight: "50px", padding: "12px", border: "none", borderRadius: "14px", background: busy ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: busy ? "default" : "pointer", boxShadow: busy ? "none" : "0 4px 12px rgba(14,75,67,0.28)" },
+    onClick, disabled: off,
+    style: { marginTop: "16px", width: "100%", minHeight: "50px", padding: "12px", border: "none", borderRadius: "14px", background: off ? "#8FAFA9" : "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: off ? "default" : "pointer", boxShadow: off ? "none" : "0 4px 12px rgba(14,75,67,0.28)" },
   }, busy ? "অপেক্ষা করুন..." : label);
 }
 
@@ -130,4 +132,30 @@ export function DateField(label, value, onChange) {
       style: { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px" },
     })
   );
+}
+
+// ---- SheetFrame: ফুল-স্ক্রিন শিট (ওপরে ডানে স্থির ✕, নিজস্ব স্ক্রল, ঐচ্ছিক স্থির footer) ----
+// scrollKey বদলালে (যেমন ধাপ বদল) শিটের স্ক্রল ওপরে ফেরে। পেছনের পেজের স্ক্রল-জায়গা প্রভাবিত হয় না।
+// Esc চাপলেও বন্ধ। শুধু presentation — কোনো ডেটা/state-logic নেই।
+export function CloseX(onClick, label) {
+  return React.createElement("button", {
+    type: "button", onClick, "aria-label": label || "বন্ধ করুন",
+    style: { flexShrink: 0, minWidth: "44px", minHeight: "44px", border: "none", borderRadius: "12px", background: "rgba(14,75,67,0.08)", color: "var(--hs-primary, #0E4B43)", fontSize: "20px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+  }, "✕");
+}
+
+export function SheetFrame({ title, onClose, scrollKey, footer, children }) {
+  const bodyRef = React.useRef(null);
+  React.useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [scrollKey]);
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 14px", background: "#fff", borderBottom: "1px solid #D9E5DE", flexShrink: 0 } },
+      React.createElement("div", { style: { flex: 1, minWidth: 0, fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", overflowWrap: "anywhere" } }, title),
+      CloseX(onClose)),
+    React.createElement("div", { ref: bodyRef, style: { flex: 1, overflowY: "auto", overflowAnchor: "none", padding: "10px 12px 24px", WebkitOverflowScrolling: "touch" } }, children),
+    footer && React.createElement("div", { style: { flexShrink: 0, padding: "8px 12px calc(8px + env(safe-area-inset-bottom, 0px))", background: "#fff", borderTop: "1px solid #D9E5DE" } }, footer));
 }

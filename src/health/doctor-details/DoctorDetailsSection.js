@@ -117,7 +117,8 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
     !showForm && !editingDoctor && React.createElement("button", {
       onClick: () => { setEditingDoctor(null); setShowForm(true); },
       style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" },
-    }, "+ যুক্ত করুন")
+    }, "+ যুক্ত করুন"),
+    onExit && React.createElement("button", { type: "button", onClick: onExit, "aria-label": "বন্ধ করুন", style: { flexShrink: 0, minWidth: "44px", minHeight: "44px", border: "1px solid rgba(255,255,255,0.5)", borderRadius: "12px", background: "none", color: "#fff", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "✕")
   );
 
   const sidebarDrawer = sidebarOpen && React.createElement(
