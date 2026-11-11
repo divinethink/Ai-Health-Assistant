@@ -45,20 +45,43 @@ import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
 import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
 import { DoctorDetailsSection } from "../doctor-details/DoctorDetailsSection.js";
-import { HealthOverviewCards } from "./HealthOverviewCards.js";
+import { useMemberHealth } from "./useMemberHealth.js";
+import { listDocuments } from "../documents/documentsData.js";
 
-const { useState } = React;
+const { useState, useEffect } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
 import { peekQuickIntent, takeQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 
 // স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
 // id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
 const RECORD_SUBS = [
-  { id: "all", label: "সব", hint: "অসুখ, ওষুধ ও রিপোর্ট — সব এক জায়গায়" },
+  { id: "meds", label: "ওষুধ/প্রেসক্রিপশন", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
   { id: "records", label: "অসুখ", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
-  { id: "meds", label: "ওষুধ", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
-  { id: "docs", label: "রিপোর্ট", hint: "ল্যাব রিপোর্ট ও প্রেসক্রিপশন" }, // জমা নথি/রিপোর্ট
+  { id: "docs", label: "ল্যাব রিপোর্ট", hint: "ল্যাব রিপোর্ট, ইমেজিং, ডিসচার্জ ও অন্যান্য নথি" }, // জমা নথি (ধাপ ৩-এ প্রেসক্রিপশন ওষুধ-পিলে যাবে)
 ];
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+const bnNum = (n) => String(n).replace(/\d/g, (d) => BN_DIGITS[d]);
+const pad2 = (n) => String(n).padStart(2, "0");
+function localTodayStr() { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+
+// পিলের সংখ্যা — শুধু পড়ে (শেয়ার্ড cache + listDocuments), কিছু লেখে না
+function usePillCounts(familyId, memberId, tick) {
+  const { records } = useMemberHealth(familyId, memberId);
+  const [docs, setDocs] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    if (!memberId) { setDocs(null); return undefined; }
+    listDocuments(familyId, memberId).then((d) => { if (alive) setDocs(d); }).catch(() => { if (alive) setDocs(null); });
+    return () => { alive = false; };
+  }, [familyId, memberId, tick]);
+  if (!records) return { meds: null, records: null, docs: docs ? docs.length : null };
+  const today = localTodayStr();
+  return {
+    meds: records.filter((r) => r.resourceType === "medicationStatement" && !(r.endDate && today > r.endDate)).length,
+    records: records.filter((r) => r.resourceType === "condition" || r.resourceType === "allergy").length,
+    docs: docs ? docs.length : null,
+  };
+}
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
 const TIMELINE_SUBS = [
@@ -87,7 +110,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   const [timelineSub, setTimelineSub] = useState("diet");
   const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
-  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "all"));
+  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "meds"));
+  const counts = usePillCounts(familyId, isHealth ? selectedMemberId : null, addTick);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
   histBind(hk + "rec", recordSub, setRecordSub);
@@ -133,11 +157,9 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
                   border: recordSub === sb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
                   background: recordSub === sb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
                 },
-              }, sb.label))),
+              }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")))),
             React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
         }),
-        // "সব": তিনটা সারাংশ-কার্ড (চাপলে সংশ্লিষ্ট পিলে যায়); অসুখ-তালিকা ও ট্রেন্ড এখন "অসুখ" পিলে
-        recordSub === "all" && React.createElement(HealthOverviewCards, { key: "ov-" + selectedMemberId + "-" + addTick, familyId, selectedMemberId, onGo: (id) => histChange(hk + "rec", recordSub, id, setRecordSub) }),
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick, familyId, callerMemberId, selectedMemberId }),
         recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
