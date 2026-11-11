@@ -28,7 +28,6 @@ import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
-import { GeneralChatSection } from "../health/general-chat/GeneralChatSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
@@ -107,7 +106,7 @@ function BottomNav({ active, onChange }) {
 
 // প্রোফাইল-চিপ — পুরনো স্থির TopBar-এর বদলে (৪৪px ফেরত)। প্রতিটি পেজের
 // ট্যাব-পিল-সারির বামে বসে। ড্রপডাউন position:fixed — পিল-সারির overflow-এ কাটা পড়ে না।
-function ProfileChip({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members, selectedMemberId, onChangeMember }) {
+function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId, onChangeMember }) {
   const [open, setOpen] = useState(false);
   const first = ((memberDoc.name || "?").trim().split(/\s+/)[0]) || "?";
   return React.createElement(
@@ -153,13 +152,6 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, onOpenGeneralChat, members
           },
           (m.id === selectedMemberId ? "✓ " : "") + m.name
         ))
-      ),
-      isAdmin && React.createElement(
-        "button", {
-          onClick: () => { setOpen(false); onOpenGeneralChat(); },
-          style: { marginTop: "10px", width: "100%", padding: "8px", border: "1px solid #1B2430", borderRadius: "10px", background: "#1B2430", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
-        },
-        t("top.generalChat")
       ),
       React.createElement(
         "button", {
@@ -420,38 +412,36 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   useLang(); // ভাষা বদলালে পুরো স্ক্রিন নতুন করে আঁকা হয় (state অক্ষত থাকে)
   const [refreshTick, setRefreshTick] = useState(0);
   // ফোনের Back বাটন: ট্যাব/ওভারলে বদলালে browser-history-তে এন্ট্রি যোগ হয়, Back চাপলে ঠিক আগের স্ক্রিনে ফেরে
-  // (আগে history-তে কিছুই ছিল না বলে সরাসরি অ্যাপ থেকে বেরিয়ে যেত)। ভিউ = {tab, gc: General Chat, dd: Doctor Details}।
-  const [view, setView] = useState({ tab: "home", gc: false, dd: false });
+  // (আগে history-তে কিছুই ছিল না বলে সরাসরি অ্যাপ থেকে বেরিয়ে যেত)। ভিউ = {tab, dd: Doctor Details}।
+  const [view, setView] = useState({ tab: "home", dd: false });
   const viewRef = React.useRef(view);
   viewRef.current = view;
   const navigate = (patch) => {
     const cur = viewRef.current;
     const next = { ...cur, ...patch };
-    if (next.tab === cur.tab && next.gc === cur.gc && next.dd === cur.dd) return;
+    if (next.tab === cur.tab && next.dd === cur.dd) return;
     try { window.history.pushState({ hs: 1, ...next }, ""); } catch (_e) { /* history ব্যর্থ হলেও নেভিগেশন চলে */ }
     viewRef.current = next;
     setView(next);
   };
   useEffect(() => {
-    try { window.history.replaceState({ hs: 1, tab: "home", gc: false, dd: false }, ""); } catch (_e) { /* উপেক্ষা */ }
+    try { window.history.replaceState({ hs: 1, tab: "home", dd: false }, ""); } catch (_e) { /* উপেক্ষা */ }
     const onPop = (e) => {
       const st = e.state;
-      if (st && st.hs) { const next = { tab: st.tab || "home", gc: !!st.gc, dd: !!st.dd }; viewRef.current = next; setView(next); histRestore(st.inner); }
+      if (st && st.hs) { const next = { tab: st.tab || "home", dd: !!st.dd }; viewRef.current = next; setView(next); histRestore(st.inner); }
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   const activeTab = view.tab;
-  const setActiveTab = (tab) => navigate({ tab, gc: false, dd: false });
-  const showGeneralChat = view.gc;
+  const setActiveTab = (tab) => navigate({ tab, dd: false });
   const showDoctorDetails = view.dd;
   // ওভারলে বন্ধ = history-তে এক ধাপ পিছনে (নতুন এন্ট্রি নয়), নইলে Back আবার ওভারলে ফেরাত
   const closeOverlay = (key) => {
     if (viewRef.current[key] && window.history.state && window.history.state.hs && window.history.state[key]) window.history.back();
     else navigate({ [key]: false });
   };
-  const setShowGeneralChat = (v) => (v ? navigate({ gc: true, dd: false }) : closeOverlay("gc"));
-  const setShowDoctorDetails = (v) => (v ? navigate({ dd: true, gc: false }) : closeOverlay("dd"));
+  const setShowDoctorDetails = (v) => (v ? navigate({ dd: true }) : closeOverlay("dd"));
   const [members, setMembers] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   // General Chat / Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
@@ -481,9 +471,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     if (tab === activeTab) setHomeKey((n) => n + 1); else setActiveTab(tab);
   };
 
-  if (isAdmin && showGeneralChat) {
-    return React.createElement(GeneralChatSection, { familyId, onExit: () => setShowGeneralChat(false) });
-  }
   if (showDoctorDetails) {
     return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
   }
@@ -492,7 +479,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   // নির্বাচিত সদস্য ডিফল্টে সবসময় নিজে (selectedMemberId শুরুতে memberId)।
   const topOffsetPx = 0;
   const chip = React.createElement(ProfileChip, {
-    key: "profile-chip", memberDoc, familyDoc, isAdmin, onOpenGeneralChat: () => setShowGeneralChat(true),
+    key: "profile-chip", memberDoc, familyDoc, isAdmin,
     members, selectedMemberId, onChangeMember: setSelectedMemberId,
   });
 

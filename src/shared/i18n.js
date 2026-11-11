@@ -47,7 +47,7 @@ const DICT = {
     "tab.symptom": "🩺 লক্ষণ যাচাই", "tab.medsci": "⚕️ আধুনিক চিকিৎসা", "tab.herbal": "🌿 ভেষজ", "tab.homeo": "💧 হোমিওপ্যাথি",
     "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তার",
 
-    "top.role": "ভূমিকা", "top.familyCode": "পরিবারের কোড", "top.generalChat": "🌐 সাধারণ চ্যাট",
+    "top.role": "ভূমিকা", "top.familyCode": "পরিবারের কোড",
     "top.logout": "🚪 লগ-আউট", "top.member": "সদস্য",
 
     "menu.prefs": "⚙️ পছন্দ — থিম", "menu.settings": "⚙️ সেটিংস (ভাষা ও থিম)", "menu.back": "← মেনু", "menu.aichatSub": "লক্ষণ যাচাই ও স্বাস্থ্য-পরামর্শ", "menu.familyTitle": "পরিবার", "menu.familySub": "সদস্য ও অ্যাক্সেস", "menu.dataTitle": "ডেটা ব্যাকআপ", "menu.dataSub": "ব্যাকআপ রাখুন ও ফিরিয়ে আনুন", "menu.settingsTitle": "সেটিংস", "menu.settingsSub": "ভাষা ও থিম", "menu.copy": "কপি", "menu.copied": "কপি হয়েছে ✓", "menu.adminTools": "🛠 Admin টুলস (আমন্ত্রণ ও নতুন সদস্য)", "menu.emergencyShort": "📞 জরুরি সেবা", "menu.language": "🌐 ভাষা", "menu.family": "👨‍👩‍👧‍👦 পরিবার",
@@ -89,7 +89,7 @@ const DICT = {
     "tab.symptom": "🩺 Symptom Check", "tab.medsci": "⚕️ Medical Science", "tab.herbal": "🌿 Herbal", "tab.homeo": "💧 Homeopathy",
     "tab.nutrition": "🥗 Nutrition", "tab.fitness": "🏃 Fitness", "tab.upload": "📁 My Documents", "tab.export": "🩺 Doctor",
 
-    "top.role": "Role", "top.familyCode": "Family code", "top.generalChat": "🌐 General Chat",
+    "top.role": "Role", "top.familyCode": "Family code",
     "top.logout": "🚪 Log out", "top.member": "Member",
 
     "menu.prefs": "⚙️ Preferences — Theme", "menu.settings": "⚙️ Settings (Language & Theme)", "menu.back": "← Menu", "menu.aichatSub": "Symptom check & health guidance", "menu.familyTitle": "Family", "menu.familySub": "Members & access", "menu.dataTitle": "Data Backup", "menu.dataSub": "Back up and restore", "menu.settingsTitle": "Settings", "menu.settingsSub": "Language & theme", "menu.copy": "Copy", "menu.copied": "Copied ✓", "menu.adminTools": "🛠 Admin Tools (Invite & New Member)", "menu.emergencyShort": "📞 Emergency", "menu.language": "🌐 Language", "menu.family": "👨‍👩‍👧‍👦 Family",
