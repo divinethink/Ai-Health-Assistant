@@ -70,11 +70,11 @@ const BOTTOM_NAV_HEIGHT = 56;
 
 const NAV_TABS = [
   // ৫ ট্যাব (owner-request): এআই চ্যাট এখন মেনু থেকে খোলে (activeTab "aichat" থাকে, শুধু বটম-নেভে বাটন নেই)
-  ["home", "🏠", "nav.home"],
-  ["health", "🩺", "nav.health"],
-  ["tracker", "📈", "nav.tracker"],
-  ["blog", "📚", "nav.blog"],
-  ["menu", "☰", "nav.menu"],
+  ["home", "🏠", "Home"],
+  ["health", "🩺", "Health"],
+  ["tracker", "📈", "Tracker"],
+  ["blog", "📚", "Blog"],
+  ["menu", "☰", "Menu"],
 ];
 
 function BottomNav({ active, onChange }) {
@@ -99,7 +99,7 @@ function BottomNav({ active, onChange }) {
           },
         },
         React.createElement("span", { style: { fontSize: "20px", lineHeight: 1, padding: "4px 18px", borderRadius: "999px", background: isActive ? "var(--hs-chip-bg)" : "transparent", transition: "background .2s" } }, icon),
-        React.createElement("span", { style: { fontSize: "14px", lineHeight: 1 } }, t(label))
+        React.createElement("span", { style: { fontSize: "14px", lineHeight: 1 } }, label)
       );
     })
   );
@@ -505,7 +505,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "aichat") {
     tabContent = React.createElement(AIChatSection, { familyId, callerMemberId: memberId, selectedMemberId, topOffsetPx, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "tracker") {
-    tabContent = React.createElement(TrackerPageSection, { mode: "plan", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
+    tabContent = React.createElement(TrackerPageSection, { mode: "plan", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onGoHome: goHome });
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else {

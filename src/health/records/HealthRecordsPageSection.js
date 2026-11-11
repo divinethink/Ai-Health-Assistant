@@ -52,7 +52,7 @@ import { peekQuickIntent, takeQuickIntent } from "../../shared/quickIntent.js";
 // স্বাস্থ্য তথ্য-ট্যাবের ভেতরের ২টা সাব-পিল (ধাপ ৩: ঔষধ আলাদা হোম-পিল থেকে এখানে এসেছে)
 const RECORD_SUBS = [
   { id: "records", label: "📋 স্বাস্থ্য রেকর্ড" },
-  { id: "meds", label: "💊 প্রেসক্রিপশন/রিপোর্ট" },
+  { id: "meds", label: "💊 ওষুধ" },
 ];
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়

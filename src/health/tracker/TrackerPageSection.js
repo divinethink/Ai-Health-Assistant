@@ -23,9 +23,7 @@ import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./P
 import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
-import { stepWeight, shiftTime } from "./stepper.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
-import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries, gutFoodCount, entriesOn } from "./gutLog.js";
 import { GutLogCard } from "./GutLogCard.js";
@@ -34,7 +32,7 @@ import { AvoidCard } from "./AvoidCard.js";
 import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
-  GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate, sleepMinutes,
+  GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
   sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -352,7 +350,7 @@ function TrendTab({ info, familyId, memberId, onGoInput }) {
   return React.createElement("div", null,
     fewData && React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
       React.createElement("div", { style: { fontSize: "14px", color: T.green, fontWeight: 700 } }, "২ দিনের ডেটা দিলে গ্রাফ শুরু হবে"),
-      onGoInput && React.createElement("button", { onClick: onGoInput, style: { marginTop: "8px", minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "দৈনিক ইনপুট")),
+      onGoInput && React.createElement("button", { onClick: onGoInput, style: { marginTop: "8px", minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "হোমে তথ্য দিন")),
     card("ওজন (কেজি)", "গত ৭ দিন", wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
     // ক্যালরি ও ঘুম — এক লাইনে পাশাপাশি, আলাদা কার্ড (ক্যালরি-টার্গেট না থাকলে ঘুম পুরো প্রস্থে)
     React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch" } },
@@ -404,20 +402,17 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
       panel === "gut" && React.createElement(GutLogCard, { bare: true, info, familyId, callerMemberId, memberId, gutFoods, onSaved }),
       React.createElement(MealTab, common),
-      React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"),
-      React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId, compact: true }),
-      React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "পূর্ণ তালিকা: Health → খাদ্যাভ্যাস ও টাইমলাইন → 🍽️ খাদ্য।")));
+      React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, এলার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"))
+  );
 }
 
-// ---------- ট্রেন্ড ও রিমাইন্ডার (ট্রেন্ড | দৈনিক ইনপুট | রিমাইন্ডার) ----------
+// ---------- ট্রেন্ড ও রিমাইন্ডার (ট্রেন্ড | রিমাইন্ডার) ----------
 function TrendReminderTab(props) {
   const [sub, setSub] = useState("trend");
-  const { info, familyId, callerMemberId, memberId, onSaved } = props;
-  const common = { info, familyId, callerMemberId, memberId, onSaved };
+  const { info, familyId, callerMemberId, memberId, onSaved, onGoHome } = props;
   return React.createElement("div", null,
-    Pills([["trend", "ট্রেন্ড"], ["input", "দৈনিক ইনপুট"], ["reminder", "রিমাইন্ডার"]], sub, setSub),
-    sub === "trend" && React.createElement(TrendTab, { info, familyId, memberId, onGoInput: () => setSub("input") }),
-    sub === "input" && React.createElement(InputTab, common),
+    Pills([["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"]], sub, setSub),
+    sub === "trend" && React.createElement(TrendTab, { info, familyId, memberId, onGoInput: onGoHome }),
     sub === "reminder" && React.createElement(ReminderSettings, { info, familyId, memberId, callerMemberId, onSaved }));
 }
 
@@ -430,95 +425,6 @@ function GoalPlanTab(props) {
     sub === "goal" && React.createElement(GoalTab, props),
     sub === "meal" && React.createElement(MealPlanTab, props),
     sub === "exercise" && React.createElement(ExerciseTab, props));
-}
-
-// ---------- দৈনিক ইনপুট ----------
-function InputTab({ info, familyId, callerMemberId, memberId, onSaved }) {
-  const { daily, latestWeight } = info;
-  const d = daily || {};
-  const [weight, setWeight] = useState(d.weightKg ? String(d.weightKg) : "");
-  const [exercise, setExercise] = useState(d.exerciseMin !== undefined ? String(d.exerciseMin) : "");
-  const [water, setWater] = useState(d.waterGlasses !== undefined ? String(d.waterGlasses) : "");
-  const [steps, setSteps] = useState(d.steps !== undefined ? String(d.steps) : "");
-  const [bed, setBed] = useState(d.sleep ? d.sleep.bed : "");
-  const [wake, setWake] = useState(d.sleep ? d.sleep.wake : "");
-  const [quality, setQuality] = useState(d.sleep && d.sleep.quality ? d.sleep.quality : 0);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
-  const [ok, setOk] = useState(false);
-
-  const submit = useCallback(async () => {
-    setErr(null); setOk(false);
-    const fields = {};
-    const num = (v, lo, hi, name, int) => {
-      if (!String(v).trim()) return undefined;
-      const n = Number(v);
-      if (Number.isNaN(n) || n < lo || n > hi || (int && !Number.isInteger(n))) throw new Error(name + " সঠিক সংখ্যা দিন।");
-      return n;
-    };
-    try {
-      const w = num(weight, 2, 400, "ওজন"); if (w !== undefined) fields.weightKg = w;
-      const e = num(exercise, 0, 1440, "ব্যায়ামের মিনিট", true); if (e !== undefined) fields.exerciseMin = e;
-      const g = num(water, 0, 40, "পানির গ্লাস", true); if (g !== undefined) fields.waterGlasses = g;
-      const s = num(steps, 0, 100000, "স্টেপ", true); if (s !== undefined) fields.steps = s;
-      if (bed || wake) {
-        const m = sleepMinutes(bed, wake);
-        if (!m) throw new Error("ঘুমের জন্য শোয়ার ও ওঠার সময় দুটোই দিন।");
-        fields.sleep = { bed, wake, quality: quality || null };
-        fields.sleepMinutes = m;
-      }
-    } catch (x) { setErr(x.message); return; }
-    if (!Object.keys(fields).length) { setErr("অন্তত একটি তথ্য দিন।"); return; }
-    setBusy(true);
-    try {
-      await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
-      setOk(true);
-      onSaved();
-    } catch (x) {
-      setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x)));
-    } finally { setBusy(false); }
-  }, [weight, exercise, water, steps, bed, wake, quality, familyId, memberId, callerMemberId, daily, onSaved]);
-
-  // কম্প্যাক্ট ঘর: লেবেল উপরে, ৩টি পাশাপাশি (flex) — scroll কমাতে
-  const CIN = { ...INPUT, padding: "9px 8px", fontSize: "14px", borderRadius: "10px" };
-  const CLAB = { fontSize: "12px", fontWeight: 600, color: T.ink, display: "block", margin: "0 0 3px" };
-  const num3 = (label, value, setter, step) => React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-    React.createElement("label", { style: CLAB }, label),
-    React.createElement("input", { type: "number", inputMode: "decimal", step: step || "1", value, onChange: (e) => setter(e.target.value), style: CIN }));
-  const row = { display: "flex", gap: "8px" };
-  const SB = { width: "44px", minHeight: "44px", flexShrink: 0, borderRadius: "10px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "20px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-  const SBS = { flex: 1, minHeight: "36px", borderRadius: "10px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-  // ওজন: − [ঘর] + (০.১ কেজি); সময়: ঘরের নিচে −১৫/+১৫ মি.
-  const weightStepper = React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-    React.createElement("label", { style: CLAB }, "ওজন (কেজি)"),
-    React.createElement("div", { style: row },
-      React.createElement("button", { onClick: () => setWeight(stepWeight(weight, -0.1, latestWeight)), "aria-label": "ওজন ০.১ কমান", style: SB }, "−"),
-      React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", value: weight, onChange: (e) => setWeight(e.target.value), style: { ...CIN, textAlign: "center", minHeight: "44px", flex: 1 } }),
-      React.createElement("button", { onClick: () => setWeight(stepWeight(weight, 0.1, latestWeight)), "aria-label": "ওজন ০.১ বাড়ান", style: SB }, "+")));
-  const timeStepper = (label, value, setter, fallback) => React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-    React.createElement("label", { style: CLAB }, label),
-    React.createElement("input", { type: "time", value, onChange: (e) => setter(e.target.value), style: { ...CIN, padding: "9px 4px", fontSize: "13px" } }),
-    React.createElement("div", { style: { ...row, gap: "6px", marginTop: "4px" } },
-      React.createElement("button", { onClick: () => setter(shiftTime(value, -15, fallback)), "aria-label": label + " ১৫ মিনিট আগে", style: SBS }, "−১৫"),
-      React.createElement("button", { onClick: () => setter(shiftTime(value, 15, fallback)), "aria-label": label + " ১৫ মিনিট পরে", style: SBS }, "+১৫")));
-
-  return React.createElement("div", null,
-    React.createElement("div", { style: CARD },
-      React.createElement("div", { style: row }, num3("ব্যায়াম (মি.)", exercise, setExercise), num3("পানি (গ্লাস)", water, setWater), num3("স্টেপ", steps, setSteps))),
-    React.createElement("div", { style: CARD },
-      weightStepper,
-      React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, margin: "4px 0 8px" } }, "ওজন প্রোফাইলেও সংরক্ষিত হবে" + (latestWeight ? " · সর্বশেষ: " + latestWeight + " কেজি" : "")),
-      React.createElement("div", { style: row }, timeStepper("শোয়া", bed, setBed, "22:00"), timeStepper("ওঠা", wake, setWake, "06:00")),
-      React.createElement("label", { style: { ...CLAB, margin: "8px 0 4px" } }, "ঘুমের মান"),
-      React.createElement("div", { style: { display: "flex", gap: "8px" } },
-        [1, 2, 3, 4, 5].map((n) => React.createElement("button", {
-          key: n, onClick: () => setQuality(n === quality ? 0 : n), "aria-pressed": n === quality,
-          style: { width: "40px", height: "40px", borderRadius: "999px", cursor: "pointer", fontSize: "14px", fontWeight: 700, border: "1px solid " + T.green, background: n === quality ? T.green : T.surface, color: n === quality ? "#fff" : T.green },
-        }, bnNum(n))))),
-    err && ErrorBox(err),
-    ok && React.createElement(Notice, { tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
-    PrimaryButton("সংরক্ষণ", submit, busy)
-  );
 }
 
 // ---------- উপবাস-দিবস মোড + ব্যক্তিগত পানির লক্ষ্য (পার্ট ১০) ----------
@@ -667,7 +573,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- মূল পেজ ----------
 // টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
-export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan" }) {
+export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome }) {
   // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান + ট্রেন্ড ও রিমাইন্ডার)
   const isToday = mode === "today";
   const [tab, setTab] = useState(isToday ? "today" : "plan");
@@ -722,7 +628,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && !isToday && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && !isToday && tab === "trend" && React.createElement(TrendReminderTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load })
+      data && !isToday && tab === "trend" && React.createElement(TrendReminderTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onGoHome })
     )
   );
 }

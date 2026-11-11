@@ -11,9 +11,6 @@ import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
-import { foodColumns, habitTipsBox } from "../nutrition-fitness/FoodColumns.js";
-import { listDietGuidanceRules, matchFoodGuidance } from "../nutrition-fitness/dietGuidanceData.js";
-import { getGoal } from "../tracker/trackerData.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
 import { t } from "../../shared/i18n.js";
@@ -85,14 +82,11 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     Promise.all([
       listMembers(familyId),
       listHealthRecords(familyId, selectedMemberId),
-      // সম্পূরক — rules পুরনো/ব্যর্থ হলে পুরো প্রোফাইল-কার্ড আটকাবে না; শুধু Firestore-নিয়ম বাদ, কোডে-বসানো বয়স/অবস্থা-নিয়ম থাকে।
-      listDietGuidanceRules().catch(() => []),
-      getGoal(familyId, selectedMemberId).catch(() => null), // বয়স/অবস্থা-নিয়মের জন্য
       // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
       listCalendarEvents(familyId).catch(() => null),
       fetchTestNameDictionary().catch(() => []), // ল্যাব সতর্কতা — না এলে শুধু ঐ টাইল বাদ
     ])
-      .then(([members, records, allRules, goal, calEvents, dict]) => {
+      .then(([members, records, calEvents, dict]) => {
         const member = members.find((m) => m.id === selectedMemberId) || null;
 
         const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -105,9 +99,6 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         const activeConditions = records.filter((r) => r.resourceType === "condition" && (r.status === "active" || r.status === "chronic"));
         const activeMeds = records.filter((r) => r.resourceType === "medicationStatement" && r.status === "active");
 
-        const relevantConditions = activeConditions.map((r) => r.name);
-        const bmiTag = (bmiCategory && bmiCategory !== "normal") ? bmiCategory : null;
-        const dietResult = matchFoodGuidance(allRules, [...relevantConditions, ...(bmiTag ? [bmiTag] : [])], { records, age: member ? getAgeInYears(member.dob) : null, goal });
 
         const allergies = records.filter((r) => r.resourceType === "allergy");
         const nowD = new Date();
@@ -119,7 +110,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়)
         const labAlerts = buildLabAlerts(groupObservations(records).map((g) => g.items[0]), dict);
 
-        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt, labAlerts });
+        setData({ member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, allergies, vaccination, nextAppt, labAlerts });
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
@@ -129,7 +120,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   if (err) return ErrorBox(err);
   if (loading || !data) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, dietResult, allergies, vaccination, nextAppt, labAlerts } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, activeConditions, activeMeds, allergies, vaccination, nextAppt, labAlerts } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
@@ -210,12 +201,5 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     vaccination && React.createElement("div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px" } },
       "💉 টিকা: " + vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
 
-    (dietResult.avoidFoods.length > 0 || dietResult.includeFoods.length > 0 || dietResult.habitTips.length > 0) && React.createElement(
-      React.Fragment, null,
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "#0E4B43", marginTop: "16px", marginBottom: "6px" } }, "🍽️ খাদ্য নির্দেশিকা"),
-      foodColumns({ avoid: dietResult.avoidFoods, include: dietResult.includeFoods, limit: 4 }),
-      habitTipsBox(dietResult.habitTips, 2),
-      React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "6px" } }, "বিস্তারিত জন্য \"খাদ্যাভ্যাস ও টাইমলাইন\" ট্যাবে যান।")
-    )
   );
 }
