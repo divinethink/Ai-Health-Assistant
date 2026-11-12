@@ -684,7 +684,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   useEffect(() => { setData(null); load(); }, [load]);
 
   const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"]];
-  return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
+  return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
     !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: isToday ? "8px 12px 88px" : "0 12px 16px" } }, // হোমে নিচে বাড়তি ফাঁকা: ভাসমান + বাটন শেষ কার্ডের উপর না পড়ে

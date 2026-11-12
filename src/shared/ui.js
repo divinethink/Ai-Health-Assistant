@@ -90,8 +90,8 @@ export function TabPills(tabs, activeId, onChange, leading, histKey) {
           key: id, onClick: () => (histKey ? histChange(histKey, activeId, id, onChange) : onChange(id)),
           style: {
             flexShrink: 0, fontSize: "14px", fontWeight: 600, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", cursor: "pointer",
-            border: active ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
-            background: active ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: active ? "#fff" : "#2B3A36",
+            border: active ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid var(--hs-input-border, #C3D2CA)",
+            background: active ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "var(--hs-surface, #fff)", color: active ? "#fff" : "var(--hs-text, #2B3A36)",
             boxShadow: active ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
         },

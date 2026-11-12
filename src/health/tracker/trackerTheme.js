@@ -3,9 +3,9 @@
 
 export const T = {
   ink: "var(--hs-text, #1F2D2A)", muted: "var(--hs-muted, #5F716C)", green: "var(--hs-primary, #0E4B43)", green2: "var(--hs-primary-2, #17705F)",
-  amber: "#E0A100", amberSoft: "#FFC86B", orange: "#E8892B", blue: "#3B8ED8", blueSoft: "#D6E6F5",
-  purple: "#7B6BC9", leaf: "#2FAE6B", track: "#E4ECE7", surface: "var(--hs-surface, #FFFFFF)", canvas: "var(--hs-bg, #F1F6F2)",
-  sand: "#FBF1DF", sandBorder: "#EBD9B4", border: "var(--hs-border, #D9E5DE)", inputBorder: "#C3D2CA",
+  amber: "#E0A100", amberSoft: "#FFC86B", orange: "#E8892B", blue: "#3B8ED8", blueSoft: "var(--hs-blue-soft, #D6E6F5)",
+  purple: "#7B6BC9", leaf: "#2FAE6B", track: "var(--hs-track, #E4ECE7)", surface: "var(--hs-surface, #FFFFFF)", canvas: "var(--hs-bg, #F1F6F2)",
+  sand: "var(--hs-sand, #FBF1DF)", sandBorder: "var(--hs-sand-border, #EBD9B4)", border: "var(--hs-border, #D9E5DE)", inputBorder: "var(--hs-input-border, #C3D2CA)",
   onDark: "#FFFFFF", onDarkSoft: "rgba(255,255,255,0.85)", ringTrackOnDark: "rgba(255,255,255,0.22)",
 };
 
