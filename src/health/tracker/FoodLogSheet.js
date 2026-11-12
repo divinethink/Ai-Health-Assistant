@@ -2,7 +2,6 @@
 // ধাপ: ১) বেলা বাছাই + খাবার খোঁজা (বিদ্যমান FoodPicker: ✓/!/✕ স্ট্যাটাস, এলার্জি-সতর্কতা) ২) পরিমাণ (মাপ বা গ্রাম) + লাইভ ক্যালরি/ম্যাক্রো → যোগ।
 // ✕ (এড়ানো/এলার্জি) হলে ব্লক নয় — সতর্কতা দেখিয়ে "তবু যোগ করুন"। ওষুধ-নোট বিদ্যমান medFoodNotes থেকে।
 
-import { TabPills } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { foodEnglish } from "../../shared/searchAliases.js";
 import { FOODS, MEAL_SLOTS, hasFoodOverride, foodK } from "./mealPlanData.js";
@@ -78,7 +77,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
       const ok = await onAdd(r.entry);
       if (ok) { setNotice("✓ " + r.entry.name + " যোগ হয়েছে (" + slotLabel + ") — পরে ‘সাম্প্রতিক’-এ ১ ট্যাপে পাবেন"); setOwn(null); }
     };
-    return React.createElement(Sheet, { title: "নিজে যোগ করুন", subtitle: slotLabel + " · আপনার দেওয়া আনুমানিক মান", onClose },
+    return React.createElement(Sheet, { title: "নিজে যোগ করুন", subtitle: slotLabel + " · আপনার দেওয়া আনুমানিক মান", onClose, soft: true },
       React.createElement("button", { onClick: () => { setOwn(null); setOwnErr(null); }, style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN, marginBottom: "6px" } }, "← খাবার খুঁজুন"),
       field("খাবারের নাম (যেমন: মায়ের হাতের খিচুড়ি)", "name", "নাম", "text"),
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
@@ -95,7 +94,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
 
   // ---------- বেলা বাছাই: "খাওয়া / বরাদ্দ" সহ তালিকা ----------
   if (stage === "pick" && !key) {
-    return React.createElement(Sheet, { title: "কোন বেলার খাবার যোগ করবেন?", subtitle: (dateText ? dateText + " · " : "") + "বরাদ্দ = আজকের টার্গেটের ভাগ (বেশি হলেও বাধা নেই)", onClose },
+    return React.createElement(Sheet, { title: "কোন বেলার খাবার যোগ করবেন?", subtitle: (dateText ? dateText + " · " : "") + "বরাদ্দ = আজকের টার্গেটের ভাগ (বেশি হলেও বাধা নেই)", onClose, soft: true },
       slotList.map((s) => {
         const b = slotBudgets && slotBudgets[s.id];
         const over = b && b.eaten > b.planned;
@@ -109,15 +108,20 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
 
   // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
   const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 8px" } },
-    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক"),
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: MUTED, margin: "2px 2px 6px", letterSpacing: "0.2px" } }, "সাম্প্রতিক"),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px" } },
       quick.slice(0, 8).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
-        style: { ...chip(false), minHeight: "38px", padding: "4px 6px", fontSize: "13px", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: busy ? 0.5 : 1 } }, e.name))));
+        style: { ...chip(false), border: "1px solid rgba(127,150,140,0.22)", boxShadow: "0 1px 3px rgba(14,75,67,0.06)", minHeight: "38px", padding: "4px 6px", fontSize: "13px", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: busy ? 0.5 : 1 } }, e.name))));
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
-    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose },
-      React.createElement("div", { className: "hs-fp-pills", style: { marginTop: "-8px" } }, TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot)),
+    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose, soft: true },
+      // বেলা-চিপ: ছোট, স্ক্রিনে আঁটে (সোয়াইপ/স্ক্রলবার নেই); বেশি হলে নিচের লাইনে নামে
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "-8px 0 10px" } },
+        slotList.map((s) => { const on = s.id === slot; return React.createElement("button", { key: s.id, onClick: () => setSlot(s.id), "aria-pressed": on,
+          style: { flex: "1 1 0", minWidth: "fit-content", minHeight: "38px", padding: "4px 8px", borderRadius: "999px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+            border: on ? "1px solid " + GREEN : "1px solid rgba(127,150,140,0.22)", boxShadow: on ? "0 3px 8px rgba(14,75,67,0.25)" : "0 1px 3px rgba(14,75,67,0.06)",
+            background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, s.label); })),
       budget && React.createElement("div", { style: { margin: "-6px 0 10px" } },
         React.createElement("div", { role: "img", "aria-label": slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },
           React.createElement("div", { style: { height: "6px", borderRadius: "6px", width: Math.min(100, budget.planned > 0 ? (budget.eaten / budget.planned) * 100 : 0) + "%", background: GREEN } }))),
@@ -158,7 +162,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const circleBtn = (label, onClick, disabled, aria) => h("button", { type: "button", onClick, disabled, "aria-label": aria, style: { width: "52px", height: "52px", borderRadius: "50%", border: "none", background: "#E4ECE7", color: GREEN, fontSize: "26px", fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, flexShrink: 0 } }, label);
   const hasMacro = !!entry && entry.p !== undefined;
 
-  return h(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose },
+  return h(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose, soft: true },
     h("div", { style: { position: "relative", display: "flex", alignItems: "center", minHeight: "44px", marginBottom: "4px" } },
       h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto" } }, "← অন্য খাবার"),
       // "কতটুকু খাবেন?" — "অন্য খাবার"-এর একই লাইনে, মাঝ-বরাবর, বড় ফন্টে

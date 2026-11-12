@@ -34,7 +34,7 @@ const ALLERGY_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999
 const POS_CHIP = { marginLeft: "6px", padding: "1px 7px", borderRadius: "999px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: "var(--hs-primary, #0E4B43)", fontSize: "12px", fontWeight: 700 };
 export const INPUT = { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "10px 12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 
-export function Sheet({ title, subtitle, onClose, children }) {
+export function Sheet({ title, subtitle, onClose, children, soft }) { // soft = প্রিমিয়াম-ধাঁচ: হালকা-সবুজাভ ক্যানভাস + হ্যান্ডেল (সাদা কার্ড উঠে দেখায়)
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -52,11 +52,12 @@ export function Sheet({ title, subtitle, onClose, children }) {
   },
     React.createElement("div", {
       ref, role: "dialog", "aria-modal": "true", "aria-label": title, tabIndex: -1,
-      style: { width: "100%", maxWidth: "520px", maxHeight: "88vh", overflowY: "auto", boxSizing: "border-box", background: "#fff", borderRadius: "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", outline: "none", fontFamily: "'Hind Siliguri', sans-serif" },
+      style: { width: "100%", maxWidth: "520px", maxHeight: "88vh", overflowY: "auto", boxSizing: "border-box", background: soft ? "#F3F7F4" : "#fff", borderRadius: soft ? "28px 28px 0 0" : "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", outline: "none", fontFamily: "'Hind Siliguri', sans-serif" },
     },
+      soft && React.createElement("div", { "aria-hidden": "true", style: { width: "44px", height: "5px", borderRadius: "3px", background: "#D3DFD8", margin: "-6px auto 10px" } }),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "10px" } },
         React.createElement("div", null,
-          React.createElement("div", { style: { fontSize: "17px", fontWeight: 700, color: "#1F2D2A" } }, title),
+          React.createElement("div", { style: soft ? { fontSize: "21px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" } : { fontSize: "17px", fontWeight: 700, color: "#1F2D2A" } }, title),
           subtitle && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "2px" } }, subtitle)),
         React.createElement("button", { onClick: onClose, "aria-label": "বন্ধ করুন", style: { ...BTN, border: "none", background: "#EEF3F0", color: "#1F2D2A", fontSize: "18px" } }, "✕")),
       children));
@@ -88,23 +89,23 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
 // খাবার-পেজের স্কোপড CSS: পিল-সারির স্ক্রলবার-রেখা লুকানো + সার্চ-ঘরে আইকনের জায়গা (index.html-এর !important padding ছাপিয়ে)
-export const FOOD_CSS = ".hs-fp-pills>div{scrollbar-width:none;-ms-overflow-style:none}.hs-fp-pills>div::-webkit-scrollbar{display:none}input.hs-fp-search{padding-left:46px!important;border-radius:16px!important;min-height:52px}";
+export const FOOD_CSS = ".hs-fp-pills>div{scrollbar-width:none;-ms-overflow-style:none}.hs-fp-pills>div::-webkit-scrollbar{display:none}input.hs-fp-search{padding-left:46px!important;border-radius:18px!important;min-height:52px;border:1px solid rgba(127,150,140,.30)!important;box-shadow:0 4px 14px rgba(14,75,67,.08)}input.hs-fp-search:focus{border-color:var(--hs-primary,#0E4B43)!important;box-shadow:0 0 0 3px rgba(14,75,67,.14)}";
 export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
   return React.createElement("div", { className: "hs-fp-pills" },
     React.createElement("style", null, FOOD_CSS),
-    React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#fff", padding: "2px 0 6px" } },
+    React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#F3F7F4", padding: "2px 0 6px" } },
       React.createElement("div", { style: { position: "relative" } },
         React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", pointerEvents: "none" } }, "🔍"),
-        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
+        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — ভাত, Rice, ইলিশ", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
     between || null,
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "8px 0" } }, // সোয়াইপ নয়: ছোট চিপ ২ লাইনে
       [["", "সব"], ...FOOD_GROUPS].map(([id, label]) => React.createElement("button", { key: id || "all", onClick: () => setGrp(id), "aria-pressed": grp === id,
         style: { fontSize: "13px", fontWeight: 600, padding: "4px 12px", minHeight: "34px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit",
-          border: grp === id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid var(--hs-input-border, #C3D2CA)",
-          background: grp === id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "var(--hs-surface, #fff)", color: grp === id ? "#fff" : "var(--hs-text, #2B3A36)" } }, label))),
+          border: grp === id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid rgba(127,150,140,0.22)", boxShadow: grp === id ? "0 3px 8px rgba(14,75,67,0.25)" : "0 1px 3px rgba(14,75,67,0.06)",
+          background: grp === id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: grp === id ? "#fff" : "var(--hs-text, #2B3A36)" } }, label))),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     layout === "list" ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
       found.map(({ key, f, allergy }) => {
@@ -112,7 +113,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
         const n = hasFoodOverride(key) ? null : per100Of(key);
         const ok = st.level === "green"; // ঠিক খাবার: সাদা কার্ড + খালি হালকা বৃত্ত ("বেছে নিন" ভাব); হলুদ/লাল সতর্কতা আগের মতো স্পষ্ট
         return React.createElement("button", { key, onClick: () => onPick(key), title: st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : ""),
-          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "60px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "16px", border: "1px solid " + (ok ? "#E1EAE5" : sc.border), background: ok ? "#fff" : sc.bg, color: "#1F2D2A", boxShadow: "0 1px 4px rgba(14,75,67,0.06)" } },
+          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "60px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "18px", border: "1px solid " + (ok ? "rgba(127,150,140,0.16)" : sc.border), background: ok ? "#fff" : sc.bg, color: "#1F2D2A", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 6px 16px rgba(14,75,67,0.07)" } },
           React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", flexShrink: 0, boxSizing: "border-box", borderRadius: "50%", border: ok ? "2px solid #D3DFD8" : "none", background: ok ? "#fff" : sc.border, color: sc.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 } }, ok ? "" : st.icon),
           React.createElement("span", { style: { flex: 1, minWidth: 0 } },
             React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700 } }, f.n, React.createElement("span", { style: { fontWeight: 500, fontSize: "12.5px", color: MUTED } }, " · " + foodEnglish(key, f)),
@@ -121,7 +122,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
             React.createElement("span", { style: { display: "block", fontSize: "12px", color: MUTED, marginTop: "2px" } },
               n ? "প্রতি ১০০ গ্রামে · প্রোটিন " + fmtMacro(n.p) + " · কার্ব " + fmtMacro(n.c) + " · ফ্যাট " + fmtMacro(n.f) : "১ " + f.u + "-এ")),
           React.createElement("span", { style: { textAlign: "right", flexShrink: 0 } },
-            React.createElement("b", { style: { display: "block", fontSize: "19px", lineHeight: 1.1 } }, bnNum(n ? n.kcal : foodK(key))),
+            React.createElement("b", { style: { display: "block", fontSize: "20px", lineHeight: 1.1, color: "var(--hs-primary, #0E4B43)" } }, bnNum(n ? n.kcal : foodK(key))),
             React.createElement("span", { style: { fontSize: "11.5px", color: "#8A9B95" } }, "কিলোক্যালরি")));
       })) :
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
