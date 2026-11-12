@@ -11,6 +11,7 @@ import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
+import { UpcomingSection } from "../summary/UpcomingGrid.js";
 
 const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -57,6 +58,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
     (section === "all" || section === "profile") && React.createElement(PregnancyStatusCard, { key: "preg-" + targetMemberId, familyId, selectedMemberId: targetMemberId, callerMemberId }),
+    (section === "all" || section === "profile") && React.createElement(UpcomingSection, { key: "up-" + targetMemberId, familyId, selectedMemberId: targetMemberId, refreshTick }),
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {

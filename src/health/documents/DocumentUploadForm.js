@@ -20,7 +20,7 @@ const h = React.createElement;
 
 const G = "var(--hs-primary, #0E4B43)";
 const CHIPS = [
-  [AUTO, "🤖", "নিজে চিনে নিক"],
+  [AUTO, "🤖", "AI শনাক্ত করুক"],
   ["prescription", "💊", "প্রেসক্রিপশন"],
   ["lab-report", "🔬", "ল্যাব রিপোর্ট"],
   ["visiting-card", "📇", "ডাক্তার-কার্ড"],

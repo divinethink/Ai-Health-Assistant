@@ -13,7 +13,6 @@ import { listHealthRecords } from "./healthRecordsData.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
-import { bnDate } from "../../shared/dates.js";
 import { groupObservations } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
@@ -31,9 +30,9 @@ function bmiCategoryOf(bmi) {
 
 // owner-request-এর exact ভাষা অনুসরণ করে (BMI কম/বেশি/সঠিক + পরামর্শ)।
 function bmiAdviceLine(category) {
-  if (category === "underweight") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন কম (BMI অনুসারে) — বেশি ক্যালরি ও প্রোটিন-সমৃদ্ধ সুষম খাবার খান, প্রয়োজনে ডাক্তার/পুষ্টিবিদের পরামর্শ নিন।";
-  if (category === "overweight" || category === "obese") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন বেশি (BMI অনুসারে) — নিয়মিত ব্যায়াম করুন, সুষম খাবার খান ও ওজন কমানোর চেষ্টা করুন।";
-  if (category === "normal") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন সঠিক (BMI অনুসারে) — বর্তমান সুষম খাদ্যাভ্যাস বজায় রাখুন।";
+  if (category === "underweight") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন কম (বিএমআই অনুসারে) — বেশি ক্যালরি ও প্রোটিন-সমৃদ্ধ সুষম খাবার খান, প্রয়োজনে ডাক্তার/পুষ্টিবিদের পরামর্শ নিন।";
+  if (category === "overweight" || category === "obese") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন বেশি (বিএমআই অনুসারে) — নিয়মিত ব্যায়াম করুন, সুষম খাবার খান ও ওজন কমানোর চেষ্টা করুন।";
+  if (category === "normal") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন সঠিক (বিএমআই অনুসারে) — বর্তমান সুষম খাদ্যাভ্যাস বজায় রাখুন।";
   return null;
 }
 
@@ -46,11 +45,6 @@ function vaccinationSummaryOf(member, ageYears, events, today) {
   const done = schedule.filter((d) => doneIds.includes(d.doseId)).length;
   const overdue = schedule.filter((d) => !doneIds.includes(d.doseId) && d.dueDate < today).length;
   return { done, total: schedule.length, overdue };
-}
-
-// পরবর্তী অ্যাপয়েন্টমেন্ট/চেকআপ — শুধু এই সদস্যের নামে tag করা, আজ বা ভবিষ্যতের, সবচেয়ে কাছেরটা।
-function nextAppointmentOf(memberId, events, today) {
-  return events.find((e) => e.memberId === memberId && (e.eventType === "appointment" || e.eventType === "checkup") && e.status !== "done" && (e.date || "") >= today) || null;
 }
 
 const bn = (n) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
@@ -75,6 +69,15 @@ function stat(label, big, unit, chip) {
     h("div", { style: { whiteSpace: "nowrap", lineHeight: 1.2 } },
       h("span", { style: { fontSize: "17px", fontWeight: 800, color: INK } }, big),
       unit && h("span", { style: { fontSize: "12px", color: SOFT } }, " " + unit)));
+}
+
+// অসুখ/অ্যালার্জির ছোট নাম: বন্ধনীর সংক্ষেপ থাকলে সেটা ("... (IBS)" → "IBS"), নইলে ১২ অক্ষর পর্যন্ত
+function shortCondName(name) {
+  const n = String(name || "").trim();
+  const m = /\(([^()]{2,8})\)\s*$/.exec(n);
+  if (m) return m[1].trim();
+  const chars = Array.from(n);
+  return chars.length > 12 ? chars.slice(0, 12).join("") + "…" : n;
 }
 
 // "এক নজরে" প্যানেলের একটি লাইন: আইকন + লেবেল বামে, মান ডানে
@@ -112,16 +115,16 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         const bmiCategory = bmiCategoryOf(bmi);
 
         const allergies = records.filter((r) => r.resourceType === "allergy");
+        const conds = records.filter((r) => r.resourceType === "condition" && (!r.status || r.status === "active"));
         const nowD = new Date();
         const today = nowD.getFullYear() + "-" + String(nowD.getMonth() + 1).padStart(2, "0") + "-" + String(nowD.getDate()).padStart(2, "0"); // লোকাল তারিখ (UTC না)
         const ageForVax = member ? getAgeInYears(member.dob) : null;
         const vaccination = calEvents ? vaccinationSummaryOf(member, ageForVax, calEvents, today) : null;
-        const nextAppt = calEvents ? nextAppointmentOf(selectedMemberId, calEvents, today) : null;
 
         // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়)
         const labAlerts = buildLabAlerts(groupObservations(records).map((g) => g.items[0]), dict);
 
-        setData({ member, heightCm, weightKg, bmi, bmiCategory, allergies, vaccination, nextAppt, labAlerts });
+        setData({ member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts });
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
@@ -131,15 +134,26 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   if (err) return ErrorBox(err);
   if (loading || !data) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, vaccination, nextAppt, labAlerts } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
 
   const chip = bmiCategory ? BMI_CHIP[bmiCategory] : null;
   const initial = member && member.name ? Array.from(member.name.trim())[0] || "?" : "?";
-  const a0 = allergies[0];
-  const allergyText = allergies.length === 0 ? "নেই" : a0.substance + (a0.reaction ? " (" + a0.reaction + ")" : "") + (allergies.length > 1 ? " +" + bn(allergies.length - 1) : "");
+  // হোমের সতর্ক-সারির মতো চিপ: অ্যালার্জি (লাল) + চলমান অসুখ (এক-শব্দ নাম)। কিছু না থাকলে সারিই নেই
+  // ("নেই" দেখালে "নিরাপদ" মনে হতে পারে — হোমের "তথ্য না থাকলে কিছু নয়" নীতির সাথে মিল)।
+  const mkChip = (key, text, bg, fg) => h("span", { key, style: { padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "13px", fontWeight: 700, maxWidth: "100%", overflowWrap: "anywhere" } }, text);
+  const condShown = conds.slice(0, 3), allergyShown = allergies.slice(0, 2);
+  const chipRow = (allergies.length || conds.length) ? h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px", alignItems: "center" } },
+    allergyShown.map((a, i) => mkChip("a" + i, "⚠️ " + shortCondName(a.substance), "#FDECEA", "#A32018")),
+    allergies.length > allergyShown.length && h("span", { key: "am", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(allergies.length - allergyShown.length)),
+    condShown.map((c, i) => mkChip("c" + i, "🩺 " + shortCondName(c.name), "#fff", "var(--hs-primary, #0E4B43)")),
+    conds.length > condShown.length && h("span", { key: "cm", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(conds.length - condShown.length) + "টি")) : null;
+  const glanceRows = [
+    labAlerts.length > 0 && glance("🔴", "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : "")),
+    vaccination && glance("💉", "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
+  ].filter(Boolean);
 
   // হিরো-কার্ড: হোম-পেজের মতোই সবুজ গ্রেডিয়েন্ট। অসুখ/ওষুধ এখানে নয় — নিচের তালিকায় (ডুপ্লিকেট এড়াতে)।
   return h("div", { style: { background: "#E4F1E9", color: INK, border: "1px solid #C3D9CC", borderRadius: "16px", padding: "8px 10px", marginBottom: "8px" } },
@@ -162,16 +176,13 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       })),
 
     h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px", marginTop: "6px", alignItems: "start" } },
-      stat("উচ্চতা", heightCm ? String(Math.round(heightCm * 10) / 10) : "—", heightCm ? "cm" : ""),
-      stat("ওজন", weightKg ? String(weightKg) : "—", weightKg ? "kg" : ""),
-      stat("BMI", bmi ? bmi.toFixed(1) : "—", "", chip)),
+      stat("উচ্চতা", heightCm ? String(Math.round(heightCm * 10) / 10) : "—", heightCm ? "সেমি" : ""),
+      stat("ওজন", weightKg ? String(weightKg) : "—", weightKg ? "কেজি" : ""),
+      stat("বিএমআই", bmi ? bmi.toFixed(1) : "—", "", chip)),
     adviceLine && h("div", { style: { fontSize: "12px", lineHeight: 1.35, color: SOFT, marginTop: "5px", padding: "0 2px" } }, adviceLine),
-    (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে BMI ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
+    (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে বিএমআই ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
-    // এক নজরে: অ্যালার্জি (সবসময় — নিরাপত্তা-তথ্য, "নেই"-ও দেখানো হয়) + যা আছে (পরবর্তী অ্যাপয়েন্টমেন্ট, ল্যাব সতর্কতা, টিকা)
-    h("div", { style: { marginTop: "6px", padding: "1px 12px", borderRadius: "12px", background: "var(--hs-surface, #fff)", color: "#1F2D2A", border: "1px solid #CFE0D5" } },
-      glance("⚠️", "অ্যালার্জি", allergyText, allergies.length ? "red" : "muted"),
-      nextAppt && glance("📅", "পরবর্তী", nextAppt.title + " · " + bnDate(nextAppt.date) + (nextAppt.time ? " " + nextAppt.time : "")),
-      labAlerts.length > 0 && glance("🔴", "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : ""), "red"),
-      vaccination && glance("💉", "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : ""))));
+    chipRow,
+    // এক নজরে: ল্যাব সতর্কতা/টিকা (থাকলেই); "পরবর্তী অ্যাপয়েন্টমেন্ট" এখন নিচের "আসন্ন" গ্রিডে
+    glanceRows.length > 0 && h("div", { style: { marginTop: "6px", padding: "1px 12px", borderRadius: "12px", background: "var(--hs-surface, #fff)", color: "#1F2D2A", border: "1px solid #CFE0D5" } }, glanceRows));
 }

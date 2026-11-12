@@ -84,13 +84,13 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
 
   return React.createElement(
     "div", { style: { marginTop: embedded ? "0" : "14px", marginBottom: embedded ? "10px" : 0, padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "উচ্চতা, ওজন ও BMI"),
+    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "উচ্চতা, ওজন ও বিএমআই"),
     latest && (latest.heightCm || latest.weightKg) && React.createElement(
       "div", { style: { fontSize: "14px", color: "#1F2D2A", margin: "8px 0" } },
       "সর্বশেষ: " +
         (latest.heightCm ? latest.heightCm + " সেমি" : "উচ্চতা নেই") + " · " +
         (latest.weightKg ? latest.weightKg + " কেজি" : "ওজন নেই") +
-        (latest.bmi ? " · BMI: " + latest.bmi : "")
+        (latest.bmi ? " · বিএমআই: " + latest.bmi : "")
     ),
     React.createElement(VitalsLinkNote),
     React.createElement(

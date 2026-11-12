@@ -12,8 +12,9 @@ import { sanitizeTaken } from "../records/medTaken.js";
 import { ageYears, bmiOf, safetyGate, waterTargetFor, detectFlagsFromConditions, effectivePregnant } from "../tracker/trackerCalc.js";
 import { T } from "../tracker/trackerTheme.js";
 import { bnNum, localISO } from "../../shared/dates.js";
-import { buildTodayDoses, progressPct, headlineOf, upcomingEvents, whenLabel } from "./todaySummaryCalc.js";
+import { buildTodayDoses, progressPct, headlineOf, upcomingEvents } from "./todaySummaryCalc.js";
 import { DoseGrid } from "./DoseGrid.js";
+import { UpcomingGrid } from "./UpcomingGrid.js";
 import { homeVisibleDoses } from "./doseGroups.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -26,7 +27,6 @@ const SEC = { fontSize: "17px", fontWeight: 700, color: T.green, margin: "16px 2
 function numOf(r) { const n = r ? parseFloat(r.value) : NaN; return Number.isNaN(n) ? null : n; }
 function isType(r, names) { return r.resourceType === "observation" && names.includes((r.type || "").trim().toLowerCase()); }
 const nowHHMM = () => new Date().toTimeString().slice(0, 5);
-const EVENT_ICON = { vaccination: "💉", appointment: "🩺" };
 
 function Bar({ pct, color }) {
   const p = Math.max(0, Math.min(100, pct || 0));
@@ -135,7 +135,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
         ? h(Stat, { icon: "💧", title: "পানি", big: bnNum(water), small: "/" + bnNum(waterTarget) + " গ্লাস", pct: (water / waterTarget) * 100 })
         : h(Stat, { icon: "💧", title: "পানি", big: bnNum(water), small: "গ্লাস" }),
       h(Stat, { icon: "🍽️", title: "ক্যালরি", big: bnNum(d.caloriesIn || 0), small: calorieTarget ? "/" + bnNum(calorieTarget) : "কিলোক্যালরি", pct: calorieTarget ? ((d.caloriesIn || 0) / calorieTarget) * 100 : undefined, color: T.green }),
-      h(Stat, { icon: "⚖️", title: "ওজন", big: weightKg ? bnNum(weightKg) : "—", small: weightKg ? "কেজি" + (bmi ? " · BMI " + bnNum(Math.round(bmi * 10) / 10) : "") : "" }))]),
+      h(Stat, { icon: "⚖️", title: "ওজন", big: weightKg ? bnNum(weightKg) : "—", small: weightKg ? "কেজি" + (bmi ? " · বিএমআই " + bnNum(Math.round(bmi * 10) / 10) : "") : "" }))]),
 
     (!onlyMeds || doses.length > 0) && h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
       h("div", { style: SEC }, "আজকের ওষুধ"), doses.length > 0 && h("div", { style: { fontSize: "13px", color: T.muted } }, "সব ডিভাইসে মিলবে")),
@@ -154,16 +154,9 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 
     (!onlyMeds || upcoming.length > 0) && h("div", { style: SEC }, "আসন্ন"),
-    (!onlyMeds || upcoming.length > 0) && h("div", { style: { ...BOX, padding: "4px 14px" } },
+    (!onlyMeds || upcoming.length > 0) && h("div", { style: { ...BOX, padding: upcoming.length === 0 ? "4px 14px" : "8px 10px" } },
       upcoming.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0" } }, "আগামী ৩০ দিনে টিকা বা অ্যাপয়েন্টমেন্ট নেই।")
-        : upcoming.map((e, i) => h("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: i === upcoming.length - 1 ? "none" : "1px solid " + T.track } },
-          // তারিখ বড় (সংখ্যা + মাস), আইকন ছোট — ধাপ ২
-          h("div", { "aria-hidden": "true", style: { width: "56px", height: "56px", flexShrink: 0, borderRadius: "14px", background: T.green, color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", lineHeight: 1.1 } },
-            h("span", { style: { fontSize: "22px", fontWeight: 800 } }, bnNum(new Date(e.date + "T00:00:00").getDate())),
-            h("span", { style: { fontSize: "12px" } }, new Date(e.date + "T00:00:00").toLocaleDateString("bn-BD", { month: "short" }))),
-          h("div", { style: { minWidth: 0, flex: 1 } },
-            h("div", { style: { fontSize: "17px", fontWeight: 700, color: T.ink } }, e.title),
-            h("div", { style: { fontSize: "14px", color: T.muted } }, h("span", { "aria-hidden": "true", style: { fontSize: "13px" } }, (EVENT_ICON[e.eventType] || "📅") + " "), whenLabel(e)))))),
+        : h(UpcomingGrid, { events: upcoming })),
     !onlyMeds && h("p", { style: { fontSize: "12px", color: T.muted, margin: "10px 2px 0" } }, "এটা শুধু আপনার দেওয়া তথ্যের সারাংশ; চিকিৎসা পরামর্শ নয়।"));
 }

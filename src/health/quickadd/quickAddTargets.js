@@ -19,6 +19,6 @@ export function quickTarget(kind) {
 
 // প্রেসার/সুগার → স্বাস্থ্য-রেকর্ড ফর্মে আগে-থেকে-ভরা ধরন+একক (বাকি ঘর ব্যবহারকারী ভরেন)
 export const OBS_PRESETS = {
-  bp: { type: "Blood Pressure", unit: "mmHg" },
-  sugar: { type: "Blood Sugar", unit: "mg/dL" },
+  bp: { type: "রক্তচাপ", unit: "mmHg" },
+  sugar: { type: "রক্তের শর্করা", unit: "mg/dL" },
 };

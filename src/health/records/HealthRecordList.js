@@ -10,7 +10,7 @@ import { t } from "../../shared/i18n.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
-import { groupObservations, obsTrend } from "./recordGrouping.js";
+import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
@@ -128,14 +128,14 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
           al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4")),
         React.createElement("div", { style: { marginTop: "2px" } },
           React.createElement("span", { style: { fontSize: "19px", fontWeight: 700, color: al ? RED : G } }, latest.value),
-          latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + latest.unit),
+          latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + unitLabelBn(latest.unit)),
           tr && React.createElement("div", { style: { fontSize: "13px", color: al ? RED : MUTED } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
         React.createElement(Spark, { items: g.items }),
         latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } }, shortDate(latest.date))),
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: G, margin: "8px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
         g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "6px 0", borderBottom: "1px solid #EEF1EF" } },
-          React.createElement("div", { style: { fontSize: "14px" } }, React.createElement("b", null, r.value + (r.unit ? " " + r.unit : "")), "  ·  ", r.date ? bnDate(r.date) : "তারিখ নেই"),
+          React.createElement("div", { style: { fontSize: "14px" } }, React.createElement("b", null, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")), "  ·  ", r.date ? bnDate(r.date) : "তারিখ নেই"),
           actions(r)))));
   };
 

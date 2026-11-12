@@ -5,10 +5,17 @@ function obsGroupKey(r) {
   const s = (r.type || "").trim().toLowerCase();
   if (s === "উচ্চতা") return "height";
   if (s === "ওজন") return "weight";
+  if (s === "blood pressure") return "রক্তচাপ"; // পুরনো ইংরেজি রেকর্ড ও নতুন বাংলা একই গ্রুপে
+  if (s === "blood sugar") return "রক্তের শর্করা";
   return s;
 }
+// ইউনিট দেখানোর বাংলা (শুধু দেখানো; সংরক্ষিত মান বদলায় না)
+export function unitLabelBn(u) {
+  const k = String(u || "").trim().toLowerCase();
+  return k === "kg" ? "কেজি" : k === "cm" ? "সেমি" : (u || "");
+}
 // অ্যাপ-তৈরি type-এর বাংলা নাম (কাঁচা slug দেখানো হয় না)
-const OBS_LABELS_BN = { "stool-bristol": "পেটের লক্ষণ (Bristol)" };
+const OBS_LABELS_BN = { "stool-bristol": "পেটের লক্ষণ (Bristol)", "রক্তচাপ": "রক্তচাপ", "রক্তের শর্করা": "রক্তের শর্করা" };
 function obsLabel(key, sample) {
   if (OBS_LABELS_BN[key]) return OBS_LABELS_BN[key];
   if (key === "height") return "উচ্চতা";

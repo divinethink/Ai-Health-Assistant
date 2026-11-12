@@ -19,6 +19,8 @@ const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "�
 const tileBase = { minHeight: "72px", padding: "6px 4px", borderRadius: "14px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, lineHeight: 1.25, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" };
 // প্রতিটা ধরনের নিজস্ব রং (ACCENTS) — টাইল ও পরের পেজ একই রঙে মেলে
 const tileStyle = (kind) => { const a = ACCENTS[kind]; return { ...tileBase, border: "1.5px solid " + a.border, background: a.tint, color: a.main }; };
+// স্বাস্থ্য-পাতার "কী যোগ করবেন?"-তেও হোমের মতো প্রেসার/সুগার (আগে-থেকে-ভরা ধরন+একক)
+const PRESET_TILES = [["bp", "❤️", "প্রেসার"], ["sugar", "🩸", "সুগার"]];
 const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
@@ -96,6 +98,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setResourceType(v); resetFields(); setErr(null); setMore(false);
   }, [resetFields]);
   const pickType = (v) => { changeResourceType(v); setPicked(true); };
+  const pickPreset = (k) => { const pr = OBS_PRESETS[k]; pickType("observation"); setObsType(pr.type); setUnit(pr.unit); };
 
   const submit = useCallback(async () => {
     setErr(null);
@@ -179,8 +182,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
         "ডিরেক্টরিতে রাখুন (পরিবারের সবাই দেখবে)"));
     }
   } else if (resourceType === "observation") {
-    typeFields.push(TextField(t("f.obsType"), obsType, setObsType, "যেমন: Blood Sugar"));
-    typeFields.push(TextField(t("f.value"), value, setValue, "যেমন: 110"));
+    typeFields.push(TextField(t("f.obsType"), obsType, setObsType, "যেমন: রক্তের শর্করা"));
+    typeFields.push(TextField(t("f.value"), value, setValue, obsType === "রক্তচাপ" || /blood pressure/i.test(obsType) ? "যেমন: 120/80" : "যেমন: 110"));
     moreFields.push(TextField(t("f.unit"), unit, setUnit, "যেমন: mg/dL"));
     moreFields.push(DateField(t("f.date"), date, setDate));
   } else if (resourceType === "medicationStatement") {
@@ -219,8 +222,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
         React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } },
-        ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => (type === "medicationStatement" && onMedChoice ? setMedMenu(true) : pickType(type)),
-          style: tileStyle(type) },
+        [...ADD_TILES.slice(0, 3), ...PRESET_TILES, ...ADD_TILES.slice(3)].map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => (OBS_PRESETS[type] ? pickPreset(type) : type === "medicationStatement" && onMedChoice ? setMedMenu(true) : pickType(type)),
+          style: tileStyle(OBS_PRESETS[type] ? "observation" : type) },
           React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px", lineHeight: 1 } }, icon), label)),
         // ল্যাব রিপোর্ট — ল্যাব রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
         onUpload && React.createElement("button", { key: "lab", onClick: onUpload, style: tileStyle("lab") },

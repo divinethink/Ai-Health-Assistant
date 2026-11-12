@@ -151,13 +151,16 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
 
   // ধাপ ৩: ব্যায়াম/ঘুম/স্টেপ/ওজন শিট। saveDaily একই (নির্দিষ্ট ডক-ID + merge); busy লক = double-tap নিরাপদ।
+  const [wFlash, setWFlash] = useState(false);
   const [inKind, setInKind] = useState(null); // "exercise" | "sleep" | "steps" | "weight" | null
   const [inErr, setInErr] = useState(null);
   const openIn = (k) => { setInErr(null); setInKind(k); };
   // "+ দ্রুত যোগ" থেকে এলে বিদ্যমান ফর্ম/শিট খোলা (ধাপ ৯); নতুন কোনো লেখার পথ নয়
   useEffect(() => {
-    const k = takeQuickIntent(["weight", "sleep", "food"]);
-    if (k === "food") openFood(); else if (k) openIn(k);
+    const k = takeQuickIntent(["weight", "sleep", "food", "water"]);
+    if (k === "food") openFood();
+    else if (k === "water") { if (waterTarget) setWater(glasses + 1).then(() => { setWFlash(true); setTimeout(() => setWFlash(false), 1800); }); } // "＋ → পানি": বিদ্যমান ＋১ গ্লাস পথেই; কার্ড কিছুক্ষণ নীল বর্ডারে
+    else if (k) openIn(k);
     // eslint-disable-next-line
   }, []);
   const closeIn = () => { setInErr(null); setInKind(null); };
@@ -235,7 +238,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, bnNum(info.age) + " বছর"),
         // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
         React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 4px", borderRadius: "999px", border: "none", background: "transparent", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" } },
-          bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
+          bmiVal ? "বিএমআই " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
           React.createElement("span", { "aria-hidden": "true", style: { fontSize: "12px", opacity: 0.75 } }, "✎")),
         dateChip),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
@@ -297,7 +300,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     // পানি (৩/৪) + খাবার-যোগ (১/৪) এক সারিতে — আলাদা কার্ড। খাবার-কার্ড শুধু লগ-যোগ্য হলে; নইলে পানি পুরো প্রস্থে।
     (waterTarget || canLog) && React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
-      waterTarget && React.createElement("div", { style: { ...CARD_STYLE, flex: 3, minWidth: 0, marginBottom: 0, padding: "7px 10px 8px", display: "flex", flexDirection: "column", gap: "5px", borderRadius: "16px", boxShadow: "0 6px 16px rgba(59,142,216,0.12)" } },
+      waterTarget && React.createElement("div", { style: { ...CARD_STYLE, ...(wFlash ? { border: "2px solid " + T.blue } : {}), flex: 3, minWidth: 0, marginBottom: 0, padding: "7px 10px 8px", display: "flex", flexDirection: "column", gap: "5px", borderRadius: "16px", boxShadow: "0 6px 16px rgba(59,142,216,0.12)" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4px" } },
           React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "💧 পানি"),
           React.createElement("span", { style: { fontSize: "13px", color: T.muted, whiteSpace: "nowrap" } }, React.createElement("b", { style: { color: T.blue, fontSize: "17px" } }, bnNum(glasses)), " / " + bnNum(waterTarget))),
