@@ -37,3 +37,13 @@ test("সাপ্তাহিক বৃত্ত: সিয়াম-দিন 
   assert.equal(weekSummary([], week, "2026-11-10", ctx).days[1].state, "fast");
   assert.equal(weekSummary([{ date: SUN, extraFoods: [x("lunch")] }], week, "2026-11-10", ctx).days[1].state, "miss");
 });
+
+test("সিয়ামের দিনে বেলা-তালিকা লগ অনুযায়ী: দিনের লগ → সেহরি/ইফতার নেই; সেহরি লগ → সকাল–বিকাল নেই; দুটোই বা কিছুই না → সব", () => {
+  const ids = (doc) => slotsForDay(true, doc).map((s) => s.id);
+  assert.deepEqual(ids({ extraFoods: [x("breakfast")] }), ["breakfast", "snack1", "lunch", "snack2", "dinner"]);
+  assert.deepEqual(ids({ extraFoods: [x("sehri")] }), ["sehri", "iftar", "dinner"]);
+  assert.deepEqual(ids({ mealsEaten: ["iftar"] }), ["sehri", "iftar", "dinner"]);
+  assert.deepEqual(ids({ extraFoods: [x("sehri"), x("lunch")] }), ["sehri", "breakfast", "snack1", "lunch", "snack2", "iftar", "dinner"]);
+  assert.deepEqual(ids({}), ["sehri", "breakfast", "snack1", "lunch", "snack2", "iftar", "dinner"]);
+  assert.deepEqual(slotsForDay(false, { extraFoods: [x("sehri")] }).map((s) => s.id), ["breakfast", "snack1", "lunch", "snack2", "dinner"]);
+});

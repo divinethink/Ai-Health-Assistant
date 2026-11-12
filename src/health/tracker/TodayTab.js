@@ -304,7 +304,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement(DietGuidanceSection, { familyId, selectedMemberId: memberId })),
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
-      dateText, slots: slotsForDay(plannedFast), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
+      dateText, slots: slotsForDay(plannedFast, dayDoc), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
       count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
     }),
 
@@ -384,7 +384,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
           background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("health", { key: "i", size: 18 }), "পেট ডায়েরি"])),
     gutOpen && React.createElement(Sheet, { title: "🩺 পেট ডায়েরি", subtitle: "আজকের পেটের অবস্থা (ব্রিস্টল স্কেল)", onClose: () => setGutOpen(false) },
       React.createElement(GutLogCard, { bare: true, info, familyId, callerMemberId, memberId, gutFoods: gutFoodCount(plan, eatenIds, extras), onSaved })),
-    canLog && slotsForDay(plannedFast).map((sl) => {
+    canLog && slotsForDay(plannedFast, dayDoc).map((sl) => {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sl.id);
       const sm = sumNutrition(mine);
       const bud = budgets[sl.id];

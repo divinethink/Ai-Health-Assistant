@@ -3,7 +3,7 @@
 // সেহরি/ইফতার/রাতের লগ বা কিছুই না থাকলে সিয়াম। ভুল লগ মুছলেই আবার সিয়াম — আলাদা সেভ/ফিল্ড নেই।
 
 import { isFastDate } from "./trackerCalc.js";
-import { MEAL_SLOTS, FAST_SLOTS, DAYTIME_SLOT_IDS } from "./mealPlanData.js";
+import { MEAL_SLOTS, FAST_SLOTS, DAYTIME_SLOT_IDS, FAST_SLOT_IDS } from "./mealPlanData.js";
 
 export function ateInDaytime(doc) {
   const d = doc || {};
@@ -17,13 +17,23 @@ export function fastOnDate(date, fastDays, doc) {
   return isFastDate(date, fastDays) && !ateInDaytime(doc);
 }
 
+// সেহরি/ইফতারের কোনো লগ বা টিক আছে কিনা (ateInDaytime-এর জোড়া)
+export function ateInFastSlot(doc) {
+  const d = doc || {};
+  return (Array.isArray(d.extraFoods) && d.extraFoods.some((x) => x && FAST_SLOT_IDS.includes(x.slot))) || (Array.isArray(d.mealsEaten) && d.mealsEaten.some((id) => FAST_SLOT_IDS.includes(id)));
+}
+
 // পরিকল্পিত সিয়ামের দিনে বেলার ক্রম: সেহরি, সকাল…বিকাল, ইফতার, রাত। অন্য দিনে অপরিবর্তিত।
-export function slotsForDay(plannedFast) {
+// doc দিলে: শুধু দিনের বেলার লগ → সেহরি/ইফতার দেখানো নয় (সিয়াম নয়); শুধু সেহরি/ইফতারের লগ → সকাল–বিকাল দেখানো নয়।
+// দুই ধরনেরই লগ থাকলে বা কিছুই না থাকলে সব বেলা (লগ-করা তথ্য কখনো লুকায় না)।
+export function slotsForDay(plannedFast, doc) {
   if (!plannedFast) return MEAL_SLOTS;
+  const day = ateInDaytime(doc), fast = ateInFastSlot(doc);
+  if (day && !fast) return MEAL_SLOTS;
   const sehri = FAST_SLOTS.find((s) => s.id === "sehri");
   const iftar = FAST_SLOTS.find((s) => s.id === "iftar");
   const out = [sehri];
-  MEAL_SLOTS.forEach((s) => { if (s.id === "dinner") out.push(iftar); out.push(s); });
+  MEAL_SLOTS.forEach((s) => { if (s.id === "dinner") out.push(iftar); if (!(fast && !day && DAYTIME_SLOT_IDS.includes(s.id))) out.push(s); });
   return out;
 }
 
