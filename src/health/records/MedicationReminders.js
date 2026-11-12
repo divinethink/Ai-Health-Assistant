@@ -12,7 +12,7 @@
 import { ErrorBox, SheetFrame, ConfirmDialog } from "../../shared/ui.js";
 import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
-import { takeQuickIntent } from "../../shared/quickIntent.js";
+import { takeQuickIntent, takeQuickOrigin, quickReturn } from "../../shared/quickIntent.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
@@ -117,6 +117,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
 
   // নতুন ওষুধ যোগের ফর্ম
   const [startIntent] = useState(() => takeQuickIntent(["rx", "medmanual", "medicine"])); // "যোগ করুন" প্যানেল থেকে সরাসরি আসা
+  const fromRef = React.useRef(undefined); // "+" যে ট্যাব থেকে চাপা; ✕/বাতিলে সেখানে ফেরা (সেভ হলে নয় — তখন তালিকা দেখায়)
+  if (fromRef.current === undefined) fromRef.current = startIntent ? takeQuickOrigin() : null;
+  const backToOrigin = () => { if (fromRef.current) { fromRef.current = null; quickReturn(); } };
   const [addOpen, setAddOpen] = useState(startIntent === "medmanual");
   const [chooseOpen, setChooseOpen] = useState(startIntent === "medicine"); // হোমের "＋ → ওষুধ/প্রেসক্রিপশন": সরাসরি দুই-অপশন পেজ
   const [rxOpen, setRxOpen] = useState(startIntent === "rx"); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
@@ -285,7 +288,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       setABusy(true);
       try {
         await createHealthRecord(familyId, aMember, callerMemberId, "medicationStatement", { name, tier: "requires-consult", status: "active", date: todayStr(), frequency: "প্রয়োজনে খাবেন", durationDays: "", asNeeded: true });
-        setAName(""); setAAsNeeded(false); setAddOpen(false); setSuggOpen(false);
+        fromRef.current = null; setAName(""); setAAsNeeded(false); setAddOpen(false); setSuggOpen(false);
         await loadMeds();
       } catch (e) { setAErr(e.message || String(e)); }
       finally { setABusy(false); }
@@ -300,7 +303,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       const id = await createHealthRecord(familyId, aMember, callerMemberId, "medicationStatement", { name, tier: "requires-consult", status: "active", date: start, frequency: freq, durationDays: aDays || "" });
       await setMedicationReminderTimes(familyId, id, callerMemberId, times, { endDate, mealTiming: aMeal });
       if (permission === "default") requestPermission();
-      setAName(""); setAddOpen(false); setSuggOpen(false);
+      fromRef.current = null; setAName(""); setAddOpen(false); setSuggOpen(false);
       await loadMeds();
     } catch (e) { setAErr(e.message || String(e)); }
     finally { setABusy(false); }
@@ -365,16 +368,16 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
-    chooseOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 ওষুধ/প্রেসক্রিপশন", onClose: () => setChooseOpen(false) },
+    chooseOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 ওষুধ/প্রেসক্রিপশন", onClose: () => { setChooseOpen(false); backToOrigin(); } },
       h("div", { style: { display: "grid", gap: "12px", alignContent: "center", minHeight: "calc(100vh - 160px)" } }, // দুই বড় বাটন পর্দার মাঝখানে
         h("button", { onClick: () => { setChooseOpen(false); setRxOpen(true); }, style: { ...BIGB, border: "2px solid var(--hs-primary)" } }, "📷 প্রেসক্রিপশন আপলোড (ওষুধ অটো-ফিল)"),
         h("button", { onClick: () => { setChooseOpen(false); setAddOpen(true); }, style: { ...BIGB, border: "1.5px solid #D3C7EE" } }, "✍️ হাতে লিখুন"))),
-    rxOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
+    rxOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); backToOrigin(); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f, _p, id) => { setRxDocId(id || null); setRxFile(f); } }),
-      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান", onStageChange: setRxStage })),
-    addOpen && h(SheetFrame, { accent: "medicationStatement", title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
+      rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => { fromRef.current = null; loadMeds(); }, onClose: () => { setRxOpen(false); setRxFile(null); fromRef.current = null; }, closeLabel: "ওষুধের তালিকায় যান", onStageChange: setRxStage })),
+    addOpen && h(SheetFrame, { accent: "medicationStatement", title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); backToOrigin(); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
         h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, minHeight: "48px", padding: "11px", borderRadius: "12px", border: "none", background: aBusy ? "#8FAFA9" : GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
-        h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { minHeight: "48px", padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল")) },
+        h("button", { onClick: () => { setAddOpen(false); setAErr(null); backToOrigin(); }, style: { minHeight: "48px", padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল")) },
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
       lblEl("ওষুধের নাম"),
       h("div", { style: { position: "relative" } },

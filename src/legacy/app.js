@@ -34,7 +34,7 @@ import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
 import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
-import { setQuickIntent } from "../shared/quickIntent.js";
+import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
 
@@ -476,7 +476,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     setQuickIntent(kind);
     setQuickOpen(false);
     if (!tab) return;
-    if (tab === activeTab) setHomeKey((n) => n + 1); else setActiveTab(tab);
+    if (tab === activeTab) setHomeKey((n) => n + 1); else { setQuickOrigin(activeTab); setActiveTab(tab); }
   };
 
   if (showDoctorDetails) {

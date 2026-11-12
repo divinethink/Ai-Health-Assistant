@@ -17,14 +17,15 @@ import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { DoctorCardPanel } from "../doctor-details/DoctorCardPanel.js";
 
 const { useState, useCallback, useEffect } = React;
-import { takeQuickIntent } from "../../shared/quickIntent.js";
+import { takeQuickIntent, takeQuickOrigin, quickReturn } from "../../shared/quickIntent.js";
 
 export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, excludeType, hideAdd, emptyText }) {
   const [refreshTick, setRefreshTick] = useState(0);
   // panel: null | { mode: "add" } | { mode: "analyze", file } | { mode: "manual" }
   const [panel, setPanel] = useState(null);
   const targetMemberId = selectedMemberId;
-  useEffect(() => { if (takeQuickIntent(["report"])) setPanel({ mode: "add" }); }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
+  const fromRef = React.useRef(null); // "+" যে ট্যাব থেকে চাপা (✕ দিলে সেখানে ফেরা)
+  useEffect(() => { if (takeQuickIntent(["report"])) { fromRef.current = takeQuickOrigin(); setPanel({ mode: "add" }); } }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
   const startAnalyze = useCallback((file, preOcr) => setPanel({ mode: "analyze", file, preOcr, key: Date.now() }), []);
@@ -50,7 +51,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
     ),
     // ফুল-পেজ (ওষুধের মতো): যেখান থেকেই যোগ চাপা হোক, উপরে ✕ বন্ধ-বার সহ নিজস্ব পাতায় খোলে
     panel && React.createElement(
-      SheetFrame, { accent: "lab", title: panelTitle, onClose: () => setPanel(null), scrollKey: panel.mode + "-" + (panel.key || "") },
+      SheetFrame, { accent: "lab", title: panelTitle, onClose: () => { setPanel(null); if (fromRef.current) { fromRef.current = null; quickReturn(); } }, scrollKey: panel.mode + "-" + (panel.key || "") },
       panel.mode === "add" && React.createElement(DocumentUploadForm, {
         key: "upload-" + targetMemberId,
         familyId, targetMemberId, callerMemberId,
