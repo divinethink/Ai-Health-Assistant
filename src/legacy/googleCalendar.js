@@ -108,7 +108,7 @@ export async function createMedicationCalendarEvents({ memberName, genericName, 
       const end = new Date(start.getTime() + EVENT_MINUTES * 60000);
       ids.push(await insertEvent({
         summary,
-        description: "Health Assistant অ্যাপ থেকে যোগ হয়েছে — ওষুধ সেবনের রিমাইন্ডার।",
+        description: "Healthy Life অ্যাপ থেকে যোগ হয়েছে — ওষুধ সেবনের রিমাইন্ডার।",
         start: { dateTime: fmtLocal(start), timeZone: tz },
         end: { dateTime: fmtLocal(end), timeZone: tz },
         recurrence: ["RRULE:FREQ=DAILY;UNTIL=" + untilUtc(endDate)],
@@ -129,7 +129,7 @@ export async function createAllDayCalendarEvent({ title, date, description }) {
   next.setDate(next.getDate() + 1);
   return insertEvent({
     summary: title,
-    description: description || "Health Assistant অ্যাপ থেকে যোগ হয়েছে",
+    description: description || "Healthy Life অ্যাপ থেকে যোগ হয়েছে",
     start: { date },
     end: { date: localDateStr(next) },
     reminders: { useDefault: false, overrides: [{ method: "popup", minutes: 900 }] },

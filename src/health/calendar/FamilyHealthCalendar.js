@@ -41,7 +41,7 @@ function googleCalendarLink(e) {
     action: "TEMPLATE",
     text: e.title || "",
     dates: start + "/" + end,
-    details: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Health Assistant অ্যাপ থেকে যোগ হয়েছে",
+    details: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Healthy Life অ্যাপ থেকে যোগ হয়েছে",
   });
   return "https://calendar.google.com/calendar/render?" + params.toString();
 }
@@ -92,7 +92,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
       await createAllDayCalendarEvent({
         title: e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : ""),
         date: e.date,
-        description: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Health Assistant অ্যাপ থেকে যোগ হয়েছে",
+        description: (TYPE_LABELS[e.eventType] || e.eventType || "") + " — Healthy Life অ্যাপ থেকে যোগ হয়েছে",
       });
       try { localStorage.setItem(syncedKey(e.id), "1"); } catch (err) { /* storage বন্ধ থাকলে শুধু dedupe হবে না */ }
       setCalMsg({ id: e.id, ok: true, text: "✓ Google ক্যালেন্ডারে যুক্ত হয়েছে (আগের দিন সকাল ৯টায় রিমাইন্ডার)" });

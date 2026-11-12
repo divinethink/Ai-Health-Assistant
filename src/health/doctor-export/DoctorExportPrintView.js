@@ -45,7 +45,7 @@ export function DoctorExportPrintView({ data, onBack }) {
 
     React.createElement("div", { style: { color: "#111", maxWidth: "720px", margin: "0 auto" } },
       React.createElement("div", { style: { textAlign: "center", borderBottom: "2px solid var(--hs-primary, #0E4B43)", paddingBottom: "8px" } },
-        React.createElement("h2", { style: { margin: 0, color: "var(--hs-primary, #0E4B43)" } }, "Health Assistant — রোগী স্বাস্থ্য প্রোফাইল"),
+        React.createElement("h2", { style: { margin: 0, color: "var(--hs-primary, #0E4B43)" } }, "Healthy Life — রোগী স্বাস্থ্য প্রোফাইল"),
         React.createElement("p", { style: { fontSize: "11px", color: "#666", margin: "4px 0 0" } }, "এটি একটি factual সারাংশ — কোনো AI মতামত/রোগনির্ণয় এখানে নেই")
       ),
       React.createElement("p", { style: { fontSize: "11px", color: "#888", textAlign: "right" } }, "তৈরির তারিখ: " + fmtDate(data.generatedAt)),
@@ -105,7 +105,7 @@ export function DoctorExportPrintView({ data, onBack }) {
         React.createElement("p", { style: { fontSize: "10px", color: "#888", margin: "4px 0 0" } }, "ব্যবহারকারীর নিজের ইনপুট থেকে সাধারণ গড়/যোগফল; আনুমানিক, কোনো মূল্যায়ন নয়।")),
 
       React.createElement("p", { style: { fontSize: "10px", color: "#888", borderTop: "1px solid #ccc", marginTop: "16px", paddingTop: "6px", textAlign: "center" } },
-        "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — শুধু পরিবার কর্তৃক সংরক্ষিত factual তথ্যের সারাংশ। Health Assistant App।")
+        "এটি প্রেসক্রিপশন/রোগনির্ণয় নয় — শুধু পরিবার কর্তৃক সংরক্ষিত factual তথ্যের সারাংশ। Healthy Life App।")
     )
   );
 }

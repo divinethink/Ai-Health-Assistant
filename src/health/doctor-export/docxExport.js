@@ -50,7 +50,7 @@ function fmtDate(ms) {
 export async function exportHealthProfileDocx(data) {
   const m = data.member;
   const children = [
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Health Assistant — রোগী স্বাস্থ্য প্রোফাইল", bold: true, size: 32, font: FONT, color: "0E4B43" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Healthy Life — রোগী স্বাস্থ্য প্রোফাইল", bold: true, size: 32, font: FONT, color: "0E4B43" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "এটি একটি factual সারাংশ — কোনো AI মতামত/রোগনির্ণয় এখানে নেই", italics: true, size: 18, font: FONT, color: "666666" })] }),
     para("তৈরির তারিখ: " + fmtDate(data.generatedAt), { size: 18, color: "888888" }),
     heading("১. ব্যক্তিগত ও মৌলিক তথ্য"),
@@ -98,7 +98,7 @@ export async function exportHealthProfileDocx(data) {
 // "AI Health Guidance — Not a Medical Prescription" বক্স (§10.5 নোট)।
 export async function exportAiHealthSummaryDocx(data) {
   const children = [
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Health Assistant — AI Health Summary", bold: true, size: 32, font: FONT, color: "0E4B43" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Healthy Life — AI Health Summary", bold: true, size: 32, font: FONT, color: "0E4B43" })] }),
     para("তৈরির তারিখ: " + fmtDate(data.generatedAt), { size: 18, color: "888888" }),
     para("সদস্য: " + (data.memberName || "—")),
     heading("AI Health Guidance — Not a Medical Prescription", "7A5B00"),
