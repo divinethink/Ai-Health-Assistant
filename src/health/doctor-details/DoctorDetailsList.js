@@ -38,9 +38,9 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
   if (!doctors) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
   const filtered = !category || category === "all" ? doctors : doctors.filter((d) => d.specialtyCategory === category);
-  const empty = (icon, text) => React.createElement("div", { style: { marginTop: "10px", padding: "22px 14px", textAlign: "center", background: "#fff", border: "1.5px dashed #B9CDC2", borderRadius: "16px", color: "#5F716C", fontSize: "14px" } },
-    React.createElement("div", { style: { fontSize: "30px", marginBottom: "4px" } }, icon), text);
-  if (doctors.length === 0) return empty("🩺", "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি। উপরের বাটনে চেপে প্রথম ডাক্তার যোগ করুন।");
+  const empty = (icon, text) => React.createElement("div", { style: { marginTop: "16px", padding: "32px 20px", textAlign: "center", background: "linear-gradient(180deg,#fff,#F4FAF6)", border: "1.5px dashed #B9CDC2", borderRadius: "22px", color: "#5F716C", fontSize: "14.5px", lineHeight: 1.6 } },
+    React.createElement("div", { "aria-hidden": "true", style: { width: "64px", height: "64px", margin: "0 auto 12px", borderRadius: "50%", background: "#E4F0E9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px" } }, icon), text);
+  if (doctors.length === 0) return empty("🩺", "এখনো কোনো ডাক্তারের তথ্য যোগ হয়নি। উপরের “+ যোগ করুন” চেপে প্রথম ডাক্তার যোগ করুন।");
   if (filtered.length === 0) return empty("🔎", "এই বিভাগে এখনো কোনো ডাক্তার যোগ হয়নি।");
 
   const pill = (color, bg) => ({ minHeight: "40px", padding: "0 14px", borderRadius: "999px", border: "1px solid " + color, background: bg, color, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", textDecoration: "none" });
@@ -100,7 +100,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
 
   return React.createElement(
     React.Fragment, null,
-    React.createElement("div", { style: { marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } }, filtered.map(tileOf)),
+    React.createElement("div", { style: { marginTop: "14px", display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "10px" } }, filtered.map(tileOf)),
     openDoc && React.createElement(
       React.Fragment, null,
       React.createElement("div", { onClick: () => { setOpenId(null); setConfirmId(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 90 } }),

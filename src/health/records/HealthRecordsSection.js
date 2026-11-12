@@ -64,7 +64,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),
-        style: { width: "100%", minHeight: "46px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", boxShadow: "0 4px 12px rgba(14,75,67,0.25)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
+        style: { width: "100%", minHeight: "48px", margin: "6px 0 20px", borderRadius: "16px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", boxShadow: "0 4px 12px rgba(14,75,67,0.25)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
       }, Icon("plus", { size: 18, stroke: 2.2 }), "যোগ করুন"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),

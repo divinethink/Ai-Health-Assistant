@@ -26,7 +26,7 @@ function AddDoctorButton({ onClick }) {
       onClick,
       style: { fontSize: "14px", minHeight: "44px", padding: "0 16px", borderRadius: "999px", border: "1px solid var(--hs-primary, #0E4B43)", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 3px 8px rgba(14,75,67,0.25)", fontFamily: "inherit" },
     },
-    "+ নতুন ডাক্তার যোগ করুন"
+    "+ যোগ করুন"
   );
 }
 
@@ -81,13 +81,16 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
   // ---- Inline (non-full-page) mode — অপরিবর্তিত পুরনো layout, backward-compatible ----
   if (!onExit) {
     return React.createElement(
-      "div", { style: { marginTop: "20px" } },
+      "div", { style: { marginTop: "4px" } },
       React.createElement(
-        "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" } },
-        React.createElement("h3", { style: { fontSize: "16px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "🩺 ডাক্তার বিবরণ ও ভিজিটিং কার্ড"),
+        "div", { style: { display: "flex", alignItems: "center", gap: "12px", padding: "14px", borderRadius: "20px", background: "linear-gradient(135deg,#E4F0E9,#F4FAF6)", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 3px 12px rgba(14,75,67,0.09)" } },
+        React.createElement("div", { "aria-hidden": "true", style: { flex: "0 0 auto", width: "46px", height: "46px", borderRadius: "14px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", boxShadow: "0 1px 4px rgba(14,75,67,0.12)" } }, "🩺"),
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", lineHeight: 1.25 } }, "ডাক্তার বিবরণ"),
+          React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "2px" } }, "ভিজিটিং কার্ডসহ সংরক্ষণ করুন")),
         !showForm && !editingDoctor && React.createElement(AddDoctorButton, { onClick: () => { setEditingDoctor(null); setShowForm(true); } })
       ),
-      !showForm && !editingDoctor && React.createElement("div", { role: "group", "aria-label": "বিভাগ", style: { display: "flex", gap: "6px", overflowX: "auto", marginTop: "10px", paddingBottom: "2px" } },
+      !showForm && !editingDoctor && React.createElement("div", { role: "group", "aria-label": "বিভাগ", style: { display: "flex", gap: "6px", overflowX: "auto", marginTop: "16px", padding: "2px 2px 6px" } },
         [["all", "সব"], ...DOCTOR_CATEGORIES].map(([catId, label]) => React.createElement("button", {
           key: catId, onClick: () => setCategory(catId), "aria-pressed": category === catId,
           style: { flexShrink: 0, minHeight: "40px", padding: "0 14px", borderRadius: "999px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",

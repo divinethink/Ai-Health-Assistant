@@ -32,7 +32,7 @@ function actionButton(label, onClick, disabled, primary) {
 }
 
 function buttonRow(...btns) {
-  return React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } }, ...btns);
+  return React.createElement("div", { style: { display: "flex", gap: "10px", marginTop: "16px" } }, ...btns);
 }
 
 export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId, onGoUpload }) {
@@ -94,8 +94,8 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
 
   const memberName = (members.find((m) => m.id === targetMemberId) || {}).name;
   return React.createElement(
-    "div", { style: { marginTop: "12px" } },
-    React.createElement("h3", { style: { fontSize: "16px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "ডাক্তারকে দেখানোর জন্য"),
+    "div", { style: { marginTop: "4px", paddingBottom: "16px" } },
+    React.createElement("h3", { style: { fontSize: "18px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "0 2px" } }, "ডাক্তারকে দেখানোর জন্য"),
 
     exportCard("🧾", "স্বাস্থ্য প্রোফাইল", "যাচাই-করা তথ্য থেকে — কোনো AI মতামত নেই।", null,
       React.createElement(React.Fragment, null,

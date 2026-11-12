@@ -11,12 +11,12 @@ const { useState, useEffect, useMemo } = React;
 
 // সব কার্ড এক স্টাইলে: আইকন + বাংলা শিরোনাম + এক-লাইন বর্ণনা + (ঐচ্ছিক) ছোট লেবেল।
 export function exportCard(icon, title, subtitle, tag, children) {
-  return React.createElement("div", { style: { border: "1px solid #D9E5DE", borderRadius: "16px", background: "#fff", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", padding: "14px", marginTop: "12px" } },
-    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
-      React.createElement("div", { style: { fontSize: "24px" } }, icon),
-      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } }, title)),
-    subtitle && React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "6px 0 0" } }, subtitle),
-    tag && React.createElement("div", { style: { display: "inline-block", marginTop: "6px", padding: "3px 10px", borderRadius: "999px", background: "#FFF4DC", color: "#8A5A00", fontSize: "12px", fontWeight: 600 } }, tag),
+  return React.createElement("div", { style: { border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "20px", background: "var(--hs-surface, #fff)", boxShadow: "0 3px 12px rgba(14,75,67,0.09)", padding: "16px", marginTop: "16px" } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
+      React.createElement("div", { "aria-hidden": "true", style: { flex: "0 0 auto", width: "46px", height: "46px", borderRadius: "14px", background: "linear-gradient(135deg,#D5EBDF,#EAF4EE)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" } }, icon),
+      React.createElement("div", { style: { fontWeight: 800, fontSize: "16.5px", color: "var(--hs-primary, #0E4B43)" } }, title)),
+    subtitle && React.createElement("p", { style: { fontSize: "13.5px", color: "#5F716C", lineHeight: 1.5, margin: "10px 0 0" } }, subtitle),
+    tag && React.createElement("div", { style: { display: "inline-block", marginTop: "10px", padding: "4px 12px", borderRadius: "999px", background: "#FFF4DC", color: "#8A5A00", fontSize: "12px", fontWeight: 600 } }, tag),
     children
   );
 }

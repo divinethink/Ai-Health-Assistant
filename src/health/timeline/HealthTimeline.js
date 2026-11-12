@@ -1,4 +1,3 @@
-import { t } from "../../shared/i18n.js";
 // Health Timeline UI। Checklist P2-এর শেষ আইটেম।
 //
 // member-selector unification (owner-request): নিজস্ব member-fetch/dropdown
@@ -68,10 +67,10 @@ function TimelineRow({ row }) {
   const count = row.items.length;
   const danger = e.riskLevel === "emergency";
   return React.createElement(
-    "div", { style: { marginBottom: "10px", position: "relative" } },
+    "div", { style: { marginBottom: "12px", position: "relative", background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "16px", padding: "10px 12px", boxShadow: "0 1px 4px rgba(14,75,67,0.07)" } },
     React.createElement("div", {
       style: {
-        position: "absolute", left: "-19px", top: "5px", width: "10px", height: "10px", borderRadius: "50%",
+        position: "absolute", left: "-30px", top: "16px", width: "10px", height: "10px", borderRadius: "50%",
         background: danger ? "#B3261E" : "var(--hs-primary, #0E4B43)", border: "2px solid #F5F7F5",
       },
     }),
@@ -97,7 +96,7 @@ function TimelineRow({ row }) {
   );
 }
 
-export function HealthTimeline({ familyId, selectedMemberId }) {
+export function HealthTimeline({ familyId, selectedMemberId, vaccineSlot }) {
   const [entries, setEntries] = useState(null);
   const [entriesErr, setEntriesErr] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -143,7 +142,7 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
     if (monthLabel !== lastMonth) {
       nodes.push(React.createElement("div", {
         key: "m-" + monthLabel + "-" + row.sig,
-        style: { margin: "6px 0 8px -14px", fontSize: "13px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" },
+        style: { margin: "10px 0 10px -18px", fontSize: "14px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" },
       }, monthLabel));
       lastMonth = monthLabel;
     }
@@ -152,27 +151,26 @@ export function HealthTimeline({ familyId, selectedMemberId }) {
 
   return React.createElement(
     "div", null,
-    React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, t("h.timeline")),
-
     React.createElement(
-      "div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "6px" } },
+      "div", { className: "hs-noscroll", style: { display: "flex", gap: "8px", overflowX: "auto", padding: "4px 2px 10px" } },
       FILTERS.map((f) => React.createElement("button", {
         key: f.id, onClick: () => { setFilter(f.id); setVisible(PAGE_SIZE); },
         style: {
-          flexShrink: 0, padding: "4px 12px", minHeight: "32px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer",
+          flexShrink: 0, padding: "4px 16px", minHeight: "40px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           border: filter === f.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
-          background: filter === f.id ? "var(--hs-primary, #0E4B43)" : "#fff", color: filter === f.id ? "#fff" : "#2B3A36",
+          background: filter === f.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", boxShadow: filter === f.id ? "0 3px 8px rgba(14,75,67,0.22)" : "none", color: filter === f.id ? "#fff" : "#2B3A36",
         },
       }, f.label))
     ),
 
+    filter === "vaccine" && vaccineSlot ? React.createElement("div", { style: { marginBottom: "14px" } }, vaccineSlot) : null,
     (entriesErr || recErr) && ErrorBox(entriesErr || (recErr.code === "permission-denied" ? "এই সদস্যের টাইমলাইন দেখার অনুমতি আপনার নেই।" : (recErr.message || String(recErr)))),
     !entriesErr && !recErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
     !entriesErr && entries && rows.length === 0 &&
       React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, entries.length === 0 ? "এখনো কোনো রেকর্ড/নথি নেই।" : "এই ফিল্টারে কোনো এন্ট্রি নেই।"),
 
     !entriesErr && entries && rows.length > 0 && React.createElement(
-      "div", { style: { marginTop: "10px", borderLeft: "2px solid #D3E0D9", paddingLeft: "14px" } }, nodes
+      "div", { style: { marginTop: "14px", borderLeft: "2px solid #CFE0D6", paddingLeft: "18px", marginLeft: "4px" } }, nodes
     ),
     !entriesErr && rows.length > visible && React.createElement("button", {
       onClick: () => setVisible((v) => v + PAGE_SIZE),
