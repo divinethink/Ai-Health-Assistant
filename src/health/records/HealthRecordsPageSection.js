@@ -107,7 +107,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
-  const [recordSub, setRecordSub] = useState(() => (peekQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["bp", "sugar"]) ? "records" : peekQuickIntent(["report"]) ? "docs" : "meds")); // শুধু peek: ইনটেন্ট নেয় গন্তব্য-ফর্ম নিজে (ওষুধ→MedicationReminders, প্রেসার/সুগার→HealthRecordsSection, রিপোর্ট→DocumentsSection)
+  const [recordSub, setRecordSub] = useState(() => (peekQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["bp", "sugar", "observation", "condition", "allergy"]) ? "records" : peekQuickIntent(["report"]) ? "docs" : "meds")); // শুধু peek: ইনটেন্ট নেয় গন্তব্য-ফর্ম নিজে (ওষুধ→MedicationReminders, প্রেসার/সুগার→HealthRecordsSection, রিপোর্ট→DocumentsSection)
   const counts = usePillCounts(familyId, isHealth ? selectedMemberId : null, addTick);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);

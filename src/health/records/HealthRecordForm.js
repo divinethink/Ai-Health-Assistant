@@ -25,10 +25,11 @@ const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", ph
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
 // না দিলে (undefined/null) স্বাভাবিক create-mode — আগের behavior অপরিবর্তিত।
-export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs, onUpload, onMedChoice }) {
+export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onAdded, editingRecord, onCancelEdit, presetObs, presetType, onUpload, onMedChoice }) {
   const isEdit = !!editingRecord;
   const preset = !isEdit && presetObs ? OBS_PRESETS[presetObs] : null; // "+ দ্রুত যোগ": প্রেসার/সুগার — শুধু ধরন+একক আগে-থেকে-ভরা
-  const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : preset ? "observation" : "condition");
+  const startType = !isEdit && !preset && presetType ? presetType : null; // ＋ পপআপ: অসুখ/অ্যালার্জি/পরিমাপ সরাসরি
+  const [resourceType, setResourceType] = useState(editingRecord ? editingRecord.resourceType : preset ? "observation" : startType || "condition");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("A");
   const [status, setStatus] = useState("active");
@@ -51,7 +52,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
-  const [picked, setPicked] = useState(isEdit || !!preset); // ধাপ ৫: আগে ৪টা টাইল ("কী যোগ করবেন?"), বাছার পর ২–৩ ঘরের ফর্ম
+  const [picked, setPicked] = useState(isEdit || !!preset || !!startType); // ধাপ ৫: আগে ৪টা টাইল ("কী যোগ করবেন?"), বাছার পর ২–৩ ঘরের ফর্ম
   const [medMenu, setMedMenu] = useState(false); // "ওষুধ/প্রেসক্রিপশন" টাইল → দুই বড় অপশন (আপলোড | হাতে লিখুন)
   const [more, setMore] = useState(!!editingRecord); // "আরও যোগ করুন" ভাঁজ — নতুন রেকর্ডে বন্ধ, edit-এ খোলা
 
@@ -59,9 +60,9 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   useEffect(() => {
     if (!editingRecord) {
       // edit বাতিল/সম্পন্ন হয়ে create-mode-এ ফিরলে আগের edit-value থেকে যাওয়া ঠেকাতে reset
-      setResourceType(preset ? "observation" : "condition"); resetFields(); setErr(null); setMore(false);
+      setResourceType(preset ? "observation" : startType || "condition"); resetFields(); setErr(null); setMore(false);
       if (preset) { setObsType(preset.type); setUnit(preset.unit); } // "+ দ্রুত যোগ": ধরন+একক আগে-থেকে-ভরা থাকে
-      setPicked(!!preset);
+      setPicked(!!preset || !!startType);
       return;
     }
     const r = editingRecord;

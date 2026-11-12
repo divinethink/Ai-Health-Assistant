@@ -11,7 +11,6 @@ import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
-import { QuickAddFab } from "../quickadd/QuickAddSheet.js";
 import { T } from "../tracker/trackerTheme.js";
 import { UpcomingSection } from "../summary/UpcomingGrid.js";
 
@@ -31,6 +30,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
   const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
+  const [presetType, setPresetType] = useState(null); // ＋ পপআপ থেকে অসুখ/অ্যালার্জি/পরিমাপ — ধরন আগে-থেকে-বাছা
   const [presetObs, setPresetObs] = useState(null); // "+ দ্রুত যোগ" থেকে প্রেসার/সুগার (ধাপ ৯)
   const formRef = useRef(null);
   const targetMemberId = selectedMemberId;
@@ -41,8 +41,9 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   useEffect(() => { setEditingRecord(null); setAdding(false); }, [targetMemberId]);
   useEffect(() => {
     if (section !== "records" && section !== "all") return;
-    const k = takeQuickIntent(["bp", "sugar"]);
-    if (k) { setPresetObs(k); setAdding(true); }
+    const k = takeQuickIntent(["bp", "sugar", "condition", "allergy", "observation"]);
+    if (k === "bp" || k === "sugar") { setPresetObs(k); setAdding(true); }
+    else if (k) { setPresetType(k === "observation" ? "observation" : k); setAdding(true); }
     // eslint-disable-next-line
   }, []);
   useEffect(() => { if (adding && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [adding]);
@@ -64,14 +65,14 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     (section === "all" || section === "profile") && React.createElement(UpcomingSection, { key: "up-" + targetMemberId, familyId, selectedMemberId: targetMemberId, refreshTick }),
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
-      !adding && !editingRecord && QuickAddFab({ onOpen: () => setAdding(true) }), // হোমের মতো ভাসমান ＋ (owner-request ২০২৬-১১-১২)
+      // ＋ এখন app.js-এর একটাই সাধারণ পপআপ (হোমের সাথে এক); বাছা ধরন intent হয়ে এখানে ফর্ম খোলে
       (() => {
         const form = (adding || editingRecord) && React.createElement(HealthRecordForm, {
-          key: "form-" + targetMemberId + (presetObs || ""),
-          familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
+          key: "form-" + targetMemberId + (presetObs || "") + (presetType || ""),
+          familyId, targetMemberId, callerMemberId, presetObs, presetType, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
           onMedChoice: onMedChoice ? (k) => { setAdding(false); onMedChoice(k); } : undefined,
-          editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
-          onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); if (onRecordAdded) onRecordAdded(); },
+          editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); setPresetType(null); },
+          onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); setPresetType(null); if (onRecordAdded) onRecordAdded(); },
         });
         // নতুন যোগ: হোমের মতো নিচ-থেকে-ওঠা পপআপ (ব্যাকড্রপ চাপলে বন্ধ নয় — লেখা হারানো ঠেকাতে শুধু ✕); edit আগের মতো ইনলাইন
         if (!(adding && !editingRecord)) return form;

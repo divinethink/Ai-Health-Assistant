@@ -1,7 +1,7 @@
 // হোমের "＋" বাটন ও "কী যোগ করবেন?" শিট (ধাপ ৯, মকআপ অনুযায়ী)। শুধু presentational — ফর্ম/লেখা এখানে নেই।
 // props: open, onOpen, onClose, onPick(kind), memberName
 import { T } from "../tracker/trackerTheme.js";
-import { QUICK_ITEMS } from "./quickAddTargets.js";
+import { QUICK_ITEMS, QUICK_GROUPS } from "./quickAddTargets.js";
 
 const h = React.createElement;
 
@@ -22,10 +22,12 @@ export function QuickAddSheet({ open, onClose, onPick, memberName }) {
         h("div", { style: { fontSize: "20px", fontWeight: 800, color: T.green } }, "কী যোগ করবেন?"),
         h("button", { type: "button", onClick: onClose, "aria-label": "বন্ধ করুন", style: { minWidth: "44px", minHeight: "44px", border: "none", background: "none", fontSize: "20px", color: T.muted, cursor: "pointer" } }, "✕")),
       h("div", { style: { fontSize: "14px", color: T.muted, margin: "2px 0 12px" } }, "একবার দিলেই প্রোফাইল, ট্রেন্ড ও ডাক্তার-রিপোর্টে নিজে থেকে যুক্ত হবে।"),
-      h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" } },
-        QUICK_ITEMS.map((it) => h("button", {
-          key: it.id, type: "button", onClick: () => onPick(it.id),
-          style: { minHeight: "88px", borderRadius: "18px", border: "1px solid " + T.border, background: T.surface, color: T.green, fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", fontFamily: "inherit" },
-        }, h("span", { "aria-hidden": "true", style: { fontSize: "30px" } }, it.icon), it.label))),
+      QUICK_GROUPS.map(([gid, glabel]) => h("div", { key: gid, style: { marginBottom: "10px" } },
+        h("div", { style: { fontSize: "13px", fontWeight: 700, color: T.muted, margin: "6px 2px" } }, glabel),
+        h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" } },
+          QUICK_ITEMS.filter((it) => it.group === gid).map((it) => h("button", {
+            key: it.id, type: "button", onClick: () => onPick(it.id),
+            style: { minHeight: "88px", borderRadius: "18px", border: "1px solid " + T.border, background: T.surface, color: T.green, fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", fontFamily: "inherit" },
+          }, h("span", { "aria-hidden": "true", style: { fontSize: "30px" } }, it.icon), it.label))))),
       memberName && h("div", { style: { marginTop: "12px", padding: "10px 12px", borderRadius: "12px", background: T.track, fontSize: "13px", color: T.ink } }, "🔗 সদস্য: " + memberName + " · সব তথ্য একটাই স্বাস্থ্য-ভান্ডারে জমা হয়")));
 }

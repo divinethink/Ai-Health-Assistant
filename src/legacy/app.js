@@ -514,7 +514,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     React.Fragment, null,
     tabContent,
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
-    activeTab === "home" && selectedMemberId && React.createElement(QuickAddFab, { onOpen: () => setQuickOpen(true) }),
+    (activeTab === "home" || activeTab === "health") && selectedMemberId && React.createElement(QuickAddFab, { onOpen: () => setQuickOpen(true) }),
     React.createElement(QuickAddSheet, { open: quickOpen, onClose: () => setQuickOpen(false), onPick: onQuickPick, memberName: ((members || []).find((m) => m.id === selectedMemberId) || {}).name || "" }),
     React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: setActiveTab })
   );

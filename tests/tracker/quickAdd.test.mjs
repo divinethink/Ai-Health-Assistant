@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 import { QUICK_ITEMS, quickTarget, OBS_PRESETS } from "../../src/health/quickadd/quickAddTargets.js";
 import { setQuickIntent, peekQuickIntent, takeQuickIntent } from "../../src/shared/quickIntent.js";
 
-test("৯টা টাইল, id অনন্য, প্রতিটার গন্তব্য আছে", () => {
-  assert.equal(QUICK_ITEMS.length, 9);
-  assert.equal(new Set(QUICK_ITEMS.map((x) => x.id)).size, 9);
+test("১২টা টাইল, id অনন্য, প্রতিটার গন্তব্য ও গ্রুপ আছে", () => {
+  assert.equal(QUICK_ITEMS.length, 12);
+  assert.equal(new Set(QUICK_ITEMS.map((x) => x.id)).size, 12);
+  QUICK_ITEMS.forEach((x) => assert.ok(["today", "measure", "record"].includes(x.group)));
   QUICK_ITEMS.forEach((x) => assert.ok(["home", "health", "tracker", "aichat"].includes(quickTarget(x.id))));
   assert.equal(quickTarget("nope"), null);
 });
