@@ -1,6 +1,6 @@
 // Doctor Details — card list। DocumentList.js-এর ২-ধাপ delete-confirm pattern reuse।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
 import { listDoctors, deleteDoctor, DOCTOR_CATEGORIES } from "./doctorDetailsData.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -76,14 +76,8 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
           "div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "10px" } },
           telHref && React.createElement("a", { href: telHref, style: pill("#fff", "var(--hs-primary, #0E4B43)") }, "📞 কল করুন"),
           canEdit && React.createElement("button", { onClick: () => { setOpenId(null); onEdit(d); }, style: pill("var(--hs-primary, #0E4B43)", "#fff") }, "✎ এডিট"),
-          canDelete && (confirmId === d.id
-            ? React.createElement(
-                React.Fragment, null,
-                React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
-                React.createElement("button", { onClick: () => doDelete(d), disabled: busyId === d.id, style: pill("#fff", "#C0392B") }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-                React.createElement("button", { onClick: () => setConfirmId(null), style: pill("#5F716C", "#fff") }, "না")
-              )
-            : React.createElement("button", { onClick: () => setConfirmId(d.id), style: pill("#C0392B", "#fff") }, "🗑 মুছুন")))
+          canDelete && React.createElement("button", { onClick: () => setConfirmId(d.id), style: pill("#C0392B", "#fff") }, "🗑 মুছুন"),
+          canDelete && confirmId === d.id && React.createElement(ConfirmDialog, { title: "ডাক্তারের তথ্য মুছবেন?", message: d.name + " — স্থায়ীভাবে মুছে যাবে।", busy: busyId === d.id, onConfirm: () => doDelete(d), onCancel: () => setConfirmId(null) }))
       );
   };
 

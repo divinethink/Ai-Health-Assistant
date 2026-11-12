@@ -5,7 +5,7 @@ import { t } from "../../shared/i18n.js";
 // component-ই যথেষ্ট)। app.js থেকে split (Component-Split — অংশ A), কোনো
 // functional পরিবর্তন নেই।
 
-import { TextField, SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
+import { TextField, SelectField, DateField, ErrorBox, PrimaryButton, SecondaryButton, ACCENTS, accentVars } from "../../shared/ui.js";
 import { createHealthRecord, updateHealthRecord, listHealthRecords, ensureDoctorInDirectory } from "./healthRecordsData.js";
 import { listDoctors } from "../doctor-details/doctorDetailsData.js";
 import { DoctorFieldsRow } from "../doctor-details/DoctorFieldsRow.js";
@@ -16,7 +16,9 @@ const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
 // ধাপ ৫: টাইল (resourceType, আইকন, নাম) — ওষুধও একই createHealthRecord পথে; রিমাইন্ডার-সময় পরে "ওষুধ" তালিকা থেকে
 const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "অ্যালার্জি"], ["medicationStatement", "💊", "ওষুধ/প্রেসক্রিপশন"], ["observation", "📏", "পরিমাপ"]];
-const tileStyle = { minHeight: "88px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px" };
+const tileBase = { minHeight: "72px", padding: "6px 4px", borderRadius: "14px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, lineHeight: 1.25, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" };
+// প্রতিটা ধরনের নিজস্ব রং (ACCENTS) — টাইল ও পরের পেজ একই রঙে মেলে
+const tileStyle = (kind) => { const a = ACCENTS[kind]; return { ...tileBase, border: "1.5px solid " + a.border, background: a.tint, color: a.main }; };
 const EMPTY_PHYS = { name: "", specialtyCategory: "", area: "", hospital: "", phone: "", doctorId: "" };
 
 // editingRecord দিলে edit-mode (fields prefill, submit করলে update; resourceType লক)।
@@ -201,9 +203,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const closeBtn = React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
     style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", cursor: "pointer" } }, "✕");
   const wrap = { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
-  const bigBtn = (primary) => ({ minHeight: "64px", borderRadius: "16px", border: "1.5px solid " + (primary ? "var(--hs-primary, #0E4B43)" : "#9CC5B4"), background: primary ? "#E6F3EC" : "#F6FAF7", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" });
+  const accWrap = (kind) => { const a = ACCENTS[kind]; return { ...wrap, background: a.tint, border: "1px solid " + a.border, borderTop: "4px solid " + a.main, ...accentVars(kind) }; };
+  const bigBtn = (primary) => ({ minHeight: "64px", borderRadius: "16px", border: "1.5px solid " + (primary ? "var(--hs-primary, #0E4B43)" : "#D3C7EE"), background: "#fff", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" });
   if (!isEdit && !picked && medMenu && onMedChoice) {
-    return React.createElement("div", { style: wrap },
+    return React.createElement("div", { style: accWrap("medicationStatement") },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
         React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "💊 ওষুধ/প্রেসক্রিপশন"), closeBtn),
       React.createElement("div", { style: { display: "grid", gap: "10px" } },
@@ -215,17 +218,17 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     return React.createElement("div", { style: wrap },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
         React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
-      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" } },
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } },
         ADD_TILES.map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => (type === "medicationStatement" && onMedChoice ? setMedMenu(true) : pickType(type)),
-          style: tileStyle },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, icon), label)),
+          style: tileStyle(type) },
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px", lineHeight: 1 } }, icon), label)),
         // ল্যাব রিপোর্ট — ল্যাব রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
-        onUpload && React.createElement("button", { key: "lab", onClick: onUpload, style: tileStyle },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "28px" } }, "🧪"), "ল্যাব রিপোর্ট")));
+        onUpload && React.createElement("button", { key: "lab", onClick: onUpload, style: tileStyle("lab") },
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px", lineHeight: 1 } }, "🧪"), "ল্যাব রিপোর্ট")));
   }
 
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: isEdit ? "#FFFBEB" : undefined } },
+    "div", { style: isEdit ? { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: "#FFFBEB", ...accentVars(resourceType) } : accWrap(resourceType) },
     React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
       React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
       closeBtn),

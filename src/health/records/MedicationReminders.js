@@ -9,7 +9,7 @@
 // অবস্থায় (বা background tab, ব্রাউজার বন্ধ না থাকলে) reminder কাজ করবে। App সম্পূর্ণ
 // বন্ধ থাকলে notification আসবে না। এটাই honest সীমা, UI-তে স্পষ্ট করে বলা আছে।
 
-import { ErrorBox, SheetFrame } from "../../shared/ui.js";
+import { ErrorBox, SheetFrame, ConfirmDialog } from "../../shared/ui.js";
 import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -355,10 +355,10 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
-    rxOpen && h(SheetFrame, { title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
+    rxOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f, _p, id) => { setRxDocId(id || null); setRxFile(f); } }),
       rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান", onStageChange: setRxStage })),
-    addOpen && h(SheetFrame, { title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
+    addOpen && h(SheetFrame, { accent: "medicationStatement", title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
         h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, minHeight: "48px", padding: "11px", borderRadius: "12px", border: "none", background: aBusy ? "#8FAFA9" : GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
         h("button", { onClick: () => { setAddOpen(false); setAErr(null); }, style: { minHeight: "48px", padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল")) },
       members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
@@ -422,11 +422,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             h("button", { onClick: () => { setMenuId(null); handleCalendarSync(m); }, disabled: calBusy === m.recordId, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", borderBottom: "1px solid #EEF3F0", background: "none", color: "#2B3A36", fontSize: F, cursor: "pointer", fontFamily: "inherit" } }, calBusy === m.recordId ? "..." : (m.calendarEventIds.length > 0 ? "📅 Calendar আপডেট" : "📅 সংরক্ষণ করে ক্যালেন্ডারে যোগ করুন")),
             m.calendarEventIds.length > 0 && h("button", { onClick: () => { setMenuId(null); handleCalendarRemove(m); }, disabled: calBusy === m.recordId, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", borderBottom: "1px solid #EEF3F0", background: "none", color: "#B3261E", fontSize: F, cursor: "pointer", fontFamily: "inherit" } }, "Calendar থেকে সরান"),
             h("button", { onClick: () => { setMenuId(null); setDelConfirm(m.recordId); }, style: { display: "block", width: "100%", minHeight: "48px", padding: "0 14px", textAlign: "left", border: "none", background: "none", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" } }, "🗑 ওষুধ মুছুন")),
-          delConfirm === m.recordId && h("div", { style: { marginTop: "12px" } },
-            h("div", { style: { fontSize: F, color: "#B3261E", marginBottom: "6px" } }, "নিশ্চিত মুছবেন? রিমাইন্ডারও বন্ধ হবে।"),
-            h("div", { style: { display: "flex", gap: "8px" } },
-              h("button", { onClick: () => handleDelete(m), disabled: delBusy, style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #B3261E", background: "#FDF0EE", color: "#B3261E", fontSize: F, fontWeight: 600, cursor: "pointer" } }, delBusy ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-              h("button", { onClick: () => setDelConfirm(null), style: { flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#5F716C", fontSize: F, cursor: "pointer" } }, "না"))),
+          delConfirm === m.recordId && h(ConfirmDialog, { title: "ওষুধটি মুছবেন?", message: m.genericName + " — রিমাইন্ডারও বন্ধ হবে।", busy: delBusy, onConfirm: () => handleDelete(m), onCancel: () => setDelConfirm(null) }),
           calMsg && calMsg.recordId === m.recordId && h("div", { style: { fontSize: F, marginTop: "8px", color: calMsg.ok ? GREEN : "#B3261E" } }, calMsg.text)));
     })
   );

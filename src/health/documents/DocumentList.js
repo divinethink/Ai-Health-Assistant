@@ -5,7 +5,7 @@
 // access-controlled Firestore metadata doc-এর ভেতরেই থাকে (listDocuments() নিজেই
 // hasAccess()-গেটেড)। Delete বোতাম এখন ⋮ মেনুর ভেতরে (ভুল-ট্যাপ কমাতে)।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
 import { listDocuments, deleteDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -130,23 +130,11 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
         ),
         menuId === d.id && React.createElement(
           "div", { style: { display: "flex", gap: "12px", alignItems: "center", marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #D3E0D9" } },
-          confirmId === d.id
-            ? React.createElement(
-                React.Fragment, null,
-                React.createElement("span", { style: { fontSize: "14px", color: "#C0392B" } }, "নিশ্চিত মুছবেন?"),
-                React.createElement("button", {
-                  onClick: () => doDelete(d), disabled: busyId === d.id,
-                  style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", fontWeight: 600, cursor: "pointer", padding: 0 },
-                }, busyId === d.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-                React.createElement("button", {
-                  onClick: () => setConfirmId(null),
-                  style: { fontSize: "14px", border: "none", background: "none", color: "#5F716C", cursor: "pointer", padding: 0 },
-                }, "না")
-              )
-            : React.createElement("button", {
-                onClick: () => setConfirmId(d.id),
-                style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: 0 },
-              }, "🗑 মুছুন")
+          React.createElement("button", {
+            onClick: () => setConfirmId(d.id),
+            style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: "8px 0", minHeight: "44px" },
+          }, "🗑 মুছুন"),
+          confirmId === d.id && React.createElement(ConfirmDialog, { title: "নথিটি মুছবেন?", message: "\"" + d.fileName + "\" স্থায়ীভাবে মুছে যাবে।", busy: busyId === d.id, onConfirm: () => doDelete(d), onCancel: () => setConfirmId(null) })
         )
       );
     })

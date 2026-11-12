@@ -1,6 +1,7 @@
 // ---- ছোট UI primitives (app.js থেকে split, Component-Split — অংশ A) ----
 // কোনো functional পরিবর্তন নেই, শুধু নিজস্ব ফাইলে সরানো হয়েছে।
 
+import { createPortal } from "react-dom";
 import { histBind, histChange } from "./navHistory.js";
 import { localISO } from "./dates.js";
 
@@ -144,7 +145,8 @@ export function CloseX(onClick, label) {
   }, "✕");
 }
 
-export function SheetFrame({ title, onClose, scrollKey, footer, children }) {
+export function SheetFrame({ title, onClose, scrollKey, footer, accent, children }) {
+  const ac = accent ? ACCENTS[accent] : null;
   const bodyRef = React.useRef(null);
   React.useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [scrollKey]);
   React.useEffect(() => {
@@ -152,10 +154,43 @@ export function SheetFrame({ title, onClose, scrollKey, footer, children }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
-    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 14px", background: "#fff", borderBottom: "1px solid #D9E5DE", flexShrink: 0 } },
+  return React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: ac ? ac.tint : "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif", ...(ac ? accentVars(accent) : {}) } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 14px", background: "#fff", borderBottom: ac ? "3px solid " + ac.main : "1px solid #D9E5DE", flexShrink: 0 } },
       React.createElement("div", { style: { flex: 1, minWidth: 0, fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", overflowWrap: "anywhere" } }, title),
       CloseX(onClose)),
     React.createElement("div", { ref: bodyRef, style: { flex: 1, overflowY: "auto", overflowAnchor: "none", padding: "10px 12px 24px", WebkitOverflowScrolling: "touch" } }, children),
     footer && React.createElement("div", { style: { flexShrink: 0, padding: "8px 12px calc(8px + env(safe-area-inset-bottom, 0px))", background: "#fff", borderTop: "1px solid #D9E5DE" } }, footer));
+}
+
+// ---- ধরন-ভিত্তিক রং: প্রতিটা "যোগ"-পেজ আলাদা রঙে চেনা যায় ----
+// accentVars() CSS-variable বদলায় (--hs-primary), তাই ভেতরের বাটন/শিরোনাম/চিপ নিজে থেকে ওই রঙ নেয়।
+export const ACCENTS = {
+  condition: { main: "#2B5EA7", main2: "#3F78C4", tint: "#EEF4FC", border: "#B7CDEB" },
+  allergy: { main: "#B45309", main2: "#D2691E", tint: "#FFF5EA", border: "#F0CBA0" },
+  medicationStatement: { main: "#6A4BB0", main2: "#8466C9", tint: "#F4F0FC", border: "#D3C7EE" },
+  observation: { main: "#0B7A85", main2: "#169AA6", tint: "#E9F6F7", border: "#B3DADE" },
+  lab: { main: "#B03A5B", main2: "#C9536F", tint: "#FDF0F3", border: "#EFC3CF" },
+};
+export function accentVars(kind) {
+  const a = ACCENTS[kind];
+  return a ? { "--hs-primary": a.main, "--hs-primary-2": a.main2 } : {};
+}
+
+// ---- ConfirmDialog: স্ট্যান্ডার্ড মোছার নিশ্চিতকরণ (মাঝখানে ডায়ালগ; ডিফল্ট ফোকাস "বাতিল") ----
+export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy, onConfirm, onCancel }) {
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && !busy) onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel, busy]);
+  const btn = { flex: 1, minHeight: "48px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Hind Siliguri', sans-serif" } },
+    React.createElement("div", { onClick: busy ? undefined : onCancel, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
+    React.createElement("div", { role: "alertdialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "340px", background: "#fff", borderRadius: "20px", padding: "20px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
+      React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: "#1F2D2A" } }, title || "মুছে ফেলবেন?"),
+      message && React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginTop: "8px", lineHeight: 1.5, overflowWrap: "anywhere" } }, message),
+      React.createElement("div", { style: { display: "flex", gap: "10px", marginTop: "18px" } },
+        React.createElement("button", { type: "button", autoFocus: true, onClick: onCancel, disabled: busy, style: { ...btn, border: "1.5px solid #C3D2CA", background: "#fff", color: "#2B3A36" } }, cancelLabel || "বাতিল"),
+        React.createElement("button", { type: "button", onClick: onConfirm, disabled: busy, style: { ...btn, border: "none", background: busy ? "#D9A39D" : "#B3261E", color: "#fff" } }, busy ? "মুছছে..." : (confirmLabel || "মুছুন")))));
+  return createPortal(dlg, document.body);
 }

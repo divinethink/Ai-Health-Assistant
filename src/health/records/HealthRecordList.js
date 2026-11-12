@@ -7,7 +7,7 @@
 // শুধু presentation — কোনো schema/rules বদল নেই।
 
 import { t } from "../../shared/i18n.js";
-import { ErrorBox, Skeleton } from "../../shared/ui.js";
+import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
 import { groupObservations, obsTrend } from "./recordGrouping.js";
@@ -74,15 +74,11 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid " + color, background: bg || "#fff", color, fontSize: "14px", fontWeight: 600, cursor: "pointer" });
 
   // ✎ সম্পাদনা + 🗑 মুছুন (২-ধাপ)
-  const actions = (r) => confirmId === r.id
-    ? React.createElement("div", { style: { marginTop: "10px" } },
-        React.createElement("div", { style: { fontSize: "14px", color: RED, marginBottom: "6px" } }, "নিশ্চিত মুছবেন?"),
-        React.createElement("div", { style: { display: "flex", gap: "8px" } },
-          React.createElement("button", { onClick: () => doDelete(r), disabled: busyId === r.id, style: btn(RED, "#FDF0EE") }, busyId === r.id ? "মুছছে..." : "হ্যাঁ, মুছুন"),
-          React.createElement("button", { onClick: () => setConfirmId(null), style: btn(MUTED) }, "না")))
-    : React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
-        React.createElement("button", { onClick: () => onEdit && onEdit(r), style: btn(G) }, "✎ সম্পাদনা"),
-        React.createElement("button", { onClick: () => setConfirmId(r.id), style: btn(RED) }, "🗑 মুছুন"));
+  const actions = (r) => React.createElement(React.Fragment, null,
+    React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
+      React.createElement("button", { onClick: () => onEdit && onEdit(r), style: btn(G) }, "✎ সম্পাদনা"),
+      React.createElement("button", { onClick: () => setConfirmId(r.id), style: btn(RED) }, "🗑 মুছুন")),
+    confirmId === r.id && React.createElement(ConfirmDialog, { title: "রেকর্ডটি মুছবেন?", message: "এই রেকর্ড স্থায়ীভাবে মুছে যাবে।", busy: busyId === r.id, onConfirm: () => doDelete(r), onCancel: () => setConfirmId(null) }));
 
   const line = (label, v) => v ? React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "3px" } }, label + ": " + v) : null;
   const title = (icon, text, n) => React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 8px" } },
