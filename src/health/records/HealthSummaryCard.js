@@ -8,6 +8,7 @@
 // কোনো নতুন schema/collection/permission-rule লাগেনি।
 
 import { ErrorBox } from "../../shared/ui.js";
+import { Icon } from "../../shared/icons.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
@@ -51,21 +52,21 @@ const bn = (n) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭�
 
 const h = React.createElement;
 const BMI_CHIP = {
-  underweight: { text: "কম ওজন", bg: "#FFE3A8", fg: "#7A4B00" },
+  underweight: { text: "ওজন কম", bg: "#FFE3A8", fg: "#7A4B00" },
   normal: { text: "সঠিক ওজন", bg: "#CFF1DE", fg: "#0E4B43" },
-  overweight: { text: "বেশি ওজন", bg: "#FFE3A8", fg: "#7A4B00" },
+  overweight: { text: "ওজন বেশি", bg: "#FFE3A8", fg: "#7A4B00" },
   obese: { text: "স্থূলতা", bg: "#FFD3CD", fg: "#8A1C12" },
 };
 const SOFT = "#4A6159";
 const INK = "var(--hs-primary, #0E4B43)";
-const GLASS = { background: "#FFFFFF", border: "1px solid #CFE0D5", borderRadius: "10px", padding: "4px 9px", minWidth: 0, boxSizing: "border-box" };
+const GLASS = { background: "#FFFFFF", border: "none", boxShadow: "0 1px 2px rgba(14,75,67,0.06), 0 4px 12px rgba(14,75,67,0.08)", borderRadius: "12px", padding: "4px 9px", minWidth: 0, boxSizing: "border-box" };
 
 // হিরোর ভেতরের সংখ্যা-টাইল (উচ্চতা/ওজন/BMI)
 function stat(label, big, unit, chip) {
   return h("div", { style: GLASS },
     h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px", minHeight: "16px" } },
       h("span", { style: { fontSize: "11.5px", color: SOFT } }, label),
-      chip && h("span", { style: { padding: "0 6px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, lineHeight: "16px", whiteSpace: "nowrap", background: chip.bg, color: chip.fg } }, chip.text)),
+      chip && h("span", { style: { padding: "0 5px", borderRadius: "999px", fontSize: "10.5px", fontWeight: 700, lineHeight: "16px", whiteSpace: "nowrap", background: chip.bg, color: chip.fg } }, chip.text)),
     h("div", { style: { whiteSpace: "nowrap", lineHeight: 1.2 } },
       h("span", { style: { fontSize: "17px", fontWeight: 800, color: INK } }, big),
       unit && h("span", { style: { fontSize: "12px", color: SOFT } }, " " + unit)));
@@ -83,7 +84,7 @@ function shortCondName(name) {
 // "এক নজরে" প্যানেলের একটি লাইন: আইকন + লেবেল বামে, মান ডানে
 function glance(icon, label, value, tone) {
   return h("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", padding: "3px 0" } },
-    h("span", { style: { fontSize: "13px", color: "#5F716C", flexShrink: 0 } }, icon + " " + label),
+    h("span", { style: { display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "13px", color: "#5F716C", flexShrink: 0 } }, icon, label),
     h("span", { style: { fontSize: "14px", fontWeight: 700, textAlign: "right", overflowWrap: "anywhere", color: tone === "red" ? "#B3261E" : tone === "muted" ? "#5F716C" : "#1F2D2A" } }, value));
 }
 
@@ -143,20 +144,20 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   const initial = member && member.name ? Array.from(member.name.trim())[0] || "?" : "?";
   // হোমের সতর্ক-সারির মতো চিপ: অ্যালার্জি (লাল) + চলমান অসুখ (এক-শব্দ নাম)। কিছু না থাকলে সারিই নেই
   // ("নেই" দেখালে "নিরাপদ" মনে হতে পারে — হোমের "তথ্য না থাকলে কিছু নয়" নীতির সাথে মিল)।
-  const mkChip = (key, text, bg, fg) => h("span", { key, style: { padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "13px", fontWeight: 700, maxWidth: "100%", overflowWrap: "anywhere" } }, text);
+  const mkChip = (key, text, bg, fg) => h("span", { key, style: { display: "inline-flex", alignItems: "center", gap: "5px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "13px", fontWeight: 700, maxWidth: "100%", overflowWrap: "anywhere" } }, text);
   const condShown = conds.slice(0, 3), allergyShown = allergies.slice(0, 2);
   const chipRow = (allergies.length || conds.length) ? h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px", alignItems: "center" } },
-    allergyShown.map((a, i) => mkChip("a" + i, "⚠️ " + shortCondName(a.substance), "#FDECEA", "#A32018")),
+    allergyShown.map((a, i) => mkChip("a" + i, [Icon("alert", { key: "i", size: 14 }), shortCondName(a.substance)], "#FDECEA", "#A32018")),
     allergies.length > allergyShown.length && h("span", { key: "am", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(allergies.length - allergyShown.length)),
-    condShown.map((c, i) => mkChip("c" + i, "🩺 " + shortCondName(c.name), "#fff", "var(--hs-primary, #0E4B43)")),
+    condShown.map((c, i) => mkChip("c" + i, [Icon("health", { key: "i", size: 14 }), shortCondName(c.name)], "#fff", "var(--hs-primary, #0E4B43)")),
     conds.length > condShown.length && h("span", { key: "cm", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(conds.length - condShown.length) + "টি")) : null;
   const glanceRows = [
-    labAlerts.length > 0 && glance("🔴", "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : "")),
-    vaccination && glance("💉", "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · ⚠️ " + vaccination.overdue + "টির মেয়াদ পার" : "")),
+    labAlerts.length > 0 && glance(Icon("alert", { size: 14, color: "#B3261E" }), "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : "")),
+    vaccination && glance(Icon("syringe", { size: 14 }), "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · " + bn(vaccination.overdue) + "টির মেয়াদ পার" : "")),
   ].filter(Boolean);
 
   // হিরো-কার্ড: হোম-পেজের মতোই সবুজ গ্রেডিয়েন্ট। অসুখ/ওষুধ এখানে নয় — নিচের তালিকায় (ডুপ্লিকেট এড়াতে)।
-  return h("div", { style: { background: "#E4F1E9", color: INK, border: "1px solid #C3D9CC", borderRadius: "16px", padding: "8px 10px", marginBottom: "8px" } },
+  return h("div", { style: { background: "#E4F1E9", color: INK, border: "1px solid rgba(127,150,140,0.16)", borderRadius: "20px", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 8px 22px rgba(14,75,67,0.08)", padding: "8px 10px", marginBottom: "8px" } },
     h("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
       h("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "50%", background: "#CBE4D5", color: INK, border: "1px solid #B2D2BF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800 } }, initial),
       h("div", { style: { flex: 1, minWidth: 0 } },
@@ -165,8 +166,8 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
           birthYear ? (ageYears != null ? "বয়স " + bn(Math.floor(ageYears)) + " বছর · " : "") + "জন্ম " + bn(birthYear) : "জন্মতারিখ যোগ করা হয়নি")),
       h("button", {
         onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
-        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", margin: "-4px 0", border: "1px solid #B2D2BF", background: editing ? "#CBE4D5" : "#fff", color: INK, fontSize: "18px", cursor: "pointer" },
-      }, editing ? "✕" : "✎")),
+        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", margin: "-4px 0", border: "none", boxShadow: "0 1px 2px rgba(14,75,67,0.08), 0 3px 8px rgba(14,75,67,0.10)", background: editing ? "#CBE4D5" : "#fff", color: INK, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+      }, Icon(editing ? "x" : "pencil", { size: 18 }))),
 
     // ফর্মটি হালকা রঙের জন্য বানানো — তাই সাদা প্যানেলের ভেতরে
     editing && h("div", { style: { marginTop: "10px", background: "#fff", color: "#1F2D2A", borderRadius: "14px", padding: "8px 10px" } },
@@ -175,11 +176,11 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         onSaved: () => { setEditing(false); onVitalsSaved && onVitalsSaved(); },
       })),
 
-    h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px", marginTop: "6px", alignItems: "start" } },
-      stat("উচ্চতা", heightCm ? String(Math.round(heightCm * 10) / 10) : "—", heightCm ? "সেমি" : ""),
-      stat("ওজন", weightKg ? String(weightKg) : "—", weightKg ? "কেজি" : ""),
-      stat("বিএমআই", bmi ? bmi.toFixed(1) : "—", "", chip)),
-    adviceLine && h("div", { style: { fontSize: "12px", lineHeight: 1.35, color: SOFT, marginTop: "5px", padding: "0 2px" } }, adviceLine),
+    h("div", { style: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)", gap: "6px", marginTop: "6px", alignItems: "start" } },
+      stat("উচ্চতা", heightCm ? bn(Math.round(heightCm * 10) / 10) : "—", heightCm ? "সেমি" : ""),
+      stat("ওজন", weightKg ? bn(weightKg) : "—", weightKg ? "কেজি" : ""),
+      stat("বিএমআই", bmi ? bn(bmi.toFixed(1)) : "—", "", chip)),
+    adviceLine && h("div", { style: { fontSize: "11.5px", lineHeight: 1.35, color: SOFT, opacity: 0.9, marginTop: "5px", padding: "0 2px" } }, adviceLine),
     (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে বিএমআই ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
     chipRow,

@@ -11,6 +11,7 @@ import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
+import { Icon } from "../../shared/icons.js";
 import { UpcomingSection } from "../summary/UpcomingGrid.js";
 
 const { useState, useEffect, useRef } = React;
@@ -63,8 +64,8 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && React.createElement("button", {
         onClick: () => setAdding(true),
-        style: { width: "100%", minHeight: "48px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, var(--hs-accent, #B45309), var(--hs-accent-2, #D2691E))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" },
-      }, "＋ যোগ করুন"),
+        style: { width: "100%", minHeight: "46px", margin: "8px 0", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", boxShadow: "0 4px 12px rgba(14,75,67,0.25)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
+      }, Icon("plus", { size: 18, stroke: 2.2 }), "যোগ করুন"),
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),
         familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
