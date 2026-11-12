@@ -87,15 +87,18 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
+// খাবার-পেজের স্কোপড CSS: পিল-সারির স্ক্রলবার-রেখা লুকানো + সার্চ-ঘরে আইকনের জায়গা (index.html-এর !important padding ছাপিয়ে)
+export const FOOD_CSS = ".hs-fp-pills>div{scrollbar-width:none;-ms-overflow-style:none}.hs-fp-pills>div::-webkit-scrollbar{display:none}input.hs-fp-search{padding-left:46px!important;border-radius:16px!important;min-height:52px}";
 export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
-  return React.createElement("div", null,
+  return React.createElement("div", { className: "hs-fp-pills" },
+    React.createElement("style", null, FOOD_CSS),
     React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#fff", padding: "2px 0 6px" } },
       React.createElement("div", { style: { position: "relative" } },
         React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", pointerEvents: "none" } }, "🔍"),
-        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", style: { ...INPUT, minHeight: "52px", paddingLeft: "42px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
+        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
     between || null,
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),

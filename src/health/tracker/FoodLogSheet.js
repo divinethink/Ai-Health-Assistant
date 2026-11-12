@@ -110,7 +110,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
   const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "8px 0" } },
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · পরিমাণ দেখে " + slotLabel + "-এ যোগ"),
-    React.createElement("div", { style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" } },
+    React.createElement("div", { className: "hs-noscroll", style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" } },
       quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
         style: { ...chip(false), flex: "0 0 auto", textAlign: "left", opacity: busy ? 0.5 : 1, lineHeight: 1.3 } },
         React.createElement("span", { style: { display: "block", fontSize: "14px" } }, "＋ " + e.name),
@@ -119,7 +119,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose },
-      TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot),
+      React.createElement("div", { className: "hs-fp-pills", style: { marginTop: "-8px" } }, TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot)),
       budget && React.createElement("div", { style: { margin: "-6px 0 10px" } },
         React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি · বরাদ্দ, বেশি হলেও বাধা নেই"),
         React.createElement("div", { "aria-hidden": "true", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },

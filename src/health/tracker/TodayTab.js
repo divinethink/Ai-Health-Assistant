@@ -282,17 +282,17 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType])))),
       fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।")),
     // পুষ্টির হিসাব: হিরো-কার্ডের নিচে আলাদা কার্ডে (owner-request ২০২৬-১১-১২)। খালি অবস্থায়ও থাকে (০ ও টার্গেট); ডেটা বদলায় না, শুধু দেখানো।
-    calc && canLog && React.createElement("div", { style: { ...HOME_CARD, padding: "10px 14px", color: T.ink, marginBottom: "8px" }, "aria-label": "আজকের পুষ্টির হিসাব (গ্রাম, আনুমানিক)" },
+    calc && canLog && React.createElement("div", { style: { ...HOME_CARD, padding: "6px 12px 7px", color: T.ink, marginBottom: "8px" }, "aria-label": "আজকের পুষ্টির হিসাব (গ্রাম, আনুমানিক)" },
       React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
         [["প্রোটিন", macros.p, "#2E9E5B", "p"], ["কার্ব", macros.c, "#E0892B", "c"], ["ফ্যাট", macros.f, "#8A6FD6", "f"], ["ফাইবার", macros.fib, "#3C86D6", "fib"]].map(([name, v, col, key]) => {
           const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
           const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
           return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
-            React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, name),
-            React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: over ? "#B3261E" : T.ink, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v)),
-            mt && React.createElement("div", { style: { fontSize: "12px", color: T.muted, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
-            React.createElement("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: tg ? T.border : col, marginTop: "3px" } },
-              tg ? React.createElement("div", { style: { height: "4px", borderRadius: "4px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
+            React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, lineHeight: 1.2 } }, name),
+            React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: over ? "#B3261E" : T.ink, lineHeight: 1.15, whiteSpace: "nowrap" } }, fmtMacro(v)),
+            mt && React.createElement("div", { style: { fontSize: "11px", color: T.muted, whiteSpace: "nowrap", lineHeight: 1.15 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
+            React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? T.border : col, marginTop: "2px" } },
+              tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
       macros.total === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "6px" } }, "“খাবার” বাটনে যোগ করা খাবার থেকে হিসাব হয় 🙂"),
       macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
