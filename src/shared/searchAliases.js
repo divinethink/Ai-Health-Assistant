@@ -26,6 +26,36 @@ export const FOOD_EN = {
   sugarcane: "Sugarcane juice", lemonSharbat: "Lemonade (with sugar)", softDrink: "Soft drink", juice: "Packaged fruit juice", lassi: "Lassi",
   coffee: "Coffee (milk, sugar)", tonedMilk: "Packaged liquid milk (pasteurised / UHT)", tokDoi100: "Plain yogurt (100 g)", goldenWater: "Turmeric water",
   gingerTea: "Ginger / tulsi tea", redTea: "Black tea (no sugar)", lemonWater: "Lemon water (no sugar)", mintGingerWater: "Ginger-mint water",
+  burger: "Burger",
+  sandwich: "Sandwich",
+  nimki: "Nimki",
+  laddu: "Laddu",
+  semai: "Sweet semai",
+  lacchaSemai: "Laccha semai",
+  shawarma: "Shawarma",
+  pizza: "Pizza",
+  ghee: "Ghee",
+  blackCoffee: "Black coffee",
+  turmericTea: "Turmeric tea",
+  herbTea: "Herbal tea (no sugar)",
+  patolBhaji: "Fried pointed gourd",
+  kumraBhaji: "Fried pumpkin",
+  pepeBhaji: "Green papaya fry",
+  fulkopi: "Cauliflower curry",
+  patakopi: "Fried cabbage",
+  kolaBhorta: "Banana bhorta",
+  lebu: "Lemon",
+  malta: "Malta (sweet orange)",
+  amloki: "Indian gooseberry (Amla)",
+  kathal: "Jackfruit",
+  tomato: "Tomato",
+  sorputi: "Sarputi (Puntius) curry",
+  poa: "Poa fish curry",
+  rupchanda: "Pomfret (Rupchanda) curry",
+  boal: "Boal (Wallago) curry",
+  tengra: "Tengra (small catfish) curry",
+  guraMach: "Tiny fish (Gura mach)",
+  haansMansho: "Duck meat curry",
 };
 
 // খাবারের key → বাড়তি সার্চ-শব্দ (বাংলিশ/সমার্থক); বাংলা নাম ও ইংলিশ নাম আলাদাভাবেই মেলে
@@ -37,6 +67,21 @@ export const FOOD_ALIAS = {
   chingri: ["shrimp", "chingri", "চিংড়ি"], papaya: ["pepe", "পেঁপে"], guava: ["peyara", "পেয়ারা"], watermelon: ["tormuj", "তরমুজ"], dabWater: ["dab", "ডাব"],
   singara: ["samosa"], jilapi: ["jalebi", "jilebi"], haleem: ["halim"], chhola: ["chola", "chana", "ছোলা"], shak: ["saag", "spinach", "শাক"],
 };
+
+// বাড়তি সার্চ-বানান (বিদ্যমান ও নতুন খাবার) — FOOD_ALIAS-এর সাথে মেশে
+const FOOD_ALIAS_MORE = {
+  singara: ["সিংগাড়া", "সামুচা", "সমুচা", "samucha", "shingara"], sandwich: ["স্যান্ডুইচ", "স্যান্ডইউচ", "sandwitch"], burger: ["বার্গার", "burgar"],
+  greentea: ["গ্রীণ টি", "green tea", "গ্রিন টি"], veg: ["সবজির তরকারি", "vegetables curry"], eggFry: ["ডিম ভজি", "ডিম ভাজা"], lau: ["লাউ এর তরকারি", "লাউয়ের তরকারি"],
+  kakrol: ["কাকরোল ভাজি"], begunBhaja: ["বেগুন ভাজি"], nimki: ["nimkee", "namakpara"], laddu: ["ladoo", "laddoo", "লাড্ডু", "লাড্ডু"],
+  semai: ["সেমাই", "shemai", "vermicelli"], lacchaSemai: ["লাচ্ছা", "laccha", "lachcha"], shawarma: ["শরমা", "শাওয়ারমা", "shawarma", "sharma"], pizza: ["পিৎজা", "pizza"],
+  ghee: ["ঘি", "ghi"], blackCoffee: ["black coffee", "কালো কফি", "ব্ল্যাক কফি", "ব্লাক কফি"], turmericTea: ["হলুদ চা", "halud cha"], herbTea: ["হার্ব টি", "herbal tea"],
+  patolBhaji: ["পটল ভাজি", "potol"], kumraBhaji: ["কুমড়া ভাজি", "kumra", "pumpkin fry"], pepeBhaji: ["পেঁপে ভাজি", "পেপে ভাজি", "pepe"], fulkopi: ["ফুলকপি", "fulkopi", "cauliflower"],
+  patakopi: ["পাতা কপি", "বাঁধাকপি", "bandhakopi", "cabbage"], kolaBhorta: ["কলা ভর্তা", "kola bharta"], lebu: ["লেবু", "lemon", "lime"], malta: ["মাল্টা", "malta"],
+  amloki: ["আমলকি", "amla", "amloki"], kathal: ["কাঁঠাল", "kathal"], tomato: ["টমেটো", "tomato"], sorputi: ["সরপুঁটি", "sarputi", "punti", "পুঁটি"],
+  poa: ["পোয়া", "poa"], rupchanda: ["রুপচাঁদা", "rupchanda", "pomfret", "পমফ্রেট"], boal: ["বোয়াল", "boal"], tengra: ["টেংড়া", "টেংরা", "tengra"],
+  guraMach: ["গুড়া মাছ", "গুঁড়া মাছ", "gura mach"], haansMansho: ["হাঁসের গোশত", "হাঁসের মাংস", "hash", "duck"],
+};
+for (const [k, v] of Object.entries(FOOD_ALIAS_MORE)) FOOD_ALIAS[k] = [...(FOOD_ALIAS[k] || []), ...v];
 
 // ---------- ওষুধ ----------
 // জেনেরিক (COMMON_MEDS-এর হুবহু নাম) → [ব্র্যান্ড/বাংলা/বাংলিশ সার্চ-শব্দ]
