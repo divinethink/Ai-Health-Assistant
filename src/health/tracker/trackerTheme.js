@@ -13,6 +13,9 @@ export const GRADIENT_HERO = "linear-gradient(135deg, var(--hs-hero-1, #0E4B43),
 
 export const CARD_STYLE = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "10px 12px", marginBottom: "8px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
+// হোমের প্রিমিয়াম কার্ড: বর্ডার প্রায়-অদৃশ্য (সব থিমে কিনারা থাকে), দুই-স্তর নরম ছায়া, বড় গোল কোণ
+export const HOME_CARD = { ...CARD_STYLE, border: "1px solid rgba(127,150,140,0.14)", borderRadius: "20px", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 8px 22px rgba(14,75,67,0.08)" };
+
 // বেলা-আইকন (emoji — অ্যাপের বাকি অংশের মতো) ও আইকন-টালির নরম রং
 export const SLOT_ICON = { sehri: "🌙", iftar: "🌇", breakfast: "🌅", snack1: "🍎", lunch: "☀️", snack2: "🫖", dinner: "🌙" };
 export const SLOT_TINT = { sehri: "#E6E4F5", iftar: "#FFE9CF", breakfast: "#FFF0D6", snack1: "#FDE8E4", lunch: "#E4F2EA", snack2: "#F3ECD9", dinner: "#E6E4F5" };
