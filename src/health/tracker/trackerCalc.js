@@ -2,8 +2,8 @@
 // Mifflin-St Jeor BMR × কার্যকলাপ-গুণক। UI/Firestore থেকে সম্পূর্ণ আলাদা।
 
 export const GOAL_LABELS = { lose: "ওজন কমানো", gain: "ওজন বাড়ানো", fit: "ফিট থাকা", muscle: "পেশি গঠন" };
-export const ACTIVITY_LABELS = { low: "কম", medium: "মাঝারি", high: "বেশি" };
-export const ACTIVITY_FACTOR = { low: 1.2, medium: 1.55, high: 1.725 };
+export const ACTIVITY_LABELS = { low: "কম", light: "হালকা", medium: "মাঝারি", high: "বেশি" };
+export const ACTIVITY_FACTOR = { low: 1.2, light: 1.375, medium: 1.55, high: 1.725 }; // light = ঐচ্ছিক নতুন মান (পুরনো সংরক্ষিত low/medium/high অপরিবর্তিত)
 export const MIN_KCAL = { female: 1200, male: 1500 };
 const KCAL_PER_KG = 7700;
 const MAX_LOSS_KG_WEEK = 0.5;

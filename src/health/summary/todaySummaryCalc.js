@@ -25,7 +25,7 @@ export function buildTodayDoses(member, records, today, nowHHMM, taken) {
   let noTimeCount = 0;
   meds.forEach((m) => {
     const times = [...new Set(m.reminderTimes.filter((x) => /^\d{1,2}:\d{2}$/.test(x)))];
-    if (!times.length) { noTimeCount++; return; }
+    if (!times.length) { if (!m.asNeeded) noTimeCount++; return; } // "প্রয়োজনে" ওষুধে সময়ের কথা তোলা হয় না
     times.forEach((tm) => {
       const hhmm = tm.padStart(5, "0");
       const key = doseKey(m.recordId, tm);

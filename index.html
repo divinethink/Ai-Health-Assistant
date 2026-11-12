@@ -143,6 +143,14 @@
   button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hs-primary, #0E4B43) 45%, transparent); outline-offset: 2px; }
   @keyframes hsFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .hs-page { animation: hsFade .25s ease; }
+  /* "যোগ করুন"-জাতীয় বাটনের আলাদা accent রং — প্রতি থিমে primary থেকে ভিন্ন (টোকেন; নতুন থিমে না দিলে :root-এর ডিফল্ট) */
+  :root { --hs-accent: #B45309; --hs-accent-2: #D2691E; }
+  html[data-theme="sepia"], html[data-theme="warm-clay"] { --hs-accent: #2F6F73; --hs-accent-2: #3E8A8F; }
+  html[data-theme="dark"], html[data-theme="night-pulse"] { --hs-accent: #B8651B; --hs-accent-2: #D07A2A; }
+  html[data-theme="herbal"] { --hs-accent: #A16207; --hs-accent-2: #C58A1B; }
+  /* অনুভূমিক স্ক্রল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (স্ক্রল কাজ করে) */
+  .hs-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
+  .hs-noscroll::-webkit-scrollbar { display: none; }
   .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
   .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
 </style>

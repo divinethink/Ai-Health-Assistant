@@ -126,7 +126,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     isHealth && React.createElement(
-      "div", { style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
+      "div", { className: "hs-noscroll", style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
       chip || null,
       TABS.map((tb) => React.createElement(
         "button", {
@@ -155,7 +155,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
           onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
           belowSummary: React.createElement("div", { key: "subs" },
-            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", marginBottom: "6px", overflowX: "auto" } },
+            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", className: "hs-noscroll", style: { display: "flex", gap: "6px", marginBottom: "6px", overflowX: "auto" } },
               RECORD_SUBS.map((sb) => React.createElement("button", {
                 key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
                 style: {
@@ -164,13 +164,13 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
                   background: recordSub === sb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
                 },
               }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")))),
-            React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", margin: "0 2px 8px", lineHeight: 1.4 } }, (RECORD_SUBS.find((x) => x.id === recordSub) || RECORD_SUBS[0]).hint)),
+            null),
         }),
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
         recordSub === "meds" && React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) }),
         recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" })),
       isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
-        React.createElement("div", { role: "group", "aria-label": "ডাক্তার", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
+        React.createElement("div", { role: "group", "aria-label": "ডাক্তার", className: "hs-noscroll", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           [["summary", "📋 সারাংশ"], ["doctors", "🩺 আমার ডাক্তার"]].map(([id, label]) => React.createElement("button", {
             key: id, onClick: () => histChange(hk + "doc", docSub, id, setDocSub), "aria-pressed": docSub === id,
             style: {
@@ -185,7 +185,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
-          "div", { style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
+          "div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", marginBottom: "10px", overflowX: "auto" } },
           TIMELINE_SUBS.map((sb) => React.createElement("button", {
             key: sb.id, onClick: () => histChange(hk + "tl", timelineSub, sb.id, setTimelineSub), "aria-pressed": timelineSub === sb.id,
             style: {

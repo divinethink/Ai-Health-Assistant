@@ -154,12 +154,13 @@ export function SheetFrame({ title, onClose, scrollKey, footer, accent, children
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: ac ? ac.tint : "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif", ...(ac ? accentVars(accent) : {}) } },
+  // document.body-তে আঁকা: হেলথ-পেজের (z-index ৪০) ভেতরে থাকলে নিচের নেভ-বার (৪৫) ফর্মের সংরক্ষণ বাটন ঢেকে দিত
+  return createPortal(React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: ac ? ac.tint : "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif", ...(ac ? accentVars(accent) : {}) } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 14px", background: "#fff", borderBottom: ac ? "3px solid " + ac.main : "1px solid #D9E5DE", flexShrink: 0 } },
       React.createElement("div", { style: { flex: 1, minWidth: 0, fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", overflowWrap: "anywhere" } }, title),
       CloseX(onClose)),
     React.createElement("div", { ref: bodyRef, style: { flex: 1, overflowY: "auto", overflowAnchor: "none", padding: "10px 12px 24px", WebkitOverflowScrolling: "touch" } }, children),
-    footer && React.createElement("div", { style: { flexShrink: 0, padding: "8px 12px calc(8px + env(safe-area-inset-bottom, 0px))", background: "#fff", borderTop: "1px solid #D9E5DE" } }, footer));
+    footer && React.createElement("div", { style: { flexShrink: 0, padding: "8px 12px calc(8px + env(safe-area-inset-bottom, 0px))", background: "#fff", borderTop: "1px solid #D9E5DE" } }, footer)), document.body);
 }
 
 // ---- ধরন-ভিত্তিক রং: প্রতিটা "যোগ"-পেজ আলাদা রঙে চেনা যায় ----

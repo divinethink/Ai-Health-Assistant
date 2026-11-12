@@ -129,6 +129,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [aSlots, setASlots] = useState(SLOT_DEFAULTS[3]);
   const [aMeal, setAMeal] = useState("after");
   const [aDays, setADays] = useState(7);
+  const [aAsNeeded, setAAsNeeded] = useState(false); // true = "প্রয়োজনে খাবেন": শুধু নাম সেভ, বেলা/সময়/কতদিন নেই
   const [aBusy, setABusy] = useState(false);
   const [aErr, setAErr] = useState(null);
   const [suggOpen, setSuggOpen] = useState(false);
@@ -150,7 +151,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             if (!pastMap[k]) pastMap[k] = { key: k, memberId: member.id, memberName: member.name, name: r.genericName, times: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], meal: r.mealTiming || "after", days: r.durationDays ? Number(r.durationDays) : 0 };
           }
           if (r.status !== "active") return;
-          flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], fromRx: !!r.prescriptionDocId, createdMs: r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : 0 });
+          flat.push({ recordId: r.id, memberId: member.id, memberName: member.name, genericName: r.genericName, frequency: r.frequency || null, asNeeded: !!r.asNeeded, durationDays: r.durationDays || null, startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null, calendarEventIds: (r.calendarEventIds && Array.isArray(r.calendarEventIds[callerMemberId])) ? r.calendarEventIds[callerMemberId] : [], reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], fromRx: !!r.prescriptionDocId, createdMs: r.createdAt && r.createdAt.toMillis ? r.createdAt.toMillis() : 0 });
         });
       });
       setMeds(flat);
@@ -280,6 +281,16 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     if (!name) { setAErr("ওষুধের নাম লিখুন।"); return; }
     if (!aMember) { setAErr("সদস্য বেছে নিন।"); return; }
     if (meds.some((m) => m.memberId === aMember && !(m.endDate && todayStr() > m.endDate) && m.genericName.trim().toLowerCase() === name.toLowerCase())) { setAErr("এই ওষুধ এই সদস্যের তালিকায় আগেই আছে।"); return; }
+    if (aAsNeeded) {
+      setABusy(true);
+      try {
+        await createHealthRecord(familyId, aMember, callerMemberId, "medicationStatement", { name, tier: "requires-consult", status: "active", date: todayStr(), frequency: "প্রয়োজনে খাবেন", durationDays: "", asNeeded: true });
+        setAName(""); setAAsNeeded(false); setAddOpen(false); setSuggOpen(false);
+        await loadMeds();
+      } catch (e) { setAErr(e.message || String(e)); }
+      finally { setABusy(false); }
+      return;
+    }
     const times = [...new Set(aSlots)].sort();
     const start = todayStr();
     const endDate = aDays ? addDays(start, aDays - 1) : null;
@@ -328,13 +339,10 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const card = { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
   return h("div", null,
-    h("details", { style: { background: "#FFF6DD", border: "1px solid #E8D08A", borderRadius: "12px", padding: "0 12px", marginBottom: "10px", color: "#7A5B00" } },
-      h("summary", { style: { minHeight: "44px", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 700 } }, h("span", { "aria-hidden": "true" }, "ⓘ"), "ওষুধের ঘণ্টা বাজাতে অ্যাপ খুলে রাখুন"),
-      h("div", { style: { fontSize: "13px", lineHeight: 1.5, padding: "0 0 10px" } }, "অ্যাপ খোলা থাকলে ওষুধের সময়ে রিমাইন্ডার আসবে। অ্যাপ বন্ধ থাকলেও পেতে চাইলে ওষুধের কার্ডে \"📅 Calendar\" চাপুন।")),
     permission !== "granted" && permission !== "unsupported" && h("button", { onClick: requestPermission, style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid " + GREEN, borderRadius: "10px", background: "#fff", color: GREEN, fontSize: F, cursor: "pointer" } }, "🔔 নোটিফিকেশন চালু করুন"),
     permission === "unsupported" && h("div", { style: { fontSize: F, color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজারে Notification সাপোর্ট নেই।"),
 
-    members.length > 1 && h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
+    members.length > 1 && h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
       [chip(filter === "all", "সবাই", () => setFilter("all"), "all"), ...members.map((mm) => chip(filter === mm.id, mm.name, () => setFilter(mm.id), mm.id))]),
 
     // ঘ) শেষ হতে চলেছে
@@ -355,7 +363,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     // নতুন ওষুধ যোগ
     !addOpen && pastShown.length > 0 && h("div", { style: { marginBottom: "10px" } },
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
-      h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
+      h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
     chooseOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 ওষুধ/প্রেসক্রিপশন", onClose: () => setChooseOpen(false) },
       h("div", { style: { display: "grid", gap: "10px", marginTop: "6px" } },
@@ -376,13 +384,17 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
         suggOpen && suggestions.length > 0 && h("div", { style: { position: "absolute", left: 0, right: 0, top: "100%", zIndex: 5, marginTop: "2px", background: "#fff", border: "1px solid #C3D2CA", borderRadius: "10px", boxShadow: "0 6px 16px rgba(0,0,0,0.12)", overflow: "hidden" } },
           suggestions.map(({ label, value: n }) => h("div", { key: n, onMouseDown: (e) => { e.preventDefault(); setAName(n); setSuggOpen(false); }, onTouchStart: () => { setAName(n); setSuggOpen(false); },
             style: { padding: "10px 12px", fontSize: F, borderBottom: "1px solid #EEF3F0", cursor: "pointer", color: "#1F2D2A" } }, (knownNames.includes(n) ? "🕘 " : "") + label)))),
-      lblEl("কয় বেলা"),
-      h("div", { style: { display: "flex", gap: "6px" } }, [1, 2, 3, 4].map((n) => chip(aCount === n, bn(n) + " বেলা", () => pickCount(n), "c" + n))),
-      lblEl("সময়"), timeInputs(aSlots, setASlots),
-      lblEl("খাবারের"),
-      h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip(aMeal === k, MEAL_LABELS[k], () => setAMeal(k), k))),
-      lblEl("কতদিন খাবেন"),
-      h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")]),
+      lblEl("কীভাবে খাবেন"),
+      h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [chip(!aAsNeeded, "🕘 নিয়মিত (সময় ধরে)", () => setAAsNeeded(false), "reg"), chip(aAsNeeded, "🆘 প্রয়োজনে (শুধু নাম)", () => setAAsNeeded(true), "prn")]),
+      aAsNeeded && h("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "8px", lineHeight: 1.5 } }, "শুধু ওষুধের নাম সেভ হবে। বেলা, সময় ও রিমাইন্ডার থাকবে না।"),
+      !aAsNeeded && h(React.Fragment, null,
+        lblEl("কয় বেলা"),
+        h("div", { style: { display: "flex", gap: "6px" } }, [1, 2, 3, 4].map((n) => chip(aCount === n, bn(n) + " বেলা", () => pickCount(n), "c" + n))),
+        lblEl("সময়"), timeInputs(aSlots, setASlots),
+        lblEl("খাবারের"),
+        h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip(aMeal === k, MEAL_LABELS[k], () => setAMeal(k), k))),
+        lblEl("কতদিন খাবেন"),
+        h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")])),
       aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr)),
 
     // ওষুধের তালিকা
@@ -395,13 +407,13 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       const expired = isExpired(m);
       const left = daysLeft(m.endDate);
       const open = openId === m.recordId;
-      const badge = expired ? ["মেয়াদ শেষ", "#6B7B76", "#ECEFEE"] : left === 0 ? ["আজ শেষ দিন", "#8A5A00", "#FFF3DC"] : left !== null && left <= 3 ? ["আর " + bn(left) + " দিন", "#8A5A00", "#FFF3DC"] : left !== null ? ["আর " + bn(left) + " দিন", GREEN, "#EAF6F0"] : ["নিয়মিত", GREEN, "#EAF6F0"];
+      const badge = m.asNeeded ? ["প্রয়োজনে", GREEN, "#EAF6F0"] : expired ? ["মেয়াদ শেষ", "#6B7B76", "#ECEFEE"] : left === 0 ? ["আজ শেষ দিন", "#8A5A00", "#FFF3DC"] : left !== null && left <= 3 ? ["আর " + bn(left) + " দিন", "#8A5A00", "#FFF3DC"] : left !== null ? ["আর " + bn(left) + " দিন", GREEN, "#EAF6F0"] : ["নিয়মিত", GREEN, "#EAF6F0"];
       return h("div", { key: m.recordId, style: { ...card, padding: 0, overflow: "hidden", opacity: expired ? 0.7 : 1 } },
         h("div", { onClick: () => setOpenId(open ? null : m.recordId), style: { padding: "11px 12px", cursor: "pointer", display: "flex", gap: "8px", alignItems: "flex-start" } },
           h("div", { style: { flex: 1, minWidth: 0 } },
             h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "💊 " + m.genericName, m.fromRx && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · 📄 প্রেসক্রিপশন থেকে"), members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
             h("div", { style: { fontSize: "13px", color: "#4B5C57", marginTop: "3px", lineHeight: 1.5 } },
-              m.reminderTimes.length > 0 ? "⏰ " + m.reminderTimes.map(bnTime).join(", ") : "⏰ সময় সেট করা হয়নি",
+              m.asNeeded ? "🆘 প্রয়োজনে খাবেন (সময় ঠিক করা নেই)" : m.reminderTimes.length > 0 ? "⏰ " + m.reminderTimes.map(bnTime).join(", ") : "⏰ সময় সেট করা হয়নি",
               m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "",
               m.calendarEventIds.length > 0 ? " · 📅" : "")),
           h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 } },

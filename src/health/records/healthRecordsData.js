@@ -66,7 +66,7 @@ export function buildHealthRecordFields(resourceType, fields) {
     // Architecture Plan §2-এর MedicationStatement-এ dose/frequency-enforcement-এর
     // সাথে সাংঘর্ষিক না — এটা শুধু user-typed reference-নোট, AI dose-generation
     // এখানে জড়িত না, §6.4 bright-line অপরিবর্তিত)।
-    return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null, frequency: (fields.frequency || "").trim() || null, durationDays: fields.durationDays ? Number(fields.durationDays) : null, ...(fields.prescriptionDocId ? { prescriptionDocId: String(fields.prescriptionDocId) } : {}) }; // prescriptionDocId: ঐচ্ছিক, প্রেসক্রিপশন-নথির আইডি (additive)
+    return { genericName: fields.name.trim(), tier: fields.tier, status: fields.status, startDate: fields.date || null, frequency: (fields.frequency || "").trim() || null, durationDays: fields.durationDays ? Number(fields.durationDays) : null, ...(fields.asNeeded ? { asNeeded: true } : {}), ...(fields.prescriptionDocId ? { prescriptionDocId: String(fields.prescriptionDocId) } : {}) }; // prescriptionDocId: ঐচ্ছিক, প্রেসক্রিপশন-নথির আইডি (additive)
   }
   if (resourceType === "allergy") {
     return { substance: fields.name.trim(), reaction: fields.reaction.trim(), severity: fields.severity };

@@ -5,7 +5,7 @@
 // (বিদ্যমান DietGuidanceSection reuse — Condition/Allergy/BMI থেকে স্বয়ংক্রিয়)।
 // ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
-import { ErrorBox, PrimaryButton, TabPills, Skeleton } from "../../shared/ui.js";
+import { ErrorBox, PrimaryButton, SecondaryButton, TabPills, Skeleton } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
@@ -32,7 +32,7 @@ import { AvoidCard } from "./AvoidCard.js";
 import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
-  GOAL_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
+  GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
   sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -479,7 +479,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
 const WEEK_CHOICES = [4, 8, 12, 20];
 const GOAL_HINTS = { lose: "ধীরে ও নিরাপদে ওজন কমানো", gain: "ধীরে ও সুস্থভাবে ওজন বাড়ানো", fit: "এখনকার ওজন ও সুস্থতা ধরে রাখা", muscle: "ব্যায়ামের সাথে শক্তি ও পেশি বাড়ানো" };
 // ACTIVITY_LABELS-এর মান (low/medium/high) অপরিবর্তিত; শুধু বোঝানোর লেখা
-const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
+const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], light: ["হালকা সক্রিয়", "বসে কাজ + সপ্তাহে ১–৩ দিন হাঁটা/হালকা ব্যায়াম"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
 
 // ---------- লক্ষ্য ----------
 function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
@@ -495,6 +495,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [result, setResult] = useState(null);
+  const hasGoal = !!(g.goalType && g.calc && g.calc.calorieTarget && !safetyGate({ age, flags: { pregnant, diabetes: !!(g.flags && g.flags.diabetes) || detected.diabetes, kidney: !!(g.flags && g.flags.kidney) || detected.kidney } }).blocked);
+  const [editing, setEditing] = useState(false); // সেট-করা লক্ষ্য থাকলে ফর্ম ভাঁজ; "প্ল্যান পরিবর্তন করুন" চাপলে খোলে
 
   const flags = { pregnant, diabetes: diabetes || detected.diabetes, kidney: kidney || detected.kidney };
   const gate = safetyGate({ age, flags });
@@ -518,7 +520,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           setResult({ blocked: true, reason: calc.reason });
         } else {
           await saveGoal(familyId, memberId, callerMemberId, { ...base, calc: { calorieTarget: calc.calorieTarget, bmr: calc.bmr, tdee: calc.tdee, weeklyRateKg: calc.weeklyRateKg } }, goal);
-          setResult(calc);
+          setResult(calc); setEditing(false);
         }
       }
       onSaved();
@@ -551,6 +553,27 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     const max = goalType === "lose" ? 0.5 : 0.25;
     return rate <= max ? { ok: true, text: "সপ্তাহে প্রায় " + r + " কেজি — নিরাপদ গতি ✓" } : { ok: false, text: "সপ্তাহে প্রায় " + r + " কেজি — একটু দ্রুত; সময় বাড়ান।" };
   })();
+
+  // সেট-করা লক্ষ্যের সারাংশ-কার্ড (শুধু পড়া; হিসাব আগের সংরক্ষিত calc থেকে, নোট একই সূত্রে পুনরায় হিসাব)
+  if (hasGoal && !editing) {
+    const gc = g.calc;
+    const again = computeGoal({ goalType: g.goalType, activity: g.activity, sex: member && member.sex, age, heightCm, weightKg, targetWeightKg: g.targetWeightKg, weeks: g.weeks, flags: g.flags || flags });
+    const notes = again && !again.error && !again.blocked ? again.notes : [];
+    const line = (k, v) => React.createElement("div", { key: k, style: { fontSize: "14px", color: T.ink, marginTop: "4px" } }, v);
+    return React.createElement("div", null,
+      React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, "আমার লক্ষ্য"),
+        React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: T.green, marginTop: "2px" } }, GOAL_LABELS[g.goalType] || ""),
+        (g.goalType === "lose" || g.goalType === "gain") && g.targetWeightKg && line("w", (weightKg ? bnNum(weightKg) + " → " : "") + bnNum(g.targetWeightKg) + " কেজি" + (g.weeks ? " · " + bnNum(g.weeks) + " সপ্তাহে" : "")),
+        line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
+        gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
+        gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
+        notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
+      SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
+      React.createElement("details", { style: { marginTop: "8px", marginBottom: "8px" } },
+        React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
+        React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));
+  }
 
   return React.createElement("div", null,
     React.createElement("div", { style: CARD },
@@ -597,7 +620,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       "দৈনিক টার্গেট: ", React.createElement("b", null, bnNum(result.calorieTarget) + " কিলোক্যালরি"),
       result.weeklyRateKg ? " · প্রতি সপ্তাহে প্রায় " + bnNum(result.weeklyRateKg) + " কেজি" : "",
       result.notes.map((n, i) => React.createElement("div", { key: i, style: { marginTop: "6px" } }, n))),
-    PrimaryButton(gate.blocked ? "সংরক্ষণ" : "প্ল্যান বানান", submit, busy)
+    PrimaryButton(gate.blocked ? "সংরক্ষণ" : "প্ল্যান বানান", submit, busy),
+    hasGoal && SecondaryButton("বাতিল", () => { setEditing(false); setErr(null); }, busy)
   );
 }
 

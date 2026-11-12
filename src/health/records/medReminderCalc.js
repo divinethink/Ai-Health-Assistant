@@ -15,7 +15,7 @@ export function buildActiveMeds(member, records) {
     .map((r) => ({
       recordId: r.id, memberId: member.id, memberName: member.name || "", genericName: r.genericName,
       startDate: r.startDate || null, endDate: r.endDate || null, mealTiming: r.mealTiming || null,
-      reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [],
+      reminderTimes: Array.isArray(r.reminderTimes) ? r.reminderTimes : [], asNeeded: !!r.asNeeded,
     }));
 }
 
