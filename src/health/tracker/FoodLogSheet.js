@@ -34,7 +34,6 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const slotList = slots || MEAL_SLOTS;
   const slotLabel = (slotList.find((s) => s.id === slot) || {}).label;
   const full = count >= MAX_LIST;
-  const budget = slotBudgets && slotBudgets[slot];
 
   // pre (ঐচ্ছিক) = সাম্প্রতিক এন্ট্রি: আগের বারের মাপ/পরিমাণ/গ্রাম আগে থেকে বসে; অবৈধ হলে ডিফল্ট।
   const pick = (k, pre) => {
@@ -122,9 +121,6 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
           style: { flex: "1 1 0", minWidth: "fit-content", minHeight: "38px", padding: "4px 8px", borderRadius: "999px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
             border: on ? "1px solid " + GREEN : "1px solid rgba(127,150,140,0.22)", boxShadow: on ? "0 3px 8px rgba(14,75,67,0.25)" : "0 1px 3px rgba(14,75,67,0.06)",
             background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, s.label); })),
-      budget && React.createElement("div", { style: { margin: "-6px 0 10px" } },
-        React.createElement("div", { role: "img", "aria-label": slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },
-          React.createElement("div", { style: { height: "6px", borderRadius: "6px", width: Math.min(100, budget.planned > 0 ? (budget.eaten / budget.planned) * 100 : 0) + "%", background: GREEN } }))),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
       recentRow || null,
