@@ -89,7 +89,6 @@ function usePillCounts(familyId, memberId, tick) {
 
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
 const TIMELINE_SUBS = [
-  { id: "diet", label: "🍽️ খাদ্য" },
   { id: "vaccine", label: "💉 টিকা" },
   { id: "timeline", label: "🕘 টাইমলাইন" },
 ];
@@ -97,6 +96,7 @@ const TIMELINE_SUBS = [
 // mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = স্বাস্থ্য প্রোফাইল (প্রোফাইল+স্বাস্থ্য তথ্য) · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
 const HEALTH_TABS = [
   { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + স্বাস্থ্য তথ্য একসাথে (owner-approved ২০২৬-১১-১১)
+  { id: "diet", label: "tab.food" }, // খাদ্য: স্বাস্থ্য প্রোফাইলের ঠিক পরে (owner-request ২০২৬-১১-১২)
   { id: "timeline", label: "tab.timeline" },
   { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
 ];
@@ -110,7 +110,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
     if (!isHealth) return "today";
     return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
   });
-  const [timelineSub, setTimelineSub] = useState("diet");
+  const [timelineSub, setTimelineSub] = useState("timeline");
   const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
@@ -181,6 +181,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         docSub === "summary" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
         // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode
         docSub === "doctors" && React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
+      isHealth && activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
       isHealth && activeTab === "timeline" && React.createElement(
         React.Fragment, null,
         React.createElement(
@@ -194,9 +195,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             },
           }, sb.label))
         ),
-        timelineSub === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
-        timelineSub === "vaccine" && React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId, inline: true }),
-        timelineSub === "timeline" && React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })
+        timelineSub !== "vaccine" && React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId }),
+        timelineSub === "vaccine" && React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId, inline: true })
       )
     )
   );

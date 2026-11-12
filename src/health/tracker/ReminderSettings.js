@@ -44,7 +44,7 @@ const timeInput = (value, onChange, label) => h("input", { type: "time", value, 
 export function ReminderSettings({ info, familyId, memberId, callerMemberId, onSaved }) {
   const { goal, flags } = info;
   const [s, setS] = useState(() => normalizeReminders(goal && goal.reminders));
-  const [sel, setSel] = useState("medicine");
+  const [sel, setSel] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [ok, setOk] = useState(false);
@@ -70,8 +70,7 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
   const selectEl = (value, onCh, label, opts) => h("select", { value, "aria-label": label, onChange: onCh, style: TIME }, opts);
   const flexRow = { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", fontSize: "14px" };
   const tiles = [
-    { key: "medicine", icon: "💊", short: "ওষুধ", title: "ওষুধ", on: s.medicine.on,
-      note: s.medicine.on ? "ওষুধের সময় এলে জানানো হবে; “খেয়েছি” দিলে আর আসবে না। সময় বদলাতে: Health → স্বাস্থ্য প্রোফাইল → ওষুধ।" : "বন্ধ থাকলে ওষুধের কোনো নোটিফিকেশন আসবে না।" },
+    { key: "medicine", icon: "💊", short: "ওষুধ", title: "ওষুধ", on: s.medicine.on },
     { key: "meal", icon: "🍽️", short: "খাবার", title: "খাবার", on: s.meal.on, note: "মিল-প্ল্যান থাকলে নোটিফিকেশনে খাবারের নামও আসে।",
       children: MEAL_SLOTS.map((slot) => h("div", { key: slot.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "4px 0" } },
         h("span", { style: { fontSize: "14px", color: "#1F2D2A" } }, MEAL_TITLES[slot.id]),
@@ -91,15 +90,16 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
         "দিন আগে") },
   ];
   const cur = tiles.find((x) => x.key === sel);
+  const showDetail = cur && (cur.note || (cur.on && !cur.disabled && cur.children));
 
   return h("div", null,
     perm !== "granted" && h("div", { style: { ...CARD, background: "#FFF6DD", borderColor: "#E8D08A", color: "#7A5B00", fontSize: "13.5px", lineHeight: 1.5 } },
       perm === "denied" ? "ব্রাউজারে নোটিফিকেশন বন্ধ করা আছে। ব্রাউজারের সেটিং থেকে চালু করুন।" : perm === "unsupported" ? "এই ব্রাউজারে নোটিফিকেশন চলে না।" : "নোটিফিকেশন পেতে অনুমতি দিন।",
       perm === "default" && h("button", { onClick: askPermission, style: { display: "block", marginTop: "8px", minHeight: "44px", padding: "8px 16px", borderRadius: "12px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontWeight: 700, cursor: "pointer" } }, "অনুমতি দিন")),
-    h("div", { style: { fontSize: "12.5px", color: "#5F716C", lineHeight: 1.5, margin: "0 2px 10px" } }, "এখন অ্যাপ/ট্যাব খোলা থাকলে তবেই নোটিফিকেশন আসবে।"),
+    h("div", { style: { fontSize: "12.5px", color: "#5F716C", lineHeight: 1.5, margin: "0 2px 10px" } }, "নোটিফিকেশন পেতে সুইচ অন করুন।"),
     h("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } },
       tiles.map((x) => h(Tile, { key: x.key, icon: x.icon, title: x.short, on: x.on, disabled: x.disabled, selected: sel === x.key, onSelect: () => setSel(x.key), onToggle: (v) => set(x.key, { on: v }) }))),
-    cur && h(Detail, { icon: cur.icon, title: cur.title, note: cur.note, open: cur.on && !cur.disabled }, cur.children),
+    showDetail && h(Detail, { icon: cur.icon, title: cur.title, note: cur.note, open: cur.on && !cur.disabled }, cur.children),
     err && ErrorBox(err),
     ok && h("div", { style: BANNER }, "সংরক্ষিত হয়েছে ✓"),
     PrimaryButton("সংরক্ষণ", save, busy),

@@ -189,13 +189,13 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
 
   return h(
     "div", { style: { background: "var(--hs-surface, #fff)", padding: "14px 12px 12px", borderRadius: "20px", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)", boxSizing: "border-box", maxWidth: "100%" } },
-    h("h4", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "0 0 6px" } }, t("h.calendar")),
+    h("h4", { style: { fontSize: "19px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px", textAlign: "center" } }, t("h.calendar")),
 
     // ---- month-grid ----
     h(
       "div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" } },
       h("button", { onClick: () => navMonth(-1), "aria-label": "আগের মাস", style: navBtn }, "‹"),
-      h("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)" } }, new Date(viewYear, viewMonth, 1).toLocaleDateString("bn-BD", { month: "long", year: "numeric" })),
+      h("div", { style: { fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, new Date(viewYear, viewMonth, 1).toLocaleDateString("bn-BD", { month: "long", year: "numeric" })),
       h("button", { onClick: () => navMonth(1), "aria-label": "পরের মাস", style: navBtn }, "›")
     ),
     h(
