@@ -46,7 +46,7 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
   return R("div", { style: { ...CARD_STYLE, padding: bare ? "10px 12px 0" : "2px 12px" } },
     // ভাঁজযোগ্য হেডার: এক লাইনে নাম + আজকের স্কোর-সারাংশ + তীর
     !bare && R("button", { onClick: () => { setErr(null); setExpanded(!expanded); }, "aria-expanded": expanded, style: { display: "flex", alignItems: "center", gap: "8px", width: "100%", minHeight: "44px", padding: 0, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
-      R("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🩺 পেটের লক্ষণ"),
+      R("span", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🩺 পেট ডায়েরি"),
       R("span", { style: { flex: 1, minWidth: 0 } }, latest ? R("span", { style: chip("#E4F0E9", T.green) }, "আজ স্কোর " + bnNum(latest.score)) : R("span", { style: { fontSize: "13px", color: T.muted } }, "আজ এন্ট্রি নেই")),
       R("span", { "aria-hidden": "true", style: { fontSize: "13px", color: T.muted } }, expanded ? "▲" : "▼")),
 

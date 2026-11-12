@@ -26,8 +26,7 @@ import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { activeMedNames } from "./medFoodNotes.js";
-import { gutEntries, gutFoodCount, entriesOn } from "./gutLog.js";
-import { GutLogCard } from "./GutLogCard.js";
+import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
 import { AvoidCard } from "./AvoidCard.js";
 import { conditionKeysOf } from "./avoidRules.js";
@@ -203,12 +202,12 @@ function bnTimeHM(hhmm) {
 // কার্যকর রুটিন = বেস-রুটিন + goal.planPrefs.exercise; "আজ আসলে" = daily.exerciseLog (ধাপ B-২)।
 // নিরাপত্তা-গেট বন্ধ হলে (বয়স<১৮/গর্ভবতী/ডায়াবেটিস/কিডনি/৬৫+) রুটিন-এডিট বন্ধ ও সংরক্ষিত prefs উপেক্ষিত; ‘আজ আসলে’ লগ চলে।
 function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
-  const { daily, goal, age, flags, weekMin, gate } = info;
+  const { daily, goal, age, flags, gate } = info;
   const d = daily || {};
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [sheet, setSheet] = useState(null); // { kind: "day", idx } | { kind: "log", type }
-  const [panel, setPanel] = useState(null); // "why" | "week" | null
+  const [panel, setPanel] = useState(null); // "why" | null
   const base = exercisePlan(age, goal ? goal.goalType : null);
 
   if (!base) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
@@ -268,16 +267,11 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
   return React.createElement("div", null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-      FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel),
-      plan.weeklyTargetMin && FoldChip("week", "🎯 এই সপ্তাহের লক্ষ্য", bnNum(Math.min(100, Math.round(((weekMin || 0) / plan.weeklyTargetMin) * 100))) + "%", panel, setPanel)),
+      FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel)),
     panel === "why" && React.createElement(PlanWhyCard, { bare: true, lines: explainExercise({ plan: base, age, goalType: goal ? goal.goalType : null }) }),
     needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
     gate.blocked && plan.routine && React.createElement(Notice, { tone: "info" }, "আপনার ক্ষেত্রে রুটিন নিজে বদলানো বন্ধ — ডাক্তারের পরামর্শ অনুযায়ী করুন। নিচে ‘আজ আসলে’ লগ করা যাবে।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
-    panel === "week" && plan.weeklyTargetMin && React.createElement(Stat, {
-      title: "এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(weekMin || 0) + " মিনিট" + (plan.custom && plan.custom.length ? " · পরিকল্পিত " + bnNum(planned) + " মিনিট" : ""),
-      pct: ((weekMin || 0) / plan.weeklyTargetMin) * 100, color: T.green2,
-    }),
     err && !sheet && ErrorBox(err),
     plan.routine && React.createElement("div", { style: CARD },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "4px" } },
@@ -385,6 +379,11 @@ function TrendTab({ info, familyId, memberId, onGoInput }) {
           React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, "লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax)),
           t.sleepDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.sleepH), target: sMin, color: "#6B5BD2", width: 160 }) : none("ঘুমের তথ্য দেওয়া হয়নি।")))),
     React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "-2px 0 8px" } }, "বিন্দু-রেখা = লক্ষ্য (ঘুমে সর্বনিম্ন)"),
+    // এই সপ্তাহের ব্যায়াম-লক্ষ্য (শনি–শুক্র) — আগে ব্যায়াম প্ল্যানে ছিল; এখন রিভিউয়ের ঠিক উপরে
+    plan && plan.weeklyTargetMin && React.createElement(Stat, {
+      title: "🎯 এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(info.weekMin || 0) + " মিনিট",
+      pct: ((info.weekMin || 0) / plan.weeklyTargetMin) * 100, color: T.green2,
+    }),
     card("সাপ্তাহিক রিভিউ", "শুধু আপনার দেওয়া তথ্য থেকে",
       React.createElement("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6 } },
         points.map((p, i) => React.createElement("div", { key: "p" + i }, "• " + p)),
@@ -404,23 +403,15 @@ function FoldChip(id, text, badge, panel, setPanel) {
 // ---------- মিল প্ল্যান — ধাপ A১/A২/A৩ ----------
 // "কেন এই প্ল্যান?" + মিলের নিচে "আজ এড়িয়ে চলুন" (বিদ্যমান খাদ্য-নির্দেশিকা, compact; পূর্ণ তালিকা নথিপত্রে)।
 function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
-  const [panel, setPanel] = useState(null); // "why" | "gut" | null — মিল-ট্যাবের দুই ভাঁজযোগ্য চিপ
+  const [panel, setPanel] = useState(null); // "why" | null — মিল-ট্যাবের ভাঁজযোগ্য চিপ (পেট ডায়েরি এখন হোমে — TodayTab)
   const { goal, age, weightKg, heightCm, allergyTags, gate } = info;
   const common = { info, familyId, callerMemberId, memberId, onSaved };
-  // পেটের লক্ষণ-লগ এখন প্ল্যানের আগে (খাবার বাছাইয়ের সুবিধা); গেট বন্ধ থাকলেও দেখায়
-  const d = info.daily || {};
-  const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
-  const gutFoods = gutFoodCount(calc ? applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs), goal.planPrefs, allergyTags) : null, d.mealsEaten, sanitizeExtraFoods(d.extraFoods));
-  const todayGut = entriesOn(info.gutEntries, todayISO());
-  const latestGut = todayGut.length ? todayGut[todayGut.length - 1] : null;
   const foldChip = (id, text, badge) => FoldChip(id, text, badge, panel, setPanel);
   return React.createElement("div", null,
     React.createElement(React.Fragment, null,
       React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-        !gate.blocked && foldChip("why", "💡 কেন এই প্ল্যান?"),
-        foldChip("gut", "🩺 পেটের লক্ষণ", latestGut ? bnNum(latestGut.score) : null)),
+        !gate.blocked && foldChip("why", "💡 কেন এই প্ল্যান?")),
       panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
-      panel === "gut" && React.createElement(GutLogCard, { bare: true, info, familyId, callerMemberId, memberId, gutFoods, onSaved }),
       React.createElement(MealTab, common),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, অ্যালার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"))
   );

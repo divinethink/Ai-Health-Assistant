@@ -77,13 +77,20 @@ function markLegacyMigrated() {
   try { localStorage.setItem(MIGRATED_KEY, todayStr()); } catch (e) { /* ignore */ }
 }
 
-function chip(active, label, onClick, key) {
+function chip(active, label, onClick, key, grow) {
   return h("button", {
-    key: key || label, type: "button", onClick,
-    style: { padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: active ? "1px solid " + GREEN : "1px solid #C3D2CA", background: active ? GREEN : "#fff", color: active ? "#fff" : "#2B3A36" },
+    key: key || label, type: "button", onClick, "aria-pressed": active,
+    style: { padding: grow ? "8px 4px" : "7px 14px", minHeight: "38px", borderRadius: "999px", fontSize: grow ? "13.5px" : F, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", textAlign: "center",
+      ...(grow ? { flex: "1 1 0", minWidth: 0 } : {}),
+      border: active ? "1.5px solid " + GREEN : "1px solid var(--hs-input-border, #C3D2CA)", background: active ? GREEN : "var(--hs-surface, #fff)", color: active ? "var(--hs-primary-contrast, #fff)" : "var(--hs-text, #2B3A36)",
+      boxShadow: active ? "0 2px 6px rgba(0,0,0,0.18)" : "none" },
   }, label);
 }
-function lblEl(text) { return h("div", { style: { fontSize: F, color: "#3E4E49", fontWeight: 600, margin: "12px 0 6px" } }, text); }
+function lblEl(text) { return h("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", fontWeight: 700, letterSpacing: "0.2px", margin: "14px 0 6px" } }, text); }
+// খাবারের আগে/পরে/যেকোনো সময় — সবসময় এক লাইনে (সমান প্রস্থের তিন পিল)
+function mealChips(active, onPick) {
+  return h("div", { style: { display: "flex", gap: "6px", flexWrap: "nowrap" } }, ["before", "after", "any"].map((k) => chip(active === k, MEAL_LABELS[k], () => onPick(k), k, true)));
+}
 function timeInputs(slots, onChange) {
   return h("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
     slots.map((slot, i) => h("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px" } },
@@ -339,7 +346,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     ? suggestMedicines(pool, q, 6)
     : knownNames.filter((n) => n.toLowerCase() !== q).slice(0, 6).map((n) => ({ label: n, value: n }));
 
-  const card = { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+  const card = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D3E0D9)", borderRadius: "16px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
   return h("div", null,
     permission !== "granted" && permission !== "unsupported" && h("button", { onClick: requestPermission, style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid " + GREEN, borderRadius: "10px", background: "#fff", color: GREEN, fontSize: F, cursor: "pointer" } }, "🔔 নোটিফিকেশন চালু করুন"),
@@ -395,7 +402,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
         h("div", { style: { display: "flex", gap: "6px" } }, [1, 2, 3, 4].map((n) => chip(aCount === n, bn(n) + " বেলা", () => pickCount(n), "c" + n))),
         lblEl("সময়"), timeInputs(aSlots, setASlots),
         lblEl("খাবারের"),
-        h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip(aMeal === k, MEAL_LABELS[k], () => setAMeal(k), k))),
+        mealChips(aMeal, setAMeal),
         lblEl("কতদিন খাবেন"),
         h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(aDays === d, bn(d) + " দিন", () => setADays(d), "d" + d)), chip(aDays === 0, "চলবে (নিয়মিত)", () => setADays(0), "d0")])),
       aErr && h("div", { style: { fontSize: F, color: "#B3261E", marginTop: "10px" } }, aErr)),
@@ -411,31 +418,38 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       const left = daysLeft(m.endDate);
       const open = openId === m.recordId;
       const badge = m.asNeeded ? ["প্রয়োজনে", GREEN, "#EAF6F0"] : expired ? ["মেয়াদ শেষ", "#6B7B76", "#ECEFEE"] : left === 0 ? ["আজ শেষ দিন", "#8A5A00", "#FFF3DC"] : left !== null && left <= 3 ? ["আর " + bn(left) + " দিন", "#8A5A00", "#FFF3DC"] : left !== null ? ["আর " + bn(left) + " দিন", GREEN, "#EAF6F0"] : ["নিয়মিত", GREEN, "#EAF6F0"];
-      return h("div", { key: m.recordId, style: { ...card, padding: 0, overflow: "hidden", opacity: expired ? 0.7 : 1 } },
-        h("div", { onClick: () => setOpenId(open ? null : m.recordId), style: { padding: "11px 12px", cursor: "pointer", display: "flex", gap: "8px", alignItems: "flex-start" } },
+      // বাম-ধারে স্ট্যাটাস-রঙ: নিয়মিত = থিমের primary, শেষ হচ্ছে = অ্যাম্বার, মেয়াদ শেষ = ধূসর, প্রয়োজনে = বেগুনি
+      const accent = m.asNeeded ? "#7B6BC9" : expired ? "#9AA8A3" : left !== null && left <= 3 ? "#E0A100" : GREEN;
+      const pill = (text, bg, fg) => h("span", { key: text, style: { display: "inline-flex", alignItems: "center", padding: "3px 9px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" } }, text);
+      return h("div", { key: m.recordId, style: { ...card, padding: 0, overflow: "hidden", opacity: expired ? 0.7 : 1, borderLeft: "5px solid " + accent, boxShadow: open ? "0 6px 18px rgba(14,75,67,0.14)" : card.boxShadow } },
+        h("div", { onClick: () => setOpenId(open ? null : m.recordId), style: { padding: "12px 12px 12px 10px", cursor: "pointer", display: "flex", gap: "10px", alignItems: "flex-start" } },
+          h("span", { "aria-hidden": "true", style: { width: "42px", height: "42px", borderRadius: "13px", background: "var(--hs-chip-bg, #E4F0E9)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", flexShrink: 0 } }, "💊"),
           h("div", { style: { flex: 1, minWidth: 0 } },
-            h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#1F2D2A" } }, "💊 " + m.genericName, m.fromRx && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · 📄 প্রেসক্রিপশন থেকে"), members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
-            h("div", { style: { fontSize: "13px", color: "#4B5C57", marginTop: "3px", lineHeight: 1.5 } },
-              m.asNeeded ? "🆘 প্রয়োজনে খাবেন (সময় ঠিক করা নেই)" : m.reminderTimes.length > 0 ? "⏰ " + m.reminderTimes.map(bnTime).join(", ") : "⏰ সময় সেট করা হয়নি",
-              m.mealTiming && m.mealTiming !== "any" ? " · " + MEAL_LABELS[m.mealTiming] : "",
-              m.calendarEventIds.length > 0 ? " · 📅" : "")),
+            h("div", { style: { fontSize: "16px", fontWeight: 800, color: "var(--hs-text, #1F2D2A)", lineHeight: 1.3 } }, m.genericName, m.fromRx && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · 📄 প্রেসক্রিপশন থেকে"), members.length > 1 && h("span", { style: { fontWeight: 400, color: "#5F716C", fontSize: "13px" } }, " · " + m.memberName)),
+            h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px" } },
+              m.asNeeded ? pill("🆘 প্রয়োজনে খাবেন", "#EFEBFA", "#5A4BA8")
+                : m.reminderTimes.length > 0 ? m.reminderTimes.map((tm) => pill("⏰ " + bnTime(tm), "var(--hs-chip-bg, #E4F0E9)", GREEN))
+                  : h("span", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)" } }, "⏰ সময় সেট করা হয়নি"),
+              m.mealTiming && m.mealTiming !== "any" && pill(MEAL_LABELS[m.mealTiming], "#FFF3DC", "#8A5A00"),
+              m.calendarEventIds.length > 0 && pill("📅 ক্যালেন্ডার", "#E8EDF6", "#3E6092"))),
           h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 } },
             h("span", { style: { fontSize: "13px", fontWeight: 600, padding: "3px 9px", borderRadius: "999px", color: badge[1], background: badge[2] } }, badge[0]),
             isNew(m) && h("span", { style: { fontSize: "13px", fontWeight: 700, padding: "3px 9px", borderRadius: "999px", color: "#fff", background: GREEN, marginLeft: "6px" } }, "🆕 এইমাত্র"),
             h("span", { style: { color: "#6B7B76", fontSize: "13px" } }, open ? "▲" : "▼"))),
 
-        open && h("div", { style: { padding: "0 12px 14px", borderTop: "1px solid #EEF3F0", background: "#F7FAF9" } },
+        open && h("div", { style: { padding: "0 14px 14px", borderTop: "1px solid var(--hs-border, #EEF3F0)", background: "var(--hs-bg, #F7FAF9)" } },
           lblEl("কয় বেলা"),
           h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
-            [chip(ev.slots.length === 0, "রিমাইন্ডার নেই", () => setEdit(m.recordId, { slots: [] }), "n0"), ...[1, 2, 3, 4].map((n) => chip(ev.slots.length === n, bn(n) + " বেলা", () => setEdit(m.recordId, { slots: ev.slots.length === n ? ev.slots : SLOT_DEFAULTS[n] }), "n" + n))]),
+            [...[1, 2, 3, 4].map((n) => chip(ev.slots.length === n, bn(n) + " বেলা", () => setEdit(m.recordId, { slots: ev.slots.length === n ? ev.slots : SLOT_DEFAULTS[n] }), "n" + n)), chip(ev.slots.length === 0, "🔕 রিমাইন্ডার নেই", () => setEdit(m.recordId, { slots: [] }), "n0")]),
           ev.slots.length > 0 && h(React.Fragment, null, lblEl("সময়"), timeInputs(ev.slots, (v) => setEdit(m.recordId, { slots: v }))),
           lblEl("খাবারের"),
-          h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ["before", "after", "any"].map((k) => chip((ev.mealTiming || "any") === k, MEAL_LABELS[k], () => setEdit(m.recordId, { mealTiming: k }), k))),
-          lblEl("কত তারিখ পর্যন্ত খাবেন"),
-          h("input", { type: "date", value: ev.endDate || "", onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }), style: { padding: "9px 10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: F, background: "#fff" } }),
-          h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" } },
-            h("span", { style: { fontSize: "13px", color: "#5F716C" } }, ev.endDate ? "শেষ তারিখ: " + ev.endDate : "ফাঁকা = নিয়মিত (শেষ তারিখ নেই)"),
-            ev.endDate && h("button", { type: "button", onClick: () => setEdit(m.recordId, { endDate: "" }), style: { minHeight: "36px", padding: "0 10px", borderRadius: "999px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: "13px", cursor: "pointer" } }, "তারিখ মুছুন")),
+          mealChips(ev.mealTiming || "any", (k) => setEdit(m.recordId, { mealTiming: k })),
+          // তারিখ: লেবেলের ডানে, ডান-এলাইনে। "শেষ তারিখ: …" লেখা নেই; তারিখ থাকলে ✕ দিয়ে মোছা যায়, ফাঁকা = নিয়মিত।
+          h("div", { style: { display: "flex", alignItems: "center", gap: "8px", margin: "14px 0 4px" } },
+            h("div", { style: { flex: 1, minWidth: 0, fontSize: "13px", fontWeight: 700, color: "var(--hs-muted, #5F716C)", letterSpacing: "0.2px" } }, "কত তারিখ পর্যন্ত খাবেন"),
+            h("input", { type: "date", value: ev.endDate || "", onChange: (e) => setEdit(m.recordId, { endDate: e.target.value }), "aria-label": "কত তারিখ পর্যন্ত খাবেন", style: { flexShrink: 0, width: "142px", boxSizing: "border-box", textAlign: "right", padding: "8px 10px", border: "1px solid var(--hs-input-border, #C3D2CA)", borderRadius: "10px", fontSize: F, background: "var(--hs-surface, #fff)", color: "var(--hs-text, #1F2D2A)" } }),
+            ev.endDate && h("button", { type: "button", onClick: () => setEdit(m.recordId, { endDate: "" }), "aria-label": "তারিখ মুছুন", style: { flexShrink: 0, width: "38px", minHeight: "38px", borderRadius: "999px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "var(--hs-surface, #fff)", color: "var(--hs-muted, #5F716C)", fontSize: "14px", cursor: "pointer", fontFamily: "inherit" } }, "✕")),
+          !ev.endDate && h("div", { style: { fontSize: "12px", color: "var(--hs-muted, #5F716C)", textAlign: "right" } }, "ফাঁকা = নিয়মিত"),
           h("div", { style: { display: "flex", gap: "8px", marginTop: "14px", alignItems: "center" } },
             h("button", { onClick: () => saveSchedule(m.recordId), style: { flex: 1, minHeight: "48px", padding: "10px 18px", borderRadius: "12px", border: "none", background: GREEN, color: "#fff", fontSize: F, fontWeight: 700, cursor: "pointer" } }, savedFlash === m.recordId ? "✓ সংরক্ষিত" : "সংরক্ষণ করুন"),
             h("button", { type: "button", onClick: () => setMenuId(menuId === m.recordId ? null : m.recordId), "aria-label": "আরও অপশন", "aria-expanded": menuId === m.recordId, style: { minWidth: "48px", minHeight: "48px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "⋯")),

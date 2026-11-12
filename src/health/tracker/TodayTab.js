@@ -18,6 +18,8 @@ import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet, Sheet } from "./PlanEditSheets.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { DailyInputSheet } from "./DailyInputSheet.js";
+import { GutLogCard } from "./GutLogCard.js";
+import { entriesOn, gutFoodCount } from "./gutLog.js";
 import { TodayDateSheet } from "./TodayDateSheet.js";
 import { shiftISO, inRange, clampISO, swipeDelta, hasDayRecord } from "./dateNav.js";
 
@@ -81,6 +83,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const today = todayISO();
   const [selDate, setSelDate] = useState(today);
   const [dietOpen, setDietOpen] = useState(false);
+  const [gutOpen, setGutOpen] = useState(false);
   const viewDate = clampISO(selDate, today);
   const isViewToday = viewDate === today;
   // গত ৩০ দিন = `recent`-এ লোড-করা; তার আগের দিন আলাদা getDaily (একই equality-query, নতুন index নয়)
@@ -362,12 +365,18 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)
     homeExtra || null,
 
-    // আজকের খাবার-লগ — বেলা-ভিত্তিক কার্ড (আইকন, বেলার যোগফল ও ম্যাক্রো, খালি বেলাও দেখায়)। যোগ করা হয় শুধু উপরের "＋ খাবার" থেকে।
+    // আজকের খাবার-লগ হেডার + পাশে "পেট ডায়েরি" (এক লাইনের আলাদা কার্ড; উচ্চতা বাড়ে না — দুটোই একই সারিতে সমান উচ্চতা)।
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
-    canLog && React.createElement("div", { style: { ...CARD_STYLE, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, isViewToday ? "🍽 আজকের খাবার-লগ" : "🍽 " + dateText + "-এর খাবার-লগ"),
-      React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি (প্ল্যানের টিকসহ)"),
-      foodErr && !foodOpen && ErrorBox(foodErr)),
+    React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch", marginBottom: "8px" } },
+      canLog && React.createElement("div", { style: { ...CARD_STYLE, flex: 1, minWidth: 0, marginBottom: 0, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "🍽 আজকের খাবার-লগ" : "🍽 " + dateText + "-এর খাবার-লগ"),
+        React.createElement("div", { title: "প্ল্যানের টিকসহ", style: { fontSize: "12px", color: T.muted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি"),
+        foodErr && !foodOpen && ErrorBox(foodErr)),
+      React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
+        style: { ...CARD_STYLE, flex: canLog ? "0 0 auto" : 1, marginBottom: 0, padding: "0 12px", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 800, color: T.green,
+          background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, "🩺 পেট ডায়েরি")),
+    gutOpen && React.createElement(Sheet, { title: "🩺 পেট ডায়েরি", subtitle: "আজকের পেটের অবস্থা (ব্রিস্টল স্কেল)", onClose: () => setGutOpen(false) },
+      React.createElement(GutLogCard, { bare: true, info, familyId, callerMemberId, memberId, gutFoods: gutFoodCount(plan, eatenIds, extras), onSaved })),
     canLog && slotsForDay(plannedFast).map((sl) => {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === sl.id);
       const sm = sumNutrition(mine);
