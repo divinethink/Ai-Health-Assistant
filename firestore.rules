@@ -206,7 +206,8 @@ service cloud.firestore {
         && request.resource.data.category in
              ['general', 'diet-fitness', 'child-care', 'women-health', 'elderly-care',
               'chronic-disease-prevention', 'mental-health', 'skin-beauty',
-              'sleep-lifestyle', 'first-aid-emergency'];
+              'sleep-lifestyle', 'first-aid-emergency',
+              'education-career', 'money-life-skills', 'digital-safety', 'outdoor-community'];
       allow update: if request.auth != null
         && resource.data.authorId == callerMemberIdOf(resource.data.familyId)
         && request.resource.data.familyId == resource.data.familyId

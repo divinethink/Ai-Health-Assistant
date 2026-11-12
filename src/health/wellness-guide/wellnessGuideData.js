@@ -19,6 +19,10 @@ export const WELLNESS_CATEGORIES = [
   ["skin-beauty", "ত্বক ও সৌন্দর্য"],
   ["sleep-lifestyle", "ঘুম ও জীবনযাত্রা"],
   ["first-aid-emergency", "প্রাথমিক চিকিৎসা ও জরুরি সচেতনতা"],
+  ["education-career", "শিক্ষা ও ক্যারিয়ার"],
+  ["money-life-skills", "অর্থ ও জীবন-দক্ষতা"],
+  ["digital-safety", "ডিজিটাল ও নেশা-সচেতনতা"],
+  ["outdoor-community", "ভ্রমণ, খেলাধুলা ও সমাজ"],
 ];
 
 export async function listWellnessGuides(category) {

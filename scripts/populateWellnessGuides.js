@@ -17,6 +17,11 @@
 //   "child-care"                 — শিশু লালন-পালন সংক্রান্ত, ageRangeYears: [min,max] (ঐচ্ছিক)
 //   "women-health"                — নারী স্বাস্থ্য/গর্ভাবস্থা, pregnancyMonthRange: [min,max] (1-9, ঐচ্ছিক)
 //   "elderly-care"                — বয়স্কদের যত্ন, ageRangeYears: [min,max] (ঐচ্ছিক)
+//   "diet-fitness" / "mental-health" / "skin-beauty" / "sleep-lifestyle" / "first-aid-emergency" — অ্যাপের ক্যাটেগরি-তালিকা অনুযায়ী
+//   "education-career"           — শিক্ষা, শেখা, ক্যারিয়ার ও দক্ষতা
+//   "money-life-skills"          — অর্থ ব্যবস্থাপনা, জীবন-দক্ষতা, আইন ও নাগরিক সচেতনতা
+//   "digital-safety"             — ডিজিটাল নিরাপত্তা, স্ক্রিন/গেম/নেশা ও ঝুঁকি প্রতিরোধ
+//   "outdoor-community"          — ভ্রমণ, প্রকৃতি, খেলাধুলা, সমাজসেবা ও পরিবেশ
 //
 // ব্যবহার:
 //   ড্রাই-রান:  node scripts/populateWellnessGuides.js
