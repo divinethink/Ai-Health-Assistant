@@ -413,7 +413,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     // ওষুধের তালিকা
     shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: F } }, "এখনো কোনো ওষুধ নেই — উপরের ＋ যোগ করুন চাপুন।"),
     shown.length > 0 && h("button", { type: "button", onClick: () => setListOpen(!listVisible), "aria-expanded": listVisible,
-      style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: "48px", padding: "0 4px", marginBottom: "8px", background: "none", border: "none", fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer", fontFamily: "inherit" } },
+      style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: "40px", padding: "0 4px", marginBottom: "0", background: "none", border: "none", fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer", fontFamily: "inherit" } },
       h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("pill", { size: 17 }), "সব ওষুধ (" + bn(shown.length) + ")"), Icon(listVisible ? "up" : "down", { size: 18 })),
     listVisible && shown.map((m) => {
       const ev = editValues[m.recordId] || { slots: [], endDate: "", mealTiming: "any" };

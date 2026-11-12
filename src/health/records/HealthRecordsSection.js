@@ -11,7 +11,7 @@ import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
-import { Icon } from "../../shared/icons.js";
+import { QuickAddFab } from "../quickadd/QuickAddSheet.js";
 import { UpcomingSection } from "../summary/UpcomingGrid.js";
 
 const { useState, useEffect, useRef } = React;
@@ -44,6 +44,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     if (k) { setPresetObs(k); setAdding(true); }
     // eslint-disable-next-line
   }, []);
+  useEffect(() => { if (adding && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [adding]);
   // ✎ সম্পাদনা চাপলে ফর্ম খোলে ও দৃশ্যে আসে
   useEffect(() => { if (editingRecord && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [editingRecord]);
 
@@ -62,10 +63,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     (section === "all" || section === "profile") && React.createElement(UpcomingSection, { key: "up-" + targetMemberId, familyId, selectedMemberId: targetMemberId, refreshTick }),
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
-      !adding && !editingRecord && React.createElement("button", {
-        onClick: () => setAdding(true),
-        style: { width: "100%", minHeight: "48px", margin: "6px 0 20px", borderRadius: "16px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", boxShadow: "0 4px 12px rgba(14,75,67,0.25)", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
-      }, Icon("plus", { size: 18, stroke: 2.2 }), "যোগ করুন"),
+      !adding && !editingRecord && QuickAddFab({ onOpen: () => setAdding(true) }), // হোমের মতো ভাসমান ＋ (owner-request ২০২৬-১১-১২)
       (adding || editingRecord) && React.createElement(HealthRecordForm, {
         key: "form-" + targetMemberId + (presetObs || ""),
         familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,

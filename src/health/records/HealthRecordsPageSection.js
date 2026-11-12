@@ -135,7 +135,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
     !selectedMemberId
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
       : React.createElement(
-      "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 12px" } },
+      "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 84px" } },
       !isHealth && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
       // স্বাস্থ্য প্রোফাইল = হিরো-কার্ড (নাম/বয়স/উচ্চতা/ওজন/BMI/অ্যালার্জি) + ফিল্টার-পিল (সব | অসুখ | ওষুধ | রিপোর্ট) + সংশ্লিষ্ট তালিকা।
       // "সব"/"অসুখ" = section "all" (কার্ড + ফর্ম + তালিকা + ট্রেন্ড একই instance); "ওষুধ"/"রিপোর্ট" = section "profile" (শুধু কার্ড)।
@@ -145,8 +145,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           onRecordAdded: () => setAddTick((n) => n + 1),
           onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
           onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
-          belowSummary: React.createElement("div", { key: "subs", style: { marginTop: "18px", marginBottom: "6px" } },
-            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", className: "hs-noscroll", style: { display: "flex", gap: "8px", marginBottom: "14px", overflowX: "auto", padding: "2px 2px 6px" } },
+          belowSummary: React.createElement("div", { key: "subs", style: { marginTop: "16px", marginBottom: "0" } },
+            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", className: "hs-noscroll", style: { display: "flex", gap: "8px", marginBottom: "6px", overflowX: "auto", padding: "2px 2px 6px" } },
               RECORD_SUBS.map((sb) => React.createElement("button", {
                 key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
                 style: {
