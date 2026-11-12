@@ -52,7 +52,7 @@ export function Sheet({ title, subtitle, onClose, children, soft }) { // soft = 
   },
     React.createElement("div", {
       ref, role: "dialog", "aria-modal": "true", "aria-label": title, tabIndex: -1,
-      style: { width: "100%", maxWidth: "520px", maxHeight: "88vh", overflowY: "auto", boxSizing: "border-box", background: soft ? "#F3F7F4" : "#fff", borderRadius: soft ? "28px 28px 0 0" : "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", outline: "none", fontFamily: "'Hind Siliguri', sans-serif" },
+      style: { width: "100%", maxWidth: "520px", maxHeight: "88vh", overflowY: "auto", overflowX: "hidden", boxSizing: "border-box", background: soft ? "#F3F7F4" : "#fff", borderRadius: soft ? "28px 28px 0 0" : "20px 20px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", outline: "none", fontFamily: "'Hind Siliguri', sans-serif" },
     },
       soft && React.createElement("div", { "aria-hidden": "true", style: { width: "44px", height: "5px", borderRadius: "3px", background: "#D3DFD8", margin: "-6px auto 10px" } }),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "10px" } },

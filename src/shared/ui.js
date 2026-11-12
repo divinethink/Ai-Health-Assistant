@@ -81,7 +81,7 @@ export function SelectField(label, value, onChange, options) {
 export function TabPills(tabs, activeId, onChange, leading, histKey) {
   if (histKey) histBind(histKey, activeId, onChange); // Back বাটনে এই পিল-সারির আগের অবস্থায় ফেরা
   return React.createElement(
-    "div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px", marginBottom: "12px" } },
+    "div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px", marginBottom: "12px" } }, // hs-noscroll: স্ক্রলবার-রেখা লুকানো (সোয়াইপ আগের মতো)
     leading || null,
     tabs.map(([id, label]) => {
       const active = id === activeId;
