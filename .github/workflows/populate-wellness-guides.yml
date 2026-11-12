@@ -1,0 +1,51 @@
+name: populate-wellness-guides
+
+# হেলদি লাইফ ব্লগ (wellnessGuides) Firestore-এ যোগ — পিসি ছাড়াই।
+# Actions → populate-wellness-guides → Run workflow।
+#  ১) প্রথমে mode = dry-run (কিছু লেখে না, শুধু preview + ৫০০ শব্দ ওয়ার্নিং) — লগ দেখে নিন।
+#  ২) ঠিক থাকলে mode = write এবং confirm ঘরে WRITE লিখুন।
+# আগে থেকে থাকা পোস্ট skip হয় (overwrite হয় না) — তাই নিরাপদে রি-রান করা যায়।
+# Secret: FIREBASE_SERVICE_ACCOUNT (deploy-rules-এর একই secret)।
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry-run (preview) অথবা write (আসল লেখা)'
+        type: choice
+        required: true
+        default: dry-run
+        options:
+          - dry-run
+          - write
+      confirm:
+        description: 'write হলে WRITE লিখুন (dry-run-এ ফাঁকা রাখুন)'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  populate:
+    if: ${{ inputs.mode == 'dry-run' || inputs.confirm == 'WRITE' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      - name: Service account
+        run: printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Dry-run (কিছু লেখা হবে না)
+        if: ${{ inputs.mode == 'dry-run' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateWellnessGuides.js
+      - name: Write (আসল লেখা)
+        if: ${{ inputs.mode == 'write' && inputs.confirm == 'WRITE' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateWellnessGuides.js --confirm
