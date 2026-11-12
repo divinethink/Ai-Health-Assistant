@@ -7,6 +7,7 @@
 // canonical type-string ("height"/"weight", ইংরেজি) নিশ্চিত করে — কোনো নতুন
 // schema/rules লাগে না।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, PrimaryButton } from "../../shared/ui.js";
 import { localISO } from "../../shared/dates.js";
 import { listHealthRecords } from "./healthRecordsData.js";
@@ -83,7 +84,7 @@ export function HealthVitalsWidget({ familyId, targetMemberId, callerMemberId, r
   }, [familyId, targetMemberId, callerMemberId, unit, heightInput, feetInput, inchInput, weightInput, load, onSaved]);
 
   return React.createElement(
-    "div", { style: { marginTop: embedded ? "0" : "14px", marginBottom: embedded ? "10px" : 0, padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+    "div", { style: { marginTop: embedded ? "0" : "14px", marginBottom: embedded ? "10px" : 0, ...PREMIUM_CARD, padding: "12px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "উচ্চতা, ওজন ও বিএমআই"),
     latest && (latest.heightCm || latest.weightKg) && React.createElement(
       "div", { style: { fontSize: "14px", color: "#1F2D2A", margin: "8px 0" } },

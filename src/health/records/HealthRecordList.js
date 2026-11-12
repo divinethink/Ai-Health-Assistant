@@ -6,6 +6,7 @@
 // (deleteHealthRecord নিজেই Admin-override হলে owner-কে notification পাঠায়)।
 // শুধু presentation — কোনো schema/rules বদল নেই।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { t } from "../../shared/i18n.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { bnDate } from "../../shared/dates.js";
@@ -18,7 +19,7 @@ import { LabAlertBox } from "../reports/LabAlertBox.js";
 const { useState, useEffect, useCallback } = React;
 
 const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", MUTED = "#5F716C", LINE = "#D3E0D9";
-const cardBase = { background: "#fff", border: "1px solid " + LINE, borderRadius: "14px", padding: "12px", textAlign: "left", width: "100%", boxSizing: "border-box", fontFamily: "inherit", color: "#1F2D2A", minHeight: "44px" };
+const cardBase = { ...PREMIUM_CARD, padding: "12px", textAlign: "left", width: "100%", boxSizing: "border-box", fontFamily: "inherit", color: "#1F2D2A", minHeight: "44px" };
 
 const bn1 = (n) => Number(n).toLocaleString("bn-BD", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 

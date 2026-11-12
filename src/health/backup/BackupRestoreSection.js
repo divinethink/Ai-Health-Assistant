@@ -2,6 +2,7 @@
 // §8, §11.3)। ২-ধাপ flow (দুই উৎসই শেয়ার করে): ফাইল/Drive থেকে "যাচাই করুন"
 // (dry-run plan) → merge-summary preview → "নিশ্চিত করে রিস্টোর করুন" (§8.4)।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, SuccessBox } from "../../shared/ui.js";
 import { buildBackupPayload, buildBackupFileName, planRestore, commitRestore, summarizePlan } from "../../legacy/backupData.js";
 import { isGoogleDriveConfigured, backupToGoogleDrive, fetchGoogleDriveBackup } from "../../legacy/googleDrive.js";
@@ -125,7 +126,7 @@ export function BackupRestoreSection({ familyId, callerMemberId, isAdmin }) {
 
   // ---- UI helpers (শুধু presentation; উপরের logic অপরিবর্তিত) ----
   const card = (icon, title, sub, children) => React.createElement(
-    "div", { style: { border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "18px", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)", padding: "16px", marginTop: "14px" } },
+    "div", { style: { ...PREMIUM_CARD, padding: "16px", marginTop: "14px" } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
       React.createElement("span", { style: { width: "42px", height: "42px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", background: "var(--hs-chip-bg, #E4F0E9)" } }, icon),
       React.createElement("div", null,

@@ -6,6 +6,7 @@
 // PostCard/WellnessGuideForm অপরিবর্তিত — শুধু layout/wrapper নতুন।
 // কোনো AI/dose/triage logic নেই — শুধু owner-curated reference content।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listWellnessGuides, deleteWellnessGuide, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from "./wellnessGuideData.js";
 import { WellnessGuideForm } from "./WellnessGuideForm.js";
@@ -39,7 +40,7 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
   const hasMore = !!split || !!post.summary;
 
   return React.createElement(
-    "div", { key: post.id, style: { border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", padding: "10px", marginBottom: "8px" } },
+    "div", { key: post.id, style: { ...PREMIUM_CARD, padding: "10px", marginBottom: "8px" } },
     React.createElement(
       "div", { style: { cursor: "pointer" }, onClick: onToggle },
       React.createElement("div", { style: { fontWeight: 600, color: "var(--hs-primary, #0E4B43)", fontSize: "14px" } }, post.title),

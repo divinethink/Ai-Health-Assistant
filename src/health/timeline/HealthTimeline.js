@@ -8,6 +8,7 @@
 // (ট্যাপে প্রতিটা দেখা যায়), emergency-তে লাল ব্যাজ (বাকি ধূসর), প্রথমে ১০টা +
 // "আরও দেখুন"। শুধু presentation-layer — কোনো নতুন query/schema/rules নেই।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox } from "../../shared/ui.js";
 import { bnDateFromMillis, bnMonthYear, bnTime, bnNum } from "../../shared/dates.js";
 import { buildTimeline } from "./timelineData.js";
@@ -67,7 +68,7 @@ function TimelineRow({ row }) {
   const count = row.items.length;
   const danger = e.riskLevel === "emergency";
   return React.createElement(
-    "div", { style: { marginBottom: "12px", position: "relative", background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "16px", padding: "10px 12px", boxShadow: "0 1px 4px rgba(14,75,67,0.07)" } },
+    "div", { style: { marginBottom: "12px", position: "relative", ...PREMIUM_CARD, padding: "10px 12px" } },
     React.createElement("div", {
       style: {
         position: "absolute", left: "-30px", top: "16px", width: "10px", height: "10px", borderRadius: "50%",

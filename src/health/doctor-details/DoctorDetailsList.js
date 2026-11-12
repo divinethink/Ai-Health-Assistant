@@ -1,5 +1,6 @@
 // Doctor Details — card list। DocumentList.js-এর ২-ধাপ delete-confirm pattern reuse।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
 import { listDoctors, deleteDoctor, DOCTOR_CATEGORIES } from "./doctorDetailsData.js";
 
@@ -54,7 +55,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
       const line = (icon, text, color) => React.createElement("div", { style: { fontSize: "14px", color: color || "#3E4E49", display: "flex", gap: "6px", lineHeight: 1.4 } },
         React.createElement("span", { "aria-hidden": "true", style: { flexShrink: 0 } }, icon), React.createElement("span", { style: { minWidth: 0, overflowWrap: "anywhere" } }, text));
       return React.createElement(
-        "div", { key: d.id, style: { background: "#fff", border: "1px solid #D3E0D9", borderLeft: "5px solid var(--hs-primary-2, #17705F)", borderRadius: "16px", boxShadow: "0 3px 10px rgba(14,75,67,0.08)", padding: "12px" } },
+        "div", { key: d.id, style: { ...PREMIUM_CARD, borderLeft: "5px solid var(--hs-primary-2, #17705F)", padding: "12px" } },
         React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "center" } },
           d.visitingCardImageUrl
             ? React.createElement("img", {
@@ -85,7 +86,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
   const tileOf = (d) => {
     const telM = d.phone ? String(d.phone).match(/\+?\d[\d\s-]{6,}/) : null;
     const ini = Array.from(String(d.name || "?").replace(/^(ডাঃ|ডা\.?|Dr\.?)\s*/i, "").trim())[0] || "🩺";
-    return React.createElement("div", { key: d.id, style: { background: "#fff", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", minWidth: 0 } },
+    return React.createElement("div", { key: d.id, style: { ...PREMIUM_CARD, display: "flex", flexDirection: "column", minWidth: 0 } },
       React.createElement("button", { onClick: () => setOpenId(d.id), "aria-label": d.name + " — বিস্তারিত", style: { border: "none", background: "none", padding: "10px 6px 4px", minHeight: "96px", cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: 0 } },
         d.visitingCardImageUrl
           ? React.createElement("img", { src: String(d.visitingCardImageUrl).replace(/\.pdf$/i, ".jpg"), alt: "", onError: (e) => { e.target.style.display = "none"; }, style: { width: "44px", height: "44px", objectFit: "cover", borderRadius: "50%", border: "1px solid #D3E0D9" } })

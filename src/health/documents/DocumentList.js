@@ -5,6 +5,7 @@
 // access-controlled Firestore metadata doc-এর ভেতরেই থাকে (listDocuments() নিজেই
 // hasAccess()-গেটেড)। Delete বোতাম এখন ⋮ মেনুর ভেতরে (ভুল-ট্যাপ কমাতে)।
 
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
 import { listDocuments, deleteDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
 
@@ -103,7 +104,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
       const meta = (isRx ? [d.date, d.source ? "ডাক্তার: " + d.source : null] : [d.date, d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
       const isPdf = d.originalContentType === "application/pdf";
       return React.createElement(
-        "div", { key: d.id, style: { padding: "12px", marginBottom: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", background: "#fff", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+        "div", { key: d.id, style: { padding: "12px", marginBottom: "10px", ...PREMIUM_CARD } },
         React.createElement(
           "div", { style: { display: "flex", alignItems: "flex-start", gap: "10px" } },
           React.createElement("div", { style: { fontSize: "26px", lineHeight: 1 } }, TYPE_ICONS[d.docType] || "📄"),

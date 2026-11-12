@@ -1,3 +1,4 @@
+import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { t } from "../../shared/i18n.js";
 // Family Health Calendar (owner-request, ২০২৬-০৯-১২, item ৫) — shared
 // healthCalendarEvents collection (family-wide open-read, firestore.rules দ্রষ্টব্য),
@@ -157,7 +158,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     return h(
       "div", {
         key: e.id,
-        style: { marginTop: "8px", padding: "12px", borderRadius: "16px", background: done ? "#EAF6F0" : "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 1px 3px rgba(14,75,67,0.06)" },
+        style: { marginTop: "8px", padding: "12px", ...PREMIUM_CARD, ...(done ? { background: "#EAF6F0" } : {}) },
       },
       h("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", wordBreak: "break-word" } },
         e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : "")),
@@ -188,7 +189,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   }
 
   return h(
-    "div", { style: { background: "var(--hs-surface, #fff)", padding: "14px 12px 12px", borderRadius: "20px", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)", boxSizing: "border-box", maxWidth: "100%" } },
+    "div", { style: { ...PREMIUM_CARD, padding: "14px 12px 12px", boxSizing: "border-box", maxWidth: "100%" } },
     h("h4", { style: { fontSize: "19px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px", textAlign: "center" } }, t("h.calendar")),
 
     // ---- month-grid ----
