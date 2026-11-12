@@ -6,6 +6,7 @@
 // ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
 import { ErrorBox, PrimaryButton, SecondaryButton, TabPills, Skeleton } from "../../shared/ui.js";
+import { histBind, histChange } from "../../shared/navHistory.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
@@ -84,6 +85,17 @@ const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "�
 
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
 const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}";
+// নিচের (দ্বিতীয় স্তরের) পিল: উপরের গাঢ় পিল থেকে আলাদা — থিমের হালকা chip-bg + primary রঙের বর্ডার/লেখা (সব থিমেই পড়া যায়)।
+function SubPills(tabs, active, onChange) {
+  const hk = "trk:" + tabs.map((x) => x[0]).join("|"); // আগের Pills-এর একই কী — Back বাটনে আগের উপ-ট্যাবে ফেরা
+  histBind(hk, active, onChange);
+  return React.createElement("div", { className: "hs-trk-pills" }, React.createElement("div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px" } },
+    tabs.map(([id, label]) => {
+      const on = id === active;
+      return React.createElement("button", { key: id, type: "button", onClick: () => histChange(hk, active, id, onChange), "aria-pressed": on, style: { flexShrink: 0, fontSize: "14px", fontWeight: 700, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit",
+        border: on ? "2px solid var(--hs-primary, #0E4B43)" : "1px solid var(--hs-input-border, #C3D2CA)", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)", color: on ? "var(--hs-primary, #0E4B43)" : "var(--hs-muted, #5F716C)" } }, label);
+    })));
+}
 function Pills(tabs, active, onChange, leading) {
   return React.createElement("div", { className: "hs-trk-pills" }, TabPills(tabs, active, onChange, leading, "trk:" + tabs.map((x) => x[0]).join("|")));
 }
@@ -420,7 +432,7 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 function GoalPlanTab(props) {
   const [sub, setSub] = useState("goal"); // ট্র্যাকার নেভে ঢুকলে সবসময় "আমার লক্ষ্য"
   return React.createElement("div", null,
-    Pills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
+    SubPills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
     sub === "goal" && React.createElement(GoalTab, props),
     sub === "meal" && React.createElement(MealPlanTab, props),
     sub === "exercise" && React.createElement(ExerciseTab, props));

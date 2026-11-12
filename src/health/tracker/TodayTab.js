@@ -123,13 +123,30 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const [foodErr, setFoodErr] = useState(null);
   const fmtH = (m) => bnNum(Math.floor(m / 60)) + " ঘ. " + bnNum(m % 60) + " মি.";
 
-  // পানি: আজকের লোড-করা মান থেকে absolute হিসাব → set; রিফ্রেশ শেষ না হওয়া পর্যন্ত বাটন বন্ধ (double-tap নিরাপদ)।
-  const setWater = async (next) => {
-    if (busy || next < 0 || next > MAX_WATER) return;
-    setErr(null); setBusy(true);
-    try { await saveDaily(familyId, memberId, callerMemberId, viewDate, { waterGlasses: next }, dayDoc); await onSaved(); }
-    catch (x) { setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
-    finally { setBusy(false); }
+  // পানি: ট্যাপে সংখ্যা সাথে সাথে বাড়ে (স্থানীয় মান); সেভ পরে একটাই absolute লেখায় (০.৫ সেকেন্ড থামলে)। ধারাবাহিক লেখা — একসাথে দুটো নয়।
+  const [wLocal, setWLocal] = useState(null);
+  const wWant = useRef(null), wTimer = useRef(null), wSaving = useRef(false), wDate = useRef(viewDate), wDoc = useRef(dayDoc);
+  wDoc.current = dayDoc;
+  useEffect(() => { // দিন বদলালে অপেক্ষমাণ টোকা বাতিল (ভুল দিনে লেখা এড়াতে)
+    if (wDate.current !== viewDate) { clearTimeout(wTimer.current); wWant.current = null; wDate.current = viewDate; setWLocal(null); }
+  }, [viewDate]);
+  useEffect(() => () => clearTimeout(wTimer.current), []);
+  const flushWater = async () => {
+    if (wSaving.current) return;
+    wSaving.current = true;
+    try {
+      while (wWant.current !== null) {
+        const v = wWant.current; wWant.current = null;
+        try { await saveDaily(familyId, memberId, callerMemberId, wDate.current, { waterGlasses: v }, wDoc.current); await onSaved(); }
+        catch (x) { wWant.current = null; setErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } }
+      }
+    } finally { wSaving.current = false; if (wWant.current === null) setWLocal(null); }
+  };
+  const setWater = (next) => {
+    if (!oldReady || next < 0 || next > MAX_WATER) return;
+    setErr(null); setWLocal(next); wWant.current = next;
+    clearTimeout(wTimer.current);
+    wTimer.current = setTimeout(flushWater, 500);
   };
 
   // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লকে নয়; সিয়ামের দিনেও চালু)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
@@ -159,7 +176,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   useEffect(() => {
     const k = takeQuickIntent(["weight", "sleep", "food", "water"]);
     if (k === "food") openFood();
-    else if (k === "water") { if (waterTarget) setWater(glasses + 1).then(() => { setWFlash(true); setTimeout(() => setWFlash(false), 1800); }); } // "＋ → পানি": বিদ্যমান ＋১ গ্লাস পথেই; কার্ড কিছুক্ষণ নীল বর্ডারে
+    else if (k === "water") { if (waterTarget) { setWater(glasses + 1); setWFlash(true); setTimeout(() => setWFlash(false), 1800); } } // "＋ → পানি": বিদ্যমান ＋১ গ্লাস পথেই; কার্ড কিছুক্ষণ নীল বর্ডারে
     else if (k) openIn(k);
     // eslint-disable-next-line
   }, []);
@@ -210,7 +227,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     React.createElement("button", { type: "button", onClick: () => setCalOpen(true), "aria-label": "তারিখ বেছে নিন, এখন " + shortDate, style: hitBtn },
       React.createElement("span", { style: pill(isViewToday ? "#F3E6CC" : T.orange, isViewToday ? T.green : T.onDark) }, React.createElement("span", { "aria-hidden": "true" }, "📅"), shortDate)));
 
-  const glasses = d.waterGlasses || 0;
+  const glasses = wLocal !== null ? wLocal : (d.waterGlasses || 0);
   const bmiVal = bmiOf(info.weightKg, info.heightCm);
   const eaten = d.caloriesIn || 0;
   const left = calc ? calc.calorieTarget - eaten : 0;
@@ -255,8 +272,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             : React.createElement(React.Fragment, null,
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, isViewToday ? "আজকের টার্গেট" : dateText + "-এর টার্গেট"),
               React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
-              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType]),
-              plannedFast && React.createElement("div", { style: { fontSize: "12px", color: T.onDarkSoft, marginTop: "2px" } }, "🌙 আজ সিয়ামের দিন ছিল — দিনের খাবার লগ হওয়ায় ধরা হয়নি")))),
+              React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType])))),
       fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।"),
       // পুষ্টির হিসাব: হিরো-কার্ডের ভেতরেই, তবে আলাদা কার্ডের মতো হালকা ব্যাকগ্রাউন্ডের প্যানেলে (আগের "কিছু যোগ হয়নি" বার্তার জায়গায়)।
       // খালি অবস্থায়ও থাকে (০ ও টার্গেট); ডেটা বদলায় না, শুধু দেখানো।
@@ -307,8 +323,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px" }, "aria-hidden": "true" },
           Array.from({ length: Math.max(waterTarget, Math.min(glasses, 16)) }, (_, i) => React.createElement("div", { key: i, style: { width: "13px", height: "14px", borderRadius: "3px 3px 5px 5px", background: i < glasses ? "linear-gradient(180deg, #6BB1EE, " + T.blue + ")" : T.blueSoft } }))),
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
-          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: busy || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "34px", borderRadius: "10px", border: "none", background: busy ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: busy ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, "＋ ১ গ্লাস"),
-          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: busy || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "34px", borderRadius: "10px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "18px", fontWeight: 700, lineHeight: 1, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−"))),
+          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: !oldReady || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "34px", borderRadius: "10px", border: "none", background: !oldReady ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: !oldReady ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: !oldReady ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, "＋ ১ গ্লাস"),
+          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: !oldReady || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "34px", borderRadius: "10px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "18px", fontWeight: 700, lineHeight: 1, cursor: "pointer", opacity: glasses <= 0 ? 0.4 : 1, fontFamily: "inherit" } }, "−"))),
       canLog && React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { flex: 1, minWidth: 0, borderRadius: "16px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px 4px", cursor: "pointer", fontFamily: "inherit" } },
         React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", fontWeight: 700, lineHeight: 1 } }, "＋"),
         React.createElement("span", { style: { fontSize: "14px", fontWeight: 800 } }, "খাবার"))),
