@@ -120,7 +120,10 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose },
       TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot),
-      budget && React.createElement("div", { style: { fontSize: "13px", color: MUTED, margin: "-6px 0 10px" } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি (বরাদ্দ; বেশি হলেও বাধা নেই)"),
+      budget && React.createElement("div", { style: { margin: "-6px 0 10px" } },
+        React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি · বরাদ্দ, বেশি হলেও বাধা নেই"),
+        React.createElement("div", { "aria-hidden": "true", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },
+          React.createElement("div", { style: { height: "6px", borderRadius: "6px", width: Math.min(100, budget.planned > 0 ? (budget.eaten / budget.planned) * 100 : 0) + "%", background: GREEN } }))),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
       React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list", between: recentRow }),

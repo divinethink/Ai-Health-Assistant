@@ -87,21 +87,26 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
 // props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
-export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout }) {
+export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
   return React.createElement("div", null,
-    React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", style: INPUT }),
+    React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#fff", padding: "2px 0 6px" } },
+      React.createElement("div", { style: { position: "relative" } },
+        React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", pointerEvents: "none" } }, "🔍"),
+        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — বাংলা/English (ভাত, Rice, ইলিশ)", "aria-label": "খাবার খুঁজুন", style: { ...INPUT, minHeight: "52px", paddingLeft: "42px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
+    between || null,
     React.createElement("div", { style: { margin: "8px 0" } }, TabPills([["", "সব"], ...FOOD_GROUPS], grp, setGrp)),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     layout === "list" ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
       found.map(({ key, f, allergy }) => {
         const st = foodStatus(key, f, { allergyTags, ctx: avoidCtx }); const sc = STATUS_COLORS[st.level];
         const n = hasFoodOverride(key) ? null : per100Of(key);
+        const ok = st.level === "green"; // ঠিক খাবার: সাদা কার্ড + খালি হালকা বৃত্ত ("বেছে নিন" ভাব); হলুদ/লাল সতর্কতা আগের মতো স্পষ্ট
         return React.createElement("button", { key, onClick: () => onPick(key), title: st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : ""),
-          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "56px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "14px", border: "1px solid " + sc.border, background: sc.bg, color: "#1F2D2A" } },
-          React.createElement("span", { "aria-hidden": "true", style: { width: "28px", height: "28px", flexShrink: 0, borderRadius: "50%", background: sc.border, color: st.level === "green" ? "#fff" : sc.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 } }, st.icon),
+          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "60px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "16px", border: "1px solid " + (ok ? "#E1EAE5" : sc.border), background: ok ? "#fff" : sc.bg, color: "#1F2D2A", boxShadow: "0 1px 4px rgba(14,75,67,0.06)" } },
+          React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", flexShrink: 0, boxSizing: "border-box", borderRadius: "50%", border: ok ? "2px solid #D3DFD8" : "none", background: ok ? "#fff" : sc.border, color: sc.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 } }, ok ? "" : st.icon),
           React.createElement("span", { style: { flex: 1, minWidth: 0 } },
             React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700 } }, f.n, React.createElement("span", { style: { fontWeight: 500, fontSize: "12.5px", color: MUTED } }, " · " + foodEnglish(key, f)),
               hasFoodOverride(key) && React.createElement("span", { style: POS_CHIP }, "আমার"), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ অ্যালার্জি"),
@@ -109,8 +114,8 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout }) {
             React.createElement("span", { style: { display: "block", fontSize: "12px", color: MUTED, marginTop: "2px" } },
               n ? "প্রতি ১০০ গ্রামে · প্রোটিন " + fmtMacro(n.p) + " · কার্ব " + fmtMacro(n.c) + " · ফ্যাট " + fmtMacro(n.f) : "১ " + f.u + "-এ")),
           React.createElement("span", { style: { textAlign: "right", flexShrink: 0 } },
-            React.createElement("b", { style: { display: "block", fontSize: "16px" } }, bnNum(n ? n.kcal : foodK(key))),
-            React.createElement("span", { style: { fontSize: "12px", color: MUTED } }, "কিলোক্যালরি")));
+            React.createElement("b", { style: { display: "block", fontSize: "19px", lineHeight: 1.1 } }, bnNum(n ? n.kcal : foodK(key))),
+            React.createElement("span", { style: { fontSize: "11.5px", color: "#8A9B95" } }, "কিলোক্যালরি")));
       })) :
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
       found.map(({ key, f, allergy }) => { const st = foodStatus(key, f, { allergyTags, ctx: avoidCtx }); const sc = STATUS_COLORS[st.level]; return React.createElement("span", { key, style: { display: "inline-flex", alignItems: "center" } }, React.createElement("button", {
