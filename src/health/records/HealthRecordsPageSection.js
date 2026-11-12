@@ -38,7 +38,6 @@ import { t } from "../../shared/i18n.js";
 import { HealthRecordsSection } from "./HealthRecordsSection.js";
 import { MedicationReminders } from "./MedicationReminders.js";
 import { VaccinationScheduler } from "../calendar/VaccinationScheduler.js";
-import { FamilyHealthCalendar } from "../calendar/FamilyHealthCalendar.js";
 import { HealthTimeline } from "../timeline/HealthTimeline.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
@@ -91,7 +90,6 @@ function usePillCounts(familyId, memberId, tick) {
 // টাইমলাইন-ট্যাবের ভেতরের ৩টা ছোট পিল (owner-approved, ২০২৬-০৯-০৮) — একবারে একটাই দেখা যায়
 const TIMELINE_SUBS = [
   { id: "diet", label: "🍽️ খাদ্য" },
-  { id: "calendar", label: "📅 ক্যালেন্ডার" },
   { id: "vaccine", label: "💉 টিকা" },
   { id: "timeline", label: "🕘 টাইমলাইন" },
 ];
@@ -197,7 +195,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           }, sb.label))
         ),
         timelineSub === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
-        timelineSub === "calendar" && React.createElement(FamilyHealthCalendar, { familyId, callerMemberId }),
         timelineSub === "vaccine" && React.createElement(VaccinationScheduler, { familyId, callerMemberId, selectedMemberId, inline: true }),
         timelineSub === "timeline" && React.createElement(HealthTimeline, { familyId, callerMemberId, selectedMemberId })
       )

@@ -146,22 +146,18 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     setViewMonth(m); setViewYear(y);
   }
 
-  const navBtn = { border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "20px", cursor: "pointer", padding: "4px 12px", minHeight: "40px" };
+  const navBtn = { border: "none", background: "#E4F0E9", color: "var(--hs-primary, #0E4B43)", fontSize: "20px", cursor: "pointer", width: "44px", minHeight: "44px", borderRadius: "50%", lineHeight: 1 };
 
-  // দেখানো তালিকা: তারিখ বাছলে সেই দিনের সব, নাহলে আগামী ৭ দিন (সম্পন্ন বাদে)
-  const end = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate() + 6);
-  const endStr = toDateStr(end.getFullYear(), end.getMonth(), end.getDate());
-  const shown = selectedDate
-    ? events.filter((e) => e.date === selectedDate)
-    : events.filter((e) => e.status !== "done" && e.date >= todayStr && e.date <= endStr).sort((a, b) => (a.date < b.date ? -1 : 1));
-  const listTitle = selectedDate ? bnDate(selectedDate) + "-এর ইভেন্ট" : "আগামী ৭ দিন";
+  // তালিকা শুধু তারিখ বাছলে (আগামী-৭-দিন তালিকা owner-request-এ বাদ)
+  const shown = selectedDate ? events.filter((e) => e.date === selectedDate) : [];
+  const listTitle = selectedDate ? bnDate(selectedDate) + "-এর ইভেন্ট" : "";
 
   function renderCard(e) {
     const done = e.status === "done";
     return h(
       "div", {
         key: e.id,
-        style: { marginTop: "8px", padding: "10px", borderRadius: "14px", background: done ? "#EAF6F0" : "#F7FAF9", border: "1px solid #D3E0D9" },
+        style: { marginTop: "8px", padding: "12px", borderRadius: "16px", background: done ? "#EAF6F0" : "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 1px 3px rgba(14,75,67,0.06)" },
       },
       h("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", wordBreak: "break-word" } },
         e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : "")),
@@ -192,9 +188,8 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   }
 
   return h(
-    "div", { style: { background: "#fff", padding: "12px", borderRadius: "10px", border: "1px solid #D3E0D9", boxSizing: "border-box", maxWidth: "100%" } },
-    h("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 4px" } }, t("h.calendar")),
-    h("div", { style: { fontSize: "13px", color: "#4B5C57", marginBottom: "8px" } }, "সবাই দেখতে পারবেন; শুধু নিজের তৈরি ইভেন্ট (বা Admin) পরিবর্তন/মুছতে পারবেন।"),
+    "div", { style: { background: "var(--hs-surface, #fff)", padding: "14px 12px 12px", borderRadius: "20px", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)", boxSizing: "border-box", maxWidth: "100%" } },
+    h("h4", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "0 0 6px" } }, t("h.calendar")),
 
     // ---- month-grid ----
     h(
@@ -221,9 +216,9 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
             onClick: () => setSelectedDate((prev) => (prev === dateStr ? null : dateStr)),
             style: {
               width: "100%", minWidth: 0, padding: 0, aspectRatio: "1", boxSizing: "border-box",
-              border: isSelected ? "2px solid var(--hs-primary, #0E4B43)" : isToday ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #D3E0D9",
-              borderRadius: "10px", background: isSelected ? "var(--hs-primary, #0E4B43)" : hasEvent ? "#EAF6F0" : "#fff",
-              color: isSelected ? "#fff" : "#1F2D2A", fontSize: "14px", cursor: "pointer", position: "relative",
+              border: isToday && !isSelected ? "1.5px solid var(--hs-primary, #0E4B43)" : "1.5px solid transparent",
+              borderRadius: "12px", background: isSelected ? "var(--hs-primary, #0E4B43)" : hasEvent ? "#E4F0E9" : "var(--hs-bg, #F4F8F5)",
+              color: isSelected ? "#fff" : "#1F2D2A", fontSize: "14px", fontWeight: isToday || isSelected ? 700 : 500, cursor: "pointer", position: "relative",
             },
           },
           d,
@@ -233,15 +228,15 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
     ),
 
     // ---- তালিকা ----
-    h(
+    selectedDate && h(
       "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px" } },
       h("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, listTitle),
-      selectedDate && h("button", {
+      h("button", {
         onClick: () => setSelectedDate(null),
-        style: { fontSize: "13px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", minHeight: "32px" },
-      }, "✕ আগামী ৭ দিন দেখুন")
+        style: { fontSize: "13px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", minHeight: "44px" },
+      }, "✕ বন্ধ")
     ),
-    shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: "14px", margin: "6px 0" } }, selectedDate ? "এই তারিখে কোনো ইভেন্ট নেই।" : "আগামী ৭ দিনে কোনো ইভেন্ট নেই।"),
+    selectedDate && shown.length === 0 && h("p", { style: { color: "#5F716C", fontSize: "14px", margin: "6px 0" } }, "এই তারিখে কোনো ইভেন্ট নেই।"),
     shown.map(renderCard),
 
     // ---- নতুন ইভেন্ট ----
