@@ -51,7 +51,7 @@ import { listDocuments } from "../documents/documentsData.js";
 
 const { useState, useEffect } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
-import { peekQuickIntent, takeQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
+import { peekQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 
 // স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
 // id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
@@ -115,7 +115,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
-  const [recordSub, setRecordSub] = useState(() => (takeQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["report"]) ? "docs" : "meds"));
+  const [recordSub, setRecordSub] = useState(() => (peekQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["bp", "sugar"]) ? "records" : peekQuickIntent(["report"]) ? "docs" : "meds")); // শুধু peek: ইনটেন্ট নেয় গন্তব্য-ফর্ম নিজে (ওষুধ→MedicationReminders, প্রেসার/সুগার→HealthRecordsSection, রিপোর্ট→DocumentsSection)
   const counts = usePillCounts(familyId, isHealth ? selectedMemberId : null, addTick);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);

@@ -140,16 +140,16 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
     (!onlyMeds || doses.length > 0) && h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
       h("div", { style: SEC }, "আজকের ওষুধ"), doses.length > 0 && h("div", { style: { fontSize: "13px", color: T.muted } }, "সব ডিভাইসে মিলবে")),
     doseErr && ErrorBox(doseErr),
-    (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: "12px 12px" } },
+    (!onlyMeds || doses.length > 0) && h("div", { style: { ...BOX, padding: onlyMeds ? "8px 10px" : "12px 12px" } },
       doses.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "2px 2px", lineHeight: 1.5 } }, "আজকের জন্য সময়-নির্ধারিত ওষুধ নেই। ওষুধ ও সময় যোগ করতে: স্বাস্থ্য তথ্য ▸ ওষুধ।")
         : h(React.Fragment, null,
             // হোমে (onlyMeds): শুধু দেরি-হওয়া + পরের বেলার ডোজ; "সব দেখুন"-এ পুরোটা
             (!onlyMeds || showAllDoses || homeDoses.length > 0)
-              ? h(DoseGrid, { doses: onlyMeds && !showAllDoses ? homeDoses : doses, busyKey, onToggle: toggle })
+              ? h(DoseGrid, { doses: onlyMeds && !showAllDoses ? homeDoses : doses, busyKey, onToggle: toggle, compact: onlyMeds })
               : h("div", { style: { fontSize: "15px", fontWeight: 600, color: T.green, padding: "2px" } }, "✓ আজকের সব ওষুধ খাওয়া হয়েছে"),
             onlyMeds && doses.length > homeDoses.length && h("button", { type: "button", onClick: () => setShowAllDoses((v) => !v), "aria-expanded": showAllDoses,
-              style: { marginTop: "10px", width: "100%", minHeight: "44px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: "none", color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } },
+              style: { marginTop: "8px", width: "100%", minHeight: "40px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: "none", color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } },
               showAllDoses ? "কম দেখান" : "সব দেখুন (" + bnNum(doses.length) + "টি)"))),
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 

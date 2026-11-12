@@ -4,7 +4,7 @@ export const QUICK_ITEMS = [
   { id: "weight", icon: "⚖️", label: "ওজন", tab: "home" },
   { id: "bp", icon: "❤️", label: "প্রেসার", tab: "health" },
   { id: "sugar", icon: "🩸", label: "সুগার", tab: "health" },
-  { id: "medicine", icon: "💊", label: "ওষুধ", tab: "health" },
+  { id: "medicine", icon: "💊", label: "ওষুধ/প্রেসক্রিপশন", tab: "health" },
   { id: "symptom", icon: "🤒", label: "লক্ষণ", tab: "aichat" },
   { id: "food", icon: "🍽️", label: "খাবার", tab: "home" },
   { id: "water", icon: "💧", label: "পানি", tab: "home" },

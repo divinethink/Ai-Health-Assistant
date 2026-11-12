@@ -51,6 +51,7 @@ function bnTime(hhmm) {
 const MEAL_LABELS = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
 const SLOT_DEFAULTS = { 1: ["08:00"], 2: ["08:00", "20:00"], 3: ["08:00", "14:00", "20:00"], 4: ["08:00", "13:00", "18:00", "22:00"] };
 const DAY_OPTIONS = [3, 5, 7, 10, 14, 30];
+const BIGB = { minHeight: "64px", borderRadius: "16px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#fff", color: "var(--hs-primary)", padding: "0 12px" };
 
 // endDate না থাকলে শুরুর তারিখ + কতদিন থেকে হিসাব।
 function fallbackEndDate(startDate, durationDays) {
@@ -115,8 +116,9 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [listOpen, setListOpen] = useState(null); // null = অটো (আজকের ডোজ না থাকলে বা সদ্য-যোগ থাকলে খোলা)
 
   // নতুন ওষুধ যোগের ফর্ম
-  const [startIntent] = useState(() => takeQuickIntent(["rx", "medmanual"])); // "যোগ করুন" প্যানেল থেকে সরাসরি আসা
+  const [startIntent] = useState(() => takeQuickIntent(["rx", "medmanual", "medicine"])); // "যোগ করুন" প্যানেল থেকে সরাসরি আসা
   const [addOpen, setAddOpen] = useState(startIntent === "medmanual");
+  const [chooseOpen, setChooseOpen] = useState(startIntent === "medicine"); // হোমের "＋ → ওষুধ/প্রেসক্রিপশন": সরাসরি দুই-অপশন পেজ
   const [rxOpen, setRxOpen] = useState(startIntent === "rx"); // "📄 প্রেসক্রিপশন আপলোড" (ধাপ ৬)
   const [rxFile, setRxFile] = useState(null);
   const [rxDocId, setRxDocId] = useState(null);
@@ -355,6 +357,10 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { style: { fontSize: F, fontWeight: 600, color: "#3E4E49", marginBottom: "6px" } }, "🔁 আগের ওষুধ আবার শুরু করুন"),
       h("div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
+    chooseOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 ওষুধ/প্রেসক্রিপশন", onClose: () => setChooseOpen(false) },
+      h("div", { style: { display: "grid", gap: "10px", marginTop: "6px" } },
+        h("button", { onClick: () => { setChooseOpen(false); setRxOpen(true); }, style: { ...BIGB, border: "2px solid var(--hs-primary)" } }, "📷 প্রেসক্রিপশন আপলোড (ওষুধ অটো-ফিল)"),
+        h("button", { onClick: () => { setChooseOpen(false); setAddOpen(true); }, style: { ...BIGB, border: "1.5px solid #D3C7EE" } }, "✍️ হাতে লিখুন"))),
     rxOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
       !rxFile && h(DocumentUploadForm, { familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, onPrescription: (f, _p, id) => { setRxDocId(id || null); setRxFile(f); } }),
       rxFile && h(PrescriptionPanel, { key: rxFile.name + rxFile.size, familyId, targetMemberId: selectedMemberId || aMember, callerMemberId, file: rxFile, docId: rxDocId, onDone: () => loadMeds(), onClose: () => { setRxOpen(false); setRxFile(null); }, closeLabel: "ওষুধের তালিকায় যান", onStageChange: setRxStage })),
