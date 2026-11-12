@@ -9,7 +9,7 @@ import { macroTargets } from "./macroTargets.js";
 import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { Icon } from "../../shared/icons.js";
-import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
+import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT } from "./trackerTheme.js";
 import { ringDash, pctOf, weekSummary, last30DatesISO } from "./todaySummary.js";
 import { buildMealPlan } from "./mealPlanData.js";
 import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
@@ -27,6 +27,7 @@ import { shiftISO, inRange, clampISO, swipeDelta, hasDayRecord } from "./dateNav
 const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 
+const SLOT_LINE = { sehri: "moon", iftar: "sunset", breakfast: "sunrise", snack1: "coffee", lunch: "sun", snack2: "coffee", dinner: "moon" };
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
 
 function Notice({ children, tone }) {
@@ -53,12 +54,13 @@ function Ring({ pct, size, stroke, color, track, children, label, redFrom }) {
 function MiniRing({ value, pct, color, caption, label, onTap, empty, icon }) { // empty: আজ এখনো কিছু নেই → ০% নয়, রঙিন আইকন + "লক্ষ্য …" (কার্ড মৃত দেখায় না)
   const key = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTap(); } };
   return React.createElement("div", { role: "button", tabIndex: 0, "aria-label": label + " যোগ/বদলান", onClick: onTap, onKeyDown: key,
-    style: { ...HOME_CARD, position: "relative", flex: 1, minWidth: 0, marginBottom: 0, padding: "12px 4px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", cursor: "pointer" } },
-    React.createElement(Ring, { pct: empty ? 0 : pct, size: 56, stroke: 6, color, track: color + "33", label },
+    style: { ...HOME_CARD, position: "relative", flex: 1, minWidth: 0, marginBottom: 0, padding: "9px 4px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: "3px", cursor: "pointer" } },
+    React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", top: "7px", right: "7px", width: "22px", height: "22px", borderRadius: "50%", background: T.track, color: T.green, display: "flex", alignItems: "center", justifyContent: "center" } }, Icon("plus", { size: 14, stroke: 2.4 })),
+    React.createElement(Ring, { pct: empty ? 0 : pct, size: 50, stroke: 6, color, track: color + "33", label },
       empty
-        ? Icon(icon, { size: 22, color })
+        ? Icon(icon, { size: 20, color })
         : React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, color: T.ink } }, bnNum(Math.round(Math.min(pct, 999))) + "%")),
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, textAlign: "center", lineHeight: 1.25, marginTop: "2px" } }, empty ? label : value),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, textAlign: "center", lineHeight: 1.25 } }, empty ? label : value),
     React.createElement("div", { style: { fontSize: "12px", color: T.muted, textAlign: "center", lineHeight: 1.3, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, caption));
 }
 
@@ -68,7 +70,7 @@ function AlertStrip({ allergies, conds, onDiet }) { // onDiet: রোগ থা�
   if (!allergies.length && !conds.length) return null; // কিছু না থাকলে সারিই নেই; রেকর্ড দিলে অটো আসবে
   const chip = (key, content, bg, fg) => React.createElement("span", { key, style: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "999px", background: bg, color: fg, fontSize: "14px", fontWeight: 700 } }, content);
   const shown = conds.slice(0, 3);
-  return React.createElement("div", { style: { padding: "0 4px", marginBottom: "10px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "অ্যালার্জি ও চলমান অসুস্থতা" },
+  return React.createElement("div", { style: { padding: "0 4px", marginBottom: "6px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }, "aria-label": "অ্যালার্জি ও চলমান অসুস্থতা" },
     allergies.length
       ? chip("al", "⚠️ অ্যালার্জি: " + allergies.join(", "), "#FDECEA", "#A32018")
       : null,
@@ -249,14 +251,14 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     // উপবাস-দিন (পার্ট ১০): ক্যালরি-টার্গেট স্থগিত
     onFast && !calc && React.createElement("div", { style: { ...HOME_CARD, background: GRADIENT_HERO, border: "none", color: T.onDark, padding: "16px" } },
-      React.createElement("div", { style: { fontSize: "20px", fontWeight: 800 } }, "🌙 আজ সিয়াম/ফাস্টিং"),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "20px", fontWeight: 700 } }, [Icon("moon", { key: "m", size: 20 }), " আজ সিয়াম/ফাস্টিং"]),
       React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "6px", lineHeight: 1.6 } },
         "আজ ক্যালরি-টার্গেট স্থগিত। পানি পান করুন; সেহরি/ইফতারে হালকা ও সুষম খাবার নিন। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
 
     // হিরো-কার্ড: নাম/বয়স/BMI + ক্যালরি রিং + আজকের হিসাব (গ্রাম, শুধু যোগফল — টার্গেট/শতাংশ নেই)। AlertStrip নিচে।
     calc && React.createElement("div", { style: { ...HOME_CARD, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 10px", marginBottom: "6px" } },
-        React.createElement("span", { style: { fontSize: "21px", fontWeight: 800, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, info.member && info.member.name ? info.member.name : "আমার"),
+        React.createElement("span", { style: { fontSize: "21px", fontWeight: 700, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, info.member && info.member.name ? info.member.name : "আমার"),
         info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, bnNum(info.age) + " বছর"),
         // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
         React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 4px", borderRadius: "999px", border: "none", background: "transparent", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" } },
@@ -266,17 +268,17 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
         React.createElement(Ring, { pct: onFast ? 0 : (eaten > calc.calorieTarget ? 100 : pctOf(eaten, calc.calorieTarget)), redFrom: !onFast && eaten > calc.calorieTarget ? (calc.calorieTarget / eaten) * 100 : undefined, size: 96, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
           // রিংয়ের ভেতরের ব্যাস ≈ ৭৮px: সংখ্যা ১৬px + লেবেল ১০.৫px (nowrap) এর ভেতরেই ধরে
-          React.createElement("span", { style: { fontSize: "16px", fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap" } }, bnNum(eaten)),
+          React.createElement("span", { style: { fontSize: "17px", fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap" } }, bnNum(eaten)),
           React.createElement("span", { style: { fontSize: "12px", color: T.onDarkSoft, whiteSpace: "nowrap", lineHeight: 1.2 } }, "কিলোক্যালরি")),
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           onFast
             ? React.createElement(React.Fragment, null,
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, "আজ"),
-              React.createElement("div", { style: { fontSize: "21px", fontWeight: 800, lineHeight: 1.2 } }, "🌙 সিয়াম/ফাস্টিং"),
+              React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", fontSize: "21px", fontWeight: 700, lineHeight: 1.2 } }, [Icon("moon", { key: "m", size: 20 }), " সিয়াম/ফাস্টিং"]),
               React.createElement("div", { style: { fontSize: "12.5px", color: T.onDarkSoft, marginTop: "2px", lineHeight: 1.4 } }, "ক্যালরি-টার্গেট স্থগিত · সেহরি/ইফতার লগ করুন"))
             : React.createElement(React.Fragment, null,
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft } }, isViewToday ? "আজকের টার্গেট" : dateText + "-এর টার্গেট"),
-              React.createElement("div", { style: { fontSize: "24px", fontWeight: 800, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
+              React.createElement("div", { style: { fontSize: "26px", fontWeight: 700, lineHeight: 1.1 } }, bnNum(calc.calorieTarget)),
               React.createElement("div", { style: { fontSize: "13px", color: T.onDarkSoft, marginTop: "2px" } }, (left >= 0 ? "বাকি " + bnNum(left) : "টার্গেটের বেশি " + bnNum(-left)) + " · " + GOAL_LABELS[goal.goalType])))),
       fastWarn && React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", lineHeight: 1.45, color: "#FFE3A8" } }, "⚠ আপনার ক্ষেত্রে সিয়াম/ফাস্টিং-এর আগে ডাক্তারের পরামর্শ নিন; শরীর খারাপ লাগলে ভাঙুন।"),
       // পুষ্টির হিসাব: হিরো-কার্ডের ভেতরেই, তবে আলাদা কার্ডের মতো হালকা ব্যাকগ্রাউন্ডের প্যানেলে (আগের "কিছু যোগ হয়নি" বার্তার জায়গায়)।
@@ -288,7 +290,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
           const over = tg && key !== "fib" && v > tg; // ফাইবার বেশি হলে লাল নয়
           return React.createElement("div", { key: name, style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, name),
-            React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: over ? "#B3261E" : T.ink, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v)),
+            React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: over ? "#B3261E" : T.ink, lineHeight: 1.25, whiteSpace: "nowrap" } }, fmtMacro(v)),
             mt && React.createElement("div", { style: { fontSize: "12px", color: T.muted, whiteSpace: "nowrap", lineHeight: 1.2 } }, tg ? (mt.mode === "max" && key !== "fib" ? "≤ " : "/ ") + bnNum(tg) + " গ্রাম" : "—"),
             React.createElement("div", { "aria-hidden": "true", style: { height: "4px", borderRadius: "4px", background: tg ? T.border : col, marginTop: "3px" } },
               tg ? React.createElement("div", { style: { height: "4px", borderRadius: "4px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
@@ -321,16 +323,16 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     // পানি (৩/৪) + খাবার-যোগ (১/৪) এক সারিতে — আলাদা কার্ড। খাবার-কার্ড শুধু লগ-যোগ্য হলে; নইলে পানি পুরো প্রস্থে।
     (waterTarget || canLog) && React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
-      waterTarget && React.createElement("div", { style: { ...HOME_CARD, ...(wFlash ? { border: "2px solid " + T.blue } : {}), flex: 3, minWidth: 0, marginBottom: 0, padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: "8px" } },
+      waterTarget && React.createElement("div", { style: { ...HOME_CARD, ...(wFlash ? { border: "2px solid " + T.blue } : {}), flex: 3, minWidth: 0, marginBottom: 0, padding: "8px 12px 10px", display: "flex", flexDirection: "column", gap: "6px" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4px" } },
           React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "15px", fontWeight: 700, color: T.ink } }, Icon("droplet", { size: 18, color: T.blue }), "পানি"),
           React.createElement("span", { style: { fontSize: "13px", color: T.muted, whiteSpace: "nowrap" } }, React.createElement("b", { style: { color: T.blue, fontSize: "17px" } }, bnNum(glasses)), " / " + bnNum(waterTarget))),
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px" }, "aria-hidden": "true" },
           Array.from({ length: Math.max(waterTarget, Math.min(glasses, 16)) }, (_, i) => React.createElement("div", { key: i, style: { width: "13px", height: "14px", borderRadius: "3px 3px 5px 5px", background: i < glasses ? "linear-gradient(180deg, #6BB1EE, " + T.blue + ")" : T.blueSoft } }))),
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
-          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: !oldReady || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "38px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", borderRadius: "12px", border: "none", background: !oldReady ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: !oldReady ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: !oldReady ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, [Icon("plus", { key: "p", size: 16, stroke: 2.2 }), " ১ গ্লাস"]),
-          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: !oldReady || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "38px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: T.track, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: glasses <= 0 ? 0.45 : 1, fontFamily: "inherit" } }, Icon("minus", { size: 18, stroke: 2.4 })))),
-      canLog && React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { ...HOME_CARD, marginBottom: 0, flex: 1, minWidth: 0, color: T.green, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 4px", cursor: "pointer", fontFamily: "inherit" } },
+          React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: !oldReady || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "36px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", borderRadius: "12px", border: "none", background: !oldReady ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: !oldReady ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: !oldReady ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, [Icon("plus", { key: "p", size: 16, stroke: 2.2 }), " ১ গ্লাস"]),
+          React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: !oldReady || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "36px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: T.track, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: glasses <= 0 ? 0.45 : 1, fontFamily: "inherit" } }, Icon("minus", { size: 18, stroke: 2.4 })))),
+      canLog && React.createElement("button", { type: "button", onClick: () => openFood(), "aria-label": "খাবার যোগ করুন", style: { ...HOME_CARD, marginBottom: 0, flex: 1, minWidth: 0, color: T.green, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", padding: "6px 4px", cursor: "pointer", fontFamily: "inherit" } },
         React.createElement("span", { "aria-hidden": "true", style: { width: "36px", height: "36px", borderRadius: "50%", background: T.track, display: "flex", alignItems: "center", justifyContent: "center" } }, Icon("plus", { size: 20, stroke: 2.2 })),
         React.createElement("span", { style: { fontSize: "14px", fontWeight: 800 } }, "খাবার"))),
 
@@ -374,7 +376,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
     React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch", marginBottom: "8px" } },
       canLog && React.createElement("div", { style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "আজকের খাবার-লগ" : dateText + "-এর খাবার-লগ"),
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "আজকের খাবার-লগ" : dateText + "-এর খাবার-লগ"),
         React.createElement("div", { title: "প্ল্যানের টিকসহ", style: { fontSize: "12px", color: T.muted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি"),
         foodErr && !foodOpen && ErrorBox(foodErr)),
       React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
@@ -389,9 +391,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       const head = [bud ? bnNum(bud.eaten) + " / " + bnNum(bud.planned) + " কিলোক্যালরি" : bnNum(sm.kcal) + " কিলোক্যালরি"].concat(sm.withMacro > 0 ? ["প্রো " + bnNum(Math.round(sm.p)), "কার্ব " + bnNum(Math.round(sm.c)), "ফ্যাট " + bnNum(Math.round(sm.f))] : []).join(" · ");
       return React.createElement("div", { key: sl.id, style: { ...HOME_CARD, padding: "8px 10px", opacity: mine.length ? 1 : 0.8 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
-          React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "10px", background: SLOT_TINT[sl.id], display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", flexShrink: 0 } }, SLOT_ICON[sl.id]),
+          React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "10px", background: SLOT_TINT[sl.id], display: "flex", alignItems: "center", justifyContent: "center", color: T.green, flexShrink: 0 } }, Icon(SLOT_LINE[sl.id] || "sun", { size: 20 })),
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-            React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: T.ink } }, sl.label),
+            React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, sl.label),
             React.createElement("div", { style: { fontSize: "12.5px", color: bud && bud.eaten > bud.planned ? "#B26A00" : T.muted, fontWeight: bud && bud.eaten > bud.planned ? 700 : 400 } }, mine.length ? head : bud ? "এখনও কিছু যোগ হয়নি · " + bnNum(bud.eaten) + " / " + bnNum(bud.planned) + " কিলোক্যালরি" : "এখনও কিছু যোগ হয়নি")),
           React.createElement("button", { type: "button", onClick: () => openFood(sl.id), "aria-label": sl.label + "-এ খাবার যোগ করুন", style: { flexShrink: 0, width: "44px", height: "44px", margin: "-6px -6px -6px 0", padding: 0, border: "none", background: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" } },
             React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "20px", fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } }, "＋"))),
