@@ -366,7 +366,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
       h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px" } },
         pastShown.map((p) => h("button", { key: p.key, onClick: () => reuseCourse(p), style: { flexShrink: 0, padding: "7px 14px", minHeight: "36px", borderRadius: "999px", fontSize: F, fontWeight: 600, cursor: "pointer", border: "1px solid #C3D2CA", background: "#fff", color: GREEN } }, p.name + (members.length > 1 ? " · " + p.memberName : ""))))),
     chooseOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 ওষুধ/প্রেসক্রিপশন", onClose: () => setChooseOpen(false) },
-      h("div", { style: { display: "grid", gap: "10px", marginTop: "6px" } },
+      h("div", { style: { display: "grid", gap: "12px", alignContent: "center", minHeight: "calc(100vh - 160px)" } }, // দুই বড় বাটন পর্দার মাঝখানে
         h("button", { onClick: () => { setChooseOpen(false); setRxOpen(true); }, style: { ...BIGB, border: "2px solid var(--hs-primary)" } }, "📷 প্রেসক্রিপশন আপলোড (ওষুধ অটো-ফিল)"),
         h("button", { onClick: () => { setChooseOpen(false); setAddOpen(true); }, style: { ...BIGB, border: "1.5px solid #D3C7EE" } }, "✍️ হাতে লিখুন"))),
     rxOpen && h(SheetFrame, { accent: "medicationStatement", title: "💊 প্রেসক্রিপশন থেকে ওষুধ", onClose: () => { setRxOpen(false); setRxFile(null); }, scrollKey: (rxFile ? "p" : "u") + rxStage },
