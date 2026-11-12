@@ -493,7 +493,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx });
+    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); } });
   } else if (activeTab === "health") {
     tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, isAdmin, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {

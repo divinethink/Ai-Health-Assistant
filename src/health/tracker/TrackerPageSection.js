@@ -7,6 +7,7 @@
 
 import { ErrorBox, PrimaryButton, SecondaryButton, TabPills, Skeleton } from "../../shared/ui.js";
 import { histBind, histChange } from "../../shared/navHistory.js";
+import { takeQuickIntent } from "../../shared/quickIntent.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
@@ -630,10 +631,11 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- মূল পেজ ----------
 // টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
-export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome }) {
+export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome, onOpenTrend }) {
   // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান | ট্রেন্ড | রিমাইন্ডার)
   const isToday = mode === "today";
-  const [tab, setTab] = useState(isToday ? "today" : "plan");
+  // হোমের "এই সপ্তাহ" কার্ডের "ট্রেন্ড ›" থেকে এলে (quickIntent "trend") ট্র্যাকার সরাসরি ট্রেন্ড ট্যাবে খোলে; নইলে আগের মতো "লক্ষ্য ও প্ল্যান"।
+  const [tab, setTab] = useState(() => (isToday ? "today" : takeQuickIntent(["trend"]) ? "trend" : "plan"));
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
@@ -681,7 +683,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: isToday ? "8px 12px 88px" : "0 12px 16px" } }, // হোমে নিচে বাড়তি ফাঁকা: ভাসমান + বাটন শেষ কার্ডের উপর না পড়ে
       err && ErrorBox(err),
       (!selectedMemberId || (!data && !err)) && Skeleton(3, 88),
-      data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load,
+      data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onOpenTrend,
         homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && !isToday && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),

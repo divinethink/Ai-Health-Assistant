@@ -76,7 +76,7 @@ function AlertStrip({ allergies, conds, onDiet }) { // onDiet: রোগ থা�
       style: { marginLeft: "auto", minHeight: "36px", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "14px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer" } }, "ট্রিগার খাবার দেখুন ›"));
 }
 
-export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra }) {
+export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra, onOpenTrend }) {
   const { daily, goal, age, flags, gate, recent } = info;
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
@@ -349,7 +349,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     React.createElement("div", { style: { ...CARD_STYLE, background: T.sand, borderColor: T.sandBorder, padding: "8px 12px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "এই সপ্তাহ"),
-        React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, bnNum(week.hitCount) + "/৭ দিন টার্গেটে")),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+          React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, bnNum(week.hitCount) + "/৭ দিন টার্গেটে"),
+          // পুরো ট্রেন্ড হোমে নয় — শুধু প্রবেশ-পথ (হোম হালকা থাকে); ট্যাপ এরিয়া ৪৪px, ভিজ্যুয়াল ছোট
+          onOpenTrend && React.createElement("button", { type: "button", onClick: onOpenTrend, "aria-label": "ট্রেন্ড ও সাপ্তাহিক রিভিউ দেখুন", style: { minHeight: "44px", margin: "-12px -6px -12px 0", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, "ট্রেন্ড ›"))),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
         week.days.map((x, i) => {
           const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
