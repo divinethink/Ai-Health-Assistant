@@ -9,6 +9,7 @@ import { t } from "../../shared/i18n.js";
 // "＋ নতুন যোগ করুন" বোতাম পুরো প্যানেল (আপলোড → ঐচ্ছিক AI/OCR বিশ্লেষণ → হাতে-লেখা)
 // খোলে। কোনো schema/rules/permission পরিবর্তন নেই।
 
+import { SheetFrame } from "../../shared/ui.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
@@ -47,16 +48,9 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
         style: { minHeight: "42px", padding: "8px 16px", border: "none", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "14px", fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 8px rgba(14,75,67,0.25)" },
       }, "＋ নতুন যোগ করুন")
     ),
+    // ফুল-পেজ (ওষুধের মতো): যেখান থেকেই যোগ চাপা হোক, উপরে ✕ বন্ধ-বার সহ নিজস্ব পাতায় খোলে
     panel && React.createElement(
-      "div", { style: { border: "1px solid #D9E5DE", borderRadius: "16px", marginBottom: "14px", background: "#FFFBF2", padding: "12px 14px" } },
-      React.createElement(
-        "div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-        React.createElement("span", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)" } }, panelTitle),
-        React.createElement("button", {
-          onClick: () => setPanel(null), "aria-label": "বন্ধ করুন",
-          style: { border: "none", background: "none", fontSize: "18px", cursor: "pointer", color: "#5F716C" },
-        }, "✕")
-      ),
+      SheetFrame, { accent: "lab", title: panelTitle, onClose: () => setPanel(null), scrollKey: panel.mode + "-" + (panel.key || "") },
       panel.mode === "add" && React.createElement(DocumentUploadForm, {
         key: "upload-" + targetMemberId,
         familyId, targetMemberId, callerMemberId,
