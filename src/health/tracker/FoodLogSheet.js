@@ -108,25 +108,23 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   }
 
   // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
-  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "8px 0" } },
-    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক · পরিমাণ দেখে " + slotLabel + "-এ যোগ"),
-    React.createElement("div", { className: "hs-noscroll", style: { display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" } },
-      quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
-        style: { ...chip(false), flex: "0 0 auto", textAlign: "left", opacity: busy ? 0.5 : 1, lineHeight: 1.3 } },
-        React.createElement("span", { style: { display: "block", fontSize: "14px" } }, "＋ " + e.name),
-        React.createElement("span", { style: { display: "block", fontSize: "12px", fontWeight: 500, color: MUTED } }, (entryAmountText(e) ? entryAmountText(e) + " · " : "") + bnNum(e.kcal) + " কিলো")))));
+  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 8px" } },
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, "সাম্প্রতিক"),
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px" } },
+      quick.slice(0, 8).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
+        style: { ...chip(false), minHeight: "38px", padding: "4px 6px", fontSize: "13px", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: busy ? 0.5 : 1 } }, e.name))));
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose },
       React.createElement("div", { className: "hs-fp-pills", style: { marginTop: "-8px" } }, TabPills(slotList.map((s) => [s.id, s.label]), slot, setSlot)),
       budget && React.createElement("div", { style: { margin: "-6px 0 10px" } },
-        React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি · বরাদ্দ, বেশি হলেও বাধা নেই"),
-        React.createElement("div", { "aria-hidden": "true", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },
+        React.createElement("div", { role: "img", "aria-label": slotLabel + ": " + bnNum(budget.eaten) + " / " + bnNum(budget.planned) + " কিলোক্যালরি", style: { height: "6px", borderRadius: "6px", background: "#E4ECE7", marginTop: "5px", overflow: "hidden" } },
           React.createElement("div", { style: { height: "6px", borderRadius: "6px", width: Math.min(100, budget.planned > 0 ? (budget.eaten / budget.planned) * 100 : 0) + "%", background: GREEN } }))),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
-      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list", between: recentRow }),
+      recentRow || null,
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: pick, layout: "list" }),
       React.createElement("button", { onClick: () => { setNotice(null); setOwn({ name: "", kcal: "", grams: "", p: "", c: "", f: "", fib: "" }); }, disabled: full,
         style: { ...BTN, width: "100%", marginTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 14px", border: "none", background: "#E4F0E9", color: GREEN, opacity: full ? 0.5 : 1 } },
         React.createElement("span", { style: { fontWeight: 500, color: MUTED } }, "খুঁজে পাচ্ছেন না?"), React.createElement("span", null, "নিজে যোগ করুন →")),
