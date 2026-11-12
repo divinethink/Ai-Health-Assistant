@@ -12,6 +12,7 @@ import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
 import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
 import { QuickAddFab } from "../quickadd/QuickAddSheet.js";
+import { T } from "../tracker/trackerTheme.js";
 import { UpcomingSection } from "../summary/UpcomingGrid.js";
 
 const { useState, useEffect, useRef } = React;
@@ -64,13 +65,22 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       !adding && !editingRecord && QuickAddFab({ onOpen: () => setAdding(true) }), // হোমের মতো ভাসমান ＋ (owner-request ২০২৬-১১-১২)
-      (adding || editingRecord) && React.createElement(HealthRecordForm, {
-        key: "form-" + targetMemberId + (presetObs || ""),
-        familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
-        onMedChoice: onMedChoice ? (k) => { setAdding(false); onMedChoice(k); } : undefined,
-        editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
-        onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); if (onRecordAdded) onRecordAdded(); },
-      }),
+      (() => {
+        const form = (adding || editingRecord) && React.createElement(HealthRecordForm, {
+          key: "form-" + targetMemberId + (presetObs || ""),
+          familyId, targetMemberId, callerMemberId, presetObs, onUpload: onUpload ? () => { setAdding(false); onUpload(); } : undefined,
+          onMedChoice: onMedChoice ? (k) => { setAdding(false); onMedChoice(k); } : undefined,
+          editingRecord, onCancelEdit: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); },
+          onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); if (onRecordAdded) onRecordAdded(); },
+        });
+        // নতুন যোগ: হোমের মতো নিচ-থেকে-ওঠা পপআপ (ব্যাকড্রপ চাপলে বন্ধ নয় — লেখা হারানো ঠেকাতে শুধু ✕); edit আগের মতো ইনলাইন
+        if (!(adding && !editingRecord)) return form;
+        return React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 80 } },
+          React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" } }),
+          React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "কী যোগ করবেন?", style: { position: "absolute", left: 0, right: 0, bottom: 0, background: T.canvas, borderRadius: "28px 28px 0 0", padding: "14px 16px 20px", fontFamily: "'Hind Siliguri', sans-serif", maxHeight: "85%", overflowY: "auto" } },
+            React.createElement("div", { style: { width: "44px", height: "5px", borderRadius: "3px", background: T.border, margin: "0 auto 10px" } }),
+            form));
+      })(),
       ),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,

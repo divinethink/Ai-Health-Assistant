@@ -16,7 +16,7 @@ const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
 // ধাপ ৫: টাইল (resourceType, আইকন, নাম) — ওষুধও একই createHealthRecord পথে; রিমাইন্ডার-সময় পরে "ওষুধ" তালিকা থেকে
 const ADD_TILES = [["condition", "🩺", "অসুখ"], ["allergy", "🤧", "অ্যালার্জি"], ["medicationStatement", "💊", "ওষুধ/প্রেসক্রিপশন"], ["observation", "📏", "পরিমাপ"]];
-const tileBase = { minHeight: "72px", padding: "6px 4px", borderRadius: "14px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, lineHeight: 1.25, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" };
+const tileBase = { minHeight: "88px", padding: "6px 4px", borderRadius: "14px", fontFamily: "inherit", fontSize: "14px", fontWeight: 700, lineHeight: 1.25, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" };
 // প্রতিটা ধরনের নিজস্ব রং (ACCENTS) — টাইল ও পরের পেজ একই রঙে মেলে
 const tileStyle = (kind) => { const a = ACCENTS[kind]; return { ...tileBase, border: "1.5px solid " + a.border, background: a.tint, color: a.main }; };
 // স্বাস্থ্য-পাতার "কী যোগ করবেন?"-তেও হোমের মতো প্রেসার/সুগার (আগে-থেকে-ভরা ধরন+একক)
@@ -205,7 +205,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
 
   const closeBtn = React.createElement("button", { onClick: onCancelEdit, disabled: busy, "aria-label": "বন্ধ করুন",
     style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", border: "1px solid #C3D2CA", background: "#F1F6F2", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", cursor: "pointer" } }, "✕");
-  const wrap = { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
+  const wrap = { marginTop: "0", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "18px" }; // পপআপ-শিটের ভেতরে বসে (HealthRecordsSection)
   const accWrap = (kind) => { const a = ACCENTS[kind]; return { ...wrap, background: a.tint, border: "1px solid " + a.border, borderTop: "4px solid " + a.main, ...accentVars(kind) }; };
   const bigBtn = (primary) => ({ minHeight: "64px", borderRadius: "16px", border: "1.5px solid " + (primary ? "var(--hs-primary, #0E4B43)" : "#D3C7EE"), background: "#fff", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit", fontSize: "16px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%" });
   if (!isEdit && !picked && medMenu && onMedChoice) {
@@ -220,14 +220,14 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   if (!isEdit && !picked) {
     return React.createElement("div", { style: wrap },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" } },
-        React.createElement("h4", { style: { fontSize: "18px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
+        React.createElement("h4", { style: { fontSize: "20px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "কী যোগ করবেন?"), closeBtn),
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px" } },
         [...ADD_TILES.slice(0, 3), ...PRESET_TILES, ...ADD_TILES.slice(3)].map(([type, icon, label]) => React.createElement("button", { key: type, onClick: () => (OBS_PRESETS[type] ? pickPreset(type) : type === "medicationStatement" && onMedChoice ? setMedMenu(true) : pickType(type)),
           style: tileStyle(OBS_PRESETS[type] ? "observation" : type) },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px", lineHeight: 1 } }, icon), label)),
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "30px", lineHeight: 1 } }, icon), label)),
         // ল্যাব রিপোর্ট — ল্যাব রিপোর্ট-পিলে গিয়ে আপলোড-প্যানেল খোলে
         onUpload && React.createElement("button", { key: "lab", onClick: onUpload, style: tileStyle("lab") },
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "24px", lineHeight: 1 } }, "🧪"), "ল্যাব রিপোর্ট")));
+          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "30px", lineHeight: 1 } }, "🧪"), "ল্যাব রিপোর্ট")));
   }
 
   return React.createElement(
