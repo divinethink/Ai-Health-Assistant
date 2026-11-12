@@ -90,3 +90,24 @@ export function formatAgeOrMonthRange(post) {
   }
   return null;
 }
+
+// ── ব্যক্তিগত রিডার-মার্ক (আন্ডারলাইন/হাইলাইট) — প্রতি (user, post)-এ একটা doc।
+// docId = uid + "_" + postId; শুধু মালিক পড়তে/লিখতে পারে (firestore.rules)।
+function marksDocRef(uid, postId) {
+  return db.collection("wellnessGuideMarks").doc(uid + "_" + postId);
+}
+
+export async function getMarks(uid, postId) {
+  const snap = await marksDocRef(uid, postId).get();
+  const list = snap.exists ? snap.data().marks : [];
+  return Array.isArray(list) ? list : [];
+}
+
+export async function saveMarks(uid, postId, marks) {
+  await marksDocRef(uid, postId).set({
+    uid,
+    postId,
+    marks,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}

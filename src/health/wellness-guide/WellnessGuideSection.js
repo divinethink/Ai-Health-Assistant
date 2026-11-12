@@ -10,6 +10,7 @@ import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listWellnessGuides, deleteWellnessGuide, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from "./wellnessGuideData.js";
 import { WellnessGuideForm } from "./WellnessGuideForm.js";
+import { WellnessReader } from "./WellnessReader.js";
 
 const { useState, useEffect } = React;
 
@@ -30,7 +31,7 @@ function splitBodyAtMarker(body) {
   };
 }
 
-function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDelete }) {
+function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDelete, onRead }) {
   const rangeLabel = formatAgeOrMonthRange(post);
   const split = splitBodyAtMarker(post.body);
   // marker থাকলে preview = marker-এর আগের অংশ; না থাকলে পুরনো summary
@@ -59,8 +60,15 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
       remainingText,
       post.sourceNote && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
     ),
-    (canEdit || canDelete) && React.createElement(
-      "div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
+    React.createElement(
+      "div", { style: { display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" } },
+      onRead && React.createElement(
+        "button", {
+          onClick: (e) => { e.stopPropagation(); onRead(post); },
+          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontWeight: 600 },
+        },
+        "📖 পড়ার মোড"
+      ),
       canEdit && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onEdit(post); },
@@ -108,6 +116,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
   const [showForm, setShowForm] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [readerPost, setReaderPost] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null); // ২-ধাপ confirm (existing app-wide delete pattern)
   // Desktop-এ ডিফল্টে sidebar খোলা, mobile-এ বন্ধ (mount-time viewport-check)।
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -146,6 +155,9 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
     setExpandedId(null);
     setSidebarOpen(false); // mobile drawer বন্ধ; desktop-এ user চাইলে হ্যামবার্গারে আবার খুলবেন
   }
+
+  const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
+  const readerUid = authUser ? authUser.uid : null;
 
   const headerBar = React.createElement(
     "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "var(--hs-primary, #0E4B43)", color: "#fff" } },
@@ -191,6 +203,7 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
         canDelete: isAdmin || (!!myMemberId && p.authorId === myMemberId),
         onEdit: (post) => { setShowForm(false); setEditingPost(post); },
         onDelete: (post) => setPendingDelete(post),
+        onRead: readerUid ? (post) => setReaderPost(post) : null,
       })
     ),
     pendingDelete && React.createElement(
@@ -200,6 +213,10 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       SecondaryButton("বাতিল", () => setPendingDelete(null), false)
     )
   );
+
+  if (readerPost && readerUid) {
+    return React.createElement(WellnessReader, { post: readerPost, uid: readerUid, onClose: () => setReaderPost(null) });
+  }
 
   return React.createElement(
     "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
