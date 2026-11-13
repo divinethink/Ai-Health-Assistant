@@ -55,9 +55,9 @@ import { peekQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 // স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
 // id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
 const RECORD_SUBS = [
-  { id: "meds", label: "ওষুধ/প্রেসক্রিপশন", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
+  { id: "meds", label: "মেডিসিন", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
   { id: "records", label: "অসুখ", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
-  { id: "docs", label: "ল্যাব রিপোর্ট", hint: "ল্যাব রিপোর্ট, ইমেজিং, ডিসচার্জ ও অন্যান্য নথি" }, // জমা নথি (ধাপ ৩-এ প্রেসক্রিপশন ওষুধ-পিলে যাবে)
+  { id: "docs", label: "রিপোর্ট", hint: "ল্যাব রিপোর্ট, ইমেজিং, ডিসচার্জ ও অন্যান্য নথি" }, // জমা নথি (ধাপ ৩-এ প্রেসক্রিপশন ওষুধ-পিলে যাবে)
 ];
 const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
 const bnNum = (n) => String(n).replace(/\d/g, (d) => BN_DIGITS[d]);
@@ -145,15 +145,15 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
           onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
           belowSummary: React.createElement("div", { key: "subs", style: { marginTop: "16px", marginBottom: "0" } },
-            React.createElement("div", { role: "group", "aria-label": "ফিল্টার", className: "hs-noscroll", style: { display: "flex", gap: "8px", marginBottom: "6px", overflowX: "auto", padding: "2px 2px 6px" } },
-              RECORD_SUBS.map((sb) => React.createElement("button", {
-                key: sb.id, onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-pressed": recordSub === sb.id,
+            React.createElement("div", { role: "tablist", "aria-label": "ফিল্টার", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "#E3ECE6", boxShadow: "inset 0 1px 3px rgba(14,75,67,0.12)", marginBottom: "6px" } },
+              RECORD_SUBS.map((sb) => { const on = recordSub === sb.id; return React.createElement("button", {
+                key: sb.id, type: "button", role: "tab", onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-selected": on, "aria-pressed": on,
                 style: {
-                  flex: "1 0 auto", minHeight: "44px", padding: "6px 16px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                  border: recordSub === sb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
-                  background: recordSub === sb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: recordSub === sb.id ? "#fff" : "#2B3A36",
+                  flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
+                  boxShadow: on ? "0 4px 10px rgba(14,75,67,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
+                  background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "transparent", color: on ? "#fff" : "#3E524C",
                 },
-              }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")))),
+              }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
             null),
         }),
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),

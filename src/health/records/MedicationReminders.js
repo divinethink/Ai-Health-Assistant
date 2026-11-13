@@ -352,7 +352,6 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const card = { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D3E0D9)", borderRadius: "16px", padding: "12px", marginBottom: "10px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 
   return h("div", null,
-    permission !== "granted" && permission !== "unsupported" && h("button", { onClick: requestPermission, style: { marginBottom: "10px", padding: "8px 12px", border: "1px solid " + GREEN, borderRadius: "10px", background: "#fff", color: GREEN, fontSize: F, cursor: "pointer" } }, "🔔 নোটিফিকেশন চালু করুন"),
     permission === "unsupported" && h("div", { style: { fontSize: F, color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজারে Notification সাপোর্ট নেই।"),
 
     members.length > 1 && h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
