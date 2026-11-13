@@ -20,6 +20,7 @@
 
 import { db, auth } from "./firebaseConfig.js";
 import { createFamily } from "./familyIdentity.js";
+import { RELINK_FLAG, relinkErrorMessage, hasGoogleProvider, googleProviderEmail } from "./googleAccountChange.js";
 
 function normalizeEmail(email) {
   return (email || "").trim().toLowerCase();
@@ -310,4 +311,54 @@ export {
   currentGoogleEmail,
   triggerGoogleSignInPopup,
   loadUserMapping,
+};
+
+// ---- জিমেইল বদলান (DailyTask pattern; UID অপরিবর্তিত — unlink → link) ----
+function relinkNotify() {
+  try { window.dispatchEvent(new Event("ha-relink-changed")); } catch (e) { /* noop */ }
+}
+function getRelinkFlag() {
+  try { return localStorage.getItem(RELINK_FLAG); } catch (e) { return null; }
+}
+// ধাপ ১: পুরনো Google ছাড়ানো + ফ্ল্যাগ রাখা (ফ্ল্যাগ আগে — unlink-এর পর অ্যাপ বন্ধ হলেও পরের বার রিকভারি-গেট আসে)।
+async function startGoogleAccountChange() {
+  const user = auth.currentUser;
+  if (!user) return { ok: false, message: relinkErrorMessage("auth/requires-recent-login") };
+  if (!hasGoogleProvider(user)) return { ok: false, message: relinkErrorMessage("") };
+  const old = normalizeEmail(googleProviderEmail(user));
+  try { localStorage.setItem(RELINK_FLAG, old || "1"); } catch (e) { return { ok: false, message: relinkErrorMessage("") }; }
+  try {
+    await user.unlink("google.com");
+  } catch (err) {
+    try { localStorage.removeItem(RELINK_FLAG); } catch (e) { /* noop */ }
+    return { ok: false, message: relinkErrorMessage(err && err.code) };
+  }
+  relinkNotify();
+  return { ok: true };
+}
+// ধাপ ২: আলাদা ট্যাপে নতুন (বা পুরনো) অ্যাকাউন্ট যুক্ত। linkWithPopup-এর আগে কোনো await নেই (ব্রাউজার popup আটকায়)।
+function linkGoogleAccountNow() {
+  const user = auth.currentUser;
+  if (!user) return Promise.resolve({ ok: false, message: relinkErrorMessage("auth/requires-recent-login") });
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  return user.linkWithPopup(provider).then(() => {
+    try { localStorage.removeItem(RELINK_FLAG); } catch (e) { /* noop */ }
+    relinkNotify();
+    return { ok: true };
+  }).catch((err) => {
+    if (err && err.code === "auth/provider-already-linked") {
+      try { localStorage.removeItem(RELINK_FLAG); } catch (e) { /* noop */ }
+      relinkNotify();
+      return { ok: true };
+    }
+    return { ok: false, message: relinkErrorMessage(err && err.code) };
+  });
+}
+
+export {
+  startGoogleAccountChange,
+  linkGoogleAccountNow,
+  getRelinkFlag,
+  hasGoogleProvider,
 };

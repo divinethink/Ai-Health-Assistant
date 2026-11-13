@@ -49,6 +49,16 @@ const DICT = {
 
     "top.role": "ভূমিকা", "top.familyCode": "পরিবারের কোড",
     "top.logout": "🚪 লগ-আউট", "top.member": "সদস্য",
+    "top.changeGmail": "জিমেইল বদলান", "top.changeGmailSure": "নিশ্চিত? আপনার প্রোফাইল, ভূমিকা ও সব ডেটা অক্ষুণ্ণ থাকবে। জেনে রাখুন:",
+    "top.changeGmailN1": "গুগল ড্রাইভ ব্যাকআপ এরপর নতুন জিমেইলের ড্রাইভে যাবে; আগের ব্যাকআপ আগের জিমেইলেই থাকবে।",
+    "top.changeGmailN2": "নতুন জিমেইল আগে এই অ্যাপে ব্যবহৃত হয়ে থাকলে যুক্ত করা যাবে না।",
+    "top.changeGmailN3": "পরের পর্দায় নতুন অ্যাকাউন্ট বেছে না নেওয়া পর্যন্ত লগআউট করবেন না।",
+    "top.changeGmailYes": "হ্যাঁ, বদলাব", "top.cancel": "বাতিল", "top.wait": "অপেক্ষা করুন…",
+    "relink.title": "নতুন জিমেইল অ্যাকাউন্ট যুক্ত করুন",
+    "relink.lead": "আপনার প্রোফাইল, ভূমিকা ও সব তথ্য অক্ষুণ্ণ আছে। এখন নতুন জিমেইল অ্যাকাউন্টটি বেছে নিলেই বদল সম্পূর্ণ হবে।",
+    "relink.warn": "এটি শেষ না হওয়া পর্যন্ত লগআউট করবেন না এবং ব্রাউজারের ডেটা মুছবেন না। নইলে এই পরিচয়ে আর প্রবেশ করা যাবে না।",
+    "relink.oldMail": "আগের জিমেইল:", "relink.pickNew": "নতুন জিমেইল অ্যাকাউন্ট বেছে নিন",
+    "relink.restore": "আগের জিমেইল ফিরিয়ে আনুন", "relink.busy": "অপেক্ষা করুন…",
 
     "menu.prefs": "⚙️ পছন্দ — থিম", "menu.settings": "⚙️ সেটিংস (ভাষা ও থিম)", "menu.back": "← মেনু", "menu.aichatSub": "লক্ষণ যাচাই ও স্বাস্থ্য-পরামর্শ", "menu.familyTitle": "পরিবার", "menu.familySub": "সদস্য ও অ্যাক্সেস", "menu.dataTitle": "ডেটা ব্যাকআপ", "menu.dataSub": "ব্যাকআপ রাখুন ও ফিরিয়ে আনুন", "menu.settingsTitle": "সেটিংস", "menu.settingsSub": "ভাষা", "menu.themeShort": "থিম", "menu.lockTitle": "অ্যাপ লক", "menu.lockSub": "PIN ও ফিঙ্গারপ্রিন্ট", "menu.notifShort": "নোটিফিকেশন", "menu.copy": "কপি", "menu.copied": "কপি হয়েছে ✓", "menu.adminTools": "🛠 Admin টুলস (আমন্ত্রণ ও নতুন সদস্য)", "menu.emergencyShort": "📞 জরুরি সেবা", "menu.language": "🌐 ভাষা", "menu.family": "👨‍👩‍👧‍👦 পরিবার",
     "menu.nav": "🧭 নেভিগেশন", "menu.doctor": "🩺 ডাক্তারের তথ্য ও ভিজিটিং কার্ড",
@@ -91,6 +101,16 @@ const DICT = {
 
     "top.role": "Role", "top.familyCode": "Family code",
     "top.logout": "🚪 Log out", "top.member": "Member",
+    "top.changeGmail": "Change Gmail", "top.changeGmailSure": "Sure? Your profile, role and all data stay intact. Please note:",
+    "top.changeGmailN1": "Google Drive backups will go to the new Gmail's Drive; older backups stay in the old Gmail.",
+    "top.changeGmailN2": "A Gmail already used in this app cannot be linked.",
+    "top.changeGmailN3": "Do not log out until you pick the new account on the next screen.",
+    "top.changeGmailYes": "Yes, change", "top.cancel": "Cancel", "top.wait": "Please wait…",
+    "relink.title": "Link your new Gmail account",
+    "relink.lead": "Your profile, role and all data are safe. Pick the new Gmail account now to finish the change.",
+    "relink.warn": "Do not log out or clear browser data until this is done, or you will not be able to enter this identity again.",
+    "relink.oldMail": "Previous Gmail:", "relink.pickNew": "Choose the new Gmail account",
+    "relink.restore": "Restore the previous Gmail", "relink.busy": "Please wait…",
 
     "menu.prefs": "⚙️ Preferences — Theme", "menu.settings": "⚙️ Settings (Language & Theme)", "menu.back": "← Menu", "menu.aichatSub": "Symptom check & health guidance", "menu.familyTitle": "Family", "menu.familySub": "Members & access", "menu.dataTitle": "Data Backup", "menu.dataSub": "Back up and restore", "menu.settingsTitle": "Settings", "menu.settingsSub": "Language", "menu.themeShort": "Theme", "menu.lockTitle": "App Lock", "menu.lockSub": "PIN & fingerprint", "menu.notifShort": "Notifications", "menu.copy": "Copy", "menu.copied": "Copied ✓", "menu.adminTools": "🛠 Admin Tools (Invite & New Member)", "menu.emergencyShort": "📞 Emergency", "menu.language": "🌐 Language", "menu.family": "👨‍👩‍👧‍👦 Family",
     "menu.nav": "🧭 Navigation", "menu.doctor": "🩺 Doctor Details & Visiting Cards",

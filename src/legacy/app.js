@@ -22,7 +22,8 @@ import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
 import { t, useLang, setLang, getLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
-import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
+import { rotateInviteLink, revokeInviteLink, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
+import { GoogleRelinkGate } from "../components/GoogleRelinkGate.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
@@ -115,6 +116,17 @@ function BottomNav({ active, onChange }) {
 // ট্যাব-পিল-সারির বামে বসে। ড্রপডাউন position:fixed — পিল-সারির overflow-এ কাটা পড়ে না।
 function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId, onChangeMember }) {
   const [open, setOpen] = useState(false);
+  const [confirmChange, setConfirmChange] = useState(false);
+  const [changeBusy, setChangeBusy] = useState(false);
+  const [changeErr, setChangeErr] = useState(null);
+  const doChangeGmail = async () => {
+    if (changeBusy) return;
+    setChangeBusy(true); setChangeErr(null);
+    const res = await startGoogleAccountChange();
+    setChangeBusy(false);
+    if (res && res.ok) { setOpen(false); setConfirmChange(false); } // গেট নিজে থেকে পূর্ণ-পর্দায় আসবে
+    else setChangeErr((res && res.message) || null);
+  };
   const first = ((memberDoc.name || "?").trim().split(/\s+/)[0]) || "?";
   return React.createElement(
     React.Fragment, null,
@@ -159,6 +171,20 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
           },
           (m.id === selectedMemberId ? "✓ " : "") + m.name
         ))
+      ),
+      auth.currentUser && hasGoogleProvider(auth.currentUser) && React.createElement(
+        "div", { style: { marginTop: "8px", borderTop: "1px solid var(--hs-border)", paddingTop: "8px" } },
+        !confirmChange
+          ? React.createElement("button", { onClick: () => setConfirmChange(true), style: { width: "100%", minHeight: "40px", padding: "8px", border: "1px solid var(--hs-border)", borderRadius: "10px", background: "var(--hs-surface)", color: "var(--hs-text)", fontSize: "14px", fontWeight: 600, cursor: "pointer" } }, "🔄 " + t("top.changeGmail"))
+          : React.createElement("div", { style: { fontSize: "12.5px", lineHeight: 1.5 } },
+              React.createElement("div", { style: { fontWeight: 700, marginBottom: "4px" } }, t("top.changeGmailSure")),
+              React.createElement("ul", { style: { margin: "0 0 6px", paddingLeft: "18px", color: "var(--hs-muted)" } },
+                ["top.changeGmailN1", "top.changeGmailN2", "top.changeGmailN3"].map((k) => React.createElement("li", { key: k }, t(k)))),
+              changeErr && React.createElement("div", { style: { color: "#C0392B", marginBottom: "6px" } }, changeErr),
+              React.createElement("div", { style: { display: "flex", gap: "6px" } },
+                React.createElement("button", { disabled: changeBusy, onClick: doChangeGmail, style: { flex: 1, minHeight: "40px", border: "none", borderRadius: "10px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontWeight: 700, fontSize: "14px", cursor: "pointer", opacity: changeBusy ? 0.5 : 1 } }, changeBusy ? t("top.wait") : t("top.changeGmailYes")),
+                React.createElement("button", { disabled: changeBusy, onClick: () => { setConfirmChange(false); setChangeErr(null); }, style: { flex: 1, minHeight: "40px", border: "1px solid var(--hs-border)", borderRadius: "10px", background: "var(--hs-surface)", color: "var(--hs-text)", fontSize: "14px", cursor: "pointer" } }, t("top.cancel"))
+              ))
       ),
       React.createElement(
         "button", {
@@ -678,4 +704,5 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(App));
+// GoogleRelinkGate App()-এর বাইরে: জিমেইল-বদলের মাঝপথের রিকভারি-পর্দা App-এর early-return-এ ঢাকা পড়ে না।
+root.render(React.createElement(React.Fragment, null, React.createElement(App), React.createElement(GoogleRelinkGate)));
