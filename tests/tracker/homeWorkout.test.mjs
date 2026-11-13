@@ -101,3 +101,53 @@ test("exerciseDetail ও ব্যাখ্যা", () => {
   assert.deepEqual(focusExplain([]), []);
   assert.match(focusExplain(["glute"]).join("\n"), /গ্লুট/);
 });
+
+// ---- ওজন-লক্ষ্য + টার্গেট একসাথে (goalType-aware) ----
+import { exerciseKind } from "../../src/health/tracker/exercisePlanData.js";
+import { goalExerciseLine } from "../../src/health/tracker/homeWorkout.js";
+
+test("goalType না দিলে/fit হলে প্ল্যান আগের মতোই", () => {
+  const a = focusPlan({ areas: ["belly", "chest"] }), b = focusPlan({ areas: ["belly", "chest"], goalType: "fit" });
+  assert.deepEqual(a, b);
+  assert.equal(a.weeklyTargetMin, 180);
+});
+test("lose: কার্ডিও বেশি, শক্তির দিন ৩টাই থাকে, লক্ষ্য-মিনিট ≤ রুটিনের মোট", () => {
+  for (const areas of [["belly"], ["chest"], ["belly", "chest"], ["posture"], ["legs", "core", "posture"]]) {
+    for (const [senior, lowImpact] of [[false, false], [false, true], [true, true]]) {
+      const base = focusPlan({ areas, senior, lowImpact });
+      const p = focusPlan({ areas, senior, lowImpact, goalType: "lose" });
+      assert.ok(plannedWeeklyMinutes(p) >= p.weeklyTargetMin, "lose " + areas + senior + lowImpact);
+      assert.ok(p.weeklyTargetMin >= 150, "lose লক্ষ্য WHO-র নিচে নয়");
+      assert.ok(plannedWeeklyMinutes(p) >= plannedWeeklyMinutes(base) - 1, "lose-এ কার্ডিও কমেনি");
+      [0, 2, 4].forEach((i) => assert.ok(p.routine[i].some((x) => LOWER.includes(x.type)), "শক্তির দিন বহাল"));
+      assert.deepEqual(p.routine[6], []);
+    }
+  }
+  const noFocus = exercisePlan(30, "lose");
+  assert.equal(noFocus.weeklyTargetMin, 180);
+  assert.equal(plannedWeeklyMinutes(noFocus), 180);
+});
+test("gain/muscle: শক্তির সেশন দীর্ঘ, কার্ডিও হালকা, লক্ষ্য ≥ ১৫০ ও রুটিনে পূরণ", () => {
+  for (const g of ["gain", "muscle"]) {
+    const p = focusPlan({ areas: ["muscle", "chest"], goalType: g });
+    const base = focusPlan({ areas: ["muscle", "chest"] });
+    assert.ok(p.routine[0].reduce((a, x) => a + x.min, 0) > base.routine[0].reduce((a, x) => a + x.min, 0));
+    assert.equal(p.routine[1][0].min, 20);
+    assert.ok(plannedWeeklyMinutes(p) >= p.weeklyTargetMin && p.weeklyTargetMin >= 150);
+  }
+  assert.equal(plannedWeeklyMinutes(exercisePlan(30, "gain")), 150);
+});
+test("লক্ষ্যের ব্যাখ্যা-লাইন ও exerciseKind", () => {
+  assert.match(goalExerciseLine("lose", 180), /ওজন কমানো/);
+  assert.match(goalExerciseLine("lose", 180), /মিল-প্ল্যানের ক্যালরি/);
+  assert.match(goalExerciseLine("muscle", 150), /প্রোটিন/);
+  assert.equal(goalExerciseLine("fit", 150), null);
+  assert.equal(exerciseKind({ type: "plank" }), "strength");
+  assert.equal(exerciseKind({ type: "yoga" }), "flex");
+  assert.equal(exerciseKind({ type: "jacks" }), "cardio");
+  assert.equal(exerciseKind({ key: "stretch", label: "স্ট্রেচিং" }), "flex");
+  assert.equal(exerciseKind({ key: "main", label: "শক্তির ব্যায়াম (…)" }), "strength");
+  assert.equal(exerciseKind({ key: "main", label: "দ্রুত হাঁটা" }), "cardio");
+  const lines = explainExercise({ plan: exercisePlan(30, "lose", { areas: ["belly"] }), age: 30, goalType: "lose" }).join("\n");
+  assert.match(lines, /ওজন কমানো/);
+});

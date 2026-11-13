@@ -3,7 +3,7 @@
 // counted=true মানে সাপ্তাহিক লক্ষ্যে মিনিট গোনা হয়।
 // ধাপ B: ৩য় আর্গুমেন্ট `focus` ({areas, senior, lowImpact} — homeWorkout.focusCtxOf) থাকলে প্রাপ্তবয়স্কদের জন্য টার্গেট-ভিত্তিক ঘরোয়া প্ল্যান।
 
-import { focusPlan } from "./homeWorkout.js";
+import { focusPlan, isLoseGoal, isGainGoal } from "./homeWorkout.js";
 
 export const DAY_LABELS = ["শনিবার", "রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার"];
 
@@ -34,16 +34,29 @@ export function exercisePlan(age, goalType, focus) {
       routine: [bone, play, bone, play, bone, play, play].map((m) => [m]) };
   }
   const senior = age >= 65;
-  if (focus && Array.isArray(focus.areas) && focus.areas.length) return focusPlan({ areas: focus.areas, senior, lowImpact: !!focus.lowImpact });
+  if (focus && Array.isArray(focus.areas) && focus.areas.length) return focusPlan({ areas: focus.areas, senior, lowImpact: !!focus.lowImpact, goalType });
   const str = strength(senior ? STRENGTH_SENIOR : STRENGTH_ADULT);
-  const muscle = goalType === "muscle";
+  const muscle = isGainGoal(goalType); // পেশি গঠন/ওজন বাড়ানো: ৩ দিন শক্তি
+  const lose = isLoseGoal(goalType); // ওজন কমানো: কার্ডিও ৪০ মি. (সাপ্তাহিক ১৮০)
+  const w = lose ? { ...walk, min: 40 } : walk;
   // শনি রবি সোম মঙ্গল বুধ বৃহ শুক্র
   const pattern = muscle
     ? [[walk, STRETCH], [str, STRETCH], [walk, STRETCH], [str, STRETCH], [STRETCH], [str, STRETCH], rest]
-    : [[walk, STRETCH], [str, STRETCH], [walk, STRETCH], [str, STRETCH], [walk, STRETCH], [STRETCH], rest];
-  return { band: senior ? "senior" : "adult", weeklyTargetMin: 150, routine: pattern,
+    : [[w, STRETCH], [str, STRETCH], [w, STRETCH], [str, STRETCH], [w, STRETCH], [STRETCH], rest];
+  return { band: senior ? "senior" : "adult", weeklyTargetMin: lose ? 180 : 150, routine: pattern,
     summary: "WHO: প্রাপ্তবয়স্কদের সপ্তাহে ১৫০ মিনিট মাঝারি ব্যায়াম ও অন্তত ২ দিন পেশির ব্যায়াম।" +
       (senior ? " ৬৫+ হলে ভারসাম্যের ব্যায়ামও রাখুন; ধীরে শুরু করুন।" : "") };
+}
+
+// ব্যায়ামের ধরন (UI-র রঙ-ডটের জন্য): "cardio" | "strength" | "flex"। type না থাকলে (সাধারণ প্ল্যান) key/label থেকে।
+const FLEX = new Set(["stretch", "yoga", "pilates"]);
+const STRENGTH = new Set(["gym", "squat", "pushup", "lunges", "glute", "plank", "situp", "crunch", "bicycle", "legraise", "tricepdip", "wallsit", "stepup", "superman", "birddog", "chairstand"]);
+export function exerciseKind(it) {
+  if (!it) return "cardio";
+  const t = it.type;
+  if (t) return FLEX.has(t) ? "flex" : STRENGTH.has(t) ? "strength" : "cardio";
+  if (it.key === "stretch") return "flex";
+  return String(it.label || "").startsWith("শক্তির") ? "strength" : "cardio";
 }
 
 export function plannedWeeklyMinutes(plan) {

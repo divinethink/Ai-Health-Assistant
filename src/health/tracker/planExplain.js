@@ -2,7 +2,7 @@
 // শুধু বিদ্যমান হিসাব (goal.calc, exercisePlan) থেকে পাঠযোগ্য লাইন বানায়; কোনো নতুন হিসাব/ডেটা নয়।
 
 import { bnNum } from "../../shared/dates.js";
-import { focusExplain } from "./homeWorkout.js";
+import { focusExplain, goalExerciseLine } from "./homeWorkout.js";
 import { GOAL_LABELS, ACTIVITY_LABELS, ACTIVITY_FACTOR } from "./trackerCalc.js";
 
 const BAND_LABELS = { under5: "৫ বছরের কম", child: "শিশু-কিশোর (৫–১৭)", adult: "প্রাপ্তবয়স্ক (১৮–৬৪)", senior: "প্রবীণ (৬৫+)" };
@@ -38,13 +38,15 @@ export function explainExercise({ plan, age, goalType }) {
   const lines = [plan.summary || "বয়স-ব্যান্ড অনুযায়ী সাপ্তাহিক লক্ষ্য ঠিক হয়েছে।"];
   if (BAND_LABELS[plan.band]) lines.push("আপনার বয়স-ব্যান্ড" + (age !== null && age !== undefined ? " (" + bnNum(age) + " বছর)" : "") + ": " + BAND_LABELS[plan.band]);
   if (plan.focus && plan.focus.length) {
-    focusExplain(plan.focus, { lowImpact: !!plan.lowImpact }).forEach((l) => lines.push(l));
+    focusExplain(plan.focus, { lowImpact: !!plan.lowImpact, goalType, weeklyMin: plan.weeklyTargetMin }).forEach((l) => lines.push(l));
     return lines;
   }
   if (plan.routine && (plan.band === "adult" || plan.band === "senior")) {
-    lines.push(goalType === "muscle"
-      ? "লক্ষ্য ‘পেশি গঠন’ হওয়ায় সপ্তাহে ৩ দিন শক্তির ব্যায়াম রাখা হয়েছে।"
+    lines.push(goalType === "muscle" || goalType === "gain"
+      ? "লক্ষ্য অনুযায়ী সপ্তাহে ৩ দিন শক্তির ব্যায়াম রাখা হয়েছে।"
       : "সপ্তাহে ২ দিন শক্তির ব্যায়াম, বাকি দিনে দ্রুত হাঁটা ও স্ট্রেচিং; শুক্রবার বিশ্রাম।");
+    const gl = goalExerciseLine(goalType, plan.weeklyTargetMin);
+    if (gl) lines.push(gl);
     lines.push("স্ট্রেচিং সাপ্তাহিক মিনিটে গোনা হয় না।");
   }
   return lines;

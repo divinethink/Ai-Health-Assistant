@@ -16,7 +16,7 @@ import { TodaySummary } from "../summary/TodaySummary.js";
 import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
 import { last30DatesISO } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
-import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
+import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS, exerciseKind } from "./exercisePlanData.js";
 import {
   EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog, recentExtraFoods,
   setSlotPref, clearSlotPref, setFoodOverride, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog, sanitizePlanPrefs,
@@ -87,6 +87,10 @@ function EditIcon({ onClick, disabled, label, size }) {
 }
 
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
+// ব্যায়ামের ধরন-ডট (কার্ডিও/শক্তি/স্ট্রেচ) — শুধু দেখানোর জন্য; ধরন বের হয় exercisePlanData.exerciseKind থেকে
+const KIND = { cardio: { c: T.green2, l: "কার্ডিও" }, strength: { c: T.blue, l: "শক্তি" }, flex: { c: T.purple, l: "স্ট্রেচ" } };
+const kindDot = (k, size) => React.createElement("span", { key: k, "aria-hidden": "true", style: { display: "inline-block", width: (size || 8) + "px", height: (size || 8) + "px", borderRadius: "50%", background: KIND[k].c, flexShrink: 0 } });
+const dayKinds = (items) => ["cardio", "strength", "flex"].filter((k) => items.some((x) => exerciseKind(x) === k));
 
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
 const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}";
@@ -214,6 +218,7 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [err, setErr] = useState(null);
   const [sheet, setSheet] = useState(null); // { kind: "day", idx } | { kind: "log", type }
   const [panel, setPanel] = useState(null); // "why" | null
+  const [openDay, setOpenDay] = useState(null); // সপ্তাহের রুটিনে যে দিনের তালিকা খোলা (০–৬) | null
   const sex = info.member && info.member.sex;
   const focusCtx = focusCtxOf({ goal, sex, age, flags, condKeys: info.condKeys });
   const base = exercisePlan(age, goal ? goal.goalType : null, focusCtx);
@@ -311,36 +316,54 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     gate.blocked && plan.routine && React.createElement(Notice, { tone: "info" }, "আপনার ক্ষেত্রে রুটিন নিজে বদলানো বন্ধ — ডাক্তারের পরামর্শ অনুযায়ী করুন। নিচে ‘আজ আসলে’ লগ করা যাবে।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
     err && !sheet && ErrorBox(err),
-    plan.routine && React.createElement("div", { style: CARD },
-      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "4px" } },
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "আজ · " + DAY_LABELS[todayIdx]),
+    // ---- আজ: এক কলামে পরিষ্কার তালিকা (মোট মিনিট + কতটা সম্পন্ন) ----
+    plan.routine && React.createElement("div", { style: { ...CARD, padding: "14px 16px", borderRadius: "18px" } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, "আজ · " + DAY_LABELS[todayIdx]),
+          todayItems.length
+            ? React.createElement("div", { style: { fontSize: "22px", fontWeight: 800, color: T.green, lineHeight: 1.35 } }, bnNum(todayItems.reduce((a, x) => a + x.min, 0)) + " মিনিট",
+              React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color: T.muted, marginLeft: "8px" } }, bnNum(todayItems.filter((x) => done.includes(x.key)).length) + "/" + bnNum(todayItems.length) + " সম্পন্ন"))
+            : React.createElement("div", { style: { fontSize: "18px", fontWeight: 700, color: T.ink, lineHeight: 1.5 } }, "আজ বিশ্রামের দিন")),
         canEdit && editBtn(todayIdx)),
       todayItems.length === 0
-        ? React.createElement("div", { style: { fontSize: "14px", color: T.muted } }, "আজ বিশ্রামের দিন।")
-        : React.createElement("div", { style: { display: "grid", gridTemplateColumns: todayItems.length > 1 ? "1fr 1fr" : "1fr", gap: "8px" } },
-          todayItems.map((it) => {
+        ? React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, "শরীরকে সুস্থ হতে সময় দিন। চাইলে নিচের ‘আজ আসলে’-তে হালকা কিছু যোগ করুন।")
+        : React.createElement("div", { style: { marginTop: "6px" } },
+          todayItems.map((it, k) => {
             const on = done.includes(it.key);
-            return React.createElement("div", { key: it.key, style: { display: "flex", alignItems: "center", gap: "2px", minWidth: 0, padding: "2px 8px 2px 0", borderRadius: "10px", background: on ? "#E4F0E9" : T.canvas, border: "1px solid " + (on ? "#9CC5B4" : T.border) } },
+            return React.createElement("div", { key: it.key, style: { display: "flex", alignItems: "center", gap: "4px", padding: "6px 0", borderTop: k ? "1px solid " + T.track : "none" } },
               React.createElement(Tick, { on, onClick: () => toggle(it), busy, label: it.label + " করেছি" }),
-              React.createElement("div", { style: { minWidth: 0, lineHeight: 1.35 } },
-                React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 600, color: T.ink } }, it.label),
-                React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, bnNum(it.min) + " মিনিট" + (it.counted ? "" : " · গণনায় নয়")),
-                it.type && exerciseDetail(it.type) && React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, exerciseDetail(it.type).sets)));
+              React.createElement("div", { style: { flex: 1, minWidth: 0, lineHeight: 1.4 } },
+                React.createElement("div", { style: { fontSize: "15px", fontWeight: 600, color: on ? T.muted : T.ink, textDecoration: on ? "line-through" : "none" } }, it.label.split(" (")[0]),
+                React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, bnNum(it.min) + " মিনিট" + (it.type && exerciseDetail(it.type) ? " · " + exerciseDetail(it.type).sets : "") + (it.counted ? "" : " · গণনায় নয়"))),
+              kindDot(exerciseKind(it), 8));
           }))),
-    plan.routine && React.createElement("div", { style: CARD },
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, marginBottom: "4px" } }, "সপ্তাহের রুটিন"),
+    // ---- সপ্তাহ: প্রতি দিন এক লাইন (দিন · মিনিট · ধরন-ডট); ট্যাপে ওই দিনের তালিকা + বদলান ----
+    plan.routine && React.createElement("div", { style: { ...CARD, padding: "14px 16px", borderRadius: "18px" } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" } },
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "সপ্তাহের রুটিন"),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, "মোট " + bnNum(planned) + " মি." + (plan.weeklyTargetMin ? " · লক্ষ্য " + bnNum(plan.weeklyTargetMin) : ""))),
+      React.createElement("div", { style: { display: "flex", gap: "12px", fontSize: "12px", color: T.muted, margin: "4px 0 6px" } },
+        ["cardio", "strength", "flex"].map((k) => React.createElement("span", { key: k, style: { display: "inline-flex", alignItems: "center", gap: "4px" } }, kindDot(k, 8), KIND[k].l))),
       plan.routine.map((items, i) => {
-        const isToday = i === todayIdx;
-        return React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", padding: "4px 6px", borderRadius: "10px", background: isToday ? "#E4F0E9" : "transparent", borderBottom: !isToday && i < 6 ? "1px solid " + T.track : "1px solid transparent" } },
-          React.createElement("div", { "aria-label": DAY_LABELS[i], style: { width: "44px", flexShrink: 0, fontSize: "13px", fontWeight: 700, color: isToday ? T.green : T.ink } },
-            SHORT_DAYS[i], plan.custom && plan.custom.includes(i) && React.createElement("span", { style: { display: "block", fontSize: "12px", fontWeight: 600, color: T.muted } }, "আমার")),
-          React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex", flexWrap: "wrap", gap: "4px" } },
-            items.length
-              ? items.map((x, k) => React.createElement("span", { key: k, style: { padding: "2px 8px", borderRadius: "8px", background: isToday ? "#fff" : T.canvas, border: "1px solid " + T.border, fontSize: "12px", color: T.ink, lineHeight: 1.5 } }, x.label.split(" (")[0] + " " + bnNum(x.min) + " মি."))
-              : React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, "বিশ্রাম")),
-          isToday
-            ? React.createElement("span", { style: { flexShrink: 0, fontSize: "12px", fontWeight: 700, color: T.green, padding: "0 6px" } }, "আজ")
-            : (canEdit && React.createElement(EditIcon, { onClick: () => { setErr(null); setSheet({ kind: "day", idx: i }); }, disabled: busy, label: DAY_LABELS[i] + " বদলান", size: 36 })));
+        const isToday = i === todayIdx, open = openDay === i;
+        const total = items.reduce((a, x) => a + x.min, 0);
+        const custom = !!(plan.custom && plan.custom.includes(i));
+        return React.createElement("div", { key: i, style: { borderTop: i ? "1px solid " + T.track : "none" } },
+          React.createElement("button", { type: "button", onClick: () => setOpenDay(open ? null : i), "aria-expanded": open, "aria-label": DAY_LABELS[i],
+            style: { width: "100%", minHeight: "48px", display: "flex", alignItems: "center", gap: "10px", padding: "0 4px", border: "none", borderRadius: "10px", background: isToday ? "#E4F0E9" : "transparent", cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+            React.createElement("span", { style: { width: "44px", flexShrink: 0, fontSize: "15px", fontWeight: 700, color: isToday ? T.green : T.ink } }, SHORT_DAYS[i]),
+            React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14px", color: items.length ? T.ink : T.muted } }, items.length ? bnNum(total) + " মিনিট" : "বিশ্রাম", custom && React.createElement("span", { style: { marginLeft: "8px", fontSize: "12px", color: T.muted } }, "আমার"), isToday && React.createElement("span", { style: { marginLeft: "8px", fontSize: "12px", fontWeight: 700, color: T.green } }, "আজ")),
+            React.createElement("span", { style: { display: "flex", gap: "5px", alignItems: "center" } }, dayKinds(items).map((k) => kindDot(k, 9))),
+            React.createElement("span", { "aria-hidden": "true", style: { width: "16px", fontSize: "12px", color: T.muted, textAlign: "center" } }, open ? "▲" : "▼")),
+          open && React.createElement("div", { style: { padding: "2px 6px 10px 58px" } },
+            items.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, padding: "4px 0" } }, "এই দিন বিশ্রাম।"),
+            items.map((x, k) => React.createElement("div", { key: k, style: { display: "flex", alignItems: "baseline", gap: "8px", padding: "4px 0", fontSize: "14px", color: T.ink, lineHeight: 1.45 } },
+              kindDot(exerciseKind(x), 7),
+              React.createElement("span", { style: { flex: 1, minWidth: 0 } }, x.label.split(" (")[0]),
+              React.createElement("span", { style: { color: T.muted, fontSize: "13px", flexShrink: 0 } }, bnNum(x.min) + " মি."))),
+            canEdit && React.createElement("button", { type: "button", onClick: () => { setErr(null); setSheet({ kind: "day", idx: i }); }, disabled: busy,
+              style: { marginTop: "6px", minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "✎ " + DAY_LABELS[i] + " বদলান")));
       })),
     React.createElement("div", { style: CARD },
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, marginBottom: "8px" } }, "আজ আসলে কী করলেন?"),
@@ -485,7 +508,7 @@ function GoalPlanTab(props) {
   const [sub, setSub] = useState("goal"); // ট্র্যাকার নেভে ঢুকলে সবসময় "আমার লক্ষ্য"
   return React.createElement("div", null,
     SubPills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
-    sub === "goal" && React.createElement(GoalTab, props),
+    sub === "goal" && React.createElement(GoalTab, { ...props, onGoExercise: () => setSub("exercise") }),
     sub === "meal" && React.createElement(MealPlanTab, props),
     sub === "exercise" && React.createElement(ExerciseTab, props));
 }
@@ -546,7 +569,7 @@ const GOAL_HINTS = { lose: "ধীরে ও নিরাপদে ওজন ক
 const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], light: ["হালকা সক্রিয়", "বসে কাজ + সপ্তাহে ১–৩ দিন হাঁটা/হালকা ব্যায়াম"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
 
 // ---------- লক্ষ্য ----------
-function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
+function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExercise }) {
   const { goal, age, member, heightCm, weightKg, detected } = info;
   const pregnant = !!(info.flags && info.flags.pregnant); // প্রোফাইল থেকে (ধাপ ৬) — এখানে আর আলাদা টগল নেই
   const g = goal || {};
@@ -621,6 +644,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // সেট-করা লক্ষ্যের সারাংশ-কার্ড (শুধু পড়া; হিসাব আগের সংরক্ষিত calc থেকে, নোট একই সূত্রে পুনরায় হিসাব)
   if (hasGoal && !editing) {
     const gc = g.calc;
+    const canFocusGoal = age !== null && age >= 18 && !pregnant;
+    const bodyFocus = focusCtxOf({ goal: g, sex: member && member.sex, age, flags: info.flags, condKeys: info.condKeys });
     const again = computeGoal({ goalType: g.goalType, activity: g.activity, sex: member && member.sex, age, heightCm, weightKg, targetWeightKg: g.targetWeightKg, weeks: g.weeks, flags: g.flags || flags });
     const notes = again && !again.error && !again.blocked ? again.notes : [];
     const line = (k, v) => React.createElement("div", { key: k, style: { fontSize: "14px", color: T.ink, marginTop: "4px" } }, v);
@@ -632,8 +657,11 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
+        canFocusGoal && line("f", ["🎯 শরীরের টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? focusLabels(bodyFocus.areas).join(" · ") : "এখনো বাছা হয়নি")]),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
+      canFocusGoal && onGoExercise && SecondaryButton(bodyFocus ? "🎯 শরীরের টার্গেট বদলান" : "🎯 শরীরের টার্গেট বাছুন (পেট, পেশি…)", onGoExercise, false),
+      canFocusGoal && !bodyFocus && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "টার্গেট বাছলে ব্যায়াম-প্ল্যান ওজনের লক্ষ্য ও শরীরের টার্গেট — দুটো মিলিয়ে হবে।"),
       React.createElement("details", { style: { marginTop: "8px", marginBottom: "8px" } },
         React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
         React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));

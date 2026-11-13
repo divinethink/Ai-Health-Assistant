@@ -6,6 +6,7 @@
 // আইটেম-key: প্রথম গোনা-হওয়া "main", এরপর "x2","x3"…, স্ট্রেচিং "stretch" (applyExercisePrefs-এর সাথে মেলে → টিক ভাঙে না)।
 
 import { EXERCISE_TYPES } from "./planPrefs.js";
+import { bnNum } from "../../shared/dates.js";
 
 export const MAX_FOCUS = 3;
 
@@ -126,35 +127,56 @@ export function pickStrength(areas, s, ctx) {
 
 const WARM = 6, SET_MIN = 6, STRETCH_MIN = 10;
 
+// ওজন-লক্ষ্য অনুযায়ী ঝোঁক (goalType: lose/gain/muscle/fit)। না দিলে/fit হলে আগের আচরণ হুবহু।
+// lose: কার্ডিও দীর্ঘ (৪০ মি.) + শক্তির ব্যায়াম থাকে (পেশি ধরে রাখতে)। gain/muscle: শক্তির সেশন দীর্ঘ (প্রতি ব্যায়াম ৮ মি.), কার্ডিও হালকা (২০ মি.)।
+export const isLoseGoal = (g) => g === "lose";
+export const isGainGoal = (g) => g === "gain" || g === "muscle";
+
 // বেস-প্ল্যান (শনি…শুক্র): শনি/সোম/বুধ = শক্তি (মাঝে বিশ্রামসহ), রবি/মঙ্গল = কার্ডিও, বৃহ = হালকা, শুক্র = বিশ্রাম।
-export function focusPlan({ areas, senior, lowImpact }) {
+export function focusPlan({ areas, senior, lowImpact, goalType }) {
   const ctx = { senior: !!senior, lowImpact: !!lowImpact };
   const belly = areas.includes("belly"), posture = areas.includes("posture");
+  const lose = isLoseGoal(goalType), gain = isGainGoal(goalType);
+  const setMin = gain ? 8 : SET_MIN;
   const stretch = () => item("stretch", STRETCH_MIN, "stretch");
   const strengthDay = (s) => {
     const list = [item("walk", WARM, "main")];
-    pickStrength(areas, s, ctx).forEach((t, i) => list.push(item(t, SET_MIN, "x" + (i + 2))));
+    pickStrength(areas, s, ctx).forEach((t, i) => list.push(item(t, setMin, "x" + (i + 2))));
     list.push(stretch());
     return list;
   };
   const cardio = () => {
+    if (lose) return belly && !ctx.lowImpact ? [item("walk", 30, "main"), item("jacks", 10, "x2"), stretch()] : [item("walk", 40, "main"), stretch()];
+    if (gain) return [item("walk", 20, "main"), stretch()];
     if (belly && !ctx.lowImpact) return [item("walk", 25, "main"), item("jacks", 10, "x2"), stretch()];
     return [item("walk", belly ? 40 : 30, "main"), stretch()];
   };
-  const light = posture ? [item("yoga", 25, "main"), stretch()] : [item("walk", belly ? 30 : 20, "main"), stretch()];
+  const light = posture ? [item("yoga", 25, "main"), stretch()] : [item("walk", lose || belly ? 30 : 20, "main"), stretch()];
   const routine = [strengthDay(0), cardio(), strengthDay(1), cardio(), strengthDay(2), light, []];
   const names = areas.map((a) => FOCUS_AREAS[a].label).join(", ");
+  // লক্ষ্য-মিনিট কখনো রুটিনের আসল মোট মিনিটের বেশি নয় (ব্যাজ/প্রগ্রেস মিথ্যা হবে না)
+  const planned = routine.reduce((a, day) => a + day.filter((i) => i.counted).reduce((x, i) => x + i.min, 0), 0);
+  const desired = lose ? 180 : belly ? 180 : 150;
   return {
-    band: senior ? "senior" : "adult", weeklyTargetMin: belly ? 180 : 150, routine, focus: areas, lowImpact: ctx.lowImpact,
+    band: senior ? "senior" : "adult", weeklyTargetMin: Math.min(desired, planned), routine, focus: areas, lowImpact: ctx.lowImpact,
     summary: "আপনার টার্গেট: " + names + "। ঘরে সরঞ্জাম ছাড়া সপ্তাহে ৩ দিন শক্তির ব্যায়াম, ২ দিন কার্ডিও, বাকি হালকা/বিশ্রাম।" + (senior ? " ৬৫+ হলে ধীরে শুরু করুন; হালকা বিকল্প রাখা হয়েছে।" : ""),
   };
 }
 
 // "কেন এই প্ল্যান?"-এর জন্য ব্যাখ্যা (বাংলা, সূত্রসহ)
-export function focusExplain(areas, { lowImpact } = {}) {
+// ওজন-লক্ষ্যের সাথে প্ল্যান কীভাবে মিলেছে — এক লাইন (fit/অজানা হলে null)
+export function goalExerciseLine(goalType, weeklyMin) {
+  if (isLoseGoal(goalType)) return "আপনার লক্ষ্য ‘ওজন কমানো’: কার্ডিও বেশি (সাপ্তাহিক লক্ষ্য " + (weeklyMin ? bnNum(weeklyMin) + " মিনিট, " : "") + "WHO: ১৫০–৩০০) এবং শক্তির ব্যায়ামও আছে, যাতে ওজন কমার সময় পেশি কম ক্ষয় হয়। ওজন কমার মূল চালিকা মিল-প্ল্যানের ক্যালরি; ব্যায়াম তাতে সাহায্য করে।";
+  if (isGainGoal(goalType)) return "আপনার লক্ষ্য ‘" + (goalType === "muscle" ? "পেশি গঠন" : "ওজন বাড়ানো") + "’: শক্তির ব্যায়ামে বেশি সময় (প্রতি ব্যায়ামে বেশি সেট), কার্ডিও হালকা রাখা হয়েছে। পেশি বাড়াতে ক্যালরি সামান্য বেশি ও পর্যাপ্ত প্রোটিন লাগে — মিল-প্ল্যান দেখুন।";
+  return null;
+}
+
+export function focusExplain(areas, { lowImpact, goalType, weeklyMin } = {}) {
   const a = sanitizeFocusAreas(areas);
   if (!a.length) return [];
   const out = ["আপনার বাছা টার্গেট: " + a.map((x) => FOCUS_AREAS[x].label).join(", ") + "।"];
+  const gl = goalExerciseLine(goalType, weeklyMin);
+  if (gl) out.push(gl);
   out.push("সপ্তাহে ৩ দিন (শনি/সোম/বুধ) শক্তির ব্যায়াম, মাঝে বিশ্রাম — ACSM: প্রতি বড় পেশিগোষ্ঠী সপ্তাহে ২–৩ দিন, ২–৩ সেট × ৮–১৫ বার; সহজ হলে সেট/বার/কঠিনতা ধীরে বাড়ান। WHO: সপ্তাহে অন্তত ২ দিন পেশির ব্যায়াম ও ১৫০ মিনিট মাঝারি কার্ডিও।");
   out.push("প্রতিদিন শুরুতে গা-গরম (হালকা হাঁটা), শেষে স্ট্রেচিং। প্রতিটি ব্যায়ামের সেট/বার ও টিপ ‘নির্দেশনা’ ট্যাবে।");
   out.push("এক টার্গেটের সাথে নিচের শরীর ও উপরের শরীর/কোরের একটি করে ব্যায়ামও রাখা হয়, যাতে এক দিকে ঝোঁক না হয়।");
