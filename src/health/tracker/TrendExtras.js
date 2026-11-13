@@ -5,14 +5,14 @@
 
 import { ErrorBox, Skeleton } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
-import { T, CARD_STYLE, GRADIENT_HERO } from "./trackerTheme.js";
+import { T, HOME_CARD, GRADIENT_HERO } from "./trackerTheme.js";
 import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { swipeDelta } from "./dateNav.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { lastNMonths, shiftMonth, monthKey, monthStats, monthReview, compareMonths, compareNotes } from "./trendRange.js";
-import { dayScore, scoreLevel, monthInsights, insightLines, levelCounts, monthScores, monthlyAverages, rowArrow, attentionRows, LEVEL_LABELS, MIN_FILLED } from "./trendScore.js";
+import { dayScore, scoreLevel, monthInsights, insightLines, levelCounts, monthScores, monthlyAverages, rowArrow, rowNote, weekBuckets, attentionRows, LEVEL_LABELS, MIN_FILLED } from "./trendScore.js";
 
 const { useState, useEffect } = React;
 
@@ -44,10 +44,14 @@ function useMonths(familyId, memberId, list) {
   return { cache, err };
 }
 
-const card = (children, extra) => React.createElement("div", { style: { ...CARD_STYLE, ...(extra || {}) } }, children);
-const title = (t, sub) => React.createElement("div", { style: { marginBottom: "6px" } },
-  React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, t),
-  sub && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "1px" } }, sub));
+// প্রিমিয়াম কার্ড (হোমের HOME_CARD: নরম গ্রেডিয়েন্ট, বড় গোল কোণ, স্তরযুক্ত ছায়া) + আইকন-টালি শিরোনাম
+const card = (children, extra) => React.createElement("div", { style: { ...HOME_CARD, padding: "14px", marginBottom: "12px", ...(extra || {}) } }, children);
+const title = (t, sub, icon, right) => React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" } },
+  icon && React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "11px", background: T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", flexShrink: 0 } }, icon),
+  React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+    React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink, lineHeight: 1.25 } }, t),
+    sub && React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px" } }, sub)),
+  right);
 
 // ---------- হিটম্যাপ-ক্যালেন্ডার (একটাই; ‹ মাস › + সোয়াইপ) ----------
 function monthGridCells(y, m) {
@@ -77,6 +81,20 @@ function DayDetail({ date, doc, score }) {
     React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "এটি শুধু দেখার জন্য। পুরনো দিনের তথ্য বদলাতে Home-এর তারিখ-বাছাই ব্যবহার করুন।"));
 }
 
+// ⓘ — স্কোর কীভাবে হয় ও রঙের মানে (Daily Task-এর মতো)
+function ScoreInfo({ onClose }) {
+  const rowsL = [[4, "৮০% থেকে ১০০%", "চমৎকার"], [3, "৬০% থেকে ৭৯%", "ভালো"], [2, "৪০% থেকে ৫৯%", "মাঝারি"], [1, "১% থেকে ৩৯%", "কম"], [0, "কোনো এন্ট্রি নেই", "খালি"]];
+  return React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "ক্যালেন্ডারের রং কী বোঝায়", onClick: onClose,
+    style: { position: "fixed", inset: 0, zIndex: 2000, background: "rgba(10,25,20,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" } },
+    React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { background: T.surface, borderRadius: "22px", padding: "18px", width: "100%", maxWidth: "420px", maxHeight: "86vh", overflowY: "auto", boxShadow: "0 20px 50px rgba(0,0,0,0.3)" } },
+      React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, color: T.ink } }, "ⓘ ক্যালেন্ডারের রং কী বোঝায়?"),
+      React.createElement("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6, margin: "8px 0" } }, "প্রতিদিনের স্কোর = ওই দিন আপনি যা লিখেছেন, তার লক্ষ্য-পূরণের গড়। ক্যালরি, ব্যায়াম ও ঘুম গোনা হয়। ক্যালরি লক্ষ্যের ৮০–১১০% হলে পূর্ণ নম্বর; কম বা বেশি খেলে নম্বর কমে। কম খাওয়া সফল ধরা হয় না। ঘুম/ক্যালরি না লিখলে সেটা গোনা হয় না; ব্যায়াম লক্ষ্য থাকলে ০ মিনিট ০ ধরা হয়। উপবাসের দিনে ক্যালরি গোনা হয় না।"),
+      rowsL.map(([l, r, n]) => React.createElement("div", { key: l, style: { display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", color: T.ink, margin: "8px 0" } },
+        React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", borderRadius: "8px", background: LV_BG[l], flexShrink: 0 } }), r + " — " + n)),
+      React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, margin: "6px 0 10px" } }, "আজকের দিনে কমলা বর্ডার। এটি শুধু আপনার নিজের দেওয়া তথ্যের হিসাব; কোনো রোগনির্ণয় নয়।"),
+      React.createElement("button", { type: "button", onClick: onClose, style: { width: "100%", minHeight: "46px", borderRadius: "14px", border: "none", background: T.track, color: T.green, fontSize: "15px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" } }, "বুঝেছি")));
+}
+
 function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove }) {
   const by = {};
   (docs || []).forEach((d) => { if (d && d.date) by[d.date] = d; });
@@ -93,7 +111,12 @@ function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove }) {
   const chip = (label, value, extra) => React.createElement("div", { style: { flex: 1, minWidth: 0, borderRadius: "12px", padding: "8px 10px", ...extra } },
     React.createElement("div", { style: { fontSize: "12px", opacity: 0.85 } }, label),
     React.createElement("div", { style: { fontSize: "18px", fontWeight: 800 } }, value));
+  const [info, setInfo] = useState(false);
+  const infoBtn = React.createElement("button", { type: "button", onClick: () => setInfo(true), "aria-label": "ক্যালেন্ডারের রং কী বোঝায়",
+    style: { width: "44px", minHeight: "44px", margin: "-6px -8px -6px 0", border: "none", background: "none", color: T.muted, fontSize: "22px", cursor: "pointer", fontFamily: "inherit" } }, "ⓘ");
   return card([
+    title("অ্যাক্টিভিটি ক্যালেন্ডার", "প্রতিদিনের রং = ওই দিনের স্কোর", "📅", infoBtn),
+    info && React.createElement(ScoreInfo, { key: "i", onClose: () => setInfo(false) }),
     React.createElement("div", { key: "h", style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
       arrow(-1, "আগের মাস", "‹", canPrev),
       React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.green }, "aria-live": "polite" }, monthName(ym.y, ym.m) + " " + bnPlain(ym.y)),
@@ -121,8 +144,8 @@ function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove }) {
           return React.createElement("button", { key: c.iso, type: "button", disabled: future, onClick: () => onSel(c.iso),
             "aria-label": c.iso + (isToday ? " আজ" : "") + (score !== null ? " স্কোর " + score + "%, " + LEVEL_LABELS[lv] : ""), "aria-pressed": isSel,
             style: { minHeight: "44px", minWidth: 0, padding: 0, borderRadius: "10px", fontFamily: "inherit", fontSize: "14px", fontWeight: isToday || isSel ? 800 : 500, cursor: future ? "default" : "pointer",
-              border: isSel ? "2px solid " + T.green : isToday ? "2px solid " + T.orange : "2px solid transparent",
-              background: future ? "transparent" : LV_BG[lv], color: future ? T.border : lv >= 3 ? T.onDark : T.ink } }, bnNum(c.day));
+              border: isSel ? "2px solid " + T.green : isToday ? "2.5px solid " + T.orange : "2px solid transparent", boxShadow: isToday ? "0 0 0 2px color-mix(in srgb, #E8892B 22%, transparent)" : "none",
+              background: LV_BG[lv], color: lv >= 3 ? T.onDark : T.ink } }, bnNum(c.day));
         }))),
     React.createElement("div", { key: "lg", style: { display: "flex", flexWrap: "wrap", gap: "6px 12px", marginTop: "10px", fontSize: "12.5px", color: T.ink, alignItems: "center" } },
       [4, 3, 2, 1, 0].map((l) => React.createElement("span", { key: l, style: { display: "inline-flex", alignItems: "center", gap: "5px" } },
@@ -141,17 +164,67 @@ function InsightCard({ ins }) {
   if (!lines.length) return null;
   const mark = { up: ["▲", T.green], down: ["▼", "#C46A12"], flat: ["●", T.muted], weak: ["📅", T.muted] };
   return card([
-    title("এ মাসের উন্নতি ও অবনতি", "গত মাসের একই দিন-সংখ্যার সাথে মিলিয়ে"),
+    title("এ মাসের উন্নতি ও অবনতি", "গত মাসের একই দিন-সংখ্যার সাথে মিলিয়ে", "📈"),
     ...lines.map((l, i) => React.createElement("div", { key: i, style: { display: "flex", gap: "8px", fontSize: "14px", color: T.ink, lineHeight: 1.6, marginTop: i ? "4px" : 0 } },
       React.createElement("span", { "aria-hidden": "true", style: { color: mark[l.kind][1], flexShrink: 0 } }, mark[l.kind][0]),
       React.createElement("span", null, l.text))),
   ]);
 }
 
+// ---------- দিনে দিনে স্কোর (বার) ----------
+function DailyBarsCard({ rows, y, m, today, prevAvg }) {
+  const n = new Date(y, m + 1, 0).getDate();
+  const by = {};
+  rows.forEach((r) => { by[Number(r.iso.slice(8))] = r; });
+  const H = 84;
+  return card([
+    title("দিনে দিনে স্কোর", prevAvg !== null ? "ড্যাশ-রেখা = গত মাসের গড় (" + bnNum(prevAvg) + "%)" : "প্রতিটি বার = এক দিনের স্কোর", "📊"),
+    React.createElement("div", { key: "b", role: "img", "aria-label": "মাসের দৈনিক স্কোরের বার-চার্ট", style: { position: "relative", display: "flex", alignItems: "flex-end", gap: "2px", height: H + "px", borderBottom: "1px solid " + T.border } },
+      prevAvg !== null && React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", left: 0, right: 0, bottom: (prevAvg / 100) * H + "px", borderTop: "1.5px dashed " + T.muted, opacity: 0.7 } }),
+      Array.from({ length: n }, (_, i) => { const r = by[i + 1]; const future = y + "-" + p2(m + 1) + "-" + p2(i + 1) > today;
+        return React.createElement("div", { key: i, title: r ? bnNum(i + 1) + ": " + r.score + "%" : "", style: { flex: 1, minWidth: 0, height: r ? Math.max(4, (r.score / 100) * H) + "px" : "3px", borderRadius: "3px 3px 0 0", background: r ? LV_BG[r.level] : T.track, opacity: future ? 0.4 : 1 } }); })),
+    React.createElement("div", { key: "x", style: { display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: T.muted, marginTop: "3px" } },
+      [1, 8, 15, 22, n].map((d) => React.createElement("span", { key: d }, bnNum(d)))),
+  ]);
+}
+
+// ---------- সপ্তাহ অনুযায়ী গড় স্কোর: এ মাস বনাম আগের মাস ----------
+function WeekCompareCard({ buckets, ym }) {
+  const prevName = monthName(ym.m === 0 ? ym.y - 1 : ym.y, ym.m === 0 ? 11 : ym.m - 1);
+  const anyPrev = buckets.some((b) => b.prev !== null);
+  const H = 90;
+  const bar = (v, color, op) => React.createElement("div", { style: { width: "38%", maxWidth: "26px", height: v === null ? "3px" : Math.max(4, (v / 100) * H) + "px", background: v === null ? T.track : color, opacity: op, borderRadius: "6px 6px 0 0" } });
+  return card([
+    title("সপ্তাহ অনুযায়ী গড় স্কোর", anyPrev ? "গাঢ় = " + monthName(ym.y, ym.m) + " · হালকা = " + prevName : monthName(ym.y, ym.m), "🗓️"),
+    React.createElement("div", { key: "c", style: { display: "flex", gap: "8px" } },
+      buckets.map((b, i) => React.createElement("div", { key: i, style: { flex: 1, minWidth: 0, textAlign: "center" } },
+        React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color: T.ink, minHeight: "18px" } }, b.cur === null ? "—" : bnNum(b.cur) + "%"),
+        React.createElement("div", { style: { height: H + "px", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: "3px", borderBottom: "1px solid " + T.border } },
+          anyPrev && bar(b.prev, T.green2, 0.35), bar(b.cur, T.green, 1)),
+        React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "3px" } }, bnNum(b.from) + "–" + bnNum(b.to))))),
+  ]);
+}
+
+// ---------- বিষয় অনুযায়ী লক্ষ্য-পূরণ: এ মাস বনাম আগের মাস ----------
+function MetricCompareCard({ metrics, ym }) {
+  if (!metrics.length) return null;
+  const prevName = monthName(ym.m === 0 ? ym.y - 1 : ym.y, ym.m === 0 ? 11 : ym.m - 1);
+  const row = (label, pct, color, op, key) => React.createElement("div", { key, style: { display: "flex", alignItems: "center", gap: "8px", minHeight: "20px" } },
+    React.createElement("span", { style: { width: "56px", flexShrink: 0, fontSize: "12px", color: T.muted } }, label),
+    React.createElement("div", { style: { flex: 1, minWidth: 0, height: "10px", borderRadius: "999px", background: T.track, overflow: "hidden" } }, React.createElement("div", { style: { width: (pct || 0) + "%", height: "100%", background: color, opacity: op } })),
+    React.createElement("span", { style: { width: "40px", flexShrink: 0, textAlign: "right", fontSize: "12.5px", fontWeight: 700, color: T.ink } }, bnNum(pct) + "%"));
+  return card([
+    title("বিষয় ধরে তুলনা", "লক্ষ্য পূরণের দিন ÷ তথ্য-দেওয়া দিন", "⚖️"),
+    ...metrics.map((x) => React.createElement("div", { key: x.key, style: { margin: "8px 0 10px" } },
+      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, marginBottom: "3px" } }, x.label, React.createElement(ArrowTag, { kind: x.diff >= 10 ? "up" : x.diff <= -10 ? "down" : "flat" })),
+      row(monthName(ym.y, ym.m), x.cur, T.green, 1, "c"), row(prevName, x.prev, T.green2, 0.4, "p"))),
+  ]);
+}
+
 function MonthReviewCard({ stats }) {
   const r = monthReview(stats, bnNum);
   return card([
-    title("মাসিক রিভিউ", monthName(stats.y, stats.m) + " " + bnPlain(stats.y) + " · শুধু আপনার দেওয়া তথ্য থেকে"),
+    title("সংখ্যায় সারাংশ", monthName(stats.y, stats.m) + " " + bnPlain(stats.y) + " · শুধু আপনার দেওয়া তথ্য থেকে", "🧾"),
     React.createElement("div", { key: "b", style: { fontSize: "14px", color: T.ink, lineHeight: 1.6 } },
       stats.loggedDays === 0 ? React.createElement("div", { style: { color: T.muted } }, "এই মাসে কোনো রেকর্ড নেই।")
         : [r.points.map((p, i) => React.createElement("div", { key: "p" + i }, "• " + p)),
@@ -170,28 +243,33 @@ function CompareCard({ list, avgs }) {
   const rows = compareMonths(list, bnNum);
   const notes = compareNotes(rows);
   const attn = attentionRows(rows);
-  const last = list.length - 1;
-  const avgVals = avgs.map((a) => ({ pct: a.avg }));
+  const by = Object.fromEntries(rows.map((r) => [r.key, r]));
+  const shortName = (x) => monthName(x.y, x.m);
+  const table = [
+    { key: "avg", label: "গড় স্কোর", vals: avgs.map((a) => ({ pct: a.avg, text: a.avg === null ? "—" : bnNum(a.avg) + "%" })) },
+    by.calories && { key: "calories", label: "ক্যালরি লক্ষ্য", vals: by.calories.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
+    by.exercise && { key: "exercise", label: "ব্যায়াম", vals: by.exercise.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
+    by.sleep && { key: "sleep", label: "ঘুম", vals: by.sleep.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
+  ].filter(Boolean);
+  const cols = "minmax(78px, 1.25fr) repeat(" + list.length + ", minmax(0, 1fr)) 22px";
+  const pill = (v, i) => React.createElement("div", { key: i, style: { textAlign: "center", borderRadius: "999px", padding: "6px 2px", fontSize: "13px", fontWeight: 800,
+    background: v.pct === null ? T.track : LV_BG[scoreLevel(v.pct)], color: v.pct !== null && scoreLevel(v.pct) >= 3 ? T.onDark : T.ink } }, v.text);
+  const w = by.weight;
   return card([
-    title("৩ মাসের চিত্র", "টাস্কভিত্তিক — লক্ষ্য-পূরণের দিন ÷ তথ্য-দেওয়া দিন"),
-    React.createElement("div", { key: "avg", style: { background: T.canvas, border: "1px solid " + T.border, borderRadius: "12px", padding: "8px 10px", margin: "6px 0" } },
-      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, "সব মিলিয়ে গড় স্কোর", React.createElement(ArrowTag, { kind: rowArrow(avgVals) })),
-      React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "6px" } },
-        avgs.map((a, i) => React.createElement("div", { key: i, style: { flex: 1, textAlign: "center", borderRadius: "10px", padding: "6px 2px", background: a.avg === null ? T.track : LV_BG[scoreLevel(a.avg)], color: a.avg !== null && scoreLevel(a.avg) >= 3 ? T.onDark : T.ink } },
-          React.createElement("div", { style: { fontSize: "12px" } }, monthName(a.y, a.m)),
-          React.createElement("div", { style: { fontSize: "16px", fontWeight: 800 } }, a.avg === null ? "—" : bnNum(a.avg) + "%"))))),
-    attn.length > 0 && React.createElement("div", { key: "at", style: { background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "12px", padding: "8px 10px", margin: "6px 0" } },
-      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, "🎯 যেখানে মনোযোগ দরকার"),
-      attn.map((r) => React.createElement("div", { key: r.key, style: { fontSize: "14px", color: T.ink, marginTop: "4px" } },
-        r.label + ": " + r.seq.map((p) => bnNum(p) + "%").join(" → "), React.createElement(ArrowTag, { kind: r.arrow })))),
-    ...rows.map((r) => React.createElement("div", { key: r.key, style: { margin: "10px 0 4px" } },
-      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink, marginBottom: "4px" } }, r.label, r.key === "weight" ? null : React.createElement(ArrowTag, { kind: rowArrow(r.vals) })),
-      r.vals.map((v, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", gap: "8px", minHeight: "24px" } },
-        React.createElement("span", { style: { width: "64px", flexShrink: 0, fontSize: "12.5px", color: i === last ? T.green : T.muted, fontWeight: i === last ? 700 : 400 } }, monthName(list[i].y, list[i].m)),
-        React.createElement("div", { style: { flex: 1, minWidth: 0, height: "10px", borderRadius: "999px", background: T.track, overflow: "hidden" } },
-          React.createElement("div", { style: { width: (v.pct || 0) + "%", height: "100%", background: i === last ? T.green : T.green2, opacity: i === last ? 1 : 0.55 } })),
-        React.createElement("span", { style: { width: "78px", flexShrink: 0, fontSize: "12.5px", color: T.ink, textAlign: "right" } }, v.text))))),
-    notes.length > 0 && React.createElement("div", { key: "n", style: { marginTop: "8px", fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, notes.map((n, i) => React.createElement("div", { key: i }, "• " + n))),
+    title("৩ মাসের চিত্র", "বামে বিষয়, ওপরে মাস · রং = লক্ষ্য-পূরণের হার", "🗂️"),
+    attn.length > 0 && React.createElement("div", { key: "at", style: { background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "14px", padding: "10px 12px", margin: "4px 0 10px" } },
+      React.createElement("div", { style: { fontSize: "14px", fontWeight: 800, color: T.ink } }, "🎯 যেখানে মনোযোগ দরকার"),
+      attn.map((r) => React.createElement("div", { key: r.key, style: { fontSize: "14px", color: T.ink, marginTop: "4px" } }, r.label + ": " + r.seq.map((p) => bnNum(p) + "%").join(" → "), React.createElement(ArrowTag, { kind: r.arrow })))),
+    React.createElement("div", { key: "h", style: { display: "grid", gridTemplateColumns: cols, gap: "6px", alignItems: "center", fontSize: "12.5px", color: T.muted, fontWeight: 700, padding: "0 0 6px", borderBottom: "1px solid " + T.border } },
+      React.createElement("div", null, "আমল ও অভ্যাস"), ...list.map((x, i) => React.createElement("div", { key: i, style: { textAlign: "center" } }, shortName(x))), React.createElement("div", null)),
+    ...table.map((r) => React.createElement("div", { key: r.key, style: { padding: "9px 0", borderBottom: "1px solid " + T.border } },
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: cols, gap: "6px", alignItems: "center" } },
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, r.label), ...r.vals.map(pill), React.createElement("div", { style: { textAlign: "center" } }, React.createElement(ArrowTag, { kind: rowArrow(r.vals) }))),
+      rowNote(r.vals, bnNum) && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "3px" } }, rowNote(r.vals, bnNum)))),
+    w && React.createElement("div", { key: "w", style: { display: "grid", gridTemplateColumns: cols, gap: "6px", alignItems: "center", padding: "9px 0" } },
+      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, "ওজন (গড় কেজি)"),
+      ...w.vals.map((v, i) => React.createElement("div", { key: i, style: { textAlign: "center", borderRadius: "999px", padding: "6px 2px", fontSize: "13px", fontWeight: 800, background: T.track, color: T.ink } }, v.text)), React.createElement("div", null)),
+    notes.length > 0 && React.createElement("div", { key: "n", style: { marginTop: "6px", fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, notes.map((n, i) => React.createElement("div", { key: i }, "• " + n))),
   ]);
 }
 
@@ -228,9 +306,15 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   if (range === "week") body = weekView;
   else if (err) body = ErrorBox(err);
   else if (range === "month") {
-    body = !ready ? Skeleton(2, 120) : React.createElement("div", null,
-      React.createElement(InsightCard, { ins: monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today }) }),
-      React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
+    body = !ready ? Skeleton(2, 120) : (() => {
+      const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
+      return React.createElement("div", null,
+        React.createElement(InsightCard, { ins }),
+        React.createElement(DailyBarsCard, { rows: monthScores(ymDocs, ym.y, ym.m, ctx, today), y: ym.y, m: ym.m, today, prevAvg: ins.prevAvg }),
+        React.createElement(WeekCompareCard, { buckets: weekBuckets({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today }), ym }),
+        React.createElement(MetricCompareCard, { metrics: ins.metrics, ym }),
+        React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
+    })();
   } else {
     body = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, {
       list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, ctx, today)),

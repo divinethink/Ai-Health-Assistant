@@ -84,3 +84,17 @@ test("monthlyAverages: কম দিনে avg null", () => {
   assert.equal(r[0].avg, null);
   assert.equal(r[1].avg, 100);
 });
+import { weekBuckets, rowNote } from "../../src/health/tracker/trendScore.js";
+test("weekBuckets: ৪ ভাগ, আজের পরের দিন বাদ, আগের মাসের সাথে তুলনা", () => {
+  const cur = [mk(11, 2, GOOD), mk(11, 9, { caloriesIn: 1000 })];
+  const prev = [mk(10, 3, GOOD)];
+  const b = weekBuckets({ curDocs: cur, prevDocs: prev, y: 2026, m: 10, ctx, todayISO: iso(11, 13) });
+  assert.equal(b.length, 4);
+  assert.equal(b[0].cur, 100); assert.equal(b[0].prev, 100);
+  assert.ok(b[1].cur < 50); assert.equal(b[2].cur, null); assert.equal(b[3].cur, null);
+});
+test("rowNote: পয়েন্ট-ফারাক বাক্য", () => {
+  assert.equal(rowNote([{ pct: 50 }, { pct: 70 }], bn), "আগের চেয়ে 20 পয়েন্ট বেড়েছে");
+  assert.equal(rowNote([{ pct: 50 }, { pct: 52 }], bn), "মোটামুটি একই ধারায়");
+  assert.equal(rowNote([{ pct: null }, { pct: 52 }], bn), "");
+});

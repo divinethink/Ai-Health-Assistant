@@ -432,7 +432,7 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
     weekGoal: () => [
     // এই সপ্তাহের ব্যায়াম-লক্ষ্য (শনি–শুক্র) — আগে ব্যায়াম প্ল্যানে ছিল; এখন রিভিউয়ের ঠিক উপরে
     plan && plan.weeklyTargetMin && React.createElement(Stat, {
-      title: "🎯 এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(info.weekMin || 0) + " মিনিট",
+      title: "🏃 এই সপ্তাহের ব্যায়াম-লক্ষ্য", line: bnNum(info.weekMin || 0) + " / " + bnNum(plan.weeklyTargetMin) + " মিনিট (শনি–শুক্র, সব ধরনের ব্যায়াম মিলিয়ে)",
       pct: ((info.weekMin || 0) / plan.weeklyTargetMin) * 100, color: T.green2,
     }),
     ],
@@ -736,7 +736,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "ট্রেন্ড"], ["reminder", "রিমাইন্ডার"]];
+  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "অ্যাক্টিভিটি রিভিউ"], ["reminder", "রিমাইন্ডার"]];
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
     !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),

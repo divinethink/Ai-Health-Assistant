@@ -83,7 +83,7 @@ export function monthInsights({ curDocs, prevDocs, y, m, ctx, todayISO }) {
   const total = new Date(y, m + 1, 0).getDate();
   const rows = monthScores(curDocs, y, m, ctx, todayISO);
   const out = { y, m, elapsed: dates.length, filled: rows.length, avg: rows.length ? Math.round(avg(rows.map((r) => r.score))) : null,
-    needMore: Math.max(0, MIN_FILLED - rows.length), prevAvg: null, delta: null, improvement: null, drop: null, weakest: [], counts: levelCounts(rows) };
+    needMore: Math.max(0, MIN_FILLED - rows.length), prevAvg: null, delta: null, metrics: [], improvement: null, drop: null, weakest: [], counts: levelCounts(rows) };
   if (rows.length < MIN_DAYS) return out;
 
   // আগের মাস: চলমান মাসে প্রথম N দিন, পূর্ণ মাসে পুরো আগের মাস (দুই ক্ষেত্রেই ≤ আগের মাসের দিন)
@@ -104,6 +104,7 @@ export function monthInsights({ curDocs, prevDocs, y, m, ctx, todayISO }) {
       }).filter(Boolean);
       const best = moves.filter((x) => x.diff >= 10).sort((a, b) => b.diff - a.diff)[0];
       const worst = moves.filter((x) => x.diff <= -10).sort((a, b) => a.diff - b.diff)[0];
+      out.metrics = moves;
       out.improvement = best || null;
       out.drop = worst || null;
     }
@@ -163,4 +164,34 @@ export function attentionRows(rows) {
     const seq = r.vals.map((v) => v.pct).filter((p) => p !== null && p !== undefined);
     return { key: r.key, label: r.label, arrow, last, seq };
   }).filter((r) => r.last !== null && (r.arrow === "down" || r.last < 40));
+}
+
+// মাসকে ৭ দিনের ভাগে (১–৭, ৮–১৪, ১৫–২১, ২২–শেষ) ভেঙে এ মাস বনাম আগের মাসের গড় স্কোর। আজের পরের দিন বাদ; ভাগে স্কোর না থাকলে null।
+export function weekBuckets({ curDocs, prevDocs, y, m, ctx, todayISO }) {
+  const total = new Date(y, m + 1, 0).getDate();
+  const py = m === 0 ? y - 1 : y, pm = m === 0 ? 11 : m - 1;
+  const cur = byDate(curDocs), prev = byDate(prevDocs);
+  const p2 = (n) => String(n).padStart(2, "0");
+  const avgOf = (by, yy, mm, from, to) => {
+    const s = [];
+    for (let d = from; d <= to; d++) {
+      const iso = yy + "-" + p2(mm + 1) + "-" + p2(d);
+      if (yy === y && mm === m && iso > todayISO) break;
+      const sc = dayScore(by[iso], ctx, iso);
+      if (sc !== null) s.push(sc);
+    }
+    return s.length ? Math.round(avg(s)) : null;
+  };
+  const prevTotal = new Date(py, pm + 1, 0).getDate();
+  return [[1, 7], [8, 14], [15, 21], [22, total]].map(([a, b]) => ({ from: a, to: b,
+    cur: avgOf(cur, y, m, a, b), prev: prevDocs ? avgOf(prev, py, pm, a, Math.min(b, prevTotal)) : null }));
+}
+
+// সারির নিচের এক লাইন: শেষ দুই তথ্য-আছে মানের তুলনা (পয়েন্ট)। bn = বাংলা সংখ্যা-ফরম্যাটার।
+export function rowNote(vals, bn) {
+  const have = vals.map((v) => v && v.pct).filter((p) => p !== null && p !== undefined);
+  if (have.length < 2) return "";
+  const d = have[have.length - 1] - have[have.length - 2];
+  if (Math.abs(d) < 5) return "মোটামুটি একই ধারায়";
+  return "আগের চেয়ে " + bn(Math.abs(d)) + " পয়েন্ট " + (d > 0 ? "বেড়েছে" : "কমেছে");
 }

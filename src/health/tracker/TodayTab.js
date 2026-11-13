@@ -338,7 +338,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
           React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, bnNum(week.hitCount) + "/৭ দিন টার্গেটে"),
           // পুরো ট্রেন্ড হোমে নয় — শুধু প্রবেশ-পথ (হোম হালকা থাকে); ট্যাপ এরিয়া ৪৪px, ভিজ্যুয়াল ছোট
-          onOpenTrend && React.createElement("button", { type: "button", onClick: onOpenTrend, "aria-label": "ট্রেন্ড ও সাপ্তাহিক রিভিউ দেখুন", style: { minHeight: "44px", margin: "-12px -6px -12px 0", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, "ট্রেন্ড ›"))),
+          onOpenTrend && React.createElement("button", { type: "button", onClick: onOpenTrend, "aria-label": "অ্যাক্টিভিটি রিভিউ দেখুন", style: { minHeight: "44px", margin: "-12px -6px -12px 0", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, "রিভিউ ›"))),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
         week.days.map((x, i) => {
           const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
