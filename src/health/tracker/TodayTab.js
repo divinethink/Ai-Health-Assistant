@@ -348,7 +348,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     !oldReady && React.createElement(Notice, { tone: old.err ? "warn" : "info" }, old.err ? [old.err + " ", React.createElement("button", { key: "r", type: "button", onClick: () => setRetry((n) => n + 1), style: { minHeight: "44px", padding: "0 12px", borderRadius: "12px", border: "1.5px solid " + T.green, background: "#fff", color: T.green, fontFamily: "inherit", fontWeight: 700, cursor: "pointer" } }, "আবার চেষ্টা")] : "এই দিনের তথ্য লোড হচ্ছে… (শেষ না হওয়া পর্যন্ত লেখা বন্ধ)"),
 
     // সাপ্তাহিক সারাংশ — বৃত্তে ট্যাপ করলে সেই দিনের পাতা
-    React.createElement("div", { style: { ...HOME_CARD, background: T.sand, borderColor: T.sandBorder, padding: "8px 12px" } },
+    React.createElement("div", { style: { ...HOME_CARD, background: "var(--hs-surface, #fff)", borderColor: "var(--hs-border, #DCE6E0)", padding: "8px 12px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } },
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "এই সপ্তাহ"),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
@@ -364,7 +364,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, SHORT_DAYS[i]),
             React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : partial ? " " + x.metCount + "টি লক্ষ্য পূরণ" : isFast ? " সিয়াম/ফাস্টিং-এর দিন" : isToday ? " আজ" : ""), style: { width: "26px", height: "26px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
               background: hit ? T.green : partial ? "#D4EADF" : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || (isToday && !partial) ? T.onDark : partial ? T.green : T.muted,
-              boxShadow: isSel ? "0 0 0 2px " + T.sand + ", 0 0 0 4px " + T.green : "none",
+              boxShadow: isSel ? "0 0 0 2px var(--hs-surface, #fff), 0 0 0 4px " + T.green : "none",
               border: partial ? "2px solid " + (isToday ? T.orange : T.green) : hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : partial ? bnNum(x.metCount) : isToday ? "আজ" : isFast ? "🌙" : ""));
         })),
       React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, "✓ = টার্গেট (২+ লক্ষ্য) · সংখ্যা = পূরণ হওয়া লক্ষ্য")),
