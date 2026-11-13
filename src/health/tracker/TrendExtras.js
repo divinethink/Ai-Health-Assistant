@@ -8,11 +8,12 @@ import { bnNum } from "../../shared/dates.js";
 import { T, HOME_CARD, GRADIENT_HERO } from "./trackerTheme.js";
 import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
+import { ReviewCards } from "./ReviewCards.js";
 import { swipeDelta } from "./dateNav.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { lastNMonths, shiftMonth, monthKey, monthStats, monthReview, compareMonths, compareNotes } from "./trendRange.js";
-import { dayScore, scoreLevel, monthInsights, insightLines, levelCounts, monthScores, monthlyAverages, rowArrow, rowNote, weekBuckets, attentionRows, LEVEL_LABELS, MIN_FILLED } from "./trendScore.js";
+import { dayScore, scoreLevel, monthInsights, insightLines, levelCounts, monthScores, monthlyAverages, rowArrow, rowNote, attentionRows, LEVEL_LABELS, MIN_FILLED } from "./trendScore.js";
 
 const { useState, useEffect } = React;
 
@@ -171,40 +172,6 @@ function InsightCard({ ins }) {
   ]);
 }
 
-// ---------- দিনে দিনে স্কোর (বার) ----------
-function DailyBarsCard({ rows, y, m, today, prevAvg }) {
-  const n = new Date(y, m + 1, 0).getDate();
-  const by = {};
-  rows.forEach((r) => { by[Number(r.iso.slice(8))] = r; });
-  const H = 84;
-  return card([
-    title("দিনে দিনে স্কোর", prevAvg !== null ? "ড্যাশ-রেখা = গত মাসের গড় (" + bnNum(prevAvg) + "%)" : "প্রতিটি বার = এক দিনের স্কোর", "📊"),
-    React.createElement("div", { key: "b", role: "img", "aria-label": "মাসের দৈনিক স্কোরের বার-চার্ট", style: { position: "relative", display: "flex", alignItems: "flex-end", gap: "2px", height: H + "px", borderBottom: "1px solid " + T.border } },
-      prevAvg !== null && React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", left: 0, right: 0, bottom: (prevAvg / 100) * H + "px", borderTop: "1.5px dashed " + T.muted, opacity: 0.7 } }),
-      Array.from({ length: n }, (_, i) => { const r = by[i + 1]; const future = y + "-" + p2(m + 1) + "-" + p2(i + 1) > today;
-        return React.createElement("div", { key: i, title: r ? bnNum(i + 1) + ": " + r.score + "%" : "", style: { flex: 1, minWidth: 0, height: r ? Math.max(4, (r.score / 100) * H) + "px" : "3px", borderRadius: "3px 3px 0 0", background: r ? LV_BG[r.level] : T.track, opacity: future ? 0.4 : 1 } }); })),
-    React.createElement("div", { key: "x", style: { display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: T.muted, marginTop: "3px" } },
-      [1, 8, 15, 22, n].map((d) => React.createElement("span", { key: d }, bnNum(d)))),
-  ]);
-}
-
-// ---------- সপ্তাহ অনুযায়ী গড় স্কোর: এ মাস বনাম আগের মাস ----------
-function WeekCompareCard({ buckets, ym }) {
-  const prevName = monthName(ym.m === 0 ? ym.y - 1 : ym.y, ym.m === 0 ? 11 : ym.m - 1);
-  const anyPrev = buckets.some((b) => b.prev !== null);
-  const H = 90;
-  const bar = (v, color, op) => React.createElement("div", { style: { width: "38%", maxWidth: "26px", height: v === null ? "3px" : Math.max(4, (v / 100) * H) + "px", background: v === null ? T.track : color, opacity: op, borderRadius: "6px 6px 0 0" } });
-  return card([
-    title("সপ্তাহ অনুযায়ী গড় স্কোর", anyPrev ? "গাঢ় = " + monthName(ym.y, ym.m) + " · হালকা = " + prevName : monthName(ym.y, ym.m), "🗓️"),
-    React.createElement("div", { key: "c", style: { display: "flex", gap: "8px" } },
-      buckets.map((b, i) => React.createElement("div", { key: i, style: { flex: 1, minWidth: 0, textAlign: "center" } },
-        React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color: T.ink, minHeight: "18px" } }, b.cur === null ? "—" : bnNum(b.cur) + "%"),
-        React.createElement("div", { style: { height: H + "px", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: "3px", borderBottom: "1px solid " + T.border } },
-          anyPrev && bar(b.prev, T.green2, 0.35), bar(b.cur, T.green, 1)),
-        React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "3px" } }, bnNum(b.from) + "–" + bnNum(b.to))))),
-  ]);
-}
-
 // ---------- বিষয় অনুযায়ী লক্ষ্য-পূরণ: এ মাস বনাম আগের মাস ----------
 function MetricCompareCard({ metrics, ym }) {
   if (!metrics.length) return null;
@@ -287,7 +254,8 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const need = [...three];
   [ym, prevYm].forEach((x) => { if (x && !need.some((y) => y.y === x.y && y.m === x.m)) need.push(x); });
   const { cache, err } = useMonths(familyId, memberId, need);
-  const ctx = { ...targetCtxFor({ age: info.age, flags: info.flags, goal: info.goal }), waterTarget: null };
+  const rateCtx = targetCtxFor({ age: info.age, flags: info.flags, goal: info.goal }); // পানিসহ (রিভিউ-কার্ড)
+  const ctx = { ...rateCtx, waterTarget: null };
   const loaded3 = three.every((x) => cache[monthKey(x.y, x.m)]);
   const move = (n) => { const next = shiftMonth(ym, n); if (next !== ym) { setYm(next); setSel(null); } };
 
@@ -302,16 +270,21 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const ymDocs = cache[monthKey(ym.y, ym.m)];
   const prevDocs = prevYm ? cache[monthKey(prevYm.y, prevYm.m)] : null;
   const ready = !!ymDocs && (!prevYm || !!prevDocs);
+  // রিভিউ-কার্ড: সপ্তাহ-ভিউ = আজ পর্যন্ত শেষ ৭ দিন; মাস-ভিউ = বাছা মাসের শেষ (চলতি মাসে আজ) পর্যন্ত
+  const allDocs = Object.keys(cache).flatMap((k) => cache[k] || []);
+  const monthEnd = ym.y + "-" + p2(ym.m + 1) + "-" + p2(new Date(ym.y, ym.m + 1, 0).getDate());
+  const reviewEnd = range === "month" && monthEnd < today ? monthEnd : today;
+  const review = (full) => React.createElement(ReviewCards, { docs: allDocs, endISO: reviewEnd, scoreCtx: ctx, rateCtx, gutEntries: info.gutEntries || [], showGut: (info.gutEntries || []).length > 0 || (info.condKeys || []).includes("gut"), full, past: reviewEnd !== today });
+  const reviewReady = !!cache[monthKey(three[2].y, three[2].m)] && !!cache[monthKey(three[1].y, three[1].m)];
   let body = null;
-  if (range === "week") body = weekView;
+  if (range === "week") body = React.createElement("div", null, reviewReady ? review(false) : Skeleton(1, 120), weekView);
   else if (err) body = ErrorBox(err);
   else if (range === "month") {
     body = !ready ? Skeleton(2, 120) : (() => {
       const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
       return React.createElement("div", null,
+        review(true),
         React.createElement(InsightCard, { ins }),
-        React.createElement(DailyBarsCard, { rows: monthScores(ymDocs, ym.y, ym.m, ctx, today), y: ym.y, m: ym.m, today, prevAvg: ins.prevAvg }),
-        React.createElement(WeekCompareCard, { buckets: weekBuckets({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today }), ym }),
         React.createElement(MetricCompareCard, { metrics: ins.metrics, ym }),
         React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
     })();
