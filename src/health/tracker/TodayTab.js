@@ -9,7 +9,7 @@ import { macroTargets } from "./macroTargets.js";
 import { weekDatesISO } from "./exercisePlanData.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { Icon } from "../../shared/icons.js";
-import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT } from "./trackerTheme.js";
+import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT, SLOT_LINE } from "./trackerTheme.js";
 import { ringDash, pctOf, weekSummary, last30DatesISO } from "./todaySummary.js";
 import { buildMealPlan } from "./mealPlanData.js";
 import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
@@ -29,7 +29,6 @@ import { renderLayoutCards } from "../../shared/LayoutCards.js";
 const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 
-const SLOT_LINE = { sehri: "moon", iftar: "sunset", breakfast: "sunrise", snack1: "coffee", lunch: "sun", snack2: "coffee", dinner: "moon" };
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
 
 function Notice({ children, tone }) {

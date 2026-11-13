@@ -13,7 +13,8 @@ import { listHealthRecords } from "../records/healthRecordsData.js";
 import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, saveFocusAreas, todayISO } from "./trackerData.js";
 import { TodayTab } from "./TodayTab.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
-import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
+import { T, CARD_STYLE, SLOT_LINE, SLOT_TINT } from "./trackerTheme.js";
+import { Icon } from "../../shared/icons.js";
 import { last30DatesISO } from "./todaySummary.js";
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS, exerciseKind } from "./exercisePlanData.js";
@@ -182,7 +183,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
       return React.createElement("div", { key: s.id, style: CARD },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-          React.createElement("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "10px", background: SLOT_TINT[s.id] || T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" } }, SLOT_ICON[s.id] || "🍽"),
+          React.createElement("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "10px", background: SLOT_TINT[s.id] || T.track, display: "flex", alignItems: "center", justifyContent: "center", color: T.green } }, Icon(SLOT_LINE[s.id] || "sun", { size: 20 })),
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, s.label + " · " + bnTimeHM(s.time) + (plan.custom.includes(s.id) ? " · আমার" : ""),
               React.createElement("span", { style: { fontWeight: 400, color: T.muted, fontSize: "12px" } }, " · " + bnNum(s.kcal) + " কিলো")),

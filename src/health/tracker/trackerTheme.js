@@ -16,8 +16,8 @@ export const CARD_STYLE = { background: "var(--hs-surface, #fff)", border: "1px 
 // হোমের প্রিমিয়াম কার্ড: বর্ডার প্রায়-অদৃশ্য (সব থিমে কিনারা থাকে), দুই-স্তর নরম ছায়া, বড় গোল কোণ
 export const HOME_CARD = { ...CARD_STYLE, background: "linear-gradient(180deg, var(--hs-surface, #fff), color-mix(in srgb, var(--hs-surface, #fff) 95%, var(--hs-primary, #0E4B43)))", border: "1px solid rgba(127,150,140,0.16)", borderRadius: "22px", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 4px 10px rgba(14,75,67,0.05), 0 14px 30px rgba(14,75,67,0.08)" };
 
-// বেলা-আইকন (emoji — অ্যাপের বাকি অংশের মতো) ও আইকন-টালির নরম রং
-export const SLOT_ICON = { sehri: "🌙", iftar: "🌇", breakfast: "🌅", snack1: "🍎", lunch: "☀️", snack2: "🫖", dinner: "🌙" };
+// বেলা-আইকন (লাইন-আইকন নাম, হোম ও ট্র্যাকারে একই) ও আইকন-টালির নরম রং
+export const SLOT_LINE = { sehri: "moon", iftar: "sunset", breakfast: "sunrise", snack1: "coffee", lunch: "sun", snack2: "coffee", dinner: "moon" };
 export const SLOT_TINT = { sehri: "#E6E4F5", iftar: "#FFE9CF", breakfast: "#FFF0D6", snack1: "#FDE8E4", lunch: "#E4F2EA", snack2: "#F3ECD9", dinner: "#E6E4F5" };
 
 export const MAX_WATER = 40; // InputTab-এর সীমার সাথে মেলে
