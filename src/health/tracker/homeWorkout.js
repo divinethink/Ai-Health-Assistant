@@ -41,13 +41,15 @@ export function focusOptions(sex) {
 }
 
 // প্ল্যানে ব্যবহারের ctx। ১৮ বছরের কম বা গর্ভাবস্থায় টার্গেট-প্ল্যান নয় (null → সাধারণ প্ল্যান)।
-// lowImpact = ৬৫+ বা হৃদরোগ/উচ্চ রক্তচাপ: লাফ/তীব্র/আইসোমেট্রিক-ভারী আইটেম বাদ।
+// lowImpact = ৬৫+ বা হৃদরোগ/উচ্চ রক্তচাপ/হাঁপানি/কিডনি/পেটের সমস্যা: লাফ/তীব্র/আইসোমেট্রিক-ভারী আইটেম বাদ।
 export function focusCtxOf({ goal, sex, age, flags, condKeys }) {
   if (age === null || age === undefined || age < 18 || (flags && flags.pregnant)) return null;
   const areas = sanitizeFocusAreas(goal && goal.focusAreas, sex);
   if (!areas.length) return null;
   const ck = condKeys || [];
-  return { areas, senior: age >= 65, lowImpact: age >= 65 || ck.includes("heart") || ck.includes("hypertension") };
+  const gut = ck.includes("gut"); // IBS/গ্যাস্ট্রিক: পেটে চাপ পড়া ব্যায়াম বদলে নরম বিকল্প
+  const lowImpact = age >= 65 || ck.includes("heart") || ck.includes("hypertension") || ck.includes("asthma") || !!(flags && flags.kidney) || gut;
+  return { areas, senior: age >= 65, lowImpact, softCore: gut };
 }
 
 // ---------- ব্যায়াম-নির্দেশনা (সেট/বার/টিপ) ----------
@@ -90,6 +92,7 @@ const POOLS = {
 };
 const HIGH = new Set(["burpee", "hiit", "jacks", "highknee", "skipping", "mountain", "wallsit"]); // lowImpact-এ বাদ
 const SENIOR_MAP = { squat: "chairstand", lunges: "stepup", situp: "birddog", crunch: "birddog", bicycle: "birddog", legraise: "birddog", tricepdip: "superman" };
+const SOFT_CORE_MAP = { crunch: "birddog", situp: "birddog", bicycle: "birddog", legraise: "birddog" }; // পেটের সমস্যায় (softCore)
 const LOWER = new Set(["squat", "lunges", "stepup", "glute", "chairstand", "wallsit"]);
 const UPPER_CORE = new Set(["pushup", "tricepdip", "plank", "superman", "birddog", "crunch", "bicycle", "legraise", "situp", "mountain"]);
 
@@ -97,6 +100,7 @@ const item = (type, min, key) => { const t = EXERCISE_TYPES[type]; return { key,
 
 function norm(type, ctx) {
   let t = ctx.senior && SENIOR_MAP[type] ? SENIOR_MAP[type] : type;
+  if (ctx.softCore && SOFT_CORE_MAP[t]) t = SOFT_CORE_MAP[t];
   if (ctx.lowImpact && HIGH.has(t)) return null;
   return Object.prototype.hasOwnProperty.call(EXERCISE_TYPES, t) ? t : null;
 }
@@ -133,8 +137,8 @@ export const isLoseGoal = (g) => g === "lose";
 export const isGainGoal = (g) => g === "gain" || g === "muscle";
 
 // বেস-প্ল্যান (শনি…শুক্র): শনি/সোম/বুধ = শক্তি (মাঝে বিশ্রামসহ), রবি/মঙ্গল = কার্ডিও, বৃহ = হালকা, শুক্র = বিশ্রাম।
-export function focusPlan({ areas, senior, lowImpact, goalType }) {
-  const ctx = { senior: !!senior, lowImpact: !!lowImpact };
+export function focusPlan({ areas, senior, lowImpact, softCore, goalType }) {
+  const ctx = { senior: !!senior, lowImpact: !!lowImpact, softCore: !!softCore };
   const belly = areas.includes("belly"), posture = areas.includes("posture");
   const lose = isLoseGoal(goalType), gain = isGainGoal(goalType);
   const setMin = gain ? 8 : SET_MIN;
@@ -158,7 +162,7 @@ export function focusPlan({ areas, senior, lowImpact, goalType }) {
   const planned = routine.reduce((a, day) => a + day.filter((i) => i.counted).reduce((x, i) => x + i.min, 0), 0);
   const desired = lose ? 180 : belly ? 180 : 150;
   return {
-    band: senior ? "senior" : "adult", weeklyTargetMin: Math.min(desired, planned), routine, focus: areas, lowImpact: ctx.lowImpact,
+    band: senior ? "senior" : "adult", weeklyTargetMin: Math.min(desired, planned), routine, focus: areas, lowImpact: ctx.lowImpact, softCore: ctx.softCore,
     summary: "আপনার টার্গেট: " + names + "। ঘরে সরঞ্জাম ছাড়া সপ্তাহে ৩ দিন শক্তির ব্যায়াম, ২ দিন কার্ডিও, বাকি হালকা/বিশ্রাম।" + (senior ? " ৬৫+ হলে ধীরে শুরু করুন; হালকা বিকল্প রাখা হয়েছে।" : ""),
   };
 }
@@ -171,7 +175,7 @@ export function goalExerciseLine(goalType, weeklyMin) {
   return null;
 }
 
-export function focusExplain(areas, { lowImpact, goalType, weeklyMin } = {}) {
+export function focusExplain(areas, { lowImpact, softCore, goalType, weeklyMin } = {}) {
   const a = sanitizeFocusAreas(areas);
   if (!a.length) return [];
   const out = ["আপনার বাছা টার্গেট: " + a.map((x) => FOCUS_AREAS[x].label).join(", ") + "।"];
@@ -184,6 +188,7 @@ export function focusExplain(areas, { lowImpact, goalType, weeklyMin } = {}) {
   if (a.includes("muscle") || a.includes("chest") || a.includes("arms")) out.push("পেশি বাড়াতে ব্যায়াম ক্লান্তির কাছাকাছি পর্যন্ত করা এবং ধীরে কঠিন করা (যেমন পা উঁচুতে পুশ-আপ, ধীরে নামা) জরুরি। পর্যাপ্ত প্রোটিন ও ঘুমও লাগে — মিল-প্ল্যান দেখুন। আরও ভারী প্রশিক্ষণ লাগলে সরঞ্জাম লাগতে পারে।");
   if (a.includes("glute") || a.includes("legs")) out.push("গ্লুট ব্রিজ, স্কোয়াট, লাঞ্জ ও স্টেপ-আপ নিতম্ব ও পায়ের বড় পেশি কাজ করায়; ধাপে কঠিনতা বাড়ালে সরঞ্জাম ছাড়াও উপকার হয়।");
   if (a.includes("posture")) out.push("ভঙ্গির জন্য পিঠ ও কোরের স্থিতিশীলতার ব্যায়াম (সুপারম্যান, বার্ড-ডগ) ও যোগ/স্ট্রেচিং রাখা হয়েছে। দীর্ঘক্ষণ এক ভঙ্গিতে না বসে মাঝে মাঝে উঠুন।");
-  if (lowImpact) out.push("বয়স বা হৃদরোগ/উচ্চ রক্তচাপের কারণে লাফ ও তীব্র ব্যায়াম বাদ দিয়ে কম-ধাক্কার বিকল্প রাখা হয়েছে। শুরুর আগে ডাক্তারের সাথে কথা বলুন।");
+  if (lowImpact) out.push("বয়স বা স্বাস্থ্য-অবস্থার (হৃদরোগ, উচ্চ রক্তচাপ, হাঁপানি, কিডনি, পেটের সমস্যা) কারণে লাফ ও তীব্র ব্যায়াম বাদ দিয়ে কম-ধাক্কার বিকল্প রাখা হয়েছে। শুরুর আগে ডাক্তারের সাথে কথা বলুন।");
+  if (softCore) out.push("পেটের সমস্যা (IBS/গ্যাস্ট্রিক) থাকায় পেটে চাপ দেওয়া ব্যায়াম (ক্রাঞ্চ, লেগ-রেইজ, সাইকেল) বদলে নরম বিকল্প (বার্ড-ডগ) রাখা হয়েছে। খাওয়ার ঠিক পরে ব্যায়াম নয়।");
   return out;
 }

@@ -38,7 +38,7 @@ export function explainExercise({ plan, age, goalType }) {
   const lines = [plan.summary || "বয়স-ব্যান্ড অনুযায়ী সাপ্তাহিক লক্ষ্য ঠিক হয়েছে।"];
   if (BAND_LABELS[plan.band]) lines.push("আপনার বয়স-ব্যান্ড" + (age !== null && age !== undefined ? " (" + bnNum(age) + " বছর)" : "") + ": " + BAND_LABELS[plan.band]);
   if (plan.focus && plan.focus.length) {
-    focusExplain(plan.focus, { lowImpact: !!plan.lowImpact, goalType, weeklyMin: plan.weeklyTargetMin }).forEach((l) => lines.push(l));
+    focusExplain(plan.focus, { lowImpact: !!plan.lowImpact, softCore: !!plan.softCore, goalType, weeklyMin: plan.weeklyTargetMin }).forEach((l) => lines.push(l));
     return lines;
   }
   if (plan.routine && (plan.band === "adult" || plan.band === "senior")) {

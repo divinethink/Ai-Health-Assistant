@@ -205,6 +205,11 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের অ্যালার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 
+// লক্ষ্য (যেমন ওজন কমানো) + শরীরের টার্গেট — কমা দিয়ে একসাথে (লক্ষ্য-কার্ড ও ব্যায়াম-কার্ড একই)
+function goalTargetText(goalType, areas) {
+  return [GOAL_LABELS[goalType], ...focusLabels(areas)].filter(Boolean).join(", ");
+}
+
 function bnTimeHM(hhmm) {
   const [h, m] = hhmm.split(":").map(Number);
   return bnNum(h > 12 ? h - 12 : h) + ":" + bnNum(String(m).padStart(2, "0"));
@@ -311,7 +316,7 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     canFocus && React.createElement("div", { style: { ...CARD, display: "flex", alignItems: "center", gap: "8px" } },
       React.createElement("div", { style: { flex: 1, minWidth: 0 } },
         React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🎯 আমার টার্গেট"),
-        React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, focusCtx ? focusLabels(focusCtx.areas).join(" · ") : "এখনো বাছা হয়নি — সাধারণ প্ল্যান চলছে")),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, focusCtx ? goalTargetText(goal && goal.goalType, focusCtx.areas) : "এখনো বাছা হয়নি — সাধারণ প্ল্যান চলছে")),
       React.createElement("button", { type: "button", onClick: () => { setErr(null); setSheet({ kind: "focus" }); }, disabled: busy,
         style: { flexShrink: 0, minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, focusCtx ? "বদলান" : "বাছুন")),
     needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
@@ -499,6 +504,7 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         !gate.blocked && foldChip("why", "💡 কেন এই প্ল্যান?")),
       panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
       React.createElement(MealTab, common),
+      React.createElement(AvoidCard, { domain: "food", age, flags: info.flags, condKeys: info.condKeys }),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, অ্যালার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"))
   );
 }
@@ -659,7 +665,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
-        canFocusGoal && line("f", ["🎯 শরীরের টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? focusLabels(bodyFocus.areas).join(" · ") : "এখনো বাছা হয়নি")]),
+        canFocusGoal && line("f", ["🎯 টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? goalTargetText(g.goalType, bodyFocus.areas) : "শরীরের টার্গেট এখনো বাছা হয়নি")]),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
       canFocusGoal && onGoExercise && SecondaryButton(bodyFocus ? "🎯 শরীরের টার্গেট বদলান" : "🎯 শরীরের টার্গেট বাছুন (পেট, পেশি…)", onGoExercise, false),

@@ -34,7 +34,7 @@ export function exercisePlan(age, goalType, focus) {
       routine: [bone, play, bone, play, bone, play, play].map((m) => [m]) };
   }
   const senior = age >= 65;
-  if (focus && Array.isArray(focus.areas) && focus.areas.length) return focusPlan({ areas: focus.areas, senior, lowImpact: !!focus.lowImpact, goalType });
+  if (focus && Array.isArray(focus.areas) && focus.areas.length) return focusPlan({ areas: focus.areas, senior, lowImpact: !!focus.lowImpact, softCore: !!focus.softCore, goalType });
   const str = strength(senior ? STRENGTH_SENIOR : STRENGTH_ADULT);
   const muscle = isGainGoal(goalType); // পেশি গঠন/ওজন বাড়ানো: ৩ দিন শক্তি
   const lose = isLoseGoal(goalType); // ওজন কমানো: কার্ডিও ৪০ মি. (সাপ্তাহিক ১৮০)
