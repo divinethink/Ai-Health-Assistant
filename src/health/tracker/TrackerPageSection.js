@@ -665,7 +665,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
-        canFocusGoal && line("f", ["🎯 টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? goalTargetText(g.goalType, bodyFocus.areas) : "শরীরের টার্গেট এখনো বাছা হয়নি")]),
+        canFocusGoal && line("f", ["🎯 টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? (focusLabels(bodyFocus.areas).join(", ") || "শরীরের টার্গেট এখনো বাছা হয়নি") : "শরীরের টার্গেট এখনো বাছা হয়নি")]),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
       canFocusGoal && onGoExercise && SecondaryButton(bodyFocus ? "🎯 শরীরের টার্গেট বদলান" : "🎯 শরীরের টার্গেট বাছুন (পেট, পেশি…)", onGoExercise, false),

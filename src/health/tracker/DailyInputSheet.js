@@ -24,7 +24,7 @@ const SM = { ...BTN, border: "1.5px solid " + T.green, background: "#fff", color
 
 export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarget, busy, err, onSave, onClose }) {
   const d = daily || {};
-  const [weight, setWeight] = useState(d.weightKg ? String(d.weightKg) : "");
+  const [weight, setWeight] = useState(d.weightKg ? String(d.weightKg) : (latestWeight ? String(latestWeight) : ""));
   const [steps, setSteps] = useState(d.steps !== undefined ? String(d.steps) : "");
   const [bed, setBed] = useState(d.sleep && d.sleep.bed ? d.sleep.bed : "");
   const [wake, setWake] = useState(d.sleep && d.sleep.wake ? d.sleep.wake : "");
