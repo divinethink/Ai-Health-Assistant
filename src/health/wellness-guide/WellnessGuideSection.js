@@ -9,6 +9,7 @@
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
+import { Icon } from "../../shared/icons.js";
 import {
   listWellnessGuides, deleteWellnessGuide, trashWellnessGuide, restoreWellnessGuide,
   isBlogAdminUid, WELLNESS_CATEGORIES, formatAgeOrMonthRange,
@@ -20,13 +21,17 @@ const { useState, useEffect } = React;
 
 const PRIMARY = "var(--hs-primary, #0E4B43)";
 
+// লাইন-আইকন (shared/icons.js) — হোমের সকাল/দুপুর আইকনের মতো একই ধাঁচ।
 const CATEGORY_ICONS = {
-  "general": "🩺", "diet-fitness": "🥗", "child-care": "🧒", "women-health": "👩",
-  "elderly-care": "🧓", "chronic-disease-prevention": "🫀", "mental-health": "🧠",
-  "skin-beauty": "🧴", "sleep-lifestyle": "😴", "first-aid-emergency": "🚑",
-  "education-career": "🎓", "money-life-skills": "💰", "digital-safety": "📱",
-  "outdoor-community": "🌳",
+  "general": "health", "diet-fitness": "apple", "child-care": "baby", "women-health": "venus",
+  "elderly-care": "heart", "chronic-disease-prevention": "activity", "mental-health": "brain",
+  "skin-beauty": "sparkles", "sleep-lifestyle": "bed", "first-aid-emergency": "cross",
+  "education-career": "graduation", "money-life-skills": "wallet", "digital-safety": "shield",
+  "outdoor-community": "tree",
 };
+
+// ব্লগের কার্ড সাদা (থিমের ক্রিম নয়) — owner-request ২০২৬-১১-১৩।
+const WHITE_CARD = { ...PREMIUM_CARD, background: "#fff" };
 
 // প্রতি ক্যাটেগরির নিজস্ব নরম রঙ (আইকন-বৃত্ত ও চিপে ব্যবহার)।
 const CATEGORY_COLORS = {
@@ -78,7 +83,7 @@ function Chip({ text, color }) {
 }
 
 // কার্ড: শিরোনাম + ২-৩ লাইন সারাংশ + চিপ (ক্যাটেগরি, বয়স, পড়ার সময়)। ক্লিকে সরাসরি পড়ার মোড।
-function PostCard({ post, onOpen, trashMode, onRestore, onPurge }) {
+function PostCard({ post, onOpen, trashMode, onRestore, onPurge, hideCategory }) {
   const rangeLabel = formatAgeOrMonthRange(post);
   const split = splitBodyAtMarker(post.body);
   let snippet = (split ? split.preview : post.summary || "")
@@ -90,7 +95,7 @@ function PostCard({ post, onOpen, trashMode, onRestore, onPurge }) {
     "div", {
       key: post.id, role: trashMode ? undefined : "button",
       onClick: trashMode ? undefined : () => onOpen(post),
-      style: { ...PREMIUM_CARD, padding: "14px", marginBottom: "10px", cursor: trashMode ? "default" : "pointer", borderLeft: "4px solid " + color },
+      style: { ...WHITE_CARD, padding: "14px", marginBottom: "10px", cursor: trashMode ? "default" : "pointer", borderLeft: "4px solid " + color },
     },
     React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-text, #1B2430)", fontSize: "15px", lineHeight: 1.45 } }, post.title),
     snippet && React.createElement("div", {
@@ -98,7 +103,7 @@ function PostCard({ post, onOpen, trashMode, onRestore, onPurge }) {
     }, snippet),
     React.createElement(
       "div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", marginTop: "10px" } },
-      React.createElement(Chip, { text: categoryLabel(post.category), color }),
+      !hideCategory && React.createElement(Chip, { text: categoryLabel(post.category), color }),
       rangeLabel && React.createElement(Chip, { text: rangeLabel, color: "#5F716C" }),
       React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, "⏱ প্রায় " + toBn(readMinutes(post.body)) + " মিনিট"),
       !trashMode && React.createElement("span", { style: { marginLeft: "auto", fontSize: "14px", fontWeight: 700, color: PRIMARY } }, "পড়ুন ›")
@@ -138,26 +143,26 @@ function CategoryTile({ icon, label, count, color, onClick, hero }) {
   const c = color || PRIMARY;
   const text = label + " (" + toBn(count) + ")";
   if (hero) {
+    // "সকল লেখা": পুরো প্রস্থ, একদম হালকা ও চিকন সোনালি আভা।
     return React.createElement(
       "div", {
         onClick, role: "button",
         style: {
-          gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", cursor: "pointer", boxSizing: "border-box",
-          borderRadius: "18px", border: "1px solid rgba(212,160,23,0.55)",
-          background: "linear-gradient(135deg, rgba(255,236,179,0.55), var(--hs-surface, #fff))",
-          boxShadow: "0 0 0 3px rgba(212,160,23,0.14), 0 6px 20px rgba(212,160,23,0.30)",
+          gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "12px", padding: "10px 14px", cursor: "pointer", boxSizing: "border-box",
+          borderRadius: "16px", border: "1px solid rgba(212,160,23,0.38)", background: "#fff",
+          boxShadow: "0 0 0 2px rgba(212,160,23,0.07), 0 2px 10px rgba(212,160,23,0.12)",
         },
       },
-      React.createElement("div", { style: { width: "40px", height: "40px", borderRadius: "12px", background: "rgba(212,160,23,0.20)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", flexShrink: 0 } }, icon),
+      React.createElement("div", { style: { width: "38px", height: "38px", borderRadius: "12px", background: "rgba(212,160,23,0.12)", color: "#B8860B", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, Icon(icon, { size: 20 })),
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-text, #1B2430)" } }, text)
     );
   }
   return React.createElement(
     "div", {
       onClick, role: "button",
-      style: { ...PREMIUM_CARD, borderRadius: "16px", padding: "10px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "6px", minHeight: "86px", boxSizing: "border-box" },
+      style: { ...WHITE_CARD, borderRadius: "16px", padding: "10px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "6px", minHeight: "86px", boxSizing: "border-box" },
     },
-    React.createElement("div", { style: { width: "34px", height: "34px", borderRadius: "11px", background: tint(c, 16), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", flexShrink: 0 } }, icon),
+    React.createElement("div", { style: { width: "36px", height: "36px", borderRadius: "11px", background: tint(c, 12), color: c, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, Icon(icon, { size: 20 })),
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "var(--hs-text, #1B2430)", lineHeight: 1.35 } }, text)
   );
 }
@@ -269,10 +274,10 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
 
   const headerBar = React.createElement(
     "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", color: "#fff", boxShadow: "0 2px 10px rgba(14,75,67,0.25)" } },
-    React.createElement("button", { type: "button", onClick: goBack, "aria-label": "পিছনে", style: hdrBtn }, "←"),
-    inList && !showForm && !editingPost && React.createElement("button", {
+    React.createElement("button", { type: "button", onClick: goBack, "aria-label": "পিছনে", style: hdrBtn }, Icon("arrowLeft", { size: 20, stroke: 2.2 })),
+    !showForm && !editingPost && React.createElement("button", {
       type: "button", onClick: () => setSidebarOpen((o) => !o), "aria-label": "ক্যাটেগরি", title: "ক্যাটেগরি", style: hdrBtn,
-    }, "☰"),
+    }, Icon("menu", { size: 20, stroke: 2.2 })),
     React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, title),
     canManage && !showForm && !editingPost && category !== "trash" && React.createElement(
       "button", {
@@ -283,7 +288,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
     )
   );
 
-  const sidebarDrawer = inList && sidebarOpen && React.createElement(
+  const sidebarDrawer = sidebarOpen && React.createElement(
     React.Fragment, null,
     React.createElement("div", { onClick: () => setSidebarOpen(false), style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 20 } }),
     React.createElement(
@@ -295,7 +300,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   function renderCards(list, trashMode) {
     return list.map((p) =>
       React.createElement(PostCard, {
-        key: p.id, post: p, trashMode,
+        key: p.id, post: p, trashMode, hideCategory: category !== null && category !== "all" && category !== "trash",
         onOpen: (post) => { if (readerUid) setReaderPost(post); },
         onRestore: restore,
         onPurge: (post) => setPendingPurge(post),
@@ -303,11 +308,14 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
     );
   }
 
-  const searchBox = React.createElement("input", {
-    type: "search", value: query, placeholder: "🔍 পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
+  const searchBox = React.createElement(
+    "div", { style: { position: "relative", marginBottom: "12px" } },
+    React.createElement("span", { style: { position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#5F716C", display: "flex" } }, Icon("search", { size: 18 })),
+    React.createElement("input", {
+    type: "search", value: query, placeholder: "পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
     onChange: (e) => setQuery(e.target.value),
-    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "12px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "var(--hs-surface, #fff)", fontSize: "14px", marginBottom: "12px", fontFamily: "inherit" },
-  });
+    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 38px", borderRadius: "12px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "#fff", fontSize: "14px", fontFamily: "inherit" },
+  }));
 
   let body = null;
   if (!err && posts === null) {
@@ -322,11 +330,11 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
           : renderCards(searchHits, false)
       );
     } else {
-      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সকল লেখা", count: active.length, color: "#0E4B43", hero: true, onClick: () => openCategory("all") })]
+      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "library", label: "সকল লেখা", count: active.length, color: "#0E4B43", hero: true, onClick: () => openCategory("all") })]
         .concat(WELLNESS_CATEGORIES.map(([id, label]) =>
-          React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "📄", label, color: CATEGORY_COLORS[id], count: counts[id] || 0, onClick: () => openCategory(id) })
+          React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "file", label, color: CATEGORY_COLORS[id], count: counts[id] || 0, onClick: () => openCategory(id) })
         ));
-      if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "🗑", label: "ট্র্যাশ", color: "#C0392B", count: trashed.length, onClick: () => openCategory("trash") }));
+      if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "trash", label: "ট্র্যাশ", color: "#C0392B", count: trashed.length, onClick: () => openCategory("trash") }));
       body = React.createElement(
         React.Fragment, null, searchBox,
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" } }, tiles)
@@ -368,7 +376,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   }
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
     headerBar,
     React.createElement(
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },

@@ -7,6 +7,19 @@ import { getMarks, saveMarks, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from 
 
 const { useState, useEffect, useRef, useMemo } = React;
 
+// বাংলা অঙ্ক (০-৯) পরিষ্কার দেখাতে ডিভাইসের Noto Sans Bengali-কে শুধু অঙ্কের জন্য ব্যবহার (থাকলে);
+// না থাকলে আগের ফন্টেই থাকে। একবারই যোগ হয়।
+function ensureDigitFont() {
+  try {
+    if (document.getElementById("wg-digit-font")) return;
+    const st = document.createElement("style");
+    st.id = "wg-digit-font";
+    const src = 'local("Noto Sans Bengali"), local("NotoSansBengali-Regular"), local("Noto Sans Bengali UI")';
+    st.textContent = '@font-face{font-family:"WgBnDigits";src:' + src + ';font-weight:400 800;unicode-range:U+09E6-09EF;}';
+    document.head.appendChild(st);
+  } catch (e) { /* ignore */ }
+}
+
 const MAX_MARKS = 300;
 const FONT_MIN = 12;
 const FONT_MAX = 38;
@@ -123,10 +136,15 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
   const info = useMemo(() => analyzeText(text), [text]);
   const segs = useMemo(() => {
     const extra = [];
-    info.heads.forEach((h) => { extra.push(h.s, h.e); });
+    info.heads.forEach((h) => {
+      extra.push(h.s, h.e);
+      let k = h.e; while (k < text.length && text[k] === "\n") k++; // হেডিংয়ের পরের ফাঁকা লাইন আলাদা সেগমেন্ট
+      extra.push(k);
+    });
     if (info.refS !== -1) extra.push(info.refS, info.refE);
     return buildSegments(text, validMarks, extra);
   }, [text, validMarks, info]);
+  useEffect(() => { ensureDigitFont(); }, []);
   const [refsOpen, setRefsOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const catLabel = (WELLNESS_CATEGORIES.find(([id]) => id === post.category) || [null, ""])[1];
@@ -240,9 +258,16 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     if (inRefs(g) && !refsOpen) return;
     const hl = g.covering.filter((m) => m.k === "hl").pop();
     const ul = g.covering.some((m) => m.k === "ul");
-    const isHead = info.heads.some((h) => g.s >= h.s && g.e <= h.e);
+    const headHit = info.heads.find((h) => g.s >= h.s && g.e <= h.e);
+    const isHead = !!headHit;
     const style = {};
-    if (isHead) { style.fontWeight = 700; style.color = accent; style.fontSize = "1.08em"; }
+    if (isHead) {
+      style.fontWeight = 700; style.color = accent; style.fontSize = "1.08em";
+      // পুরো হেডিং-লাইন একটাই সেগমেন্ট হলে ব্লক — নিচে ছোট ফাঁক (আগের পুরো ফাঁকা লাইনের বদলে)।
+      if (g.s === headHit.s && g.e === headHit.e) { style.display = "block"; style.marginBottom = "4px"; }
+    }
+    // হেডিংয়ের ঠিক পরের শুধু-নতুন-লাইন সেগমেন্ট: টেক্সট (অফসেট) থাকে, দেখা যায় না।
+    if (/^\n+$/.test(text.slice(g.s, g.e)) && info.heads.some((h) => h.e === g.s)) { style.display = "block"; style.height = 0; style.overflow = "hidden"; style.lineHeight = 0; style.fontSize = 0; }
     if (inRefs(g)) { style.fontSize = "0.88em"; style.opacity = 0.9; }
     if (hl) style.background = hl.c || COLORS[0];
     if (hl && themeIdx === 2) style.color = "#1F2D2A";
@@ -265,7 +290,7 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     "div", {
       ref: contentRef, onClick: onContentClick,
       onScroll: (e) => { const el = e.currentTarget; const max = el.scrollHeight - el.clientHeight; setProgress(max > 0 ? Math.min(1, el.scrollTop / max) : 0); },
-      style: { flex: 1, overflowY: "auto", padding: "18px 20px 40px", touchAction: "pan-y", WebkitUserSelect: "text", userSelect: "text", fontSize: font + "px", lineHeight: 1.95, whiteSpace: "pre-wrap", wordBreak: "break-word", color: theme.fg, background: theme.bg },
+      style: { flex: 1, overflowY: "auto", padding: "18px 20px 40px", touchAction: "pan-y", WebkitUserSelect: "text", userSelect: "text", fontFamily: "'WgBnDigits', 'Hind Siliguri', sans-serif", fontSize: font + "px", lineHeight: 1.95, whiteSpace: "pre-wrap", wordBreak: "break-word", color: theme.fg, background: theme.bg },
     },
     React.createElement("div", { style: { maxWidth: "680px", margin: "0 auto" } },
     titleBlock,
