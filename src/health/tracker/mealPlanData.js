@@ -136,7 +136,15 @@ export function itemText(key, qty) {
 }
 
 // calorieTarget → { slots, total, notes }। allergyTags: allergyTagsOf() এর ফল; prefs (ঐচ্ছিক): goal.planPrefs — শুধু `foods` ওভাররাইড পড়ে।
-export function buildMealPlan(calorieTarget, allergyTags, prefs) {
+// রোগ-ভিত্তিক খাবার-বদল (স্থির নিয়ম; AI/ডোজ নেই): [রোগ-শর্ত, স্লট|"*", পুরনো খাবার, নতুন খাবার, নোট]। ক্যালরি প্রায় সমান রেখে পরিমাণ বদলায়।
+// উচ্চ রক্তচাপ: বেস-প্ল্যানে আচার/শুঁটকি/প্রক্রিয়াজাত খাবার নেই, তাই শুধু লবণ-নোট (নিচে)।
+const COND_SWAPS = [
+  { when: (h) => h.flags && h.flags.diabetes, slot: "snack1", from: "banana", to: "guava", note: "ডায়াবেটিসের জন্য কলার বদলে পেয়ারা রাখা হয়েছে।" },
+  { when: (h) => h.condKeys && h.condKeys.includes("gut"), slot: "snack2", from: "tea", to: "papaya", note: "পেটের সমস্যার জন্য চায়ের বদলে পেঁপে রাখা হয়েছে।" },
+  { when: (h) => h.condKeys && h.condKeys.includes("gut"), slot: "dinner", from: "salad", to: "veg", note: "পেটের সমস্যার জন্য কাঁচা সালাদের বদলে রান্না-করা সবজি রাখা হয়েছে।" },
+];
+
+export function buildMealPlan(calorieTarget, allergyTags, prefs, health) {
   setFoodOverrides(prefs && prefs.foods);
   const tags = new Set(allergyTags || []);
   const rows = BASE.map((r) => [...r]);
@@ -174,6 +182,20 @@ export function buildMealPlan(calorieTarget, allergyTags, prefs) {
       final.push([slot, altKey, qty * ratio, true]);
     } else final.push([slot, key, qty, false]);
   });
+
+  // রোগ-ভিত্তিক বদল (এলার্জি-বদলের পরে); নতুন খাবার এলার্জিতে পড়লে বদল হয় না
+  const h = health || {};
+  COND_SWAPS.forEach((rule) => {
+    if (!rule.when(h)) return;
+    const row = final.find((r) => r[0] === rule.slot && r[1] === rule.from);
+    const nf = FOODS[rule.to];
+    if (!row || !nf || (nf.al && tags.has(nf.al))) return;
+    const q = Math.max(0.5, Math.round((row[2] * foodK(rule.from) / Math.max(foodK(rule.to), 1)) * 2) / 2);
+    const same = final.find((r) => r !== row && r[0] === rule.slot && r[1] === rule.to);
+    if (same) { same[2] += q; final.splice(final.indexOf(row), 1); } else { row[1] = rule.to; row[2] = q; row[3] = true; }
+    notes.push(rule.note);
+  });
+  if (h.condKeys && h.condKeys.includes("hypertension")) notes.push("উচ্চ রক্তচাপ: রান্নায় লবণ কম দিন; আচার, শুঁটকি ও প্যাকেটজাত খাবার এড়ান।");
 
   const slots = MEAL_SLOTS.map((s) => {
     const items = final.filter((r) => r[0] === s.id).map(([, key, qty, swapped]) => ({

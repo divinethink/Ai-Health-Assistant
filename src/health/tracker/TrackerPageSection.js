@@ -128,7 +128,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   if (gate.blocked) return React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথি → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।");
   if (!calc) return React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।");
 
-  const base = buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs);
+  const base = buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs, { flags: info.flags, condKeys: info.condKeys });
   const plan = applyMealPrefs(base, goal.planPrefs, allergyTags);
   const extras = sanitizeExtraFoods(d.extraFoods);
   const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
@@ -153,7 +153,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // "প্রতিদিনের জন্য": প্ল্যান বদলালে আজকের caloriesIn নতুন প্ল্যান থেকে আবার হিসাব (শুধু মান বদলালে লেখা হয়)।
   const savePrefs = (prefs) => run(async () => {
     await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
-    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs), prefs, allergyTags), eaten, extras);
+    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs, { flags: info.flags, condKeys: info.condKeys }), prefs, allergyTags), eaten, extras);
     if (cal !== (d.caloriesIn || 0)) await saveDaily(familyId, memberId, callerMemberId, todayISO(), { caloriesIn: cal }, daily);
   }, true);
 
@@ -161,7 +161,7 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const saveFood = (key, entry) => run(async () => {
     const prefs = setFoodOverride(goal.planPrefs, key, entry);
     await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal);
-    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs), prefs, allergyTags), eaten, extras);
+    const cal = caloriesForDay(applyMealPrefs(buildMealPlan(calc.calorieTarget, allergyTags, prefs, { flags: info.flags, condKeys: info.condKeys }), prefs, allergyTags), eaten, extras);
     if (cal !== (d.caloriesIn || 0)) await saveDaily(familyId, memberId, callerMemberId, todayISO(), { caloriesIn: cal }, daily);
   }, false);
 
@@ -660,12 +660,11 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
     return React.createElement("div", null,
       React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
         React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, "আমার লক্ষ্য"),
-        React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: T.green, marginTop: "2px" } }, GOAL_LABELS[g.goalType] || ""),
+        React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: T.green, marginTop: "2px" } }, ([GOAL_LABELS[g.goalType], ...(canFocusGoal && bodyFocus ? focusLabels(bodyFocus.areas) : [])].filter(Boolean).join(", "))),
         (g.goalType === "lose" || g.goalType === "gain") && g.targetWeightKg && line("w", (weightKg ? bnNum(weightKg) + " → " : "") + bnNum(g.targetWeightKg) + " কেজি" + (g.weeks ? " · " + bnNum(g.weeks) + " সপ্তাহে" : "")),
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
-        canFocusGoal && line("f", ["🎯 টার্গেট: ", React.createElement("b", { key: "b" }, bodyFocus ? (focusLabels(bodyFocus.areas).join(", ") || "শরীরের টার্গেট এখনো বাছা হয়নি") : "শরীরের টার্গেট এখনো বাছা হয়নি")]),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
       canFocusGoal && onGoExercise && SecondaryButton(bodyFocus ? "🎯 শরীরের টার্গেট বদলান" : "🎯 শরীরের টার্গেট বাছুন (পেট, পেশি…)", onGoExercise, false),

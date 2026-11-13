@@ -162,7 +162,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const canLog = !!calc;
   const macros = sumNutrition(extras);
   const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সংরক্ষণ হয় না)
-  const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs), goal.planPrefs, info.allergyTags) : null;
+  const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs, { flags: info.flags, condKeys: info.condKeys }), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
   const budgetTarget = calc && !onFast ? calc.calorieTarget : null; // সিয়ামের দিনে টার্গেট স্থগিত → আগের প্ল্যান-ভিত্তিক সংখ্যা
   const budgets = plan ? slotBudgets(plan, eatenIds, extras, budgetTarget) : {};
@@ -292,7 +292,6 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? T.border : col, marginTop: "2px" } },
               tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
-      macros.total === 0 && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "6px" } }, "“খাবার” বাটনে যোগ করা খাবার থেকে হিসাব হয় 🙂"),
       macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
     ],
     alert: () => [
