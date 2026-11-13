@@ -9,6 +9,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { foodColumns, habitTipsBox } from "./FoodColumns.js";
+import { tagLabel } from "./tagLabels.js";
 import { FoodGroupGuide } from "./FoodGroupGuide.js";
 import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
@@ -80,12 +81,9 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
   if (!targetMemberId) return React.createElement("div", null, "সদস্য বেছে নিন।");
 
   const F = "14px";
-  const bullets = (items, sources) => React.createElement("ul", { style: { margin: 0, paddingLeft: "20px", fontSize: F, color: "#1F2D2A", lineHeight: 1.6 } },
-    items.map((x, i) => React.createElement("li", { key: i, style: { marginBottom: "4px" } }, x,
-      sources && sources[x] && sources[x].length > 1 && React.createElement("span", { style: { color: "#6B7B76", fontSize: "12px" } }, " (" + sources[x].join(", ") + ")"))));
-  const box = (title, items, color, bg, sources) => React.createElement("div", { style: { background: bg, borderRadius: "14px", padding: "12px", marginTop: "10px", border: "1px solid " + color + "33" } },
-    React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color, marginBottom: "8px" } }, title),
-    items.length ? bullets(items, sources) : React.createElement("div", { style: { fontSize: F, color: "#5F716C" } }, "নির্দিষ্ট কিছু নেই"));
+  // রোগ-ট্যাগ চিপ — কাঁচা ট্যাগ (ibs, overweight) বাংলা লেবেল + আইকনে (tagLabels.js)
+  const tagChip = (tag) => { const l = tagLabel(tag); return React.createElement("span", { key: tag, style: { display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px 4px 5px", borderRadius: "999px", background: "linear-gradient(135deg, var(--hs-chip-bg, #EEF3F0), var(--hs-surface, #fff))", border: "1px solid var(--hs-border, #C3D2CA)", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", fontSize: F, color: "var(--hs-primary, #0E4B43)", fontWeight: 700 } },
+    React.createElement("span", { "aria-hidden": true, style: { width: "26px", height: "26px", borderRadius: "50%", background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #C3D2CA)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "14px" } }, l.icon), l.text); };
 
   if (compact) {
     const top = result ? result.avoidFoods.slice(0, 3) : [];
@@ -93,7 +91,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
     return React.createElement("div", null,
       !result && React.createElement("div", { style: { color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
       result && top.length === 0 && React.createElement("div", { style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } }, "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"),
-      result && top.length > 0 && box("❌ আজ এড়িয়ে চলুন", top, "#B3261E", "#FDF0EE", result.avoidSources),
+      result && top.length > 0 && foodColumns({ avoid: top, include: [], avoidSources: result.avoidSources, avoidTitle: "আজ এড়িয়ে চলুন" }),
       more > 0 && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px" } }, "আরও " + bnNum(more) + "টি আছে — পূর্ণ তালিকায় দেখুন।"));
   }
 
@@ -108,18 +106,17 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
     result && result.matchedTags.length === 0 && guide,
     result && result.matchedTags.length > 0 && React.createElement(
       React.Fragment, null,
-      React.createElement("div", { style: { fontSize: F, fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "🩺 আপনার সমস্যা"),
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-        result.matchedTags.map((tag) => React.createElement("span", { key: tag, style: { padding: "4px 12px", borderRadius: "999px", background: "#fff", border: "1px solid #C3D2CA", fontSize: F, color: "var(--hs-primary, #0E4B43)", fontWeight: 600 } }, tag))),
+      React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, letterSpacing: "0.3px", color: "var(--hs-muted, #5F716C)", marginBottom: "8px" } }, "🩺 আপনার সমস্যা"),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, result.matchedTags.map(tagChip)),
       foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources, recent: result.recent }),
       habitTipsBox(result.habitTips),
       guide,
       result.matchedTags.length > 1 && React.createElement("button", {
         onClick: () => setOpenTag(openTag ? null : "__all"),
-        style: { marginTop: "12px", width: "100%", padding: "10px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: F, fontWeight: 600, cursor: "pointer" },
+        style: { marginTop: "14px", width: "100%", minHeight: "48px", padding: "10px", borderRadius: "14px", border: "1px solid var(--hs-border, #C3D2CA)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.08)", color: "var(--hs-primary, #0E4B43)", fontSize: F, fontWeight: 700, cursor: "pointer" },
       }, openTag ? "▲ অসুখ-ভিত্তিক বিস্তারিত বন্ধ করুন" : "▼ অসুখ-ভিত্তিক বিস্তারিত দেখুন"),
-      openTag && result.byTag.map((b) => React.createElement("div", { key: b.tag, style: { marginTop: "10px", border: "1px solid #D3E0D9", borderRadius: "14px", padding: "10px 12px", background: "#fff" } },
-        React.createElement("div", { style: { fontSize: F, fontWeight: 700, color: "var(--hs-primary, #0E4B43)", marginBottom: "4px" } }, b.tag),
+      openTag && result.byTag.map((b) => React.createElement("div", { key: b.tag, style: { marginTop: "12px", border: "1px solid var(--hs-border, #D3E0D9)", borderRadius: "18px", padding: "12px", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.06)" } },
+        tagChip(b.tag),
         foodColumns({ avoid: b.avoid, include: b.include }), habitTipsBox(b.tips)))
     )
   );
