@@ -106,21 +106,28 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   }
 
   // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
-  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 8px" } },
-    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: MUTED, margin: "2px 2px 6px", letterSpacing: "0.2px" } }, "সাম্প্রতিক"),
-    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px" } },
-      quick.slice(0, 8).map((e) => React.createElement("button", { key: e.name, onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
-        style: { ...chip(false), border: "1px solid rgba(127,150,140,0.22)", boxShadow: "0 1px 3px rgba(14,75,67,0.06)", minHeight: "38px", padding: "4px 6px", fontSize: "13px", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", opacity: busy ? 0.5 : 1 } }, e.name))));
+  // কার্ড-চিপ (২ কলাম, আয়তাকার + ↻ আইকন + আগের পরিমাণ) — বেলা-বার ও ধরন-চিপ কোনোটার মতো দেখতে নয়
+  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 18px" } },
+    React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "2px 2px 6px", letterSpacing: "0.3px" } }, "সাম্প্রতিক খাবার"),
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" } },
+      quick.slice(0, 6).map((e) => { const amt = entryAmountText(e) || ""; return React.createElement("button", { key: e.name, type: "button", onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + amt + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
+        style: { display: "flex", alignItems: "center", gap: "8px", minHeight: "52px", padding: "6px 10px", borderRadius: "14px", textAlign: "left", cursor: "pointer", fontFamily: "inherit", border: "1px solid rgba(127,150,140,0.22)", borderLeft: "4px solid #17705F", background: "linear-gradient(180deg, #fff, #F7FAF8)", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", opacity: busy ? 0.5 : 1, minWidth: 0 } },
+        React.createElement("span", { "aria-hidden": "true", style: { width: "28px", height: "28px", flexShrink: 0, borderRadius: "50%", background: "#E4F0E9", color: GREEN, fontSize: "16px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" } }, "↻"),
+        React.createElement("span", { style: { minWidth: 0, display: "flex", flexDirection: "column" } },
+          React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, e.name),
+          amt && React.createElement("span", { style: { fontSize: "12px", color: MUTED, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, amt))); })));
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
     return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose, soft: true },
       // বেলা-চিপ: ছোট, স্ক্রিনে আঁটে (সোয়াইপ/স্ক্রলবার নেই); বেশি হলে নিচের লাইনে নামে
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "-8px 0 10px" } },
-        slotList.map((s) => { const on = s.id === slot; return React.createElement("button", { key: s.id, onClick: () => setSlot(s.id), "aria-pressed": on,
-          style: { flex: "1 1 0", minWidth: "fit-content", minHeight: "38px", padding: "4px 8px", borderRadius: "999px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-            border: on ? "1px solid " + GREEN : "1px solid rgba(127,150,140,0.22)", boxShadow: on ? "0 3px 8px rgba(14,75,67,0.25)" : "0 1px 3px rgba(14,75,67,0.06)",
-            background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, s.label); })),
+      // বেলা-ট্যাব: একটাই সেগমেন্টেড বার (গোল পিল নয়) — নিচের খাবার-ধরন চিপ থেকে আকারে আলাদা
+      React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "-6px 2px 6px", letterSpacing: "0.3px" } }, "কোন বেলা?"),
+      React.createElement("div", { role: "tablist", "aria-label": "বেলা", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "#E3ECE6", boxShadow: "inset 0 1px 3px rgba(14,75,67,0.12)", marginBottom: "18px" } },
+        slotList.map((s) => { const on = s.id === slot; return React.createElement("button", { key: s.id, type: "button", role: "tab", onClick: () => setSlot(s.id), "aria-selected": on, "aria-pressed": on,
+          style: { flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
+            boxShadow: on ? "0 4px 10px rgba(14,75,67,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
+            background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "transparent", color: on ? "#fff" : "#3E524C" } }, s.label); })),
       notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
       recentRow || null,

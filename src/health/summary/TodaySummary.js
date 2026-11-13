@@ -153,7 +153,7 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
               showAllDoses ? "কম দেখান" : "সব দেখুন (" + bnNum(doses.length) + "টি)"))),
     noTimeCount > 0 && h("div", { style: { fontSize: "13px", color: T.muted, margin: "6px 2px 0" } }, bnNum(noTimeCount) + "টি ওষুধে রিমাইন্ডার-সময় সেট নেই, তাই এখানে আসেনি।"),
 
-    (!onlyMeds || upcoming.length > 0) && h("div", { style: SEC }, "আসন্ন"),
+    (!onlyMeds || upcoming.length > 0) && h("div", { style: SEC }, "আসন্ন ইভেন্ট"),
     (!onlyMeds || upcoming.length > 0) && h("div", { style: { ...BOX, padding: upcoming.length === 0 ? "4px 14px" : "8px 10px" } },
       upcoming.length === 0
         ? h("div", { style: { fontSize: "14px", color: T.muted, padding: "12px 0" } }, "আগামী ৩০ দিনে টিকা বা অ্যাপয়েন্টমেন্ট নেই।")

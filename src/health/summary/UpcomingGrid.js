@@ -35,6 +35,6 @@ export function UpcomingSection({ familyId, selectedMemberId, refreshTick }) {
   const list = upcomingEvents(events, selectedMemberId, localISO(), { limit: 4 });
   if (!list.length) return null;
   return h("div", { style: { margin: "0 0 8px" } },
-    h("div", { style: { fontSize: "14px", fontWeight: 700, color: T.green, margin: "0 2px 5px" } }, "📅 আসন্ন"),
+    h("div", { style: { fontSize: "14px", fontWeight: 700, color: T.green, margin: "0 2px 5px" } }, "📅 আসন্ন ইভেন্ট"),
     h(UpcomingGrid, { events: list }));
 }

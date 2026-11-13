@@ -101,11 +101,13 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
         React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", pointerEvents: "none" } }, "🔍"),
         React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — ভাত, Rice, ইলিশ", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
     between || null,
-    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "8px 0" } }, // সোয়াইপ নয়: ছোট চিপ ২ লাইনে
-      [["", "সব"], ...FOOD_GROUPS].map(([id, label]) => React.createElement("button", { key: id || "all", onClick: () => setGrp(id), "aria-pressed": grp === id,
-        style: { fontSize: "13px", fontWeight: 600, padding: "4px 12px", minHeight: "34px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit",
-          border: grp === id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid rgba(127,150,140,0.22)", boxShadow: grp === id ? "0 3px 8px rgba(14,75,67,0.25)" : "0 1px 3px rgba(14,75,67,0.06)",
-          background: grp === id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: grp === id ? "#fff" : "var(--hs-text, #2B3A36)" } }, label))),
+    React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "16px 2px 6px", letterSpacing: "0.3px" } }, "ধরন অনুযায়ী"),
+    // ধরন-ট্যাগ: ছোট-কোণ আয়তাকার, হালকা-সবুজ ভরাট + সবুজ বর্ডার (বেলা-বারের গাঢ় সবুজ গোল থেকে আলাদা)
+    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "0 0 10px" } },
+      [["", "সব"], ...FOOD_GROUPS].map(([id, label]) => React.createElement("button", { key: id || "all", type: "button", onClick: () => setGrp(id), "aria-pressed": grp === id,
+        style: { fontSize: "13px", fontWeight: grp === id ? 800 : 600, padding: "4px 12px", minHeight: "36px", borderRadius: "10px", cursor: "pointer", fontFamily: "inherit",
+          border: grp === id ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px dashed #B5C9BF", boxShadow: "none",
+          background: grp === id ? "#D9EDE2" : "transparent", color: grp === id ? "var(--hs-primary, #0E4B43)" : "#3E524C" } }, (grp === id ? "✓ " : "") + label))),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     layout === "list" ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
       found.map(({ key, f, allergy }) => {
