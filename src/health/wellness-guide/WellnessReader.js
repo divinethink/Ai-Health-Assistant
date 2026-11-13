@@ -73,11 +73,12 @@ function readSelection(root) {
   return e > s ? { s, e } : null;
 }
 
-export function WellnessReader({ post, uid, onClose }) {
+export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash }) {
   const text = useMemo(() => readerText(post), [post]);
   const [marks, setMarks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [pending, setPending] = useState(null);
   const [activeIds, setActiveIds] = useState(null);
   const [font, setFont] = useState(() => Math.min(FONT_MAX, Math.max(FONT_MIN, Number(lsGet("wgReaderFont", 18)) || 18)));
@@ -180,12 +181,19 @@ export function WellnessReader({ post, uid, onClose }) {
   const barBtn = (extra) => ({ minHeight: "40px", minWidth: "40px", borderRadius: "10px", border: "1px solid rgba(128,128,128,0.5)", background: "transparent", color: theme.fg, fontSize: "15px", cursor: "pointer", ...extra });
 
   const header = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "6px", padding: "8px 10px", background: theme.bar, color: theme.fg } },
-    React.createElement("button", { type: "button", onClick: onClose, "aria-label": "বন্ধ করুন", style: barBtn({ fontWeight: 700 }) }, "✕"),
+    "div", { style: { display: "flex", alignItems: "center", gap: "6px", padding: "8px 10px", background: theme.bar, color: theme.fg, position: "relative" } },
+    React.createElement("button", { type: "button", onClick: onClose, "aria-label": "পিছনে", style: barBtn({ fontWeight: 700 }) }, "←"),
     React.createElement("div", { style: { flex: 1, fontWeight: 600, fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, post.title),
     React.createElement("button", { type: "button", onClick: () => changeFont(-2), "aria-label": "ছোট", style: barBtn({ fontSize: "13px" }) }, "A−"),
     React.createElement("button", { type: "button", onClick: () => changeFont(2), "aria-label": "বড়", style: barBtn({ fontSize: "17px" }) }, "A+"),
-    React.createElement("button", { type: "button", onClick: cycleTheme, "aria-label": "থিম", style: barBtn() }, "◐")
+    React.createElement("button", { type: "button", onClick: cycleTheme, "aria-label": "থিম", style: barBtn() }, "◐"),
+    // শুধু ব্লগ-অ্যাডমিনের জন্য ⋮ মেনু (এডিট / ট্র্যাশে পাঠান); সদস্যরা কিছু দেখেন না।
+    canManage && React.createElement("button", { type: "button", onClick: () => setMenuOpen((o) => !o), "aria-label": "আরো অপশন", style: barBtn({ fontWeight: 700, fontSize: "20px" }) }, "⋮"),
+    canManage && menuOpen && React.createElement(
+      "div", { style: { position: "absolute", top: "100%", right: "10px", zIndex: 5, minWidth: "170px", background: theme.bg, color: theme.fg, border: "1px solid rgba(128,128,128,0.5)", borderRadius: "12px", boxShadow: "0 4px 14px rgba(0,0,0,0.25)", overflow: "hidden" } },
+      React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onEdit(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", color: theme.fg, fontSize: "14px", cursor: "pointer" } }, "✏️ এডিট"),
+      React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onTrash(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", borderTop: "1px solid rgba(128,128,128,0.3)", color: "#C0392B", fontSize: "14px", cursor: "pointer" } }, "🗑 ট্র্যাশে পাঠান")
+    )
   );
 
   const body = React.createElement(

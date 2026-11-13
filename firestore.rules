@@ -10,6 +10,13 @@ service cloud.firestore {
       return request.auth.uid == "NFwQuUKGKDMZgAZeO3NfcUAUCxl1";
     }
 
+    // ব্লগ (wellnessGuides) লেখা/এডিট/ডিলিট শুধু এই একজন ব্লগ-অ্যাডমিন।
+    // (পরিবার-অ্যাডমিন নয় — কারণ ব্লগ সব পরিবারের জন্য একটাই।)
+    function isBlogAdmin() {
+      return request.auth != null
+        && request.auth.uid == "bZrGqbY0dFVTkIXKvEAwfHbMhRk1";
+    }
+
     function isAdminOfFamily(familyId) {
       let familyPath = /databases/$(database)/documents/families/$(familyId);
       return exists(familyPath)
@@ -199,7 +206,7 @@ service cloud.firestore {
 
     match /wellnessGuides/{guideId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null
+      allow create: if isBlogAdmin()
         && isFamilyMember(request.resource.data.familyId)
         && request.resource.data.authorId == callerMemberIdOf(request.resource.data.familyId)
         && request.resource.data.keys().hasAll(['familyId', 'authorId', 'category', 'title', 'body'])
@@ -208,13 +215,14 @@ service cloud.firestore {
               'chronic-disease-prevention', 'mental-health', 'skin-beauty',
               'sleep-lifestyle', 'first-aid-emergency',
               'education-career', 'money-life-skills', 'digital-safety', 'outdoor-community'];
-      allow update: if request.auth != null
-        && resource.data.authorId == callerMemberIdOf(resource.data.familyId)
-        && request.resource.data.familyId == resource.data.familyId
-        && request.resource.data.authorId == resource.data.authorId;
-      allow delete: if request.auth != null
-        && (isAdminOfFamily(resource.data.familyId)
-            || resource.data.authorId == callerMemberIdOf(resource.data.familyId));
+      // এডিট ও ট্র্যাশ/রিস্টোর (deletedAt/deletedBy) — শুধু ব্লগ-অ্যাডমিন; অন্য কোনো ফিল্ড (familyId/authorId/createdAt) বদলানো যাবে না।
+      allow update: if isBlogAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['category', 'title', 'summary', 'body', 'tags', 'ageRangeYears',
+              'pregnancyMonthRange', 'sourceNote', 'updatedAt', 'deletedAt', 'deletedBy']);
+      // স্থায়ী মোছা শুধু ট্র্যাশে থাকা (deletedAt আছে) পোস্ট।
+      allow delete: if isBlogAdmin()
+        && resource.data.get('deletedAt', null) != null;
     }
 
     // ব্যক্তিগত রিডার-মার্ক (আন্ডারলাইন/হাইলাইট) — docId = uid + "_" + postId,

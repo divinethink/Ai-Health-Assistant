@@ -1,12 +1,18 @@
 // Wellness Guide (ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা) data-layer।
-// User-Owned Content model (amendment item ৩): যেকোনো family member লিখতে
-// পারবেন (authorId = লেখকের memberId), শুধু নিজের লেখা edit করতে পারবেন,
-// delete author বা Admin উভয়েই পারবেন (firestore.rules দ্রষ্টব্য)। পুরনো
+// আপডেট (owner-request, ২০২৬-১১-১৩): লেখা/এডিট/ডিলিট শুধু ব্লগ-অ্যাডমিন (firestore.rules-এর
+// isBlogAdmin()); সব সদস্য শুধু পড়তে পারেন। ডিলিট = ট্র্যাশে সরানো (deletedAt), ফেরত আনা যায়;
+// স্থায়ী মোছা শুধু ট্র্যাশ থেকে। আগে User-Owned Content model ছিল। পুরনো
 // seed-content (scripts/populateWellnessGuides.js দিয়ে সরাসরি Admin-SDK-তে
 // লেখা, familyId/authorId নেই) অপরিবর্তিত থাকে — সেগুলো শুধু script re-run
 // দিয়েই edit হয়, আগের মতোই।
 
 import { db } from "../../legacy/firebaseConfig.js";
+
+// শুধু UI দেখানোর জন্য — আসল নিয়ন্ত্রণ firestore.rules-এর isBlogAdmin()-এ (দুটো একই UID রাখতে হবে)।
+export const BLOG_ADMIN_UID = "bZrGqbY0dFVTkIXKvEAwfHbMhRk1";
+export function isBlogAdminUid(uid) {
+  return !!uid && uid === BLOG_ADMIN_UID;
+}
 
 export const WELLNESS_CATEGORIES = [
   ["general", "সাধারণ স্বাস্থ্য"],
@@ -76,6 +82,22 @@ export async function updateWellnessGuide(guideId, fields) {
   });
 }
 
+// ট্র্যাশে সরানো (ডেটা মোছে না) ও ফেরত আনা।
+export async function trashWellnessGuide(guideId, uid) {
+  await db.collection("wellnessGuides").doc(guideId).update({
+    deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    deletedBy: uid,
+  });
+}
+
+export async function restoreWellnessGuide(guideId) {
+  await db.collection("wellnessGuides").doc(guideId).update({
+    deletedAt: firebase.firestore.FieldValue.delete(),
+    deletedBy: firebase.firestore.FieldValue.delete(),
+  });
+}
+
+// স্থায়ী মোছা — rules অনুযায়ী শুধু ট্র্যাশে থাকা পোস্ট।
 export async function deleteWellnessGuide(guideId) {
   await db.collection("wellnessGuides").doc(guideId).delete();
 }

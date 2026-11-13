@@ -1,25 +1,39 @@
 // Wellness Guide Section — ব্লগ-স্টাইল স্বাস্থ্যকর জীবনযাপন নির্দেশিকা।
 //
-// আপডেট (owner-request, ২০২৬-০৯-১৩): এখন একটা full-screen
-// special-mode — normal বাটনে ক্লিক করলে খোলে (app.js-এ showHealthBlog toggle),
-// ভেতরে category-sidebar (mobile-এ drawer) + পোস্ট-লিস্ট। ডেটা-লেয়ার (wellnessGuideData.js) ও
-// PostCard/WellnessGuideForm অপরিবর্তিত — শুধু layout/wrapper নতুন।
+// আপডেট (owner-request, ২০২৬-১১-১৩):
+//  • ব্লগ খুললে আগে ক্যাটেগরি-পেজ (গ্রিড + পোস্ট-সংখ্যা + সার্চ); ক্যাটেগরিতে ক্লিক করলে তালিকা।
+//  • ওপরে সর্ব বামে ব্যাক আইকন (তালিকা → ক্যাটেগরি-পেজ → ব্লগ থেকে বের); তালিকায় ব্যাকের পাশে ক্যাটেগরি-আইকন।
+//  • লেখা/এডিট/ডিলিট শুধু ব্লগ-অ্যাডমিন (UI লুকানো + firestore.rules-এ আসল নিয়ন্ত্রণ)। এডিট/ট্র্যাশ
+//    রিড-মোডের ⋮ মেনুতে; ডিলিট = ট্র্যাশে সরানো (ফেরত আনা যায়), স্থায়ী মোছা শুধু ট্র্যাশ-পেজ থেকে।
 // কোনো AI/dose/triage logic নেই — শুধু owner-curated reference content।
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
-import { listWellnessGuides, deleteWellnessGuide, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from "./wellnessGuideData.js";
+import {
+  listWellnessGuides, deleteWellnessGuide, trashWellnessGuide, restoreWellnessGuide,
+  isBlogAdminUid, WELLNESS_CATEGORIES, formatAgeOrMonthRange,
+} from "./wellnessGuideData.js";
 import { WellnessGuideForm } from "./WellnessGuideForm.js";
 import { WellnessReader } from "./WellnessReader.js";
 
 const { useState, useEffect } = React;
 
-// Read-More marker (owner-request, ২০২৬-০৯-১৩) — WordPress-এর "Insert More
-// Tag"-এর মতো: লেখক body-টেক্সটের যেখানে `[MORE]` বসাবেন, প্রিভিউ ঠিক সেই
-// বিন্দু পর্যন্ত দেখাবে, বাকিটা "আরো পড়ুন"-এ ক্লিকে খুলবে। আগের আলাদা
-// "সংক্ষিপ্ত সারাংশ" ফিল্ড আর ব্যবহার হচ্ছে না (নতুন পোস্টে ফর্ম থেকেই বাদ) —
-// কিন্তু পুরনো পোস্টে থাকা `summary` ডেটা fallback হিসেবে অক্ষত থাকল (data-loss
-// নেই, Process Rule ৩)।
+const PRIMARY = "var(--hs-primary, #0E4B43)";
+
+const CATEGORY_ICONS = {
+  "general": "🩺", "diet-fitness": "🥗", "child-care": "🧒", "women-health": "👩",
+  "elderly-care": "🧓", "chronic-disease-prevention": "🫀", "mental-health": "🧠",
+  "skin-beauty": "🧴", "sleep-lifestyle": "😴", "first-aid-emergency": "🚑",
+  "education-career": "🎓", "money-life-skills": "💰", "digital-safety": "📱",
+  "outdoor-community": "🌳",
+};
+
+function toBn(n) {
+  return String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
+}
+
+// Read-More marker (owner-request, ২০২৬-০৯-১৩) — `[MORE]`-এর আগের অংশ প্রিভিউ, বাকিটা "আরো পড়ুন"-এ।
+// পুরনো পোস্টের `summary` fallback হিসেবে অক্ষত (data-loss নেই)।
 const MORE_MARKER = "[MORE]";
 
 function splitBodyAtMarker(body) {
@@ -31,11 +45,11 @@ function splitBodyAtMarker(body) {
   };
 }
 
-function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDelete, onRead }) {
+const smallBtn = (extra) => ({ fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #D3E0D9", background: "#fff", cursor: "pointer", ...extra });
+
+function PostCard({ post, expanded, onToggle, onRead, trashMode, onRestore, onPurge }) {
   const rangeLabel = formatAgeOrMonthRange(post);
   const split = splitBodyAtMarker(post.body);
-  // marker থাকলে preview = marker-এর আগের অংশ; না থাকলে পুরনো summary
-  // fallback (থাকলে); কোনোটাই না থাকলে preview নেই — শুধু ক্লিক করলে খুলবে।
   const previewText = split ? split.preview : post.summary || null;
   const remainingText = split ? split.rest : post.body;
   const hasMore = !!split || !!post.summary;
@@ -44,14 +58,14 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
     "div", { key: post.id, style: { ...PREMIUM_CARD, padding: "10px", marginBottom: "8px" } },
     React.createElement(
       "div", { style: { cursor: "pointer" }, onClick: onToggle },
-      React.createElement("div", { style: { fontWeight: 600, color: "var(--hs-primary, #0E4B43)", fontSize: "14px" } }, post.title),
+      React.createElement("div", { style: { fontWeight: 600, color: PRIMARY, fontSize: "14px" } }, post.title),
       React.createElement(
         "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "2px" } },
         (rangeLabel ? rangeLabel + " · " : "") + (post.tags || []).join(", ")
       ),
       previewText && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
       !expanded && hasMore && React.createElement(
-        "span", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, marginTop: "4px", display: "inline-block" } },
+        "span", { style: { fontSize: "14px", color: PRIMARY, fontWeight: 600, marginTop: "4px", display: "inline-block" } },
         "আরো পড়ুন »"
       )
     ),
@@ -62,54 +76,62 @@ function PostCard({ post, expanded, onToggle, canEdit, canDelete, onEdit, onDele
     ),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" } },
-      onRead && React.createElement(
+      !trashMode && onRead && React.createElement(
         "button", {
           onClick: (e) => { e.stopPropagation(); onRead(post); },
-          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontWeight: 600 },
+          style: smallBtn({ border: "1px solid " + PRIMARY, color: PRIMARY, fontWeight: 600 }),
         },
         "📖 পড়ার মোড"
       ),
-      canEdit && React.createElement(
-        "button", {
-          onClick: (e) => { e.stopPropagation(); onEdit(post); },
-          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #D3E0D9", background: "#fff", cursor: "pointer" },
-        },
-        "এডিট"
+      trashMode && React.createElement(
+        "button", { onClick: (e) => { e.stopPropagation(); onRestore(post); }, style: smallBtn({ border: "1px solid " + PRIMARY, color: PRIMARY, fontWeight: 600 }) },
+        "↩ ফেরত আনুন"
       ),
-      canDelete && React.createElement(
-        "button", {
-          onClick: (e) => { e.stopPropagation(); onDelete(post); },
-          style: { fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #C0392B", background: "#fff", color: "#C0392B", cursor: "pointer" },
-        },
-        "ডিলিট"
+      trashMode && React.createElement(
+        "button", { onClick: (e) => { e.stopPropagation(); onPurge(post); }, style: smallBtn({ border: "1px solid #C0392B", color: "#C0392B" }) },
+        "স্থায়ীভাবে মুছুন"
       )
     )
   );
 }
 
-function CategorySidebar({ category, onSelect }) {
-  const items = [["all", "সব"], ...WELLNESS_CATEGORIES];
+function CategorySidebar({ category, onSelect, counts, total, canManage, trashCount }) {
+  const items = [["all", "সব", total], ...WELLNESS_CATEGORIES.map(([id, label]) => [id, label, counts[id] || 0])];
+  if (canManage) items.push(["trash", "🗑 ট্র্যাশ", trashCount]);
   return React.createElement(
     "div", { style: { width: "100%", height: "100%", background: "#EEF5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)", padding: "4px 8px", marginBottom: "4px" } }, "ক্যাটেগরি"),
-    items.map(([catId, label]) => {
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: PRIMARY, padding: "4px 8px", marginBottom: "4px" } }, "ক্যাটেগরি"),
+    items.map(([catId, label, n]) => {
       const active = category === catId;
       return React.createElement(
         "div", {
           key: catId, onClick: () => onSelect(catId),
           style: {
             padding: "8px 10px", borderRadius: "10px", fontSize: "14px", cursor: "pointer", marginBottom: "2px",
-            background: active ? "var(--hs-primary, #0E4B43)" : "transparent", color: active ? "#fff" : "#1F2D2A",
+            background: active ? PRIMARY : "transparent", color: active ? "#fff" : "#1F2D2A",
           },
         },
-        label
+        label + " (" + toBn(n) + ")"
       );
     })
   );
 }
 
-export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) {
-  const [category, setCategory] = useState("all");
+function CategoryTile({ icon, label, count, onClick }) {
+  return React.createElement(
+    "div", {
+      onClick, role: "button",
+      style: { ...PREMIUM_CARD, padding: "12px 10px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", minHeight: "84px", boxSizing: "border-box" },
+    },
+    React.createElement("div", { style: { fontSize: "26px", lineHeight: 1 } }, icon),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: PRIMARY } }, label),
+    React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "(" + toBn(count) + ")")
+  );
+}
+
+export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
+  // category: null = ক্যাটেগরি-পেজ; "all" | ক্যাটেগরি-id | "trash" = তালিকা
+  const [category, setCategory] = useState(null);
   const [posts, setPosts] = useState(null);
   const [err, setErr] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -117,105 +139,202 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
   const [editingPost, setEditingPost] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [readerPost, setReaderPost] = useState(null);
-  const [pendingDelete, setPendingDelete] = useState(null); // ২-ধাপ confirm (existing app-wide delete pattern)
-  // Desktop-এ ডিফল্টে sidebar খোলা, mobile-এ বন্ধ (mount-time viewport-check)।
+  const [pendingTrash, setPendingTrash] = useState(null);
+  const [pendingPurge, setPendingPurge] = useState(null); // ২-ধাপ confirm (existing app-wide delete pattern)
+  const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    if (window.innerWidth >= 900) setSidebarOpen(true);
-  }, []);
+  const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
+  const readerUid = authUser ? authUser.uid : null;
+  const canManage = isBlogAdminUid(readerUid);
 
+  // সব পোস্ট একবারে লোড; ক্যাটেগরি-ফিল্টার ও সংখ্যা ক্লায়েন্টে (আলাদা read লাগে না)।
   useEffect(() => {
-    setPosts(null);
-    listWellnessGuides(category === "all" ? null : category)
-      .then(setPosts)
+    listWellnessGuides(null)
+      .then((list) => { setPosts(list); setErr(null); })
       .catch((e) => setErr(e.message || String(e)));
-  }, [category, refreshTick]);
+  }, [refreshTick]);
+
+  const all = posts || [];
+  const active = all.filter((p) => !p.deletedAt);
+  const trashed = all.filter((p) => p.deletedAt);
+  const counts = {};
+  active.forEach((p) => { counts[p.category] = (counts[p.category] || 0) + 1; });
+
+  const q = query.trim().toLowerCase();
+  const searchHits = q
+    ? active.filter((p) => ((p.title || "") + " " + (p.summary || "") + " " + (p.tags || []).join(" ")).toLowerCase().indexOf(q) !== -1)
+    : null;
+
+  let listPosts = null;
+  if (category === "trash") listPosts = trashed;
+  else if (category === "all") listPosts = active;
+  else if (category) listPosts = active.filter((p) => p.category === category);
+
+  function reload() { setRefreshTick((t) => t + 1); }
 
   function handleSaved() {
     setShowForm(false);
     setEditingPost(null);
-    setRefreshTick((t) => t + 1);
+    reload();
   }
 
-  async function confirmDelete() {
-    if (!pendingDelete) return;
+  async function confirmTrash() {
+    if (!pendingTrash) return;
     try {
-      await deleteWellnessGuide(pendingDelete.id);
-      setPendingDelete(null);
-      setRefreshTick((t) => t + 1);
+      await trashWellnessGuide(pendingTrash.id, readerUid);
+      setPendingTrash(null);
+      reload();
     } catch (e) {
       setErr(e.message || String(e));
-      setPendingDelete(null);
+      setPendingTrash(null);
     }
   }
 
-  function selectCategory(catId) {
-    setCategory(catId);
-    setExpandedId(null);
-    setSidebarOpen(false); // mobile drawer বন্ধ; desktop-এ user চাইলে হ্যামবার্গারে আবার খুলবেন
+  async function restore(post) {
+    try {
+      await restoreWellnessGuide(post.id);
+      reload();
+    } catch (e) {
+      setErr(e.message || String(e));
+    }
   }
 
-  const authUser = typeof firebase !== "undefined" && firebase.auth ? firebase.auth().currentUser : null;
-  const readerUid = authUser ? authUser.uid : null;
+  async function confirmPurge() {
+    if (!pendingPurge) return;
+    try {
+      await deleteWellnessGuide(pendingPurge.id);
+      setPendingPurge(null);
+      reload();
+    } catch (e) {
+      setErr(e.message || String(e));
+      setPendingPurge(null);
+    }
+  }
+
+  function openCategory(catId) {
+    setCategory(catId);
+    setExpandedId(null);
+    setSidebarOpen(false);
+    setQuery("");
+  }
+
+  function goBack() {
+    if (showForm || editingPost) { setShowForm(false); setEditingPost(null); return; }
+    if (category !== null) { setCategory(null); setExpandedId(null); setSidebarOpen(false); return; }
+    if (onExit) onExit();
+  }
+
+  const inList = category !== null;
+  let title = "🌿 স্বাস্থ্য ব্লগ";
+  if (category === "all") title = "সব পোস্ট";
+  else if (category === "trash") title = "🗑 ট্র্যাশ";
+  else if (category) {
+    const hit = WELLNESS_CATEGORIES.find(([id]) => id === category);
+    title = hit ? hit[1] : title;
+  }
+
+  const hdrBtn = { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "18px", minWidth: "40px", minHeight: "40px", borderRadius: "10px", cursor: "pointer", flexShrink: 0 };
 
   const headerBar = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", background: "var(--hs-primary, #0E4B43)", color: "#fff" } },
-    React.createElement("button", {
-      onClick: () => setSidebarOpen((o) => !o), title: "ক্যাটেগরি",
-      style: { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "14px", padding: "4px 8px", borderRadius: "10px", cursor: "pointer" },
+    "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: PRIMARY, color: "#fff" } },
+    React.createElement("button", { type: "button", onClick: goBack, "aria-label": "পিছনে", style: hdrBtn }, "←"),
+    inList && !showForm && !editingPost && React.createElement("button", {
+      type: "button", onClick: () => setSidebarOpen((o) => !o), "aria-label": "ক্যাটেগরি", title: "ক্যাটেগরি", style: hdrBtn,
     }, "☰"),
-    React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px" } }, "🌿 স্বাস্থ্য ব্লগ"),
-    !showForm && !editingPost && React.createElement(
+    React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, title),
+    canManage && !showForm && !editingPost && category !== "trash" && React.createElement(
       "button", {
         onClick: () => { setEditingPost(null); setShowForm(true); },
-        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontWeight: 600 },
+        style: { fontSize: "14px", padding: "6px 10px", borderRadius: "10px", border: "1px solid #fff", background: "#fff", color: PRIMARY, cursor: "pointer", fontWeight: 600, flexShrink: 0 },
       },
       "+ নতুন লেখা"
-    ),
-    onExit && React.createElement("button", { type: "button", onClick: onExit, "aria-label": "বন্ধ করুন", style: { flexShrink: 0, minWidth: "44px", minHeight: "44px", border: "1px solid rgba(255,255,255,0.5)", borderRadius: "12px", background: "none", color: "#fff", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "✕")
+    )
   );
 
-  const sidebarDrawer = sidebarOpen && React.createElement(
+  const sidebarDrawer = inList && sidebarOpen && React.createElement(
     React.Fragment, null,
     React.createElement("div", { onClick: () => setSidebarOpen(false), style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 20 } }),
     React.createElement(
       "div", { style: { position: "absolute", top: 0, left: 0, bottom: 0, width: "78%", maxWidth: "260px", zIndex: 21, boxShadow: "3px 0 10px rgba(0,0,0,0.25)" } },
-      React.createElement(CategorySidebar, { category, onSelect: selectCategory })
+      React.createElement(CategorySidebar, { category, onSelect: openCategory, counts, total: active.length, canManage, trashCount: trashed.length })
     )
+  );
+
+  function renderCards(list, trashMode) {
+    return list.map((p) =>
+      React.createElement(PostCard, {
+        key: p.id, post: p, expanded: expandedId === p.id, trashMode,
+        onToggle: () => setExpandedId((id) => (id === p.id ? null : p.id)),
+        onRead: readerUid ? (post) => setReaderPost(post) : null,
+        onRestore: restore,
+        onPurge: (post) => setPendingPurge(post),
+      })
+    );
+  }
+
+  const searchBox = React.createElement("input", {
+    type: "search", value: query, placeholder: "🔍 পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
+    onChange: (e) => setQuery(e.target.value),
+    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "12px", border: "1px solid #D3E0D9", fontSize: "14px", marginBottom: "10px", fontFamily: "inherit" },
+  });
+
+  let body = null;
+  if (!err && posts === null) {
+    body = React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+  } else if (!err && category === null) {
+    // ক্যাটেগরি-পেজ
+    if (searchHits) {
+      body = React.createElement(
+        React.Fragment, null, searchBox,
+        searchHits.length === 0
+          ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কিছু পাওয়া যায়নি।")
+          : renderCards(searchHits, false)
+      );
+    } else {
+      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সব পোস্ট", count: active.length, onClick: () => openCategory("all") })]
+        .concat(WELLNESS_CATEGORIES.map(([id, label]) =>
+          React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "📄", label, count: counts[id] || 0, onClick: () => openCategory(id) })
+        ));
+      if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "🗑", label: "ট্র্যাশ", count: trashed.length, onClick: () => openCategory("trash") }));
+      body = React.createElement(
+        React.Fragment, null, searchBox,
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } }, tiles)
+      );
+    }
+  } else if (!err && listPosts) {
+    body = listPosts.length === 0
+      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, category === "trash" ? "ট্র্যাশ খালি।" : "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।")
+      : renderCards(listPosts, category === "trash");
+  }
+
+  const confirmBox = (text, onYes, yesLabel, onNo) => React.createElement(
+    "div", { style: { marginBottom: "10px", padding: "10px", border: "1px solid #C0392B", borderRadius: "14px", background: "#FDF2F2" } },
+    React.createElement("div", { style: { fontSize: "14px", marginBottom: "8px" } }, text),
+    PrimaryButton(yesLabel, onYes, false),
+    SecondaryButton("বাতিল", onNo, false)
   );
 
   const mainContent = React.createElement(
     "div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px" } },
-    (showForm || editingPost) && React.createElement(WellnessGuideForm, {
+    pendingTrash && confirmBox("\"" + pendingTrash.title + "\" পোস্টটা ট্র্যাশে পাঠাবেন? (পরে ফেরত আনা যাবে)", confirmTrash, "হ্যাঁ, ট্র্যাশে পাঠান", () => setPendingTrash(null)),
+    pendingPurge && confirmBox("\"" + pendingPurge.title + "\" পোস্টটা স্থায়ীভাবে মুছবেন? এটি আর ফেরত আসবে না।", confirmPurge, "হ্যাঁ, স্থায়ীভাবে মুছুন", () => setPendingPurge(null)),
+    canManage && (showForm || editingPost) && React.createElement(WellnessGuideForm, {
       familyId, myMemberId, editingPost,
       onSaved: handleSaved,
       onCancel: () => { setShowForm(false); setEditingPost(null); },
     }),
     err && ErrorBox(err),
-    !err && posts === null && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
-    !err && posts && posts.length === 0 && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।"),
-    !err && posts && posts.map((p) =>
-      React.createElement(PostCard, {
-        key: p.id, post: p, expanded: expandedId === p.id,
-        onToggle: () => setExpandedId((id) => (id === p.id ? null : p.id)),
-        canEdit: !!myMemberId && p.authorId === myMemberId,
-        canDelete: isAdmin || (!!myMemberId && p.authorId === myMemberId),
-        onEdit: (post) => { setShowForm(false); setEditingPost(post); },
-        onDelete: (post) => setPendingDelete(post),
-        onRead: readerUid ? (post) => setReaderPost(post) : null,
-      })
-    ),
-    pendingDelete && React.createElement(
-      "div", { style: { marginTop: "10px", padding: "10px", border: "1px solid #C0392B", borderRadius: "14px", background: "#FDF2F2" } },
-      React.createElement("div", { style: { fontSize: "14px", marginBottom: "8px" } }, "\"" + pendingDelete.title + "\" পোস্টটা স্থায়ীভাবে ডিলিট করবেন?"),
-      PrimaryButton("হ্যাঁ, ডিলিট করুন", confirmDelete, false),
-      SecondaryButton("বাতিল", () => setPendingDelete(null), false)
-    )
+    body
   );
 
   if (readerPost && readerUid) {
-    return React.createElement(WellnessReader, { post: readerPost, uid: readerUid, onClose: () => setReaderPost(null) });
+    return React.createElement(WellnessReader, {
+      post: readerPost, uid: readerUid, onClose: () => setReaderPost(null),
+      canManage,
+      onEdit: (post) => { setReaderPost(null); setShowForm(false); setEditingPost(post); },
+      onTrash: (post) => { setReaderPost(null); setPendingTrash(post); },
+    });
   }
 
   return React.createElement(
@@ -225,13 +344,6 @@ export function WellnessGuideSection({ familyId, isAdmin, myMemberId, onExit }) 
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },
       sidebarDrawer,
       mainContent
-    ),
-    React.createElement(
-      "div", { style: { padding: "8px 14px", background: "#EEF5F0", borderTop: "1px solid #D3E0D9", textAlign: "right" } },
-      React.createElement("button", {
-        onClick: onExit,
-        style: { background: "none", border: "1px solid var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", padding: "5px 12px", borderRadius: "10px", cursor: "pointer" },
-      }, "← ফিরে যান")
     )
   );
 }
