@@ -179,20 +179,20 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
     } catch (e) { /* noop */ }
   };
   return React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "14px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "16px", marginBottom: "14px", background: "var(--hs-surface)", boxShadow: "0 2px 10px rgba(14,75,67,0.09)" } },
-    React.createElement("div", { style: { width: "56px", height: "56px", flexShrink: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: 800, color: "var(--hs-primary-contrast)", background: "var(--hs-primary)" } }, initial),
+    "div", { style: { display: "flex", alignItems: "center", gap: "12px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "12px 14px", marginBottom: "10px", background: "linear-gradient(135deg, var(--hs-surface), var(--hs-chip-bg))", boxShadow: "0 3px 12px rgba(14,75,67,0.10)" } },
+    React.createElement("div", { style: { width: "46px", height: "46px", flexShrink: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: 800, color: "var(--hs-primary-contrast)", background: "linear-gradient(135deg, var(--hs-primary), var(--hs-primary-2, var(--hs-primary)))", boxShadow: "0 3px 8px rgba(14,75,67,0.3)" } }, initial),
     React.createElement(
       "div", { style: { flex: 1, minWidth: 0 } },
-      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" } },
-        React.createElement("span", { style: { fontWeight: 800, color: "var(--hs-primary)", fontSize: "17px" } }, memberDoc.name),
-        React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg)", color: "var(--hs-primary)" } }, isAdmin ? "Admin" : memberDoc.role)
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+        React.createElement("span", { style: { fontWeight: 800, color: "var(--hs-primary)", fontSize: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, memberDoc.name),
+        React.createElement("span", { style: { fontSize: "11px", fontWeight: 700, padding: "1px 8px", borderRadius: "999px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", flexShrink: 0 } }, isAdmin ? "Admin" : memberDoc.role)
       ),
-      React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted)", marginTop: "6px" } }, t("top.familyCode")),
-      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" } },
-        React.createElement("b", { style: { fontSize: "14px", wordBreak: "break-all" } }, familyDoc.familyCodeDisplay),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "3px", minWidth: 0 } },
+        React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted)", flexShrink: 0 } }, t("top.familyCode")),
+        React.createElement("b", { style: { fontSize: "12.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 } }, familyDoc.familyCodeDisplay),
         React.createElement("button", {
-          onClick: copyCode,
-          style: { fontSize: "13px", padding: "3px 10px", borderRadius: "999px", border: "1px solid var(--hs-primary)", background: "transparent", color: "var(--hs-primary)", cursor: "pointer" },
+          onClick: copyCode, "aria-label": t("menu.copy"),
+          style: { fontSize: "12px", padding: "2px 9px", borderRadius: "999px", border: "1px solid var(--hs-primary)", background: "transparent", color: "var(--hs-primary)", cursor: "pointer", flexShrink: 0, fontFamily: "inherit" },
         }, copied ? t("menu.copied") : "📋 " + t("menu.copy"))
       )
     )
@@ -217,31 +217,27 @@ const THEME_OPTIONS = [
 const HS_THEME_IDS = THEME_OPTIONS.map((o) => o[0]);
 
 function ThemeSwitcher() {
+  useLang();
   const [theme, setTheme] = useState(
     () => localStorage.getItem(HS_THEME_STORAGE_KEY) || "light"
   );
-  const applyTheme = (t) => {
-    document.documentElement.setAttribute("data-theme", t);
-    localStorage.setItem(HS_THEME_STORAGE_KEY, t);
-    setTheme(t);
+  const applyTheme = (id) => {
+    document.documentElement.setAttribute("data-theme", id);
+    localStorage.setItem(HS_THEME_STORAGE_KEY, id);
+    setTheme(id);
   };
+  // কমপ্যাক্ট রঙের-গোল সারি (নাম নয়) — বাছা থিমের নাম ডানে; নাম/ইমোজি aria-label-এ
   return React.createElement(
-    "div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-    THEME_OPTIONS.map(([id, label, dot]) =>
-      React.createElement(
-        "button", {
-          key: id, onClick: () => applyTheme(id),
-          style: {
-            padding: "8px 14px", borderRadius: "999px", cursor: "pointer", fontSize: "14px",
-            border: theme === id ? "2px solid var(--hs-primary)" : "1px solid var(--hs-border)",
-            background: theme === id ? "var(--hs-chip-bg)" : "var(--hs-surface)",
-            color: "var(--hs-text)", fontWeight: theme === id ? 700 : 500,
-          },
-        },
-        React.createElement("span", { "aria-hidden": "true", style: { display: "inline-block", width: "12px", height: "12px", borderRadius: "50%", background: dot, marginRight: "6px", verticalAlign: "-1px", border: "1px solid var(--hs-border)" } }),
-        t(label)
-      )
-    )
+    "div", { style: { display: "flex", alignItems: "center", gap: "10px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "8px 12px", marginBottom: "12px", background: "var(--hs-surface)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)" } },
+    React.createElement("div", { role: "radiogroup", "aria-label": t("menu.themeShort"), style: { flex: 1, display: "flex", justifyContent: "space-between", gap: "6px", overflowX: "auto", padding: "3px 2px", scrollbarWidth: "none" } },
+      THEME_OPTIONS.map(([id, label, dot]) => {
+        const on = theme === id;
+        return React.createElement("button", {
+          key: id, type: "button", role: "radio", "aria-checked": on, "aria-label": t(label), title: t(label), onClick: () => applyTheme(id),
+          style: { width: "30px", height: "30px", flexShrink: 0, padding: 0, borderRadius: "50%", cursor: "pointer", background: dot, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "14px", fontWeight: 800,
+            border: "2px solid " + (on ? "var(--hs-surface)" : "rgba(0,0,0,0.08)"), boxShadow: on ? "0 0 0 2.5px var(--hs-primary), 0 3px 8px rgba(14,75,67,0.3)" : "none" },
+        }, on ? "✓" : "");
+      }))
   );
 }
 
@@ -358,9 +354,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       body = React.createElement(
         React.Fragment, null,
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", marginBottom: "6px" } }, t("menu.language")),
-        React.createElement(LanguageSwitcher),
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", margin: "16px 0 6px" } }, t("menu.prefs")),
-        React.createElement(ThemeSwitcher)
+        React.createElement(LanguageSwitcher)
       );
     }
     return React.createElement(
@@ -377,27 +371,28 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     );
   }
 
+  // কমপ্যাক্ট প্রিমিয়াম: ছোট দ্রুত-টাইল (গ্রেডিয়েন্ট + আইকন-বাবল) + এক কার্ডে ভাগ-করা সারি-তালিকা
   const tile = (icon, label, onClick, urgent) => React.createElement("button", {
-    onClick,
+    key: label, type: "button", onClick,
     style: {
-      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "6px", minHeight: "88px", padding: "12px 8px",
-      borderRadius: "18px", cursor: "pointer", fontSize: "14px", fontWeight: 700, lineHeight: 1.3, textAlign: "center",
+      flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", minHeight: "70px", padding: "8px 4px",
+      borderRadius: "16px", cursor: "pointer", fontSize: "13px", fontWeight: 700, lineHeight: 1.2, textAlign: "center", fontFamily: "inherit",
       border: "1px solid " + (urgent ? "#E5A29A" : "var(--hs-border)"),
-      background: urgent ? "#FFF1EE" : "var(--hs-chip-bg)",
+      background: urgent ? "linear-gradient(180deg, #FFF6F4, #FFE9E5)" : "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))",
       color: urgent ? "#C0392B" : "var(--hs-primary)",
-      boxShadow: "0 2px 8px rgba(14,75,67,0.08)",
+      boxShadow: "0 3px 10px rgba(14,75,67,0.09)",
     },
-  }, React.createElement("span", { style: { fontSize: "26px" } }, icon), label);
+  }, React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1 } }, icon), React.createElement("span", { style: { maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, label));
 
-  const row = (icon, title, subtitle, onClick) => React.createElement("button", {
-    key: title, onClick,
-    style: { width: "100%", display: "flex", alignItems: "center", gap: "14px", padding: "14px", marginBottom: "10px", borderRadius: "16px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", cursor: "pointer", textAlign: "left", color: "var(--hs-text)" },
+  const row = (icon, title, subtitle, onClick, last) => React.createElement("button", {
+    key: title, type: "button", onClick,
+    style: { width: "100%", display: "flex", alignItems: "center", gap: "12px", minHeight: "56px", padding: "8px 14px", border: "none", borderBottom: last ? "none" : "1px solid var(--hs-border)", background: "transparent", cursor: "pointer", textAlign: "left", color: "var(--hs-text)", fontFamily: "inherit" },
   },
-    React.createElement("span", { style: { width: "42px", height: "42px", flexShrink: 0, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", background: "var(--hs-chip-bg)" } }, icon),
+    React.createElement("span", { "aria-hidden": "true", style: { width: "36px", height: "36px", flexShrink: 0, borderRadius: "11px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", background: "var(--hs-chip-bg)", boxShadow: "inset 0 0 0 1px var(--hs-border)" } }, icon),
     React.createElement("span", { style: { flex: 1, minWidth: 0 } },
-      React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700, color: "var(--hs-primary)" } }, title),
-      React.createElement("span", { style: { display: "block", fontSize: "13px", color: "var(--hs-muted)", marginTop: "2px" } }, subtitle)),
-    React.createElement("span", { style: { fontSize: "22px", color: "var(--hs-muted)" } }, "›")
+      React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700, color: "var(--hs-primary)", lineHeight: 1.25 } }, title),
+      React.createElement("span", { style: { display: "block", fontSize: "12.5px", color: "var(--hs-muted)", marginTop: "1px", lineHeight: 1.25 } }, subtitle)),
+    React.createElement("span", { "aria-hidden": "true", style: { fontSize: "20px", color: "var(--hs-muted)" } }, "›")
   );
 
   return React.createElement(
@@ -406,7 +401,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(
-      "div", { style: { display: "flex", gap: "10px", marginBottom: "14px" } },
+      "div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
       tile("🩺", t("nav.aichat"), onOpenAIChat, false),
       tile("🔔", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
       tile(showCare ? "✕" : "📞", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
@@ -416,10 +411,12 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
-    row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
-    row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
-    row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
-    row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"))
+    React.createElement(ThemeSwitcher),
+    React.createElement("div", { style: { borderRadius: "18px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", overflow: "hidden", boxShadow: "0 3px 12px rgba(14,75,67,0.09)" } },
+      row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
+      row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
+      row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
+      row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"), true))
   );
 }
 
