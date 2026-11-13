@@ -9,6 +9,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { foodColumns, habitTipsBox } from "./FoodColumns.js";
+import { FoodGroupGuide } from "./FoodGroupGuide.js";
 import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { getGoal, getWeekDaily } from "../tracker/trackerData.js";
@@ -70,7 +71,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
         try {
           recent = buildRecentFoodCards({ dailyDocs, goal, allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records) }, gateBlocked: safetyGate({ age, flags }).blocked });
         } catch (e) { recent = undefined; }
-        setResult({ ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
+        setResult({ statusCtx: { allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records) } }, ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
       })
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId, targetMemberId]);
@@ -96,6 +97,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
       more > 0 && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px" } }, "আরও " + bnNum(more) + "টি আছে — পূর্ণ তালিকায় দেখুন।"));
   }
 
+  const guide = result ? React.createElement(FoodGroupGuide, { allergyTags: result.statusCtx.allergyTags, ctx: result.statusCtx.ctx }) : null;
   return React.createElement(
     "div", { style: { marginTop: "0" } },
     !result && React.createElement("div", { style: { marginTop: "8px", color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
@@ -103,6 +105,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
       "div", { style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } },
       "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"
     ),
+    result && result.matchedTags.length === 0 && guide,
     result && result.matchedTags.length > 0 && React.createElement(
       React.Fragment, null,
       React.createElement("div", { style: { fontSize: F, fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "🩺 আপনার সমস্যা"),
@@ -110,6 +113,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
         result.matchedTags.map((tag) => React.createElement("span", { key: tag, style: { padding: "4px 12px", borderRadius: "999px", background: "#fff", border: "1px solid #C3D2CA", fontSize: F, color: "var(--hs-primary, #0E4B43)", fontWeight: 600 } }, tag))),
       foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources, recent: result.recent }),
       habitTipsBox(result.habitTips),
+      guide,
       result.matchedTags.length > 1 && React.createElement("button", {
         onClick: () => setOpenTag(openTag ? null : "__all"),
         style: { marginTop: "12px", width: "100%", padding: "10px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: F, fontWeight: 600, cursor: "pointer" },
