@@ -11,8 +11,11 @@ import { listHealthRecords } from "../records/healthRecordsData.js";
 import { foodColumns, habitTipsBox } from "./FoodColumns.js";
 import { listDietGuidanceRules, matchFoodGuidance } from "./dietGuidanceData.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
-import { getGoal } from "../tracker/trackerData.js";
-import { ageYears } from "../tracker/trackerCalc.js";
+import { getGoal, getWeekDaily } from "../tracker/trackerData.js";
+import { ageYears, detectFlagsFromConditions, safetyGate } from "../tracker/trackerCalc.js";
+import { allergyTagsOf } from "../tracker/mealPlanData.js";
+import { conditionKeysOf } from "../tracker/avoidRules.js";
+import { recentDates, buildRecentFoodCards } from "../tracker/recentFoods.js";
 
 const { useState, useEffect } = React;
 
@@ -49,8 +52,9 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
     Promise.all([
       listHealthRecords(familyId, targetMemberId), listDietGuidanceRules(),
       listMembers(familyId).catch(() => []), getGoal(familyId, targetMemberId).catch(() => null), // বয়স/অবস্থা-নিয়মের জন্য; না এলে শুধু বাকি নিয়ম
+      getWeekDaily(familyId, targetMemberId, recentDates()).catch(() => []), // সাম্প্রতিক খাবার (গত ১৪ দিন); ব্যর্থ হলে শুধু বাকি অংশ
     ])
-      .then(([records, allRules, members, goal]) => {
+      .then(([records, allRules, members, goal, dailyDocs]) => {
         const member = (members || []).find((m) => m.id === targetMemberId) || null;
         const relevantConditions = records
           .filter((r) => r.resourceType === "condition" && (r.status === "active" || r.status === "chronic"))
@@ -59,7 +63,14 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
           .filter((r) => r.resourceType === "allergy")
           .map((r) => r.substance);
         const bmiTag = deriveBmiTag(records);
-        setResult(matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age: member ? ageYears(member.dob) : null, goal }));
+        const age = member ? ageYears(member.dob) : null;
+        const detected = detectFlagsFromConditions(records);
+        const flags = { diabetes: !!(goal && goal.flags && goal.flags.diabetes) || detected.diabetes, kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney, pregnant: !!(goal && goal.flags && goal.flags.pregnant) };
+        let recent;
+        try {
+          recent = buildRecentFoodCards({ dailyDocs, goal, allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records) }, gateBlocked: safetyGate({ age, flags }).blocked });
+        } catch (e) { recent = undefined; }
+        setResult({ ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
       })
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId, targetMemberId]);
@@ -97,7 +108,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
       React.createElement("div", { style: { fontSize: F, fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "🩺 আপনার সমস্যা"),
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
         result.matchedTags.map((tag) => React.createElement("span", { key: tag, style: { padding: "4px 12px", borderRadius: "999px", background: "#fff", border: "1px solid #C3D2CA", fontSize: F, color: "var(--hs-primary, #0E4B43)", fontWeight: 600 } }, tag))),
-      foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources }),
+      foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources, recent: result.recent }),
       habitTipsBox(result.habitTips),
       result.matchedTags.length > 1 && React.createElement("button", {
         onClick: () => setOpenTag(openTag ? null : "__all"),
