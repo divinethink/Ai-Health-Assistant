@@ -20,7 +20,7 @@ import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
 import { histRestore } from "../shared/navHistory.js";
 import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
-import { t, useLang, setLang } from "../shared/i18n.js";
+import { t, useLang, setLang, getLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
 import { rotateInviteLink, revokeInviteLink } from "./googleAuth.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
@@ -206,41 +206,42 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
 // var()-গুলো সেই অনুযায়ী resolve হয়) + localStorage-এ persist — কোনো
 // Firestore/schema টাচ হয় না, pure client-side preference।
 const HS_THEME_STORAGE_KEY = "hs-theme";
+// [id, নামের key, primary(dot), bg, surface, মোড] — নমুনা-রঙ index.html-এর টোকেনের সাথে মেলানো
 const THEME_OPTIONS = [
-  ["light", "theme.light", "#0E4B43"],
-  ["sepia", "theme.sepia", "#6B4A2B"],
-  ["dark", "theme.dark", "#2E7D6F"],
-  ["herbal", "theme.herbal", "#14532D"],
-  ["night-pulse", "theme.nightPulse", "#1A8F60"],
-  ["calm-paper", "theme.calmPaper", "#185E6A"],
-  ["warm-clay", "theme.warmClay", "#AA4826"],
-  ["ocean-calm", "theme.oceanCalm", "#3E6092"],
+  ["light", "theme.light", "#0E4B43", "#F1F6F2", "#FFFFFF", "Light"],
+  ["sepia", "theme.sepia", "#6B4A2B", "#F2E8D5", "#FBF3E3", "Light"],
+  ["dark", "theme.dark", "#2E7D6F", "#10151A", "#1B232B", "Dark"],
+  ["herbal", "theme.herbal", "#14532D", "#E6EEDE", "#FBF8EA", "Light"],
+  ["night-pulse", "theme.nightPulse", "#1A8F60", "#05080A", "#11181A", "Dark"],
+  ["calm-paper", "theme.calmPaper", "#185E6A", "#ECE0C2", "#FDF8E9", "Light"],
+  ["warm-clay", "theme.warmClay", "#AA4826", "#F8EFE6", "#FFFAF5", "Light"],
+  ["ocean-calm", "theme.oceanCalm", "#3E6092", "#E2E7F2", "#F7F9FC", "Light"],
 ];
 const HS_THEME_IDS = THEME_OPTIONS.map((o) => o[0]);
 
+function currentThemeId() { return localStorage.getItem(HS_THEME_STORAGE_KEY) || "light"; }
+function currentThemeLabel() { const o = THEME_OPTIONS.find((x) => x[0] === currentThemeId()); return t((o || THEME_OPTIONS[0])[1]).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, ""); }
+
+// থিম-পেজ: ২ কলামের কার্ড (৩টা নমুনা-রং + নাম + Light/Dark)। শুধু ডিভাইসের পছন্দ, DB-তে কিছু নয়।
 function ThemeSwitcher() {
   useLang();
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem(HS_THEME_STORAGE_KEY) || "light"
-  );
+  const [theme, setTheme] = useState(currentThemeId);
   const applyTheme = (id) => {
     document.documentElement.setAttribute("data-theme", id);
-    localStorage.setItem(HS_THEME_STORAGE_KEY, id);
+    try { localStorage.setItem(HS_THEME_STORAGE_KEY, id); } catch (_e) { /* স্টোরেজ বন্ধ থাকলেও থিম বদলায় */ }
     setTheme(id);
   };
-  // কমপ্যাক্ট রঙের-গোল সারি (নাম নয়) — বাছা থিমের নাম ডানে; নাম/ইমোজি aria-label-এ
-  return React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "10px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "8px 12px", marginBottom: "12px", background: "var(--hs-surface)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)" } },
-    React.createElement("div", { role: "radiogroup", "aria-label": t("menu.themeShort"), style: { flex: 1, display: "flex", justifyContent: "space-between", gap: "6px", overflowX: "auto", padding: "3px 2px", scrollbarWidth: "none" } },
-      THEME_OPTIONS.map(([id, label, dot]) => {
-        const on = theme === id;
-        return React.createElement("button", {
-          key: id, type: "button", role: "radio", "aria-checked": on, "aria-label": t(label), title: t(label), onClick: () => applyTheme(id),
-          style: { width: "30px", height: "30px", flexShrink: 0, padding: 0, borderRadius: "50%", cursor: "pointer", background: dot, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "14px", fontWeight: 800,
-            border: "2px solid " + (on ? "var(--hs-surface)" : "rgba(0,0,0,0.08)"), boxShadow: on ? "0 0 0 2.5px var(--hs-primary), 0 3px 8px rgba(14,75,67,0.3)" : "none" },
-        }, on ? "✓" : "");
-      }))
-  );
+  const dot = (c) => React.createElement("span", { style: { width: "22px", height: "22px", borderRadius: "50%", background: c, border: "1px solid rgba(0,0,0,0.1)", marginLeft: "-6px", display: "inline-block" } });
+  return React.createElement("div", { role: "radiogroup", "aria-label": t("menu.themeShort"), style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "10px" } },
+    THEME_OPTIONS.map(([id, label, primary, bg, surface, mode]) => {
+      const on = theme === id;
+      return React.createElement("button", { key: id, type: "button", role: "radio", "aria-checked": on, onClick: () => applyTheme(id),
+        style: { minHeight: "76px", padding: "10px 12px", borderRadius: "16px", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: "8px",
+          border: on ? "2px solid var(--hs-primary)" : "1.5px solid var(--hs-border)", background: "var(--hs-surface)", color: "var(--hs-text)", boxShadow: on ? "0 3px 10px rgba(14,75,67,0.18)" : "none" } },
+        React.createElement("span", { style: { display: "flex", paddingLeft: "6px" } }, dot(bg), dot(surface), dot(primary)),
+        React.createElement("span", { style: { fontSize: "14px", fontWeight: 700 } }, (on ? "✓ " : "") + t(label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")),
+        React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted)" } }, mode));
+    }));
 }
 
 // ভাষা-নির্বাচন (বাংলা / English) — শুধু এই ডিভাইসের পছন্দ (shared/i18n.js)।
@@ -333,7 +334,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   const wrapStyle = { paddingTop: "8px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
 
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -356,12 +357,10 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
     } else if (sub === "lock") {
       body = React.createElement(PasscodeSettings);
+    } else if (sub === "theme") {
+      body = React.createElement(ThemeSwitcher);
     } else {
-      body = React.createElement(
-        React.Fragment, null,
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary)", marginBottom: "6px" } }, t("menu.language")),
-        React.createElement(LanguageSwitcher)
-      );
+      body = React.createElement(LanguageSwitcher);
     }
     return React.createElement(
       "div", { style: wrapStyle },
@@ -417,13 +416,13 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
-    React.createElement(ThemeSwitcher),
     React.createElement("div", { style: { borderRadius: "18px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", overflow: "hidden", boxShadow: "0 3px 12px rgba(14,75,67,0.09)" } },
       row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
       row("🕘", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
       row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
       row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
-      row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"), true))
+      row("🎨", "থিম", currentThemeLabel(), () => setSub("theme")),
+      row("🌐", "ভাষা", t("lang." + getLang()), () => setSub("lang"), true))
   );
 }
 

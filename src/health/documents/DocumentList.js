@@ -47,6 +47,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   const [menuId, setMenuId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [yearOpen, setYearOpen] = useState({}); // সাল → খোলা/বন্ধ; অনুল্লেখিত হলে সর্বশেষ সালটাই খোলা
 
   useEffect(() => {
     setDocs(null);
@@ -93,13 +94,17 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   const activeFilter = filter === "all" || counts[filter] ? filter : "all";
   const shown = activeFilter === "all" ? docs : docs.filter((d) => d.docType === activeFilter);
 
-  return React.createElement(
-    "div", { style: { marginTop: "6px" } },
-    chips.length > 2 && React.createElement(
-      "div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px" } },
-      chips.map(([id, label]) => React.createElement("button", { key: id, onClick: () => setFilter(id), style: chipStyle(id === activeFilter) }, label))
-    ),
-    shown.map((d) => {
+  // সাল-অনুযায়ী ভাঁজ: তারিখ (YYYY-MM-DD) → নইলে আপলোডের সাল → নইলে "তারিখ অজানা"; নতুন সাল আগে
+  const yearOf = (d) => {
+    if (d.date && /^\d{4}/.test(d.date)) return d.date.slice(0, 4);
+    const ms = d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
+    return ms ? String(new Date(ms).getFullYear()) : "তারিখ অজানা";
+  };
+  const byYear = {};
+  shown.forEach((d) => { const y = yearOf(d); (byYear[y] = byYear[y] || []).push(d); });
+  const yearGroups = Object.entries(byYear).sort((a, b) => (a[0] === "তারিখ অজানা") - (b[0] === "তারিখ অজানা") || b[0].localeCompare(a[0]));
+
+  const renderCard = (d) => {
       const isRx = d.docType === "prescription";
       const meta = (isRx ? [d.date, d.source ? "ডাক্তার: " + d.source : null] : [d.date, d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
       const isPdf = d.originalContentType === "application/pdf";
@@ -138,6 +143,22 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           confirmId === d.id && React.createElement(ConfirmDialog, { title: "নথিটি মুছবেন?", message: "\"" + d.fileName + "\" স্থায়ীভাবে মুছে যাবে।", busy: busyId === d.id, onConfirm: () => doDelete(d), onCancel: () => setConfirmId(null) })
         )
       );
+  };
+
+  return React.createElement(
+    "div", { style: { marginTop: "6px" } },
+    chips.length > 2 && React.createElement(
+      "div", { style: { display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px" } },
+      chips.map(([id, label]) => React.createElement("button", { key: id, onClick: () => setFilter(id), style: chipStyle(id === activeFilter) }, label))
+    ),
+    yearGroups.map(([year, list], gi) => {
+      const open = yearOpen[year] !== undefined ? yearOpen[year] : gi === 0;
+      return React.createElement("div", { key: year, style: { marginBottom: "8px" } },
+        React.createElement("button", { type: "button", onClick: () => setYearOpen((o) => ({ ...o, [year]: !open })), "aria-expanded": open,
+          style: { width: "100%", minHeight: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", marginBottom: "8px", borderRadius: "14px", border: "1px solid #C3D2CA", background: open ? "var(--hs-chip-bg, #E4F0E9)" : "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "16px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" } },
+          React.createElement("span", null, (open ? "▾ " : "▸ ") + year),
+          React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color: "#5F716C" } }, list.length + "টি")),
+        open && list.map(renderCard));
     })
   );
 }
