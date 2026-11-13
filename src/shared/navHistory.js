@@ -32,3 +32,41 @@ export function histRestore(inner) {
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => { pending = null; }, 800);
 }
+
+// ---- শিট/ওভারলে + ফোনের Back: শিট খুললে history-তে একটা এন্ট্রি; Back = শুধু ওপরের শিট বন্ধ (পেজ বদলায় না) ----
+// UI-বোতামে বন্ধ হলে নিজের এন্ট্রি history.back() দিয়ে সরানো হয় (skip দিয়ে পরের শিট/ডিটেক্টর ভুল সাড়া দেয় না)।
+const sheetStack = [];
+let skipPops = 0;
+let sheetListening = false;
+
+function onSheetPop() {
+  if (skipPops > 0) { skipPops--; return; }
+  const top = sheetStack[sheetStack.length - 1];
+  if (top) { top.popped = true; top.close(); }
+}
+
+export function useBackClose(onClose) {
+  const closeRef = React.useRef(onClose);
+  closeRef.current = onClose;
+  React.useEffect(() => {
+    const token = { popped: false, close: () => closeRef.current() };
+    let pushed = false;
+    try {
+      const st = window.history.state || {};
+      window.history.pushState({ ...st, sheet: sheetStack.length + 1 }, "");
+      pushed = true;
+    } catch (_e) { /* history ব্যর্থ হলেও শিট চলে */ }
+    sheetStack.push(token);
+    if (!sheetListening) { window.addEventListener("popstate", onSheetPop); sheetListening = true; }
+    return () => {
+      const i = sheetStack.indexOf(token);
+      if (i >= 0) sheetStack.splice(i, 1);
+      if (pushed && !token.popped) {
+        try {
+          const s = window.history.state;
+          if (s && s.sheet) { skipPops++; window.history.back(); }
+        } catch (_e) { /* উপেক্ষা */ }
+      }
+    };
+  }, []);
+}

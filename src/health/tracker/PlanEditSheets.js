@@ -5,6 +5,7 @@
 
 import { createPortal } from "react-dom";
 import { TabPills } from "../../shared/ui.js";
+import { useBackClose } from "../../shared/navHistory.js";
 import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText, foodK, foodNote, hasFoodOverride, MAX_FOOD_KCAL, MAX_FOOD_NOTE } from "./mealPlanData.js";
 import { medFoodNotes } from "./medFoodNotes.js";
@@ -38,6 +39,7 @@ export function Sheet({ title, subtitle, onClose, children, soft }) { // soft = 
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  useBackClose(onClose); // ফোনের Back = শিট বন্ধ
   useEffect(() => {
     const prev = document.activeElement;
     if (ref.current) ref.current.focus();

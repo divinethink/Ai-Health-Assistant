@@ -106,16 +106,13 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   }
 
   // সাম্প্রতিক: এক লাইনের অনুভূমিক স্ক্রল-সারি (সর্বোচ্চ ৬) — তালিকাকে ঠেলে নামায় না। চিপে আগের পরিমাণ+ক্যালরি; ট্যাপে পরিমাণ-ধাপ।
-  // কার্ড-চিপ (২ কলাম, আয়তাকার + ↻ আইকন + আগের পরিমাণ) — বেলা-বার ও ধরন-চিপ কোনোটার মতো দেখতে নয়
-  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 18px" } },
+  // শুধু নাম, ৩ কলাম × ২ সারি (সর্বোচ্চ ৬) — স্ক্রিনে আঁটে; ট্যাপে পরিমাণ-ধাপ। আয়তাকার + বাঁয়ে সবুজ ধার (বেলা-বার/ধরন-ট্যাগ থেকে আলাদা)
+  const recentRow = quick.length > 0 && React.createElement("div", { style: { margin: "0 0 16px" } },
     React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "2px 2px 6px", letterSpacing: "0.3px" } }, "সাম্প্রতিক খাবার"),
-    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" } },
-      quick.slice(0, 6).map((e) => { const amt = entryAmountText(e) || ""; return React.createElement("button", { key: e.name, type: "button", onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + amt + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
-        style: { display: "flex", alignItems: "center", gap: "8px", minHeight: "52px", padding: "6px 10px", borderRadius: "14px", textAlign: "left", cursor: "pointer", fontFamily: "inherit", border: "1px solid rgba(127,150,140,0.22)", borderLeft: "4px solid #17705F", background: "linear-gradient(180deg, #fff, #F7FAF8)", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", opacity: busy ? 0.5 : 1, minWidth: 0 } },
-        React.createElement("span", { "aria-hidden": "true", style: { width: "28px", height: "28px", flexShrink: 0, borderRadius: "50%", background: "#E4F0E9", color: GREEN, fontSize: "16px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" } }, "↻"),
-        React.createElement("span", { style: { minWidth: 0, display: "flex", flexDirection: "column" } },
-          React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, e.name),
-          amt && React.createElement("span", { style: { fontSize: "12px", color: MUTED, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, amt))); })));
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px" } },
+      quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, type: "button", onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
+        style: { minHeight: "44px", padding: "4px 6px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", lineHeight: 1.2, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+          border: "1px solid rgba(127,150,140,0.22)", borderLeft: "3px solid #17705F", background: "linear-gradient(180deg, #fff, #F7FAF8)", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", opacity: busy ? 0.5 : 1 } }, e.name))));
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {

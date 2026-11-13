@@ -2,7 +2,7 @@
 // কোনো functional পরিবর্তন নেই, শুধু নিজস্ব ফাইলে সরানো হয়েছে।
 
 import { createPortal } from "react-dom";
-import { histBind, histChange } from "./navHistory.js";
+import { histBind, histChange, useBackClose } from "./navHistory.js";
 import { localISO } from "./dates.js";
 
 export function ErrorBox(msg) {
@@ -148,6 +148,7 @@ export function CloseX(onClick, label) {
 export function SheetFrame({ title, onClose, scrollKey, footer, accent, children }) {
   const ac = accent ? ACCENTS[accent] : null;
   const bodyRef = React.useRef(null);
+  useBackClose(onClose); // ফোনের Back = শিট বন্ধ
   React.useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [scrollKey]);
   React.useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
