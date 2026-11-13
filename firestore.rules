@@ -7,7 +7,7 @@ service cloud.firestore {
     // ============================================================
 
     function isAppCreator() {
-      return request.auth.uid == "NFwQuUKGKDMZgAZeO3NfcUAUCxl1";
+      return request.auth.uid == "bZrGqbY0dFVTkIXKvEAwfHbMhRk1";
     }
 
     // ব্লগ (wellnessGuides) লেখা/এডিট/ডিলিট শুধু এই একজন ব্লগ-অ্যাডমিন।
@@ -205,6 +205,32 @@ service cloud.firestore {
     match /careEscalationDirectory/{entryId} {
       allow read: if request.auth != null;
       allow write: if false;
+    }
+
+    // অ্যাপ-ডিজাইন (পেজ-কার্ডের ক্রম/দৃশ্যমানতা/ভাঁজ) — গ্লোবাল, সবার জন্য এক।
+    // পড়া: যেকোনো সাইন-ইন সদস্য; লেখা: শুধু App Creator (isBlogAdmin — একই UID)। মোছা নয়।
+    // কাঠামো: { pages: { home: { main: [...] }, trend: { top: [...], week: [...] } }, updatedAt, updatedBy }
+    // গভীর যাচাই (কার্ড-id/fold) client-এর sanitize-এ; এখানে আকার-সীমা (প্রতি তালিকা ≤২০)।
+    function designListOk(v) {
+      return v is list && v.size() <= 20;
+    }
+    match /appDesign/{docId} {
+      allow read: if request.auth != null;
+      allow create, update: if isBlogAdmin()
+        && docId == 'layout'
+        && request.resource.data.keys().hasOnly(['pages', 'updatedAt', 'updatedBy'])
+        && request.resource.data.pages is map
+        && request.resource.data.pages.keys().hasOnly(['home', 'trend'])
+        && (!('home' in request.resource.data.pages)
+            || (request.resource.data.pages.home is map
+                && request.resource.data.pages.home.keys().hasOnly(['main'])
+                && designListOk(request.resource.data.pages.home.get('main', []))))
+        && (!('trend' in request.resource.data.pages)
+            || (request.resource.data.pages.trend is map
+                && request.resource.data.pages.trend.keys().hasOnly(['top', 'week'])
+                && designListOk(request.resource.data.pages.trend.get('top', []))
+                && designListOk(request.resource.data.pages.trend.get('week', []))));
+      allow delete: if false;
     }
 
     match /wellnessGuides/{guideId} {

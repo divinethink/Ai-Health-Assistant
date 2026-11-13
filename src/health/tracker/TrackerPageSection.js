@@ -26,6 +26,8 @@ import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
+import { useAppDesign } from "../../legacy/appDesign.js";
+import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { FocusSheet, focusLabels } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
@@ -380,6 +382,7 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
   useEffect(() => {
     getWeekDaily(familyId, memberId, last7DatesISO()).then(setDocs).catch((x) => setErr(errText(x)));
   }, [familyId, memberId]);
+  const wk = useAppDesign("trend").week; // hook: নিচের early-return-এর আগে
   if (err) return ErrorBox(err);
   if (!docs) return Skeleton(3, 96);
 
@@ -406,11 +409,12 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
   // মাত্র ১ দিনের ডেটা হলে গ্রাফ অর্থবহ নয় — বার্তা + "দৈনিক ইনপুট" বাটন
   const fewData = t.loggedDays <= 1;
 
-  return React.createElement("div", null,
-    fewData && React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
-      React.createElement("div", { style: { fontSize: "14px", color: T.green, fontWeight: 700 } }, "২ দিনের ডেটা দিলে গ্রাফ শুরু হবে"),
-      onGoInput && React.createElement("button", { onClick: onGoInput, style: { marginTop: "8px", minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "হোমে তথ্য দিন")),
+  // App Creator-এর ডিজাইন অনুযায়ী কার্ড (ক্রম/দৃশ্যমানতা/ভাঁজ); ডিফল্ট = আগের ক্রম হুবহু।
+  const nodes = {
+    weight: () => [
     card("ওজন (কেজি)", "গত ৭ দিন", wPts.length === 1 ? weightValueCard : wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
+    ],
+    calSleep: () => [
     // ক্যালরি ও ঘুম — এক লাইনে পাশাপাশি, আলাদা কার্ড (ক্যালরি-টার্গেট না থাকলে ঘুম পুরো প্রস্থে)
     React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch" } },
       calorieTarget && React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex" } },
@@ -424,15 +428,27 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
           React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, "লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax)),
           t.sleepDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.sleepH), target: sMin, color: "#6B5BD2", width: 160 }) : none("ঘুমের তথ্য দেওয়া হয়নি।")))),
     React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "-2px 0 8px" } }, "বিন্দু-রেখা = লক্ষ্য (ঘুমে সর্বনিম্ন)"),
+    ],
+    weekGoal: () => [
     // এই সপ্তাহের ব্যায়াম-লক্ষ্য (শনি–শুক্র) — আগে ব্যায়াম প্ল্যানে ছিল; এখন রিভিউয়ের ঠিক উপরে
     plan && plan.weeklyTargetMin && React.createElement(Stat, {
       title: "🎯 এই সপ্তাহের লক্ষ্য", line: bnNum(plan.weeklyTargetMin) + " মিনিট · সম্পন্ন " + bnNum(info.weekMin || 0) + " মিনিট",
       pct: ((info.weekMin || 0) / plan.weeklyTargetMin) * 100, color: T.green2,
     }),
+    ],
+    review: () => [
     card("সাপ্তাহিক রিভিউ", "শুধু আপনার দেওয়া তথ্য থেকে",
       React.createElement("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6 } },
         points.map((p, i) => React.createElement("div", { key: "p" + i }, "• " + p)),
         reviewComment(t, bnNum).map((c, i) => React.createElement("div", { key: "c" + i, style: { marginTop: i === 0 ? "8px" : "4px" } }, c)))),
+    ],
+  };
+
+  return React.createElement("div", null,
+    fewData && React.createElement("div", { style: { ...CARD, background: "#E4F0E9", borderColor: "#9CC5B4" } },
+      React.createElement("div", { style: { fontSize: "14px", color: T.green, fontWeight: 700 } }, "২ দিনের ডেটা দিলে গ্রাফ শুরু হবে"),
+      onGoInput && React.createElement("button", { onClick: onGoInput, style: { marginTop: "8px", minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "হোমে তথ্য দিন")),
+    ...renderLayoutCards("trend", "week", wk, nodes),
     React.createElement(Notice, null, "এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়। অস্বাভাবিক ওজন বা শরীর খারাপ হলে ডাক্তার দেখান।"));
 }
 

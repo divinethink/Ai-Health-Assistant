@@ -42,6 +42,9 @@ import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.j
 import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
 import { PasscodeSettings } from "../components/PasscodeSettings.js";
+import { PageLayoutScreen } from "../components/PageLayoutScreen.js";
+import { isAppCreatorUid } from "./appDesign.js";
+import { PAGE_IDS, PAGE_DEFS } from "../shared/pageLayout.js";
 import { clearPasscode } from "../shared/appLock.js";
 
 const { useState, useEffect, useCallback } = React;
@@ -330,11 +333,17 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
   const [showCare, setShowCare] = useState(false);
-  const [sub, setSub] = useState(null); // null | "family" | "data" | "lock" | "settings"
+  const [sub, setSub] = useState(null); // null | "family" | "data" | "lock" | "settings" | "design"
+  const [designPage, setDesignPage] = useState(null); // App Creator-এর পেজ-কাস্টমাইজ স্ক্রিন (null | "home" | "trend")
+  const isCreator = isAppCreatorUid(uid);
   const wrapStyle = { paddingTop: "8px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
 
+  if (designPage && isCreator) {
+    return React.createElement(PageLayoutScreen, { key: "pl-" + designPage, page: designPage, onClose: () => setDesignPage(null) });
+  }
+
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"] };
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"], design: ["🎛️", "কাস্টমাইজ"] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -357,6 +366,13 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
     } else if (sub === "lock") {
       body = React.createElement(PasscodeSettings);
+    } else if (sub === "design" && isCreator) {
+      // শুধু App Creator: পেজ বেছে কার্ডের ক্রম/দৃশ্যমানতা/ভাঁজ সাজান — সব সদস্য একই দেখবেন
+      body = React.createElement(React.Fragment, null,
+        React.createElement("p", { style: { fontSize: "13px", color: "var(--hs-muted)", margin: "0 0 10px", lineHeight: 1.5 } }, "পেজ বেছে নিন। আপনার সাজানো ডিজাইন সব সদস্য একই দেখবেন।"),
+        React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+          PAGE_IDS.map((pid) => React.createElement("button", { key: pid, type: "button", onClick: () => setDesignPage(pid),
+            style: { flex: "1 1 40%", minHeight: "70px", borderRadius: "16px", border: "1px solid var(--hs-border)", background: "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 3px 10px rgba(14,75,67,0.09)" } }, PAGE_DEFS[pid].label))));
     } else if (sub === "theme") {
       body = React.createElement(ThemeSwitcher);
     } else {
@@ -421,6 +437,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       row("🕘", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
       row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
       row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
+      isCreator && row("🎛️", "কাস্টমাইজ", "পেজের কার্ড সাজান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("design")),
       row("🎨", "থিম", currentThemeLabel(), () => setSub("theme")),
       row("🌐", "ভাষা", t("lang." + getLang()), () => setSub("lang"), true))
   );

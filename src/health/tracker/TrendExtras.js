@@ -8,6 +8,8 @@ import { T, CARD_STYLE } from "./trackerTheme.js";
 import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { swipeDelta } from "./dateNav.js";
+import { useAppDesign } from "../../legacy/appDesign.js";
+import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { lastNMonths, shiftMonth, monthKey, heatLevel, heatWeeks, monthStats, monthReview, compareMonths, compareNotes } from "./trendRange.js";
 
 const { useState, useEffect } = React;
@@ -172,6 +174,7 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const today = todayISO();
   const three = lastNMonths(new Date(), 3);
   const [range, setRange] = useState("week");
+  const topLayout = useAppDesign("trend").top;
   const [ym, setYm] = useState(three[2]);
   const [sel, setSel] = useState(today);
   const need = [...three];
@@ -203,8 +206,11 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
     body = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, { list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, ctx, today)) });
   }
 
+  // হিটম্যাপ-কার্ড: App Creator-এর ডিজাইন (দৃশ্যমানতা/ভাঁজ) অনুযায়ী; ত্রুটি-বার্তা সবসময় দেখায়
+  const heatNodes = { heatmap: () => [err && range === "week" ? null : docs3 ? React.createElement(Heatmap, { weeks: heatWeeks(docs3, ctx, start, today) }) : Skeleton(1, 150)] };
   return React.createElement("div", null,
-    err && range === "week" ? ErrorBox(err) : docs3 ? React.createElement(Heatmap, { weeks: heatWeeks(docs3, ctx, start, today) }) : Skeleton(1, 150),
+    err && range === "week" && ErrorBox(err),
+    ...renderLayoutCards("trend", "top", topLayout, heatNodes),
     pills,
     body);
 }

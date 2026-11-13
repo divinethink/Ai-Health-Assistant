@@ -900,6 +900,38 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
+  describe('13. appDesign (পেজ-কার্ড ডিজাইন — শুধু App Creator লেখে)', () => {
+    const CREATOR = 'bZrGqbY0dFVTkIXKvEAwfHbMhRk1';
+    const ref = (db, id = 'layout') => doc(db, 'appDesign', id);
+    const card = (id) => ({ id, visible: true, fold: 'fixed' });
+    const good = { pages: { home: { main: [card('hero'), card('week')] }, trend: { top: [card('heatmap')], week: [card('weight')] } }, updatedAt: new Date(), updatedBy: CREATOR };
+
+    it('13a. সাইন-ইন করা যে কেউ পড়তে পারে; অনাম নয়', async () => {
+      await seed(async (db) => { await setDoc(ref(db), good); });
+      await assertSucceeds(getDoc(ref(dbAs('uidA'))));
+      await assertFails(getDoc(ref(testEnv.unauthenticatedContext().firestore())));
+    });
+    it('13b. Creator বৈধ ডিজাইন লিখতে পারে (merge-সহ)', async () => {
+      const db = dbAs(CREATOR);
+      await assertSucceeds(setDoc(ref(db), good));
+      await assertSucceeds(setDoc(ref(db), { pages: { home: { main: [card('week')] } }, updatedAt: new Date(), updatedBy: CREATOR }, { merge: true }));
+    });
+    it('13c. Family Admin বা অন্য সদস্য লিখতে পারে না', async () => {
+      await assertFails(setDoc(ref(dbAs(ADMIN_UID)), good));
+      await assertFails(setDoc(ref(dbAs('uidA')), good));
+    });
+    it('13d. অচেনা doc-id / অতিরিক্ত ফিল্ড / অচেনা পেজ / ২০+ কার্ড / মোছা — সব বন্ধ', async () => {
+      const db = dbAs(CREATOR);
+      await assertFails(setDoc(ref(db, 'other'), good));
+      await assertFails(setDoc(ref(db), { ...good, extra: 1 }));
+      await assertFails(setDoc(ref(db), { pages: { blog: { main: [] } }, updatedAt: new Date(), updatedBy: CREATOR }));
+      await assertFails(setDoc(ref(db), { pages: { home: { main: Array.from({ length: 21 }, (_, i) => card('c' + i)) } }, updatedAt: new Date(), updatedBy: CREATOR }));
+      await assertFails(setDoc(ref(db), { pages: { home: { main: [], zzz: [] } }, updatedAt: new Date(), updatedBy: CREATOR }));
+      await seed(async (sdb) => { await setDoc(ref(sdb), good); });
+      await assertFails(deleteDoc(ref(db)));
+    });
+  });
+
   describe('11. Global reference DB', () => {
     it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {
       await seed(async (db) => {
