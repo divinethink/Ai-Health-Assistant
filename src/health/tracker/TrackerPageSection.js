@@ -94,15 +94,16 @@ const dayKinds = (items) => ["cardio", "strength", "flex"].filter((k) => items.s
 
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
 const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}";
-// নিচের (দ্বিতীয় স্তরের) পিল: উপরের গাঢ় পিল থেকে আলাদা — থিমের হালকা chip-bg + primary রঙের বর্ডার/লেখা (সব থিমেই পড়া যায়)।
+// নিচের (দ্বিতীয় স্তরের) পিল: উপরের গাঢ় গোল পিল থেকে আলাদা — ছোট-কোণ আয়তাকার, বাছাইটায় ✓ (খাবার-যোগ তালিকার ধরন-ট্যাগের মতো)।
 function SubPills(tabs, active, onChange) {
   const hk = "trk:" + tabs.map((x) => x[0]).join("|"); // আগের Pills-এর একই কী — Back বাটনে আগের উপ-ট্যাবে ফেরা
   histBind(hk, active, onChange);
   return React.createElement("div", { className: "hs-trk-pills" }, React.createElement("div", { style: { display: "flex", gap: "6px", overflowX: "auto", padding: "2px" } },
     tabs.map(([id, label]) => {
       const on = id === active;
-      return React.createElement("button", { key: id, type: "button", onClick: () => histChange(hk, active, id, onChange), "aria-pressed": on, style: { flexShrink: 0, fontSize: "14px", fontWeight: 700, padding: "9px 16px", minHeight: "42px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit",
-        border: on ? "2px solid var(--hs-primary, #0E4B43)" : "1px solid var(--hs-input-border, #C3D2CA)", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)", color: on ? "var(--hs-primary, #0E4B43)" : "var(--hs-muted, #5F716C)" } }, label);
+      // খাবার-যোগ তালিকার ধরন-ট্যাগের মতো: বাছাই = ✓ + হালকা-সবুজ ভরাট + গাঢ় বর্ডার; বাকিগুলো ড্যাশ-বর্ডার, ফাঁকা — এক নজরে আলাদা
+      return React.createElement("button", { key: id, type: "button", onClick: () => histChange(hk, active, id, onChange), "aria-pressed": on, style: { flexShrink: 0, fontSize: "14px", fontWeight: on ? 800 : 600, padding: "6px 14px", minHeight: "44px", borderRadius: "10px", cursor: "pointer", fontFamily: "inherit",
+        border: on ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px dashed var(--hs-input-border, #B5C9BF)", background: on ? "rgba(46,139,99,0.18)" : "transparent", color: on ? "var(--hs-primary, #0E4B43)" : "var(--hs-muted, #3E524C)" } }, (on ? "✓ " : "") + label);
     })));
 }
 function Pills(tabs, active, onChange, leading) {

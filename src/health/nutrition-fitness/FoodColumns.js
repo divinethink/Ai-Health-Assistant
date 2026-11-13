@@ -55,11 +55,14 @@ function recentBlock(rows, p, emptyText) {
     h("div", { style: { fontSize: "13px", fontWeight: 700, color: TEXT, marginBottom: "6px" } }, "🕘 আপনার সাম্প্রতিক খাবার"),
     rows.length === 0
       ? h("div", { style: { fontSize: "13px", color: MUTED } }, emptyText)
-      : h("ul", { style: { margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "4px" } }, rows.map((r) =>
-        h("li", { key: r.key, style: { listStyle: "none", display: "flex", gap: "6px", alignItems: "flex-start", overflowWrap: "anywhere", fontSize: "14px", lineHeight: 1.5, color: TEXT } },
-          h("span", { "aria-label": r.level === "red" ? "এড়িয়ে চলুন" : r.level === "yellow" ? "সীমিত রাখুন" : "ঠিক আছে", style: { color: LEVEL_COLOR[r.level] || p.accent, fontWeight: 800, flexShrink: 0 } }, r.icon),
-          h("span", { style: { minWidth: 0 } }, r.name,
-            r.reasons && r.reasons[0] && h("span", { style: { color: MUTED, fontSize: "12px" } }, " — " + r.reasons[0]))))));
+      : h("ul", { style: { margin: 0, padding: 0, columns: "140px 2", columnGap: "6px" } }, rows.map((r) => {
+        const c = LEVEL_COLOR[r.level] || p.accent;
+        return h("li", { key: r.key, style: { listStyle: "none", breakInside: "avoid", WebkitColumnBreakInside: "avoid", marginBottom: "6px", background: SURFACE, border: "1px solid " + c + "44", borderRadius: "10px", padding: "6px 8px", display: "block" } },
+          h("div", { style: { display: "flex", gap: "6px", alignItems: "flex-start" } },
+            h("span", { "aria-label": r.level === "red" ? "এড়িয়ে চলুন" : r.level === "yellow" ? "সীমিত রাখুন" : "ঠিক আছে", style: { color: c, fontWeight: 800, flexShrink: 0, lineHeight: 1.4 } }, r.icon),
+            h("span", { style: { fontSize: "14px", lineHeight: 1.4, color: TEXT, overflowWrap: "anywhere", minWidth: 0 } }, r.name)),
+          r.reasons && r.reasons[0] && h("div", { style: { fontSize: "12px", lineHeight: 1.4, color: MUTED, marginTop: "2px", paddingLeft: "18px", overflowWrap: "anywhere" } }, r.reasons[0]));
+      })));
 }
 
 function column(kind, title, items, sources, limit, recent, emptyText) {
