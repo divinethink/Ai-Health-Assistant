@@ -19,7 +19,7 @@ const PAL = {
 
 const cardStyle = (p) => ({
   background: "linear-gradient(160deg, " + p.tint(0.13) + ", " + p.tint(0.03) + " 62%), " + SURFACE,
-  border: "1px solid " + p.tint(0.3), borderRadius: "18px", padding: "12px", minWidth: 0,
+  border: "1px solid " + p.tint(0.3), borderRadius: "16px", padding: "10px", minWidth: 0,
   boxShadow: "0 6px 18px " + p.tint(0.1) + ", 0 1px 2px rgba(0,0,0,0.05)",
 });
 const gridStyle = (min) => ({ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(" + min + "px, 1fr))", gap: "8px" });
@@ -38,12 +38,13 @@ function moreSummary(p, n) {
 // একটা খাবার-টাইল: মার্কার + নাম + (একাধিক রোগ হলে) ছোট কারণ-ব্যাজ।
 function tile(p, x, i, sources) {
   const src = sourceLabels(sources && sources[x]);
-  return h("li", { key: i, style: { listStyle: "none", background: SURFACE, border: "1px solid " + p.tint(0.25), borderRadius: "12px", padding: "9px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 } },
-    h("div", { style: { display: "flex", gap: "8px", alignItems: "flex-start" } },
-      h("span", { "aria-hidden": true, style: { width: "20px", height: "20px", borderRadius: "50%", background: p.tint(0.16), color: p.accent, fontSize: "12px", fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" } }, p.mark),
-      h("span", { style: { fontSize: "14px", lineHeight: 1.5, color: TEXT, overflowWrap: "anywhere", minWidth: 0 } }, x)),
-    src.length > 0 && h("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px", paddingLeft: "28px" } },
-      src.map((s, k) => h("span", { key: k, style: { fontSize: "12px", lineHeight: 1.4, padding: "1px 8px", borderRadius: "999px", background: "var(--hs-chip-bg, #EEF3F0)", color: MUTED, border: "1px solid var(--hs-border, #D3E0D9)" } }, s.icon + " " + s.text))));
+  // কম্প্যাক্ট: ছোট প্যাডিং, কলাম-ফ্লো (নিচে ফাঁকা জায়গা নেই), ব্যাজ শুধু আইকন+সংক্ষিপ্ত নাম
+  return h("li", { key: i, style: { listStyle: "none", breakInside: "avoid", WebkitColumnBreakInside: "avoid", marginBottom: "6px", background: SURFACE, border: "1px solid " + p.tint(0.25), borderRadius: "10px", padding: "6px 8px", display: "block" } },
+    h("div", { style: { display: "flex", gap: "6px", alignItems: "flex-start" } },
+      h("span", { "aria-hidden": true, style: { width: "16px", height: "16px", borderRadius: "50%", background: p.tint(0.16), color: p.accent, fontSize: "10px", fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "3px" } }, p.mark),
+      h("span", { style: { fontSize: "14px", lineHeight: 1.4, color: TEXT, overflowWrap: "anywhere", minWidth: 0 } }, x)),
+    src.length > 0 && h("div", { style: { display: "flex", flexWrap: "wrap", gap: "3px", marginTop: "4px", paddingLeft: "22px" } },
+      src.map((s, k) => h("span", { key: k, "aria-label": s.text, style: { fontSize: "12px", lineHeight: 1.3, padding: "0 6px", borderRadius: "999px", background: "var(--hs-chip-bg, #EEF3F0)", color: MUTED, border: "1px solid var(--hs-border, #D3E0D9)" } }, s.icon + " " + s.text.replace(/\s*\(.*\)$/, "")))));
 }
 
 // সাম্প্রতিক খাবার (ধাপ ১): কার্ডের শেষে ছোট অংশ। rows: [{name, level, icon, reasons}] বা undefined (= দেখানো নয়)।
@@ -66,7 +67,7 @@ function column(kind, title, items, sources, limit, recent, emptyText) {
   const clean = items.map((x) => String(x).trim()).filter(Boolean);
   const first = limit ? clean.slice(0, limit) : clean;
   const rest = limit ? clean.slice(limit) : [];
-  const ul = { margin: 0, padding: 0, ...gridStyle(150) };
+  const ul = { margin: 0, padding: 0, columns: "140px 2", columnGap: "6px" }; // মেসনরি-ফ্লো: টাইল নিজের উচ্চতায়, ফাঁকা নয়
   return h("section", { style: cardStyle(p) },
     cardHeader(p, title, clean.length),
     clean.length === 0
@@ -99,7 +100,7 @@ export function habitTipsBox(tips, limit) {
   const p = PAL.tips;
   const first = limit ? clean.slice(0, limit) : clean;
   const rest = limit ? clean.slice(limit) : [];
-  const li = (x, i) => h("li", { key: i, style: { listStyle: "none", background: SURFACE, border: "1px solid " + p.tint(0.25), borderRadius: "12px", padding: "9px 10px", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", display: "flex", gap: "9px", alignItems: "flex-start", minWidth: 0 } },
+  const li = (x, i) => h("li", { key: i, style: { listStyle: "none", background: SURFACE, border: "1px solid " + p.tint(0.25), borderRadius: "10px", padding: "7px 9px", display: "flex", gap: "8px", alignItems: "flex-start", minWidth: 0 } },
     h("span", { "aria-hidden": true, style: { width: "22px", height: "22px", borderRadius: "50%", background: p.tint(0.18), color: p.accent, fontSize: "12px", fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: "1px" } }, bnNum(i + 1)),
     h("span", { style: { fontSize: "14px", lineHeight: 1.55, color: TEXT, overflowWrap: "anywhere", minWidth: 0 } }, x));
   const ul = { margin: 0, padding: 0, ...gridStyle(230) };
