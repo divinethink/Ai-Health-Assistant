@@ -97,7 +97,7 @@ export async function enableBiometric() {
     const cred = await navigator.credentials.create({
       publicKey: {
         challenge: rand(32),
-        rp: { name: "স্বাস্থ্য সহকারী", id: location.hostname },
+        rp: { name: "Health Companion", id: location.hostname },
         user: { id: rand(16), name: "owner", displayName: "Owner" },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
         authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },

@@ -3,6 +3,7 @@
 // আন্ডারলাইন/হাইলাইট (Firestore: wellnessGuideMarks — শুধু নিজের ডেটা)।
 // কোনো AI/dose logic নেই; পোস্টের মূল body অপরিবর্তিত থাকে।
 
+import { t } from "../../shared/i18n.js";
 import { getMarks, saveMarks, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from "./wellnessGuideData.js";
 
 const { useState, useEffect, useRef, useMemo } = React;
@@ -111,6 +112,7 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [pending, setPending] = useState(null);
   const [activeIds, setActiveIds] = useState(null);
   const [font, setFont] = useState(() => Math.min(FONT_MAX, Math.max(FONT_MIN, Number(lsGet("wgReaderFont", 18)) || 18)));
@@ -224,6 +226,23 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     setActiveIds(seg ? seg.dataset.m.split(",") : null);
   }
 
+  // পুরো লেখা (শিরোনামসহ) ক্লিপবোর্ডে কপি; পোস্টের ডেটা অপরিবর্তিত।
+  const copyAll = async () => {
+    const out = post.title + "\n\n" + text.replace(/^▌\s*/gm, "");
+    let ok = false;
+    try { await navigator.clipboard.writeText(out); ok = true; } catch (e) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = out; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch (e2) { ok = false; }
+    }
+    setCopied(ok);
+    setTimeout(() => { setCopied(false); setMenuOpen(false); }, 900);
+  };
+
   const keep = (e) => e.preventDefault(); // বাটনে চাপলে সিলেকশন হারাবে না
   const barBtn = (extra) => ({ minHeight: "40px", minWidth: "40px", borderRadius: "10px", border: "1px solid rgba(128,128,128,0.5)", background: "transparent", color: theme.fg, fontSize: "15px", cursor: "pointer", ...extra });
 
@@ -234,12 +253,13 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     React.createElement("button", { type: "button", onClick: () => changeFont(-2), "aria-label": "ছোট", style: barBtn({ fontSize: "13px" }) }, "A−"),
     React.createElement("button", { type: "button", onClick: () => changeFont(2), "aria-label": "বড়", style: barBtn({ fontSize: "17px" }) }, "A+"),
     React.createElement("button", { type: "button", onClick: cycleTheme, "aria-label": "থিম", style: barBtn() }, "◐"),
-    // শুধু ব্লগ-অ্যাডমিনের জন্য ⋮ মেনু (এডিট / ট্র্যাশে পাঠান); সদস্যরা কিছু দেখেন না।
-    canManage && React.createElement("button", { type: "button", onClick: () => setMenuOpen((o) => !o), "aria-label": "আরো অপশন", style: barBtn({ fontWeight: 700, fontSize: "20px" }) }, "⋮"),
-    canManage && menuOpen && React.createElement(
+    // ⋮ মেনু: কপি সবার জন্য; এডিট/ট্র্যাশ শুধু ব্লগ-অ্যাডমিনের।
+    React.createElement("button", { type: "button", onClick: () => setMenuOpen((o) => !o), "aria-label": "আরো অপশন", style: barBtn({ fontWeight: 700, fontSize: "20px" }) }, "⋮"),
+    menuOpen && React.createElement(
       "div", { style: { position: "absolute", top: "100%", right: "10px", zIndex: 5, minWidth: "170px", background: theme.bg, color: theme.fg, border: "1px solid rgba(128,128,128,0.5)", borderRadius: "12px", boxShadow: "0 4px 14px rgba(0,0,0,0.25)", overflow: "hidden" } },
-      React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onEdit(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", color: theme.fg, fontSize: "14px", cursor: "pointer" } }, "✏️ এডিট"),
-      React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onTrash(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", borderTop: "1px solid rgba(128,128,128,0.3)", color: "#C0392B", fontSize: "14px", cursor: "pointer" } }, "🗑 ট্র্যাশে পাঠান")
+      canManage && React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onEdit(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", color: theme.fg, fontSize: "14px", cursor: "pointer" } }, "✏️ এডিট"),
+      React.createElement("button", { type: "button", onClick: copyAll, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", borderTop: canManage ? "1px solid rgba(128,128,128,0.3)" : "none", color: theme.fg, fontSize: "14px", cursor: "pointer" } }, "📋 " + (copied ? t("menu.copied") : t("menu.copy"))),
+      canManage && React.createElement("button", { type: "button", onClick: () => { setMenuOpen(false); onTrash(post); }, style: { display: "block", width: "100%", textAlign: "left", padding: "12px 14px", background: "transparent", border: "none", borderTop: "1px solid rgba(128,128,128,0.3)", color: "#C0392B", fontSize: "14px", cursor: "pointer" } }, "🗑 ট্র্যাশে পাঠান")
     )
   );
 

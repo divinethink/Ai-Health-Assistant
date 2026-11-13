@@ -32,7 +32,7 @@ export function AiSummaryPrintView({ data, onBack }) {
 
     React.createElement("div", { style: { color: "#111", maxWidth: "720px", margin: "0 auto" } },
       React.createElement("div", { style: { textAlign: "center", borderBottom: "2px solid var(--hs-primary, #0E4B43)", paddingBottom: "8px" } },
-        React.createElement("h2", { style: { margin: 0, color: "var(--hs-primary, #0E4B43)" } }, "Healthy Life — AI Health Summary")
+        React.createElement("h2", { style: { margin: 0, color: "var(--hs-primary, #0E4B43)" } }, "Health Companion — AI Health Summary")
       ),
       React.createElement("p", { style: { fontSize: "11px", color: "#888", textAlign: "right" } }, "তৈরির তারিখ: " + fmtDate(data.generatedAt)),
       React.createElement("p", null, "সদস্য: ", React.createElement("b", null, data.memberName || "—")),

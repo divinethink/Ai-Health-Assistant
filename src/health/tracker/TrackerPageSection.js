@@ -576,7 +576,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
 }
 
 const WEEK_CHOICES = [4, 8, 12, 20];
-const GOAL_HINTS = { lose: "ধীরে ও নিরাপদে ওজন কমানো", gain: "ধীরে ও সুস্থভাবে ওজন বাড়ানো", fit: "এখনকার ওজন ও সুস্থতা ধরে রাখা", muscle: "ব্যায়ামের সাথে শক্তি ও পেশি বাড়ানো" };
+const GOAL_HINTS = { lose: "", gain: "ধীরে ও সুস্থভাবে ওজন বাড়ানো", fit: "এখনকার ওজন ও সুস্থতা ধরে রাখা", muscle: "ব্যায়ামের সাথে শক্তি ও পেশি বাড়ানো" };
 // ACTIVITY_LABELS-এর মান (low/medium/high) অপরিবর্তিত; শুধু বোঝানোর লেখা
 const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], light: ["হালকা সক্রিয়", "বসে কাজ + সপ্তাহে ১–৩ দিন হাঁটা/হালকা ব্যায়াম"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
 
@@ -698,7 +698,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } },
             Object.entries(GOAL_LABELS).map(([id, lbl]) => { const on = id === goalType; return React.createElement("button", { key: id, onClick: () => setGoalType(id), "aria-pressed": on,
               style: { minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); })),
-          goalType && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType]),
+          goalType && GOAL_HINTS[goalType] && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType]),
           canFocusForm && React.createElement("div", { role: "group", "aria-label": "শরীরের টার্গেট", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px" } },
             focusOptions(member && member.sex).filter((o) => o.id !== "muscle").map((o) => { const on = focus.includes(o.id); const dis = !on && focus.length >= MAX_FOCUS; return React.createElement("button", { key: o.id, type: "button", onClick: () => setFocus((v) => v.includes(o.id) ? v.filter((x) => x !== o.id) : v.length >= MAX_FOCUS ? v : [...v, o.id]), disabled: dis, "aria-pressed": on,
               style: { minHeight: "44px", padding: "6px 8px", lineHeight: 1.25, borderRadius: "999px", cursor: dis ? "default" : "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, opacity: dis ? 0.45 : 1, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, (on ? "✓ " : "") + o.label); })),
