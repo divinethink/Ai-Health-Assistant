@@ -10,7 +10,7 @@ import { histBind, histChange } from "../../shared/navHistory.js";
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, todayISO } from "./trackerData.js";
+import { getGoal, getDaily, getWeekDaily, saveGoal, saveGoalExtras, saveDaily, savePlanPrefs, saveFocusAreas, todayISO } from "./trackerData.js";
 import { TodayTab } from "./TodayTab.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
 import { T, CARD_STYLE, SLOT_ICON, SLOT_TINT } from "./trackerTheme.js";
@@ -19,13 +19,15 @@ import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS } from "./exercisePlanData.js";
 import {
   EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog, recentExtraFoods,
-  setSlotPref, clearSlotPref, setFoodOverride, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog,
+  setSlotPref, clearSlotPref, setFoodOverride, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog, sanitizePlanPrefs,
 } from "./planPrefs.js";
 import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
 import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
+import { FocusSheet, focusLabels } from "./FocusSheet.js";
+import { focusCtxOf, exerciseDetail } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
@@ -210,7 +212,10 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [err, setErr] = useState(null);
   const [sheet, setSheet] = useState(null); // { kind: "day", idx } | { kind: "log", type }
   const [panel, setPanel] = useState(null); // "why" | null
-  const base = exercisePlan(age, goal ? goal.goalType : null);
+  const sex = info.member && info.member.sex;
+  const focusCtx = focusCtxOf({ goal, sex, age, flags, condKeys: info.condKeys });
+  const base = exercisePlan(age, goal ? goal.goalType : null, focusCtx);
+  const canFocus = age !== null && age >= 18 && !flags.pregnant;
 
   if (!base) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
 
@@ -223,6 +228,8 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const done = Array.isArray(d.exerciseDone) ? d.exerciseDone : [];
   const log = sanitizeExerciseLog(d.exerciseLog);
   const needsDoctor = flags.pregnant || flags.diabetes || flags.kidney || age >= 65;
+  // নির্দেশনা: কার্যকর প্ল্যানের ব্যায়ামগুলোর মধ্যে সেট/বার-টিপ আছে এমনগুলো (ডুপ্লিকেট ছাড়া, প্ল্যানের ক্রমে)
+  const guideTypes = [...new Set((plan.routine || []).flat().map((x) => x.type).filter((t) => t && EXERCISE_TYPES[t] && exerciseDetail(t)))];
 
   const run = async (fn, closeAfter) => {
     setErr(null); setBusy(true);
@@ -252,6 +259,21 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     if (Object.keys(fields).length) await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
   }, true);
 
+  // টার্গেট সংরক্ষণ। replace=true হলে শুধু ব্যায়ামের "আমার প্ল্যান" মোছে (মিল/খাবার-prefs অক্ষত)। আগে টার্গেট, পরে মোছা — মাঝপথে ব্যর্থ হলে পুরনো এডিট বহাল থাকে।
+  // আজকের রুটিন বদলালে টিক ও exerciseMin নতুন রুটিনের সাথে মেলানো হয় (saveDay-র মতো)।
+  const saveFocus = (areas, replace) => run(async () => {
+    await saveFocusAreas(familyId, memberId, callerMemberId, areas, goal);
+    const prefs = replace ? { ...sanitizePlanPrefs(goal && goal.planPrefs), exercise: {} } : goal && goal.planPrefs;
+    if (replace) await savePlanPrefs(familyId, memberId, callerMemberId, prefs, goal || { exists: true });
+    const nb = exercisePlan(age, goal ? goal.goalType : null, focusCtxOf({ goal: { focusAreas: areas }, sex, age, flags, condKeys: info.condKeys }));
+    if (!nb || !nb.routine) return;
+    const r = reconcileExerciseDone(todayItems, applyExercisePrefs(nb, prefs).routine[todayIdx], done);
+    const fields = {};
+    if (r.done.length !== done.length) fields.exerciseDone = r.done;
+    if (r.deltaMin) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + r.deltaMin);
+    if (Object.keys(fields).length) await saveDaily(familyId, memberId, callerMemberId, todayISO(), fields, daily);
+  }, true);
+
   const writeLog = (next, deltaMin) => run(() => {
     const fields = { exerciseLog: next };
     if (deltaMin) fields.exerciseMin = Math.max(0, (d.exerciseMin || 0) + deltaMin);
@@ -269,8 +291,20 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
   return React.createElement("div", null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-      FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel)),
+      FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel),
+      guideTypes.length > 0 && FoldChip("guide", "📋 নির্দেশনা", null, panel, setPanel)),
     panel === "why" && React.createElement(PlanWhyCard, { bare: true, lines: explainExercise({ plan: base, age, goalType: goal ? goal.goalType : null }) }),
+    panel === "guide" && React.createElement("div", { style: CARD },
+      React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "প্রতিদিন শুরুতে গা-গরম, শেষে স্ট্রেচিং। সহজ লাগলে ধীরে কঠিন করুন; ব্যথা হলে থামুন।"),
+      guideTypes.map((t) => React.createElement("div", { key: t, style: { padding: "6px 0", borderBottom: "1px solid " + T.track } },
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, (EX_ICON[t] || "") + " " + EXERCISE_TYPES[t].label + " · " + exerciseDetail(t).sets),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, exerciseDetail(t).tip)))),
+    canFocus && React.createElement("div", { style: { ...CARD, display: "flex", alignItems: "center", gap: "8px" } },
+      React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🎯 আমার টার্গেট"),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, focusCtx ? focusLabels(focusCtx.areas).join(" · ") : "এখনো বাছা হয়নি — সাধারণ প্ল্যান চলছে")),
+      React.createElement("button", { type: "button", onClick: () => { setErr(null); setSheet({ kind: "focus" }); }, disabled: busy,
+        style: { flexShrink: 0, minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, focusCtx ? "বদলান" : "বাছুন")),
     needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
     gate.blocked && plan.routine && React.createElement(Notice, { tone: "info" }, "আপনার ক্ষেত্রে রুটিন নিজে বদলানো বন্ধ — ডাক্তারের পরামর্শ অনুযায়ী করুন। নিচে ‘আজ আসলে’ লগ করা যাবে।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
@@ -288,7 +322,8 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
               React.createElement(Tick, { on, onClick: () => toggle(it), busy, label: it.label + " করেছি" }),
               React.createElement("div", { style: { minWidth: 0, lineHeight: 1.35 } },
                 React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 600, color: T.ink } }, it.label),
-                React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, bnNum(it.min) + " মিনিট" + (it.counted ? "" : " · গণনায় নয়"))));
+                React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, bnNum(it.min) + " মিনিট" + (it.counted ? "" : " · গণনায় নয়")),
+                it.type && exerciseDetail(it.type) && React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, exerciseDetail(it.type).sets)));
           }))),
     plan.routine && React.createElement("div", { style: CARD },
       React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, marginBottom: "4px" } }, "সপ্তাহের রুটিন"),
@@ -320,6 +355,10 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       onReset: () => saveDay(sheet.idx, clearDayPref(goal && goal.planPrefs, sheet.idx)),
       onClose: closeSheet,
     }),
+    sheet && sheet.kind === "focus" && React.createElement(FocusSheet, {
+      key: "focus", sex, current: goal && goal.focusAreas, customDays: plan.custom ? plan.custom.length : 0, busy, err,
+      onSave: saveFocus, onClose: closeSheet,
+    }),
     sheet && sheet.kind === "log" && React.createElement(ExerciseLogSheet, {
       key: "log", initialType: sheet.type, entries: log, busy, err, onAdd: addLog, onRemove: removeLog, onClose: closeSheet,
     }),
@@ -346,7 +385,7 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
 
   const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
   const [sMin, sMax] = sleepTargetHours(age);
-  const plan = exercisePlan(age, goal ? goal.goalType : null);
+  const plan = exercisePlan(age, goal ? goal.goalType : null, focusCtxOf({ goal, sex: info.member && info.member.sex, age, flags: info.flags, condKeys: info.condKeys }));
   const t = buildTrend(docs, dates, { calorieTarget, fastDays: info.fastDays, sleepMinH: sMin, weeklyExerciseTarget: plan ? plan.weeklyTargetMin : null });
   const labels = dates.map((d) => bnNum(Number(d.slice(8))));
   const card = (title, sub, body) => React.createElement("div", { style: CARD },

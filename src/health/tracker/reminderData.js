@@ -6,6 +6,8 @@
 import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, bdDayIndex } from "./exercisePlanData.js";
 import { applyMealPrefs, applyExercisePrefs } from "./planPrefs.js";
+import { focusCtxOf } from "./homeWorkout.js";
+import { conditionKeysOf } from "./avoidRules.js";
 import { daysLeft } from "../records/medReminderCalc.js";
 import { ageYears, safetyGate, sleepTargetHours, detectFlagsFromConditions, effectivePregnant } from "./trackerCalc.js";
 
@@ -108,7 +110,7 @@ export function buildReminderContext({ goal, records, member, now = new Date() }
   // "আমার প্ল্যান" (planPrefs) থাকলে রিমাইন্ডারও সেই কার্যকর প্ল্যান পড়ে; গেট বন্ধ হলে prefs উপেক্ষিত (নিরাপত্তা)।
   const prefs = goal ? goal.planPrefs : null;
   const mealPlan = !gate.blocked && goal && goal.calc ? applyMealPrefs(buildMealPlan(goal.calc.calorieTarget, allergyTags, prefs), prefs, allergyTags) : null;
-  const base = exercisePlan(age, goal ? goal.goalType : null);
+  const base = exercisePlan(age, goal ? goal.goalType : null, focusCtxOf({ goal, sex: member && member.sex, age, flags, condKeys: conditionKeysOf(records) }));
   const plan = gate.blocked ? base : applyExercisePrefs(base, prefs);
   const exerciseToday = plan && plan.routine ? plan.routine[bdDayIndex(now)] : null;
   return { mealPlan, exerciseToday, sleepRange: age === null ? null : sleepTargetHours(age), kidney: flags.kidney };

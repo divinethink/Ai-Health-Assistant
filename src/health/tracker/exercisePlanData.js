@@ -1,6 +1,9 @@
 // ব্যায়াম-প্ল্যান — pure functions। ধাপ ২। WHO সাধারণ গাইড (রোগ নির্ণয়/চিকিৎসা নয়)।
 // বাংলাদেশি সপ্তাহ: শনিবার থেকে শুরু। day-index: শনি=০ … শুক্র=৬।
 // counted=true মানে সাপ্তাহিক লক্ষ্যে মিনিট গোনা হয়।
+// ধাপ B: ৩য় আর্গুমেন্ট `focus` ({areas, senior, lowImpact} — homeWorkout.focusCtxOf) থাকলে প্রাপ্তবয়স্কদের জন্য টার্গেট-ভিত্তিক ঘরোয়া প্ল্যান।
+
+import { focusPlan } from "./homeWorkout.js";
 
 export const DAY_LABELS = ["শনিবার", "রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার"];
 
@@ -17,7 +20,7 @@ const STRENGTH_ADULT = "১০ মি. হাঁটা + ২০ মি. স্�
 const STRENGTH_SENIOR = "১০ মি. হাঁটা + ২০ মি. চেয়ার-স্ট্যান্ড, হালকা ওজন, এক পায়ে ভারসাম্য";
 
 // age → { band, weeklyTargetMin, summary, routine[7] } | null (বয়স না জানলে)
-export function exercisePlan(age, goalType) {
+export function exercisePlan(age, goalType, focus) {
   if (age === null || age === undefined) return null;
   if (age < 5) {
     return { band: "under5", weeklyTargetMin: null, routine: null,
@@ -31,6 +34,7 @@ export function exercisePlan(age, goalType) {
       routine: [bone, play, bone, play, bone, play, play].map((m) => [m]) };
   }
   const senior = age >= 65;
+  if (focus && Array.isArray(focus.areas) && focus.areas.length) return focusPlan({ areas: focus.areas, senior, lowImpact: !!focus.lowImpact });
   const str = strength(senior ? STRENGTH_SENIOR : STRENGTH_ADULT);
   const muscle = goalType === "muscle";
   // শনি রবি সোম মঙ্গল বুধ বৃহ শুক্র

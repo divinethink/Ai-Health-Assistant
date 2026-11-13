@@ -114,7 +114,10 @@ service cloud.firestore {
         && (d.waterTarget == null || (d.waterTarget is int && d.waterTarget >= 1 && d.waterTarget <= 20)));
       // ধাপ ২: ঐচ্ছিক daily-ফিল্ড `medTaken` (ওষুধ খেয়েছি — map, সর্বোচ্চ ৬০ key; key-মান যাচাই client-এর medTaken.js-এ)।
       let medOk = !('medTaken' in d) || (d.type == 'daily' && d.medTaken is map && d.medTaken.size() <= 60);
-      return planOk && foodsOk && logOk && fastOk && waterOk && medOk;
+      // ধাপ B: ঐচ্ছিক goal-ফিল্ড `focusAreas` (ব্যায়াম-টার্গেট) — সর্বোচ্চ ৩টি, শুধু অনুমোদিত আইডি (client-এর homeWorkout.js FOCUS_AREAS-এর সাথে মেলাতে হবে)।
+      let focusOk = !('focusAreas' in d) || (d.type == 'goal' && d.focusAreas is list && d.focusAreas.size() <= 3
+        && d.focusAreas.hasOnly(['muscle', 'belly', 'chest', 'arms', 'legs', 'glute', 'core', 'posture']));
+      return planOk && foodsOk && logOk && fastOk && waterOk && medOk && focusOk;
     }
 
     // ============================================================
@@ -530,7 +533,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken', 'focusAreas',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
@@ -541,7 +544,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'medTaken', 'focusAreas',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);

@@ -774,6 +774,17 @@ describe('Health Assistant — Firestore Rules', function () {
         tr('mA', 'mA', { extraFoods: [{ name: 'সমুচা', kcal: 200, slot: 'snack2' }], exerciseLog: [{ type: 'walk', min: 20 }] })));
     });
 
+    // ধাপ B: ব্যায়াম-টার্গেট (focusAreas → শুধু goal-ডক; ≤৩; অনুমোদিত আইডি)
+    it('12g. focusAreas: goal-এ বৈধ তালিকা (খালি-সহ) চলে; ৪টি, অজানা আইডি, ভুল ধরন, daily-তে reject', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goalDoc({ focusAreas: ['belly', 'chest', 'glute'] })));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { focusAreas: [], lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'f1'), goalDoc({ focusAreas: ['muscle', 'belly', 'chest', 'arms'] })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'f2'), goalDoc({ focusAreas: ['surprise'] })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'f3'), goalDoc({ focusAreas: 'belly' })));
+      await assertFails(setDoc(famDoc(db, 'healthTracker', 'f4'), tr('mA', 'mA', { focusAreas: ['belly'] })));
+    });
+
     it('12f. planPrefs daily-তে, extraFoods/exerciseLog goal-এ, অজানা planPrefs-key, ভুল ধরন ও বড় আকার reject', async () => {
       const db = dbAs('uidA');
       const big = Array.from({ length: 21 }, () => ({ name: 'a', kcal: 1, slot: 'lunch' }));

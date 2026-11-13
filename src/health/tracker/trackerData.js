@@ -11,6 +11,7 @@ import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./pl
 import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
 import { sanitizeTaken } from "../records/medTaken.js";
 import { monthDatesISO } from "./dateNav.js";
+import { sanitizeFocusAreas } from "./homeWorkout.js";
 
 function col(familyId) {
   return db.collection("families").doc(familyId).collection("healthTracker");
@@ -55,6 +56,17 @@ export async function saveGoalExtras(familyId, memberId, callerMemberId, { fastD
   const fields = ["type", "memberId", "fastDays", "waterTarget", "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
   await col(familyId).doc("goal_" + memberId).set({
     type: "goal", memberId, fastDays: sanitizeFastDays(fastDays), waterTarget: sanitizeWaterTarget(waterTarget),
+    lastEditedByMemberId: callerMemberId, updatedAt: ts(),
+    ...(prevGoal ? {} : { createdAt: ts() }),
+  }, { mergeFields: fields });
+}
+
+// ধাপ B: ব্যায়াম-টার্গেট (`focusAreas`, ≤৩)। mergeFields — অন্য goal-ফিল্ড/planPrefs ছোঁয় না; নির্দিষ্ট ডক-ID → retry-নিরাপদ।
+// [] = টার্গেট সরানো (সাধারণ প্ল্যানে ফেরা)। লিঙ্গ-ভিত্তিক বাছাই (বাট = মহিলা) UI/পড়ার স্তরে; এখানে শুধু আইডি-যাচাই।
+export async function saveFocusAreas(familyId, memberId, callerMemberId, areas, prevGoal) {
+  const fields = ["type", "memberId", "focusAreas", "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
+  await col(familyId).doc("goal_" + memberId).set({
+    type: "goal", memberId, focusAreas: sanitizeFocusAreas(areas),
     lastEditedByMemberId: callerMemberId, updatedAt: ts(),
     ...(prevGoal ? {} : { createdAt: ts() }),
   }, { mergeFields: fields });
