@@ -265,7 +265,6 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
     if (onExit) onExit();
   }
 
-  const inList = category !== null;
   let title = "স্বাস্থ্য ব্লগ";
   if (category === "all") title = "সকল লেখা";
   else if (category === "trash") title = "ট্র্যাশ";

@@ -13,7 +13,6 @@ const { useState, useEffect, useRef } = React;
 const h = React.createElement;
 
 export const AI_COLORS = { bg: "#FFF8E1", border: "#E0A72E", text: "#8A5A00", soft: "#FFFBEA", ring: "#F2D27A" };
-const G = "var(--hs-primary, #0E4B43)";
 const CONSENT_KEY = "hs_ai_doc_consent_v1";
 
 export function hasAiConsent() { try { return window.localStorage.getItem(CONSENT_KEY) === "1"; } catch (_e) { return false; } }

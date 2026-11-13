@@ -16,7 +16,7 @@ import { TodaySummary } from "../summary/TodaySummary.js";
 import { T, CARD_STYLE, SLOT_LINE, SLOT_TINT } from "./trackerTheme.js";
 import { Icon } from "../../shared/icons.js";
 import { last30DatesISO } from "./todaySummary.js";
-import { MEAL_SLOTS, buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
+import { buildMealPlan, allergyTagsOf } from "./mealPlanData.js";
 import { exercisePlan, plannedWeeklyMinutes, weekDatesISO, bdDayIndex, DAY_LABELS, exerciseKind } from "./exercisePlanData.js";
 import {
   EXERCISE_TYPES, applyMealPrefs, applyExercisePrefs, caloriesForDay, mealWarnings, exerciseWarnings, sanitizeExtraFoods, sanitizeExerciseLog, recentExtraFoods,
@@ -136,7 +136,6 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const extras = sanitizeExtraFoods(d.extraFoods);
   const eaten = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
   const warnings = mealWarnings(plan.total, { sex: member && member.sex, target: calc.calorieTarget });
-  const slotName = (id) => (MEAL_SLOTS.find((x) => x.id === id) || {}).label;
 
   // সংরক্ষণের একই পথ: লিখুন → ডেটা রিফ্রেশ (শেষ হওয়া পর্যন্ত busy, তাই double-tap নিরাপদ) → ব্যর্থ হলেও রিফ্রেশ।
   const run = async (fn, closeAfter) => {

@@ -4,7 +4,7 @@ const e = (kcal, p, c, f, fib, measures, src, chk, ref) => ({
   per100: { kcal, p, c, f, fib }, measures: measures.map(([id, label, g]) => ({ id, label, g })), src, chk, ref,
 });
 const T = "table", R = "recipe";
-const US = "USDA (recalled)", GR = "গড় রেসিপি-অনুমান", ZERO = "USDA: ≈০ kcal";
+const US = "USDA (recalled)", GR = "গড় রেসিপি-অনুমান";
 
 export const FOOD_NUTRITION_B = {
   // মাছ-মাংস-ডিম
