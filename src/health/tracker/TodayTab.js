@@ -358,14 +358,16 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
         week.days.map((x, i) => {
           const hit = x.state === "hit", isToday = x.state === "today", isFast = x.state === "fast";
+          const partial = !hit && !isFast && x.metCount > 0; // ১টা লক্ষ্য পূরণ: হালকা সবুজ বৃত্তে সংখ্যা
           const canPick = inRange(x.date, today), isSel = x.date === viewDate;
           return React.createElement("button", { key: x.date, type: "button", disabled: !canPick, onClick: () => pickDay(x.date), "aria-pressed": isSel, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", flex: 1, minHeight: "44px", padding: 0, border: "none", background: "none", fontFamily: "inherit", cursor: canPick ? "pointer" : "default" } },
             React.createElement("span", { style: { fontSize: "12px", color: T.muted } }, SHORT_DAYS[i]),
-            React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : isFast ? " সিয়াম/ফাস্টিং-এর দিন" : isToday ? " আজ" : ""), style: { width: "26px", height: "26px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
-              background: hit ? T.green : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || isToday ? T.onDark : T.muted,
+            React.createElement("div", { "aria-label": SHORT_DAYS[i] + (hit ? " টার্গেটে" : partial ? " " + x.metCount + "টি লক্ষ্য পূরণ" : isFast ? " সিয়াম/ফাস্টিং-এর দিন" : isToday ? " আজ" : ""), style: { width: "26px", height: "26px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700,
+              background: hit ? T.green : partial ? "#D4EADF" : isToday ? T.orange : isFast ? T.sand : "transparent", color: hit || (isToday && !partial) ? T.onDark : partial ? T.green : T.muted,
               boxShadow: isSel ? "0 0 0 2px " + T.sand + ", 0 0 0 4px " + T.green : "none",
-              border: hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : isToday ? "আজ" : isFast ? "🌙" : ""));
-        }))),
+              border: partial ? "2px solid " + (isToday ? T.orange : T.green) : hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : partial ? bnNum(x.metCount) : isToday ? "আজ" : isFast ? "🌙" : ""));
+        })),
+      React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, "✓ = টার্গেট (২+ লক্ষ্য) · সংখ্যা = পূরণ হওয়া লক্ষ্য")),
 
     // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)
     homeExtra || null,

@@ -57,3 +57,11 @@ test("last30DatesISO: ৩০টি, পুরনো→নতুন, শেষট
   assert.equal(d[29], "2026-03-05");
   assert.ok(d[0] < d[1]);
 });
+test("সাপ্তাহিক সারাংশ: ১টা লক্ষ্য পূরণ হলে metCount ১ (টিক নয়, hitCount বাড়ে না)", () => {
+  const week = ["2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13"];
+  const s = weekSummary([doc("2026-11-08", { waterGlasses: 8 })], week, "2026-11-13", ctx);
+  assert.equal(s.days[1].metCount, 1);
+  assert.equal(s.days[1].state, "miss");
+  assert.equal(s.hitCount, 0);
+  assert.equal(s.days[0].metCount, 0);
+});

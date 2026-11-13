@@ -78,7 +78,9 @@ export function weekSummary(docs, weekDates, todayISO, ctx) {
     else if (dayHit(m[date], ctx, date)) { state = "hit"; hitCount++; }
     else if (fastOnDate(date, ctx.fastDays, m[date])) state = "fast"; // উপবাস-দিন: miss নয়
     else state = date === todayISO ? "today" : "miss";
-    return { date, state };
+    // metCount: সেই দিন কয়টা লক্ষ্য পূরণ হয়েছে (১টা হলেও দেখানোর জন্য; state/hitCount-এর নিয়ম অপরিবর্তিত)
+    const metCount = date > todayISO ? 0 : metricsOf(m[date], ctx, date).met.length;
+    return { date, state, metCount };
   });
   return { days, hitCount };
 }
