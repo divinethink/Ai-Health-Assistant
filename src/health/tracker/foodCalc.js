@@ -68,6 +68,30 @@ export function sumNutrition(entries) {
   return { kcal: Math.round(s.kcal), p: r1(s.p), c: r1(s.c), f: r1(s.f), fib: r1(s.fib), total: s.total, withMacro: s.withMacro };
 }
 
+// প্ল্যানের টিক-করা বেলার আইটেম → sumNutrition-এর এন্ট্রি। ক্যালরি-রিং (caloriesForDay) টিক-করা প্ল্যান ধরে, কিন্তু ম্যাক্রো আগে শুধু নিজে-যোগ-করা
+// খাবার থেকে আসত — তাই রিং ১৫০০ দেখালেও প্রোটিন/কার্ব/ফ্যাট ০ থাকত। এখানে kcal সবসময় আইটেমের মান (রিংয়ের একই), ম্যাক্রো শুধু যেখানে
+// পুষ্টি-ডেটা আছে, নিজের-মান override নেই ও ইউনিটের নামে মাপ মেলে (entryAmountText-এর একই নিয়ম); না মিললে শুধু kcal (UI "আংশিক" জানায়)।
+export function tickedPlanEntries(plan, eatenIds) {
+  const ticked = new Set(Array.isArray(eatenIds) ? eatenIds : []);
+  const out = [];
+  ((plan && plan.slots) || []).forEach((s) => {
+    if (!ticked.has(s.id)) return;
+    (s.items || []).forEach((it) => {
+      if (!it || !Number.isFinite(it.kcal)) return;
+      const e = { kcal: it.kcal };
+      const food = Object.prototype.hasOwnProperty.call(FOODS, it.key) ? FOODS[it.key] : null;
+      const n = food && !hasFoodOverride(it.key) ? nutritionOf(it.key) : null;
+      const m = n ? measuresOf(it.key).find((x) => x.label === food.u) : null;
+      if (m && Number.isFinite(it.qty) && it.qty > 0) {
+        const k = (m.g * it.qty) / 100;
+        e.p = n.per100.p * k; e.c = n.per100.c * k; e.f = n.per100.f * k; e.fib = n.per100.fib * k;
+      }
+      out.push(e);
+    });
+  });
+  return out;
+}
+
 // ম্যাক্রো দেখানোর স্ট্রিং: ১ দশমিক, বাংলা অঙ্ক, ".০" থাকে (যেমন ১১.২, ৪.০)।
 export function fmtMacro(x) {
   const n = Number(x);

@@ -84,6 +84,14 @@ export function computeGoal({ goalType, activity, sex, age, heightCm, weightKg, 
   if (target < floor) {
     target = floor;
     notes.push("ন্যূনতম নিরাপদ ক্যালরির (" + floor + ") নিচে টার্গেট যায় না।");
+    // মেঝে ছোঁয়ায় বাস্তব ঘাটতি/উদ্বৃত্ত কমে যায় — দেখানো সাপ্তাহিক হারও বাস্তব মানে (নইলে "০.৫ কেজি/সপ্তাহ" মিথ্যা দেখায়)
+    if (goalType === "lose" || goalType === "gain" || goalType === "muscle") {
+      weeklyRateKg = Math.max(0, Math.abs(target - tdee) * 7 / KCAL_PER_KG);
+      if (goalType === "lose") {
+        if (target >= tdee) { weeklyRateKg = 0; notes.push("⚠ এই ক্যালরিতে ওজন কমার মতো ঘাটতি থাকে না। ডাক্তার/পুষ্টিবিদের পরামর্শ নিন।"); }
+        else notes.push("এই সীমায় বাস্তবে সপ্তাহে প্রায় " + (Math.round(weeklyRateKg * 100) / 100) + " কেজি কমবে।");
+      }
+    }
   }
   return {
     bmr: Math.round(bmr), tdee: Math.round(tdee),
@@ -182,8 +190,10 @@ export function sleepMinutes(bed, wake) {
   if (!/^\d{2}:\d{2}$/.test(bed || "") || !/^\d{2}:\d{2}$/.test(wake || "")) return null;
   const [bh, bm] = bed.split(":").map(Number);
   const [wh, wm] = wake.split(":").map(Number);
+  if (bh > 23 || wh > 23 || bm > 59 || wm > 59) return null; // অবৈধ সময় (যেমন ২৫:৯৯)
   let diff = (wh * 60 + wm) - (bh * 60 + bm);
-  if (diff <= 0) diff += 24 * 60;
+  if (diff === 0) return null; // শোয়া = ওঠা → ২৪ ঘণ্টার ঘুম নয়, অবৈধ
+  if (diff < 0) diff += 24 * 60;
   return diff;
 }
 

@@ -22,6 +22,13 @@ export function ringDash(pct, r) {
   return { circ, dash: (p / 100) * circ, pct: p };
 }
 
+// ক্যালরি "পূরণ" = টার্গেটের ৮০%–১১০% — আজ/স্ট্রিক/ট্রেন্ড/স্কোর সবখানে এই একটাই নিয়ম (weeklyTrend-ও এটাই ডাকে)।
+export const CAL_MET_LO = 0.8;
+export const CAL_MET_HI = 1.1;
+export function calorieMet(calories, target) {
+  return !!target && calories >= target * CAL_MET_LO && calories <= target * CAL_MET_HI;
+}
+
 export function pctOf(value, target) {
   if (!target || target <= 0) return 0;
   return ((value || 0) / target) * 100;
@@ -35,7 +42,7 @@ export function metricsOf(doc, ctx, date) {
   const applicable = [];
   const met = [];
   const add = (key, ok) => { applicable.push(key); if (ok) met.push(key); };
-  if (ctx.calorieTarget && !onFast) add("calories", d.caloriesIn >= ctx.calorieTarget * 0.8 && d.caloriesIn <= ctx.calorieTarget * 1.1);
+  if (ctx.calorieTarget && !onFast) add("calories", calorieMet(d.caloriesIn, ctx.calorieTarget));
   if (ctx.exTarget) add("exercise", (d.exerciseMin || 0) >= ctx.exTarget);
   if (ctx.waterTarget) add("water", (d.waterGlasses || 0) >= ctx.waterTarget);
   if (ctx.sleepMinH) add("sleep", (d.sleepMinutes || 0) >= ctx.sleepMinH * 60);

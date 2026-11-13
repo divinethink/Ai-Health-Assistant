@@ -14,7 +14,7 @@ import { ringDash, pctOf, weekSummary, last30DatesISO } from "./todaySummary.js"
 import { buildMealPlan } from "./mealPlanData.js";
 import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
-import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries } from "./foodCalc.js";
+import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries, tickedPlanEntries } from "./foodCalc.js";
 import { FoodLogSheet } from "./FoodLogSheet.js";
 import { ExerciseLogSheet, Sheet } from "./PlanEditSheets.js";
 import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
@@ -160,10 +160,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   // ধাপ ২: খাবার-লগ (extraFoods) — ক্যালরি-টার্গেট চালু থাকলে (গেট-ব্লকে নয়; সিয়ামের দিনেও চালু)। caloriesIn = প্ল্যানের টিক + নিজে-যোগ-করা (MealTab-এর একই সূত্র)।
   const extras = sanitizeExtraFoods(d.extraFoods);
   const canLog = !!calc;
-  const macros = sumNutrition(extras);
   const mt = calc && !onFast ? macroTargets({ kcal: calc.calorieTarget, age, weightKg: info.weightKg, flags }) : null; // টার্গেট/সর্বোচ্চ সীমা (ক্যালরি-টার্গেট থেকে হিসাব, সংরক্ষণ হয় না)
   const plan = canLog ? applyMealPrefs(buildMealPlan(calc.calorieTarget, info.allergyTags, goal.planPrefs, { flags: info.flags, condKeys: info.condKeys }), goal.planPrefs, info.allergyTags) : null;
   const eatenIds = Array.isArray(d.mealsEaten) ? d.mealsEaten : [];
+  const macros = sumNutrition([...extras, ...tickedPlanEntries(plan, eatenIds)]); // নিজে-যোগ-করা + টিক-করা প্ল্যান — ক্যালরি-রিংয়ের একই উৎস
   const budgetTarget = calc && !onFast ? calc.calorieTarget : null; // সিয়ামের দিনে টার্গেট স্থগিত → আগের প্ল্যান-ভিত্তিক সংখ্যা
   const budgets = plan ? slotBudgets(plan, eatenIds, extras, budgetTarget) : {};
   const writeExtras = async (next) => {
@@ -292,7 +292,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? T.border : col, marginTop: "2px" } },
               tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
-      macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি পুরনো এন্ট্রিতে ম্যাক্রো নেই।")),
+      macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি এন্ট্রিতে ম্যাক্রোর তথ্য নেই (আংশিক হিসাব)।")),
     ],
     alert: () => [
     React.createElement(AlertStrip, { allergies: info.allergies || [], conds: info.conds || [], onDiet: () => setDietOpen(true) }),

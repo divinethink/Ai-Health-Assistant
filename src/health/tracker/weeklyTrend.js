@@ -3,7 +3,7 @@
 
 import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate, activeFastDays } from "./trackerCalc.js";
 import { fastOnDate } from "./fastDay.js";
-import { dayHit } from "./todaySummary.js";
+import { dayHit, calorieMet } from "./todaySummary.js";
 
 export function last7DatesISO(now = new Date()) {
   const p = (n) => String(n).padStart(2, "0");
@@ -26,6 +26,7 @@ export function buildTrend(docs, dates, opts) {
       weightKg: d.weightKg || null,
       calories: d.caloriesIn > 0 ? d.caloriesIn : null,
       sleepH: d.sleepMinutes ? round1(d.sleepMinutes / 60) : null,
+      sleepMin: d.sleepMinutes > 0 ? d.sleepMinutes : null, // লক্ষ্য-তুলনা মিনিটে (গোলাকার ঘণ্টায় নয়) — dayHit-এর সাথে মেলাতে
       exerciseMin: d.exerciseMin || 0,
       logged: !!byDate[date],
       fasting: fastOnDate(date, opts.fastDays, byDate[date]),
@@ -38,9 +39,10 @@ export function buildTrend(docs, dates, opts) {
   const T = opts.calorieTarget;
   // উপবাস-দিন (opts.fastDays) ক্যালরি-লক্ষ্যের হিসাবের বাইরে — "লক্ষ্যের বাইরে" ধরা হয় না
   const calCountDays = calDays.filter((x) => !x.fasting);
-  const calInRange = T ? calCountDays.filter((x) => Math.abs(x.calories - T) <= T * 0.1).length : null;
+  // "লক্ষ্যের মধ্যে" = আজকের পাতার একই নিয়ম (৮০–১১০%) — আগে এখানে ±১০% ছিল, তাই একই দিন দুই জায়গায় ভিন্ন ফল দিত
+  const calInRange = T ? calCountDays.filter((x) => calorieMet(x.calories, T)).length : null;
   const sleepDays = days.filter((x) => x.sleepH);
-  const sleepLow = sleepDays.filter((x) => x.sleepH < opts.sleepMinH).length;
+  const sleepLow = sleepDays.filter((x) => x.sleepMin < opts.sleepMinH * 60).length;
   const exerciseTotal = days.reduce((a, x) => a + x.exerciseMin, 0);
   const loggedDays = days.filter((x) => x.logged).length;
   return { days, weightChange, weightPoints: weights.length, calDays: calDays.length, calRangeDays: calCountDays.length, calInRange, sleepDays: sleepDays.length, sleepLow, exerciseTotal, loggedDays, weeklyExerciseTarget: opts.weeklyExerciseTarget };
