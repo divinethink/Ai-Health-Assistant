@@ -112,7 +112,7 @@ function PostCard({ post, onOpen, trashMode, onRestore, onPurge }) {
 }
 
 function CategorySidebar({ category, onSelect, counts, total, canManage, trashCount }) {
-  const items = [["all", "সব", total], ...WELLNESS_CATEGORIES.map(([id, label]) => [id, label, counts[id] || 0])];
+  const items = [["all", "সকল লেখা", total], ...WELLNESS_CATEGORIES.map(([id, label]) => [id, label, counts[id] || 0])];
   if (canManage) items.push(["trash", "🗑 ট্র্যাশ", trashCount]);
   return React.createElement(
     "div", { style: { width: "100%", height: "100%", background: "#EEF5F0", padding: "10px", boxSizing: "border-box", overflowY: "auto" } },
@@ -133,16 +133,32 @@ function CategorySidebar({ category, onSelect, counts, total, canManage, trashCo
   );
 }
 
-function CategoryTile({ icon, label, count, color, onClick }) {
+// ক্যাটেগরি-টাইল: ছোট কার্ড, ৩ কলাম। hero = "সকল লেখা" (পুরো প্রস্থ, গোল্ডেন আভা)।
+function CategoryTile({ icon, label, count, color, onClick, hero }) {
   const c = color || PRIMARY;
+  const text = label + " (" + toBn(count) + ")";
+  if (hero) {
+    return React.createElement(
+      "div", {
+        onClick, role: "button",
+        style: {
+          gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", cursor: "pointer", boxSizing: "border-box",
+          borderRadius: "18px", border: "1px solid rgba(212,160,23,0.55)",
+          background: "linear-gradient(135deg, rgba(255,236,179,0.55), var(--hs-surface, #fff))",
+          boxShadow: "0 0 0 3px rgba(212,160,23,0.14), 0 6px 20px rgba(212,160,23,0.30)",
+        },
+      },
+      React.createElement("div", { style: { width: "40px", height: "40px", borderRadius: "12px", background: "rgba(212,160,23,0.20)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", flexShrink: 0 } }, icon),
+      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-text, #1B2430)" } }, text)
+    );
+  }
   return React.createElement(
     "div", {
       onClick, role: "button",
-      style: { ...PREMIUM_CARD, padding: "14px 12px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "10px", minHeight: "104px", boxSizing: "border-box" },
+      style: { ...PREMIUM_CARD, borderRadius: "16px", padding: "10px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "6px", minHeight: "86px", boxSizing: "border-box" },
     },
-    React.createElement("div", { style: { width: "44px", height: "44px", borderRadius: "14px", background: tint(c, 16), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" } }, icon),
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-text, #1B2430)", lineHeight: 1.35 } }, label),
-    React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", marginTop: "auto" } }, toBn(count) + "টি পোস্ট")
+    React.createElement("div", { style: { width: "34px", height: "34px", borderRadius: "11px", background: tint(c, 16), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", flexShrink: 0 } }, icon),
+    React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "var(--hs-text, #1B2430)", lineHeight: 1.35 } }, text)
   );
 }
 
@@ -242,7 +258,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
 
   const inList = category !== null;
   let title = "🌿 স্বাস্থ্য ব্লগ";
-  if (category === "all") title = "সব পোস্ট";
+  if (category === "all") title = "সকল লেখা";
   else if (category === "trash") title = "🗑 ট্র্যাশ";
   else if (category) {
     const hit = WELLNESS_CATEGORIES.find(([id]) => id === category);
@@ -306,14 +322,14 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
           : renderCards(searchHits, false)
       );
     } else {
-      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সব পোস্ট", count: active.length, color: "#0E4B43", onClick: () => openCategory("all") })]
+      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সকল লেখা", count: active.length, color: "#0E4B43", hero: true, onClick: () => openCategory("all") })]
         .concat(WELLNESS_CATEGORIES.map(([id, label]) =>
           React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "📄", label, color: CATEGORY_COLORS[id], count: counts[id] || 0, onClick: () => openCategory(id) })
         ));
       if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "🗑", label: "ট্র্যাশ", color: "#C0392B", count: trashed.length, onClick: () => openCategory("trash") }));
       body = React.createElement(
         React.Fragment, null, searchBox,
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } }, tiles)
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" } }, tiles)
       );
     }
   } else if (!err && listPosts) {
