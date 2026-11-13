@@ -25,6 +25,7 @@ import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./P
 import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
+import { TrendRanges } from "./TrendExtras.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
@@ -327,8 +328,12 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 
-// ---------- ট্রেন্ড ও সাপ্তাহিক রিভিউ (গত ৭ দিন) ----------
-function TrendTab({ info, familyId, memberId, onGoInput }) {
+// ---------- ট্রেন্ড: হিটম্যাপ + সপ্তাহ|মাস|৩ মাস (TrendExtras.js); সপ্তাহ-ভিউ = WeekTrend (গত ৭ দিন, আগের মতোই) ----------
+function TrendTab(props) {
+  return React.createElement(TrendRanges, { info: props.info, familyId: props.familyId, memberId: props.memberId, weekView: React.createElement(WeekTrend, props) });
+}
+
+function WeekTrend({ info, familyId, memberId, onGoInput }) {
   const { goal, gate, age } = info;
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
