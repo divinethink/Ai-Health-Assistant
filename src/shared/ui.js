@@ -196,3 +196,11 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy,
         React.createElement("button", { type: "button", onClick: onConfirm, disabled: busy, style: { ...btn, border: "none", background: busy ? "#D9A39D" : "#B3261E", color: "#fff" } }, busy ? "মুছছে..." : (confirmLabel || "মুছুন")))));
   return createPortal(dlg, document.body);
 }
+
+// বুট/লোডিং স্ক্রিন — index.html-এর স্ট্যাটিক স্প্ল্যাশের হুবহু একই (লগইন ফ্ল্যাশ/ফাঁকা পর্দা এড়াতে)।
+export function BootSplash() {
+  return React.createElement("div", { className: "hc-splash" },
+    React.createElement("img", { src: "/icons/icon-192.png", alt: "" }),
+    React.createElement("b", null, "Health Companion"),
+    React.createElement("div", { className: "hc-spin" }));
+}

@@ -16,7 +16,7 @@
 // owner নিজে সরাসরি sharing নিয়ন্ত্রণ করেন।
 
 import { db, auth, initError } from "./firebaseConfig.js";
-import { Card, ErrorBox, CollapsibleSection } from "../shared/ui.js";
+import { Card, BootSplash, ErrorBox, CollapsibleSection } from "../shared/ui.js";
 import { histRestore } from "../shared/navHistory.js";
 import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
@@ -579,6 +579,7 @@ function App() {
   const [memberId, setMemberId] = useState(undefined);
   const [memberDoc, setMemberDoc] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
+  const preMemberRef = React.useRef(null); // গেট যে member ডক আগেই পড়েছে — দ্বিতীয়বার read এড়াতে
 
   useEffect(() => {
     // Design Tokens (P11, mockup §৬) — আগের সেশনে বাছাই করা theme (Sepia/Dark)
@@ -614,18 +615,25 @@ function App() {
   const loadFamilyAndMember = useCallback(async (fid, u) => {
     setLoadErr(null);
     try {
-      const famSnap = await db.collection("families").doc(fid).get();
+      // family ডক ও uidMemberIndex একসাথে (parallel) — আগে পরপর ছিল।
+      const famRef = db.collection("families").doc(fid);
+      const [famSnap, idxSnap] = await Promise.all([famRef.get(), famRef.collection("uidMemberIndex").doc(u).get()]);
       if (!famSnap.exists) {
         setFamilyId(null);
         return;
       }
       setFamilyDoc(famSnap.data());
-      const idxSnap = await db.collection("families").doc(fid).collection("uidMemberIndex").doc(u).get();
       if (idxSnap.exists) {
         const mId = idxSnap.data().memberId;
-        const mSnap = await db.collection("families").doc(fid).collection("members").doc(mId).get();
-        setMemberId(mId);
-        setMemberDoc(mSnap.exists ? mSnap.data() : null);
+        const pre = preMemberRef.current;
+        if (pre && pre.id === mId && pre.data) {
+          setMemberId(mId);
+          setMemberDoc(pre.data);
+        } else {
+          const mSnap = await famRef.collection("members").doc(mId).get();
+          setMemberId(mId);
+          setMemberDoc(mSnap.exists ? mSnap.data() : null);
+        }
       } else {
         setMemberId(null);
       }
@@ -646,10 +654,14 @@ function App() {
   // ও uid-আছে-কিন্তু-familyId-এখনো-resolve-হয়নি(mapping-check/নতুন-ইউজার)
   // — দুটো ক্ষেত্রেই GoogleSignInGate। uid prop পাঠানো থাকলে component নিজেই
   // (কোনো দ্বিতীয় popup ছাড়া) fast-path/email-match check চালায়।
+  // auth অবস্থা যাচাই চলার সময় লগইন-পেজ নয়, স্প্ল্যাশ (আগে ভুল করে লগইন ঝলকাত)।
+  if (authState === "checking") return React.createElement(BootSplash);
+
   if (!familyId) {
     return React.createElement(GoogleSignInGate, {
       uid, inviteFamilyId, inviteToken,
-      onSuccess: (fid, mId) => {
+      onSuccess: (fid, mId, mData) => {
+        preMemberRef.current = mId && mData ? { id: mId, data: mData } : null;
         clearInviteParamsFromURL();
         setFamilyId(fid);
         if (mId) setMemberId(mId);
@@ -668,7 +680,7 @@ function App() {
     return Card(ErrorBox("এই account-এর সাথে কোনো প্রোফাইল মেলেনি। আবার সাইন-ইন করে দেখুন।"));
   }
   if (!familyDoc || memberId === undefined || !memberDoc) {
-    return Card("লোড হচ্ছে...");
+    return React.createElement(BootSplash);
   }
 
   const isAdmin = (familyDoc.adminUids || []).includes(uid);

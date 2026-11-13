@@ -41,6 +41,18 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
+  /* বুট-স্প্ল্যাশ: JS লোডের আগেই দেখায়; React-এর BootSplash একই ক্লাস ব্যবহার করে (লাফ/ফ্ল্যাশ নেই) */
+  html,body{margin:0;background:var(--hs-bg,#F1F6F2)}
+  .hc-splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--hs-bg,#F1F6F2);color:var(--hs-primary,#0E4B43);font-family:"Hind Siliguri",system-ui,sans-serif}
+  .hc-splash img{width:72px;height:72px;border-radius:20px}
+  .hc-splash b{font-size:20px}
+  .hc-spin{width:26px;height:26px;border:3px solid var(--hs-border,#D9E5DE);border-top-color:var(--hs-primary,#0E4B43);border-radius:50%;animation:hcspin .8s linear infinite}
+  @keyframes hcspin{to{transform:rotate(360deg)}}
+</style>
+<script>
+  try{var th=localStorage.getItem("hs-theme");if(th)document.documentElement.setAttribute("data-theme",th);}catch(e){}
+</script>
+<style>
   /* P11 Design Tokens (mockup §৬) — Light/Sepia/Dark, data-theme attribute-driven on
      <html>। Default (no attribute / data-theme="light") = আগের অপরিবর্তিত রং, তাই এই
      token-সেট যোগ হওয়া কোনো existing visual regression তৈরি করে না। আপাতত শুধু P11
@@ -160,7 +172,7 @@
 
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><div class="hc-splash"><img src="/icons/icon-192.png" alt="" /><b>Health Companion</b><div class="hc-spin"></div></div></div>
 
 <script type="module" src="/src/main.jsx"></script>
 </body>

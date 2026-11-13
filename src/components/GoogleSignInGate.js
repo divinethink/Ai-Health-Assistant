@@ -10,7 +10,7 @@
 //     no-match হলে family-create ফর্মের বদলে join-ফর্ম (nাম+DOB+sex, কোনো
 //     Family Code চাওয়া হয় না)
 
-import { Card, TextField, PrimaryButton, ErrorBox, SelectField, DateField } from "../shared/ui.js";
+import { Card, BootSplash, TextField, PrimaryButton, ErrorBox, SelectField, DateField } from "../shared/ui.js";
 import {
   triggerGoogleSignInPopup,
   signInExistingMemberByGoogle,
@@ -38,7 +38,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
     signInExistingMemberByGoogle()
       .then((res) => {
         if (res && res.matched) {
-          onSuccess(res.familyId, res.memberId);
+          onSuccess(res.familyId, res.memberId, res.memberData);
         } else {
           if (res && res.reason === "already-claimed") {
             setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google account দিয়ে claim হয়ে গেছে।");
@@ -66,7 +66,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
       .then(() => signInExistingMemberByGoogle())
       .then((res) => {
         if (res && res.matched) {
-          onSuccess(res.familyId, res.memberId);
+          onSuccess(res.familyId, res.memberId, res.memberData);
         } else {
           if (res && res.reason === "already-claimed") {
             setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google account দিয়ে claim হয়ে গেছে।");
@@ -94,7 +94,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
     task
       .then((res) => {
         if (res && res.success) {
-          onSuccess(res.familyId, res.memberId);
+          onSuccess(res.familyId, res.memberId, res.memberData);
           return;
         }
         const msgMap = {
@@ -114,9 +114,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
       });
   }, [inviteFamilyId, inviteToken, familyCode, name, dob, sex, onSuccess]);
 
-  if (stage === "checking") {
-    return Card(React.createElement("div", { style: { fontSize: "14px", color: "#555" } }, "চেক করা হচ্ছে..."));
-  }
+  if (stage === "checking") return React.createElement(BootSplash);
 
   if (stage === "new-user-form" || stage === "submitting") {
     return Card(

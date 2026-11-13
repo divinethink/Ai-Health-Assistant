@@ -86,7 +86,7 @@ export async function signInExistingMemberByGoogle() {
       return { matched: false, reason: "error", error: err.message };
     }
     if (staleCheckData) {
-      return { matched: true, familyId: existingMapping.familyId, memberId: existingMapping.memberId };
+      return { matched: true, familyId: existingMapping.familyId, memberId: existingMapping.memberId, memberData: staleCheckData };
     }
     // stale mapping (admin আগে remove করেছেন) — নিজের doc cleanup করে ধাপ ২।
     try { await db.collection("users").doc(uid).delete(); } catch (e) { /* non-fatal */ }
