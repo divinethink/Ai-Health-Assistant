@@ -207,6 +207,10 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   if (category === "trash") listPosts = trashed;
   else if (category === "all") listPosts = active;
   else if (category) listPosts = active.filter((p) => p.category === category);
+  // ক্যাটেগরির ভেতরেও সার্চ: শিরোনাম/সারাংশ/ট্যাগে মিললে দেখাবে (ট্র্যাশে নয়)।
+  if (listPosts && q && category !== "trash") {
+    listPosts = listPosts.filter((p) => ((p.title || "") + " " + (p.summary || "") + " " + (p.tags || []).join(" ")).toLowerCase().indexOf(q) !== -1);
+  }
 
   function reload() { setRefreshTick((t) => t + 1); }
 
@@ -257,7 +261,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
 
   function goBack() {
     if (showForm || editingPost) { setShowForm(false); setEditingPost(null); return; }
-    if (category !== null) { setCategory(null); setSidebarOpen(false); return; }
+    if (category !== null) { setCategory(null); setSidebarOpen(false); setQuery(""); return; }
     if (onExit) onExit();
   }
 
@@ -270,7 +274,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
     title = hit ? hit[1] : title;
   }
 
-  const hdrBtn = { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "18px", minWidth: "40px", minHeight: "40px", borderRadius: "10px", cursor: "pointer", flexShrink: 0 };
+  const hdrBtn = { background: "none", border: "none", color: "#fff", width: "40px", height: "40px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 };
 
   const headerBar = React.createElement(
     "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", color: "#fff", boxShadow: "0 2px 10px rgba(14,75,67,0.25)" } },
@@ -309,13 +313,14 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   }
 
   const searchBox = React.createElement(
-    "div", { style: { position: "relative", marginBottom: "12px" } },
-    React.createElement("span", { style: { position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#5F716C", display: "flex" } }, Icon("search", { size: 18 })),
+    "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "0 12px", marginBottom: "12px", borderRadius: "12px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "#fff" } },
+    React.createElement("span", { style: { color: "#5F716C", display: "flex", flexShrink: 0 } }, Icon("search", { size: 18 })),
     React.createElement("input", {
-    type: "search", value: query, placeholder: "পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
-    onChange: (e) => setQuery(e.target.value),
-    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 38px", borderRadius: "12px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "#fff", fontSize: "14px", fontFamily: "inherit" },
-  }));
+      type: "search", value: query, placeholder: "পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
+      onChange: (e) => setQuery(e.target.value),
+      style: { flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", padding: "10px 0", fontSize: "14px", fontFamily: "inherit", boxShadow: "none" },
+    })
+  );
 
   let body = null;
   if (!err && posts === null) {
@@ -323,26 +328,20 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   } else if (!err && category === null) {
     // ক্যাটেগরি-পেজ
     if (searchHits) {
-      body = React.createElement(
-        React.Fragment, null, searchBox,
-        searchHits.length === 0
-          ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কিছু পাওয়া যায়নি।")
-          : renderCards(searchHits, false)
-      );
+      body = searchHits.length === 0
+        ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "কিছু পাওয়া যায়নি।")
+        : renderCards(searchHits, false);
     } else {
       const tiles = [React.createElement(CategoryTile, { key: "all", icon: "library", label: "সকল লেখা", count: active.length, color: "#0E4B43", hero: true, onClick: () => openCategory("all") })]
         .concat(WELLNESS_CATEGORIES.map(([id, label]) =>
           React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "file", label, color: CATEGORY_COLORS[id], count: counts[id] || 0, onClick: () => openCategory(id) })
         ));
       if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "trash", label: "ট্র্যাশ", color: "#C0392B", count: trashed.length, onClick: () => openCategory("trash") }));
-      body = React.createElement(
-        React.Fragment, null, searchBox,
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" } }, tiles)
-      );
+      body = React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" } }, tiles);
     }
   } else if (!err && listPosts) {
     body = listPosts.length === 0
-      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, category === "trash" ? "ট্র্যাশ খালি।" : "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।")
+      ? React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, category === "trash" ? "ট্র্যাশ খালি।" : q ? "কিছু পাওয়া যায়নি।" : "এখনো এই ক্যাটেগরিতে কোনো পোস্ট যোগ হয়নি।")
       : renderCards(listPosts, category === "trash");
   }
 
@@ -363,6 +362,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
       onCancel: () => { setShowForm(false); setEditingPost(null); },
     }),
     err && ErrorBox(err),
+    !showForm && !editingPost && category !== "trash" && !err && posts !== null && searchBox,
     body
   );
 
