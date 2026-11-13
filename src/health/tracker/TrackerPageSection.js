@@ -635,7 +635,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান | ট্রেন্ড | রিমাইন্ডার)
   const isToday = mode === "today";
   // হোমের "এই সপ্তাহ" কার্ডের "ট্রেন্ড ›" থেকে এলে (quickIntent "trend") ট্র্যাকার সরাসরি ট্রেন্ড ট্যাবে খোলে; নইলে আগের মতো "লক্ষ্য ও প্ল্যান"।
-  const [tab, setTab] = useState(() => (isToday ? "today" : takeQuickIntent(["trend"]) ? "trend" : "plan"));
+  const [tab, setTab] = useState(() => { if (isToday) return "today"; const k = takeQuickIntent(["trend", "reminder"]); return k === "trend" ? "trend" : k === "reminder" ? "reminder" : "plan"; }); // "reminder" = মেনুর 🔔 নোটিফিকেশন বাটন
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";

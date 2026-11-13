@@ -38,6 +38,9 @@ import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
+import { AppLockGate } from "../components/AppLockGate.js";
+import { PasscodeSettings } from "../components/PasscodeSettings.js";
+import { clearPasscode } from "../shared/appLock.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -155,7 +158,7 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
       ),
       React.createElement(
         "button", {
-          onClick: () => { setOpen(false); clearMemberHealthCache(); auth.signOut(); },
+          onClick: () => { setOpen(false); clearPasscode(); clearMemberHealthCache(); auth.signOut(); }, // সাইন-আউটে এই ফোনের অ্যাপ-লক PIN-ও মোছে
           style: { marginTop: "8px", width: "100%", padding: "8px", border: "1px solid #C0392B", borderRadius: "10px", background: "#fff", color: "#C0392B", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
         },
         t("top.logout")
@@ -323,16 +326,16 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   );
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, chip }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, chip }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
   const [showCare, setShowCare] = useState(false);
-  const [sub, setSub] = useState(null); // null | "family" | "data" | "settings"
+  const [sub, setSub] = useState(null); // null | "family" | "data" | "lock" | "settings"
   const wrapStyle = { paddingTop: "8px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
 
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], lock: ["🔒", t("menu.lockTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -349,6 +352,8 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       );
     } else if (sub === "data") {
       body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
+    } else if (sub === "lock") {
+      body = React.createElement(PasscodeSettings);
     } else {
       body = React.createElement(
         React.Fragment, null,
@@ -403,6 +408,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(
       "div", { style: { display: "flex", gap: "10px", marginBottom: "14px" } },
       tile("🩺", t("nav.aichat"), onOpenAIChat, false),
+      tile("🔔", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
       tile(showCare ? "✕" : "📞", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
     ),
     showCare && React.createElement(
@@ -412,6 +418,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     ),
     row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
     row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
+    row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
     row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"))
   );
 }
@@ -507,7 +514,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), chip,
+      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip,
     });
   }
 
@@ -646,7 +653,7 @@ function App() {
 
   const isAdmin = (familyDoc.adminUids || []).includes(uid);
 
-  return React.createElement(Dashboard, { uid, familyId, familyDoc, memberId, memberDoc, isAdmin });
+  return React.createElement(AppLockGate, null, React.createElement(Dashboard, { uid, familyId, familyDoc, memberId, memberDoc, isAdmin }));
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
