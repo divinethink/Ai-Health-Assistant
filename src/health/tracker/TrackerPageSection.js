@@ -591,7 +591,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [weeks, setWeeks] = useState(g.weeks ? String(g.weeks) : "");
   const [diabetes, setDiabetes] = useState(!!(g.flags && g.flags.diabetes) || detected.diabetes);
   const [kidney, setKidney] = useState(!!(g.flags && g.flags.kidney) || detected.kidney);
-  const [focus, setFocus] = useState(() => sanitizeFocusAreas(g.focusAreas, member && member.sex)); // শরীরের টার্গেট (ঐচ্ছিক, ≤৩) — ব্যায়াম-প্ল্যানে যায়
+  const [focus, setFocus] = useState(() => sanitizeFocusAreas(g.focusAreas, member && member.sex).filter((x) => x !== "muscle")); // শরীরের টার্গেট (ঐচ্ছিক, ≤৩) — ব্যায়াম-প্ল্যানে যায়
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [result, setResult] = useState(null);
@@ -624,7 +624,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           await saveGoal(familyId, memberId, callerMemberId, { ...base, calc: { calorieTarget: calc.calorieTarget, bmr: calc.bmr, tdee: calc.tdee, weeklyRateKg: calc.weeklyRateKg } }, goal);
           const cur = sanitizeFocusAreas(g.focusAreas, member && member.sex);
           const canFocusNow = age !== null && age >= 18 && !pregnant;
-          const nextFocus = canFocusNow ? sanitizeFocusAreas(focus, member && member.sex) : cur;
+          const nextFocus = canFocusNow ? sanitizeFocusAreas(focus, member && member.sex).filter((x) => x !== "muscle") : cur;
           if (nextFocus.length !== cur.length || nextFocus.some((x) => !cur.includes(x))) await saveFocusAreas(familyId, memberId, callerMemberId, nextFocus, goal || {}); // আমার-এডিট-করা ব্যায়াম অক্ষত
           setResult(calc); setEditing(false);
         }
@@ -694,18 +694,15 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       ? React.createElement(Notice, null, React.createElement("b", null, "ক্যালরি-টার্গেটের জন্য তথ্য লাগবে"), React.createElement("br"), gate.reason, React.createElement("br"), "পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।")
       : React.createElement("div", null,
         gate.warn && React.createElement(Notice, null, gate.reason),
-        stepCard("১", "আপনার লক্ষ্য কী?",
+        stepCard("১", "আপনার লক্ষ্য কী?" + (canFocusForm ? " (সর্বোচ্চ " + bnNum(MAX_FOCUS) + "টি)" : ""),
           React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } },
             Object.entries(GOAL_LABELS).map(([id, lbl]) => { const on = id === goalType; return React.createElement("button", { key: id, onClick: () => setGoalType(id), "aria-pressed": on,
               style: { minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); })),
           goalType && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType]),
-          canFocusForm && React.createElement("div", { style: { marginTop: "12px" } },
-            React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, "শরীরের কোন অংশে জোর দিতে চান? (ঐচ্ছিক, সর্বোচ্চ " + bnNum(MAX_FOCUS) + "টি)"),
-            React.createElement("div", { role: "group", "aria-label": "শরীরের টার্গেট", style: { display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" } },
-              focusOptions(member && member.sex).map((o) => { const on = focus.includes(o.id); const dis = !on && focus.length >= MAX_FOCUS; return React.createElement("button", { key: o.id, type: "button", onClick: () => setFocus((v) => v.includes(o.id) ? v.filter((x) => x !== o.id) : v.length >= MAX_FOCUS ? v : [...v, o.id]), disabled: dis, "aria-pressed": on,
-                style: { minHeight: "44px", padding: "8px 14px", borderRadius: "999px", cursor: dis ? "default" : "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, opacity: dis ? 0.45 : 1, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, (on ? "✓ " : "") + o.label); })),
-            focus.includes("belly") && React.createElement("div", { style: { ...HINT, color: "#7A5B00" } }, "পেটের চর্বি আলাদা করে কমানো যায় না — তাই কার্ডিও + কোর + মিল-প্ল্যান একসাথে ধরা হবে।"),
-            React.createElement("div", { style: HINT }, "বাছলে ব্যায়াম-প্ল্যান ওজনের লক্ষ্য ও এই টার্গেট মিলিয়ে হবে। না বাছলে সাধারণ প্ল্যান।"))),
+          canFocusForm && React.createElement("div", { role: "group", "aria-label": "শরীরের টার্গেট", style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginTop: "8px" } },
+            focusOptions(member && member.sex).filter((o) => o.id !== "muscle").map((o) => { const on = focus.includes(o.id); const dis = !on && focus.length >= MAX_FOCUS; return React.createElement("button", { key: o.id, type: "button", onClick: () => setFocus((v) => v.includes(o.id) ? v.filter((x) => x !== o.id) : v.length >= MAX_FOCUS ? v : [...v, o.id]), disabled: dis, "aria-pressed": on,
+              style: { minHeight: "44px", padding: "6px 8px", lineHeight: 1.25, borderRadius: "999px", cursor: dis ? "default" : "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, opacity: dis ? 0.45 : 1, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, (on ? "✓ " : "") + o.label); })),
+          canFocusForm && focus.includes("belly") && React.createElement("div", { style: { ...HINT, color: "#7A5B00" } }, "পেটের চর্বি আলাদা করে কমানো যায় না — তাই কার্ডিও + কোর + মিল-প্ল্যান একসাথে ধরা হবে।")),
         needsTarget && stepCard("২", "কত কেজিতে যেতে চান?",
           React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", placeholder: "লক্ষ্য ওজন (কেজি)", "aria-label": "লক্ষ্য ওজন (কেজি)", value: target, onChange: (e) => setTarget(e.target.value), style: INPUT }),
           React.createElement("div", { style: HINT }, weightKg ? "এখন আপনার ওজন " + bnNum(weightKg) + " কেজি" : "আগে Health ▸ প্রোফাইলে ওজন যোগ করুন")),
