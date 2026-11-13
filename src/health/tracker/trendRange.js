@@ -60,12 +60,12 @@ export function heatWeeks(docs, ctx, startISO, todayISO) {
 }
 
 // ---------- মাসের পরিসংখ্যান ----------
-// docs: ওই মাসের দৈনিক ডক। আজের পরের দিন গোনা হয় না। ctx: targetCtxFor() (waterTarget: null দিয়ে)।
+// docs: ওই মাসের দৈনিক ডক। আজের পরের দিন গোনা হয় না। ctx: targetCtxFor() (পানি দেখাতে চাইলে waterTarget সহ)।
 export function monthStats(docs, y, m, ctx, todayISO) {
   const by = {};
   (docs || []).forEach((d) => { if (d && d.date) by[d.date] = d; });
   const dates = monthDatesISO(y, m).filter((d) => d <= todayISO);
-  const st = { y, m, days: dates.length, loggedDays: 0, weights: [], calDays: 0, calHit: 0, exTotal: 0, exActive: 0, exHit: 0, sleepDays: 0, sleepHit: 0, sleepSum: 0, hitDays: 0 };
+  const st = { y, m, days: dates.length, loggedDays: 0, weights: [], calDays: 0, calHit: 0, exTotal: 0, exActive: 0, exHit: 0, waterDays: 0, waterHit: 0, sleepDays: 0, sleepHit: 0, sleepSum: 0, hitDays: 0 };
   dates.forEach((date) => {
     const doc = by[date];
     if (!hasDayRecord(doc)) return;
@@ -76,6 +76,7 @@ export function monthStats(docs, y, m, ctx, todayISO) {
     st.exTotal += doc.exerciseMin || 0;
     if ((doc.exerciseMin || 0) > 0) st.exActive++;
     if (met.includes("exercise")) st.exHit++;
+    if (doc.waterGlasses > 0 && applicable.includes("water")) { st.waterDays++; if (met.includes("water")) st.waterHit++; }
     if (doc.sleepMinutes > 0) { st.sleepDays++; st.sleepSum += doc.sleepMinutes; if (met.includes("sleep")) st.sleepHit++; }
     if (dayHit(doc, ctx, date)) st.hitDays++;
   });
@@ -84,6 +85,7 @@ export function monthStats(docs, y, m, ctx, todayISO) {
   st.sleepAvgH = st.sleepDays ? r1(st.sleepSum / st.sleepDays / 60) : null;
   st.hasExTarget = !!ctx.exTarget;
   st.hasCalTarget = !!ctx.calorieTarget;
+  st.hasWaterTarget = !!ctx.waterTarget;
   return st;
 }
 
@@ -105,7 +107,7 @@ export function monthReview(st, bn) {
   return { points, comment };
 }
 
-// ---------- ৩ মাসের তুলনা (ওজন, ক্যালরি, ব্যায়াম, ঘুম — পানি বাদ) ----------
+// ---------- ৩ মাসের তুলনা (ওজন, ক্যালরি, ব্যায়াম, পানি, ঘুম) ----------
 // list: monthStats()-এর ফল (পুরনো → নতুন)। প্রতিটি সারি: { key, label, vals:[{pct|null, text}] }
 // pct = বারের দৈর্ঘ্য (০–১০০) — ওজনে মাসগুলোর মধ্যে আপেক্ষিক, বাকিতে "লক্ষ্য-পূরণ দিন ÷ তথ্যের দিন"।
 export function compareMonths(list, bn) {
@@ -122,13 +124,16 @@ export function compareMonths(list, bn) {
   rows.push({ key: "exercise", label: "ব্যায়াম", vals: list.map((s) => s.hasExTarget
     ? { pct: pctOf(s.exHit, s.loggedDays), text: s.loggedDays ? bn(s.exHit) + "/" + bn(s.loggedDays) + " দিন" : "—" }
     : { pct: pctOf(s.exActive, s.loggedDays), text: s.loggedDays ? bn(s.exActive) + "/" + bn(s.loggedDays) + " দিন" : "—" }) });
+  if (list.some((s) => s.hasWaterTarget)) {
+    rows.push({ key: "water", label: "পানি লক্ষ্যের মধ্যে", vals: list.map((s) => ({ pct: pctOf(s.waterHit, s.waterDays), text: s.waterDays ? bn(s.waterHit) + "/" + bn(s.waterDays) + " দিন" : "—" })) });
+  }
   rows.push({ key: "sleep", label: "ঘুম লক্ষ্যের মধ্যে", vals: list.map((s) => ({ pct: pctOf(s.sleepHit, s.sleepDays), text: s.sleepDays ? bn(s.sleepHit) + "/" + bn(s.sleepDays) + " দিন" : "—" })) });
   return rows;
 }
 
 // শেষ মাস বনাম আগের মাস — ১৫ শতাংশ-পয়েন্ট বা বেশি ফারাকে ছোট নোট (ওজন বাদ; ওজনের ভালো/খারাপ লক্ষ্যভেদে আলাদা)।
 export function compareNotes(rows) {
-  const names = { calories: "ক্যালরি লক্ষ্য", exercise: "ব্যায়াম", sleep: "ঘুম" };
+  const names = { calories: "ক্যালরি লক্ষ্য", exercise: "ব্যায়াম", water: "পানি", sleep: "ঘুম" };
   const out = [];
   rows.forEach((r) => {
     if (!names[r.key] || r.vals.length < 2) return;

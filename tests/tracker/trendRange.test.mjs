@@ -63,3 +63,13 @@ test("compareMonths/compareNotes: পানি নেই, ওজন আপেক
   assert.equal(rows[2].vals[2].pct, 90);
   assert.ok(compareNotes(rows).some((n) => /ব্যায়াম.*ভালো/.test(n)));
 });
+
+test("compareMonths: পানির লক্ষ্য থাকলে পানি-সারি, না থাকলে নেই", () => {
+  const docs = [{ date: "2026-03-02", waterGlasses: 8 }, { date: "2026-03-03", waterGlasses: 3 }];
+  const withW = monthStats(docs, 2026, 2, { ...ctx, waterTarget: 8 }, "2026-03-31");
+  const noW = monthStats(docs, 2026, 2, ctx, "2026-03-31");
+  const row = compareMonths([withW], bn).find((r) => r.key === "water");
+  assert.equal(row.vals[0].text, "1/2 দিন".replace("দিন", "দিন"));
+  assert.equal(row.vals[0].pct, 50);
+  assert.equal(compareMonths([noW], bn).some((r) => r.key === "water"), false);
+});

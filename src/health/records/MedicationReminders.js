@@ -431,7 +431,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
             h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px" } },
               m.asNeeded ? pill("প্রয়োজনে খাবেন", "#EFEBFA", "#5A4BA8")
                 : m.reminderTimes.length > 0 ? m.reminderTimes.map((tm) => pill([Icon("clock", { key: "i", size: 12 }), bnTime(tm)], "var(--hs-chip-bg, #E4F0E9)", GREEN))
-                  : h("span", { style: { display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "13px", color: "var(--hs-muted, #5F716C)" } }, Icon("clock", { size: 13 }), "সময় সেট করা হয়নি"),
+                  : null,
               m.mealTiming && m.mealTiming !== "any" && pill(MEAL_LABELS[m.mealTiming], "#FFF3DC", "#8A5A00"),
               m.calendarEventIds.length > 0 && pill([Icon("calendar", { key: "i", size: 12 }), "ক্যালেন্ডার"], "#E8EDF6", "#3E6092"))),
           h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px", flexShrink: 0 } },

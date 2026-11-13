@@ -216,6 +216,7 @@ function CompareCard({ list, avgs }) {
     { key: "avg", label: "গড় স্কোর", vals: avgs.map((a) => ({ pct: a.avg, text: a.avg === null ? "—" : bnNum(a.avg) + "%" })) },
     by.calories && { key: "calories", label: "ক্যালরি লক্ষ্য", vals: by.calories.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
     by.exercise && { key: "exercise", label: "ব্যায়াম", vals: by.exercise.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
+    by.water && { key: "water", label: "পানি", vals: by.water.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
     by.sleep && { key: "sleep", label: "ঘুম", vals: by.sleep.vals.map((v) => ({ pct: v.pct, text: v.pct === null ? "—" : bnNum(v.pct) + "%" })) },
   ].filter(Boolean);
   const cols = "minmax(78px, 1.25fr) repeat(" + list.length + ", minmax(0, 1fr)) 22px";
@@ -290,7 +291,7 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
     })();
   } else {
     body = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, {
-      list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, ctx, today)),
+      list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, rateCtx, today)),
       avgs: monthlyAverages(three, (y, m) => cache[monthKey(y, m)], ctx, today) });
   }
 

@@ -30,7 +30,7 @@ import { TrendRanges } from "./TrendExtras.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { FocusSheet, focusLabels } from "./FocusSheet.js";
-import { focusCtxOf, exerciseDetail } from "./homeWorkout.js";
+import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
@@ -518,7 +518,7 @@ function GoalPlanTab(props) {
   const [sub, setSub] = useState("goal"); // ট্র্যাকার নেভে ঢুকলে সবসময় "আমার লক্ষ্য"
   return React.createElement("div", null,
     SubPills([["goal", "আমার লক্ষ্য"], ["meal", "মিল প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
-    sub === "goal" && React.createElement(GoalTab, { ...props, onGoExercise: () => setSub("exercise") }),
+    sub === "goal" && React.createElement(GoalTab, { ...props }),
     sub === "meal" && React.createElement(MealPlanTab, props),
     sub === "exercise" && React.createElement(ExerciseTab, props));
 }
@@ -579,7 +579,7 @@ const GOAL_HINTS = { lose: "ধীরে ও নিরাপদে ওজন ক
 const ACTIVITY_CHOICES = { low: ["বসে কাজ বেশি", "অফিস/বাসায় বসে বা হালকা চলাফেরা"], light: ["হালকা সক্রিয়", "বসে কাজ + সপ্তাহে ১–৩ দিন হাঁটা/হালকা ব্যায়াম"], medium: ["মাঝারি চলাফেরা", "সারাদিন কিছু হাঁটাহাঁটি/ঘরের কাজ"], high: ["অনেক পরিশ্রম", "সারাদিন দাঁড়িয়ে/হেঁটে বা কায়িক কাজ"] };
 
 // ---------- লক্ষ্য ----------
-function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExercise }) {
+function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const { goal, age, member, heightCm, weightKg, detected } = info;
   const pregnant = !!(info.flags && info.flags.pregnant); // প্রোফাইল থেকে (ধাপ ৬) — এখানে আর আলাদা টগল নেই
   const g = goal || {};
@@ -589,6 +589,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
   const [weeks, setWeeks] = useState(g.weeks ? String(g.weeks) : "");
   const [diabetes, setDiabetes] = useState(!!(g.flags && g.flags.diabetes) || detected.diabetes);
   const [kidney, setKidney] = useState(!!(g.flags && g.flags.kidney) || detected.kidney);
+  const [focus, setFocus] = useState(() => sanitizeFocusAreas(g.focusAreas, member && member.sex)); // শরীরের টার্গেট (ঐচ্ছিক, ≤৩) — ব্যায়াম-প্ল্যানে যায়
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [result, setResult] = useState(null);
@@ -600,6 +601,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
   const showPregnant = member && member.sex === "female" && age !== null && age >= 12 && age <= 55;
   const needsTarget = goalType === "lose" || goalType === "gain";
   const bmi = bmiOf(weightKg, heightCm);
+  const otherConds = (() => { const seen = new Set(); return ((info.conds) || []).map((c) => c.name).filter((n) => { const k = n.toLowerCase(); if (seen.has(k) || /diabet|ডায়াবেটিস|বহুমূত্র|sugar|kidney|renal|ckd|কিডনি|বৃক্ক/.test(k)) return false; seen.add(k); return true; }); })();
+  const canFocusForm = age !== null && age >= 18 && !pregnant;
 
   const submit = useCallback(async () => {
     setErr(null); setResult(null);
@@ -617,6 +620,10 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
           setResult({ blocked: true, reason: calc.reason });
         } else {
           await saveGoal(familyId, memberId, callerMemberId, { ...base, calc: { calorieTarget: calc.calorieTarget, bmr: calc.bmr, tdee: calc.tdee, weeklyRateKg: calc.weeklyRateKg } }, goal);
+          const cur = sanitizeFocusAreas(g.focusAreas, member && member.sex);
+          const canFocusNow = age !== null && age >= 18 && !pregnant;
+          const nextFocus = canFocusNow ? sanitizeFocusAreas(focus, member && member.sex) : cur;
+          if (nextFocus.length !== cur.length || nextFocus.some((x) => !cur.includes(x))) await saveFocusAreas(familyId, memberId, callerMemberId, nextFocus, goal || {}); // আমার-এডিট-করা ব্যায়াম অক্ষত
           setResult(calc); setEditing(false);
         }
       }
@@ -624,7 +631,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
     } catch (x) {
       setErr(x.code === "permission-denied" ? "এই সদস্যের লক্ষ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x)));
     } finally { setBusy(false); }
-  }, [goalType, activity, target, weeks, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
+  }, [goalType, activity, target, weeks, focus, pregnant, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
 
   // টিক-কার্ড: পুরো কার্ড ট্যাপযোগ্য; প্রোফাইল থেকে ধরা পড়লে লক
   const tile = (label, val, setter, locked) => React.createElement("button", { role: "checkbox", "aria-checked": !!val, disabled: locked, onClick: () => setter(!val),
@@ -667,10 +674,9 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
+        line("p", "✓ মিল প্ল্যান ও ব্যায়াম প্ল্যান ট্যাবে আপনার খাবার ও ব্যায়ামের প্ল্যান তৈরি হয়েছে।"),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
-      canFocusGoal && onGoExercise && SecondaryButton(bodyFocus ? "🎯 শরীরের টার্গেট বদলান" : "🎯 শরীরের টার্গেট বাছুন (পেট, পেশি…)", onGoExercise, false),
-      canFocusGoal && !bodyFocus && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "টার্গেট বাছলে ব্যায়াম-প্ল্যান ওজনের লক্ষ্য ও শরীরের টার্গেট — দুটো মিলিয়ে হবে।"),
       React.createElement("details", { style: { marginTop: "8px", marginBottom: "8px" } },
         React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
         React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));
@@ -690,7 +696,14 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
           React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } },
             Object.entries(GOAL_LABELS).map(([id, lbl]) => { const on = id === goalType; return React.createElement("button", { key: id, onClick: () => setGoalType(id), "aria-pressed": on,
               style: { minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, lbl); })),
-          goalType && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType])),
+          goalType && React.createElement("div", { style: HINT }, GOAL_HINTS[goalType]),
+          canFocusForm && React.createElement("div", { style: { marginTop: "12px" } },
+            React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, "শরীরের কোন অংশে জোর দিতে চান? (ঐচ্ছিক, সর্বোচ্চ " + bnNum(MAX_FOCUS) + "টি)"),
+            React.createElement("div", { role: "group", "aria-label": "শরীরের টার্গেট", style: { display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" } },
+              focusOptions(member && member.sex).map((o) => { const on = focus.includes(o.id); const dis = !on && focus.length >= MAX_FOCUS; return React.createElement("button", { key: o.id, type: "button", onClick: () => setFocus((v) => v.includes(o.id) ? v.filter((x) => x !== o.id) : v.length >= MAX_FOCUS ? v : [...v, o.id]), disabled: dis, "aria-pressed": on,
+                style: { minHeight: "44px", padding: "8px 14px", borderRadius: "999px", cursor: dis ? "default" : "pointer", fontFamily: "inherit", fontSize: "14px", fontWeight: 600, opacity: dis ? 0.45 : 1, border: on ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff", color: on ? "#fff" : "#2B3A36" } }, (on ? "✓ " : "") + o.label); })),
+            focus.includes("belly") && React.createElement("div", { style: { ...HINT, color: "#7A5B00" } }, "পেটের চর্বি আলাদা করে কমানো যায় না — তাই কার্ডিও + কোর + মিল-প্ল্যান একসাথে ধরা হবে।"),
+            React.createElement("div", { style: HINT }, "বাছলে ব্যায়াম-প্ল্যান ওজনের লক্ষ্য ও এই টার্গেট মিলিয়ে হবে। না বাছলে সাধারণ প্ল্যান।"))),
         needsTarget && stepCard("২", "কত কেজিতে যেতে চান?",
           React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", placeholder: "লক্ষ্য ওজন (কেজি)", "aria-label": "লক্ষ্য ওজন (কেজি)", value: target, onChange: (e) => setTarget(e.target.value), style: INPUT }),
           React.createElement("div", { style: HINT }, weightKg ? "এখন আপনার ওজন " + bnNum(weightKg) + " কেজি" : "আগে Health ▸ প্রোফাইলে ওজন যোগ করুন")),
@@ -709,7 +722,9 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved, onGoExerci
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "ডায়াবেটিস বা কিডনি রোগ আছে? (ওজন কমানোর নিরাপদ সীমা ঠিক করতে লাগে)"),
       React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
         tile("ডায়াবেটিস", diabetes || detected.diabetes, setDiabetes, detected.diabetes),
-        tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney))),
+        tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
+      otherConds.length > 0 && React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" } }, otherConds.map((n) => tile(n, true, () => {}, true))),
+      otherConds.length > 0 && React.createElement("div", { style: HINT }, "প্রোফাইলে যে অসুখগুলো আছে সেগুলো নিজে থেকে টিক। বদলাতে: Health ▸ অসুখ।")),
     pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: Health ▸ প্রোফাইল।"),
     !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে Health ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
     React.createElement("details", { style: { marginBottom: "8px" } },
