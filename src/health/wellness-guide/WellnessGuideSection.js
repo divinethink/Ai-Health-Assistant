@@ -266,23 +266,32 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   }
 
   const inList = category !== null;
-  let title = "🌿 স্বাস্থ্য ব্লগ";
+  let title = "স্বাস্থ্য ব্লগ";
   if (category === "all") title = "সকল লেখা";
-  else if (category === "trash") title = "🗑 ট্র্যাশ";
+  else if (category === "trash") title = "ট্র্যাশ";
   else if (category) {
     const hit = WELLNESS_CATEGORIES.find(([id]) => id === category);
     title = hit ? hit[1] : title;
   }
 
-  const hdrBtn = { background: "none", border: "none", color: "#fff", width: "40px", height: "40px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 };
+  const hdrBtn = { background: "none", border: "none", color: "#fff", width: "38px", height: "38px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 };
 
   const headerBar = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", color: "#fff", boxShadow: "0 2px 10px rgba(14,75,67,0.25)" } },
+    "div", { style: { display: "flex", alignItems: "center", gap: "0px", padding: "10px 12px 10px 6px", background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", color: "#fff", boxShadow: "0 2px 10px rgba(14,75,67,0.25)" } },
     React.createElement("button", { type: "button", onClick: goBack, "aria-label": "পিছনে", style: hdrBtn }, Icon("arrowLeft", { size: 20, stroke: 2.2 })),
     !showForm && !editingPost && React.createElement("button", {
       type: "button", onClick: () => setSidebarOpen((o) => !o), "aria-label": "ক্যাটেগরি", title: "ক্যাটেগরি", style: hdrBtn,
     }, Icon("menu", { size: 20, stroke: 2.2 })),
-    React.createElement("div", { style: { flex: 1, fontWeight: 700, fontSize: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, title),
+    React.createElement(
+      "div", { style: { flex: 1, display: "flex", alignItems: "center", gap: "8px", marginLeft: "8px", minWidth: 0 } },
+      // লোগো: খোলা বই + ছোট হৃদয় — স্বচ্ছ সাদা ব্যাজে (শুধু ব্লগের প্রথম পাতায়)।
+      category === null && React.createElement(
+        "span", { "aria-hidden": "true", style: { width: "32px", height: "32px", borderRadius: "10px", background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", flexShrink: 0 } },
+        Icon("blog", { size: 18, stroke: 1.9, color: "#fff" }),
+        React.createElement("span", { style: { position: "absolute", right: "-4px", top: "-4px", width: "14px", height: "14px", borderRadius: "50%", background: "#fff", color: "#C2488A", display: "flex", alignItems: "center", justifyContent: "center" } }, Icon("heart", { size: 9, stroke: 2.6, color: "#C2488A" }))
+      ),
+      React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, title)
+    ),
     canManage && !showForm && !editingPost && category !== "trash" && React.createElement(
       "button", {
         onClick: () => { setEditingPost(null); setShowForm(true); },
