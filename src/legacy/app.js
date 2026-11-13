@@ -32,7 +32,6 @@ import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
-import { DoctorDetailsSection } from "../health/doctor-details/DoctorDetailsSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
 import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
@@ -471,13 +470,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   }, []);
   const activeTab = view.tab;
   const setActiveTab = (tab) => navigate({ tab, dd: false });
-  const showDoctorDetails = view.dd;
-  // ওভারলে বন্ধ = history-তে এক ধাপ পিছনে (নতুন এন্ট্রি নয়), নইলে Back আবার ওভারলে ফেরাত
-  const closeOverlay = (key) => {
-    if (viewRef.current[key] && window.history.state && window.history.state.hs && window.history.state[key]) window.history.back();
-    else navigate({ [key]: false });
-  };
-  const setShowDoctorDetails = (v) => (v ? navigate({ dd: true }) : closeOverlay("dd"));
   const [members, setMembers] = useState(null);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   // Doctor Details — bottom-nav ট্যাব না, আগের মতোই স্বতন্ত্র
@@ -508,9 +500,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     if (tab === activeTab) setHomeKey((n) => n + 1); else { setQuickOrigin(activeTab); setActiveTab(tab); }
   };
 
-  if (showDoctorDetails) {
-    return React.createElement(DoctorDetailsSection, { familyId, callerMemberId: memberId, isAdmin, onExit: () => setShowDoctorDetails(false) });
-  }
 
   // স্থির TopBar নেই — প্রোফাইল-চিপ (নাম ▾) শুধু মেনু-পেজে (সদস্য-বদল, লগআউট এখানেই); অন্য পেজের পিল-সারিতে নেই।
   // নির্বাচিত সদস্য ডিফল্টে সবসময় নিজে (selectedMemberId শুরুতে memberId)।
@@ -534,7 +523,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip, selectedMemberId,
+      onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip, selectedMemberId,
     });
   }
 
