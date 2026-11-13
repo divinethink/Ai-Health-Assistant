@@ -15,7 +15,11 @@ import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
-import { guideForCondition, GUIDE_DISCLAIMER } from "./conditionGuideData.js";
+import { guideForCondition, mergeGuide, GUIDE_DISCLAIMER } from "./conditionGuideData.js";
+import { listGuideOverrides } from "./conditionGuideStore.js";
+import { ConditionGuideEditor } from "./ConditionGuideEditor.js";
+import { auth } from "../../legacy/firebaseConfig.js";
+import { isBlogAdminUid } from "../wellness-guide/wellnessGuideData.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -39,8 +43,12 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const [openKey, setOpenKey] = useState(null);   // খোলা কার্ড (record id বা "obs:<key>")
   const [confirmId, setConfirmId] = useState(null); // ২-ধাপ delete-confirm
   const [busyId, setBusyId] = useState(null);
+  const [guideOv, setGuideOv] = useState({});        // অসুখ গাইডের সংশোধন (না এলে ডিফল্ট লেখা)
+  const [editGuide, setEditGuide] = useState(null);    // সম্পাদনায় থাকা গাইডের id (শুধু অ্যাপ-ক্রিয়েটর)
   const [dict, setDict] = useState([]);           // ধাপ ৫: রেঞ্জ-ডিকশনারি (না এলে সতর্কতা ছাড়াই চলে)
 
+  const loadGuides = useCallback(() => { listGuideOverrides().then(setGuideOv).catch(() => setGuideOv({})); }, []);
+  useEffect(() => { loadGuides(); }, [loadGuides]);
   useEffect(() => { fetchTestNameDictionary().then(setDict).catch(() => setDict([])); }, []);
 
   useEffect(() => {
@@ -97,17 +105,21 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   // অসুখ গাইড (স্থির সাধারণ তথ্য, AI নেই) — কার্ড খুললে ভাঁজযোগ্য; না মিললে AI চ্যাটের ইঙ্গিত
   const guideBox = (r) => {
-    const gd = guideForCondition(r.name);
+    const base = guideForCondition(r.name);
+    const gd = base ? mergeGuide(base, guideOv[base.id]) : null;
+    const isCreator = !!(auth && auth.currentUser && isBlogAdminUid(auth.currentUser.uid));
     if (!gd) return React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "8px", lineHeight: 1.5 } }, "ℹ️ এই অসুখের গাইড এখনো নেই — মেনু → AI চ্যাট → ‘আধুনিক চিকিৎসা’-তে সাধারণ তথ্য জিজ্ঞেস করতে পারেন।");
     const sec = (head, items) => items && items.length ? React.createElement("div", { key: head, style: { marginTop: "8px" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G } }, head),
       React.createElement("ul", { style: { margin: "2px 0 0", paddingLeft: "18px", fontSize: "14px", color: "#3E4E49", lineHeight: 1.55 } }, items.map((x, i) => React.createElement("li", { key: i }, x)))) : null;
     return React.createElement("details", { style: { marginTop: "8px", background: "#F3F8F5", border: "1px solid " + LINE, borderRadius: "12px", padding: "0 10px" } },
-      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: G } }, "ℹ️ অসুখ গাইড — " + gd.title),
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: G } }, "ℹ️ অসুখ গাইড — " + gd.title + (gd.status === "verified" ? "  ✔ যাচাইকৃত" : "  (খসড়া)")),
       React.createElement("div", { style: { paddingBottom: "10px" } },
         React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", lineHeight: 1.55 } }, gd.what),
         sec("সাধারণ কারণ", gd.causes), sec("যা মানবেন / ছাড়বেন", gd.habits), sec("খাদ্যাভ্যাস", gd.food), sec("সতর্কতা", gd.caution),
-        React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "10px", lineHeight: 1.5 } }, "সূত্র: " + gd.src.join(", ") + " · " + GUIDE_DISCLAIMER)));
+        React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "10px", lineHeight: 1.5 } }, "সূত্র: " + gd.src.join(", ") + " · " + GUIDE_DISCLAIMER),
+        isCreator && editGuide !== gd.id && React.createElement("button", { type: "button", onClick: () => setEditGuide(gd.id), style: { marginTop: "8px", minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + G, background: "#fff", color: G, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "✎ সম্পাদনা / যাচাই"),
+        isCreator && editGuide === gd.id && React.createElement(ConditionGuideEditor, { key: gd.id + (gd.edited ? "e" : "d"), guide: gd, hasOverride: gd.edited, onCancel: () => setEditGuide(null), onDone: () => { setEditGuide(null); loadGuides(); } })));
   };
 
   const conditionCard = (r) => {

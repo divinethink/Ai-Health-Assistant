@@ -957,5 +957,24 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(setDoc(doc(dbAs('uidA'), 'dietGuidanceRules', 'z'), { status: 'verified' }));
       await assertFails(setDoc(doc(dbAs(ADMIN_UID), 'dietGuidanceRules', 'z'), { status: 'verified' }));
     });
+
+    it('11b. conditionGuides: লগইন-করা সবাই পড়ে; লেখা/মোছা শুধু অ্যাপ-ক্রিয়েটর', async () => {
+      const CREATOR = 'bZrGqbY0dFVTkIXKvEAwfHbMhRk1';
+      const good = { what: 'পরিচয়', causes: ['ক'], habits: ['খ'], food: ['গ'], caution: ['ঘ'], status: 'draft' };
+      await assertSucceeds(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'ibs'), good));
+      await assertSucceeds(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'ibs'), { ...good, status: 'verified', verifiedAt: new Date() }));
+      await assertSucceeds(getDoc(doc(dbAs('uidA'), 'conditionGuides', 'ibs')));
+      await assertSucceeds(getDocs(collection(dbAs('uidA'), 'conditionGuides')));
+      await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'conditionGuides', 'ibs')));
+      await assertFails(setDoc(doc(dbAs('uidA'), 'conditionGuides', 'ibs'), good));
+      await assertFails(setDoc(doc(dbAs(ADMIN_UID), 'conditionGuides', 'ibs'), good));
+      await assertFails(deleteDoc(doc(dbAs(ADMIN_UID), 'conditionGuides', 'ibs')));
+      // আকার/ধরন-সীমা ও অচেনা ফিল্ড
+      await assertFails(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'x'), { ...good, status: 'weird' }));
+      await assertFails(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'x'), { ...good, extra: 1 }));
+      await assertFails(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'x'), { ...good, causes: 'not-a-list' }));
+      await assertFails(setDoc(doc(dbAs(CREATOR), 'conditionGuides', 'x'), { ...good, what: 'ক'.repeat(1501) }));
+      await assertSucceeds(deleteDoc(doc(dbAs(CREATOR), 'conditionGuides', 'ibs')));
+    });
   });
 });

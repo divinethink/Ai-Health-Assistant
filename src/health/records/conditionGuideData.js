@@ -146,3 +146,46 @@ export function guideForCondition(name) {
   const hit = MATCH.find(([, res]) => res.some((re) => re.test(n)));
   return hit ? GUIDES.find((x) => x.id === hit[0]) || null : null;
 }
+
+// ---------- সম্পাদনা (অ্যাপ-ক্রিয়েটর) — pure ----------
+// Firestore `conditionGuides/{id}` = সংশোধিত লেখা। ডক থাকলে ডিফল্টের উপর বসে (`mergeGuide`), না থাকলে ডিফল্ট।
+export const GUIDE_LIST_KEYS = ["causes", "habits", "food", "caution"];
+export const MAX_GUIDE_WHAT = 1500;
+export const MAX_GUIDE_ITEMS = 12;
+export const MAX_GUIDE_ITEM_LEN = 300;
+
+// ডিফল্ট + সংশোধন → দেখানোর গাইড; status "verified" শুধু সংশোধিত ডকে থাকলে
+export function mergeGuide(base, ov) {
+  if (!base) return null;
+  if (!ov) return { ...base, status: "draft", edited: false };
+  const pickList = (k) => (Array.isArray(ov[k]) ? ov[k].filter((x) => typeof x === "string" && x.trim()) : base[k]);
+  return {
+    ...base,
+    what: typeof ov.what === "string" && ov.what.trim() ? ov.what : base.what,
+    causes: pickList("causes"), habits: pickList("habits"), food: pickList("food"), caution: pickList("caution"),
+    status: ov.status === "verified" ? "verified" : "draft",
+    edited: true,
+  };
+}
+
+// ফর্মের লেখা (প্রতি লাইনে একটা আইটেম) → সেভযোগ্য ফিল্ড; ফাঁকা/অতি-লম্বা বাদ, সীমা প্রয়োগ
+export function sanitizeGuideFields(raw) {
+  const r = raw || {};
+  const lines = (v) => String(Array.isArray(v) ? v.join("\n") : v || "").split("\n").map((s) => s.trim()).filter(Boolean)
+    .map((s) => s.slice(0, MAX_GUIDE_ITEM_LEN)).slice(0, MAX_GUIDE_ITEMS);
+  return {
+    what: String(r.what || "").trim().slice(0, MAX_GUIDE_WHAT),
+    causes: lines(r.causes), habits: lines(r.habits), food: lines(r.food), caution: lines(r.caution),
+  };
+}
+
+// নরম সতর্কতা (hard-block নয়): ডোজ/ওষুধ/ফোন-নম্বর ঢুকলে জানায়; এই গাইডের সীমা — চিকিৎসা ডাক্তারের পরামর্শে
+export function checkGuideText(fields) {
+  const f = sanitizeGuideFields(fields);
+  const all = [f.what, ...GUIDE_LIST_KEYS.flatMap((k) => f[k])].join("\n");
+  const w = [];
+  if (!f.what) w.push("‘এটা কী’ অংশ খালি।");
+  if (/[\d০-৯]+\s*(mg|ml|mcg|µg|মিগ্রা|মিলি|মি\.গ্রা)/i.test(all) || /ট্যাবলেট|ক্যাপসুল|ইনজেকশন|সিরাপ/.test(all)) w.push("ওষুধ/ডোজের কথা মনে হচ্ছে — এই গাইডে ডোজ বা ওষুধ রাখা হয় না।");
+  if (/(?:\+?88)?0?1[3-9][\d০-৯\-\s]{8,}/.test(all) || /\b999\b|৯৯৯|১৬২৬৩|হটলাইন/.test(all)) w.push("ফোন নম্বর মনে হচ্ছে — এই গাইডে নম্বর রাখা হয় না।");
+  return w;
+}

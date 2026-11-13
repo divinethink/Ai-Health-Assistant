@@ -29,3 +29,29 @@ test("লেখায় ডোজ/ফোন/জরুরি-নম্বর ন
   assert.ok(!/\d\s*(mg|ml|মিগ্রা|মিলি)/i.test(all));
   assert.ok(!/999|৯৯৯|১৬২৬৩|হটলাইন|ট্যাবলেট|ক্যাপসুল/.test(all));
 });
+
+import { mergeGuide, sanitizeGuideFields, checkGuideText } from "../../src/health/records/conditionGuideData.js";
+
+test("mergeGuide: সংশোধন না থাকলে ডিফল্ট/খসড়া; থাকলে বসে ও verified", () => {
+  const base = GUIDES.find((x) => x.id === "ibs");
+  const d = mergeGuide(base, undefined);
+  assert.equal(d.what, base.what); assert.equal(d.status, "draft"); assert.equal(d.edited, false);
+  const m = mergeGuide(base, { what: "নতুন", causes: ["ক"], habits: [], food: ["খ", " "], caution: ["গ"], status: "verified" });
+  assert.equal(m.what, "নতুন"); assert.deepEqual(m.causes, ["ক"]); assert.deepEqual(m.habits, []);
+  assert.deepEqual(m.food, ["খ"]); assert.equal(m.status, "verified"); assert.equal(m.edited, true);
+  assert.equal(mergeGuide(null, {}), null);
+});
+test("sanitizeGuideFields: লাইন ভাগ, ফাঁকা বাদ, সীমা", () => {
+  const f = sanitizeGuideFields({ what: "  ক  ", causes: "a\n\n b \n", habits: Array(30).fill("x").join("\n"), food: "ক".repeat(500), caution: "" });
+  assert.equal(f.what, "ক"); assert.deepEqual(f.causes, ["a", "b"]);
+  assert.equal(f.habits.length, 12); assert.equal(f.food[0].length, 300); assert.deepEqual(f.caution, []);
+});
+test("checkGuideText: ডোজ/ফোন/খালি সতর্কতা; ভালো লেখায় নয়", () => {
+  const ok = { what: "পরিচয়", causes: ["ক"], habits: ["খ"], food: ["গ"], caution: ["ঘ"] };
+  assert.deepEqual(checkGuideText(ok), []);
+  assert.ok(checkGuideText({ ...ok, habits: ["দিনে ৫০০ mg খান"] }).length > 0);
+  assert.ok(checkGuideText({ ...ok, caution: ["ফোন 01712345678"] }).length > 0);
+  assert.ok(checkGuideText({ ...ok, caution: ["ফোন করুন ৯৯৯"] }).length > 0);
+  assert.ok(checkGuideText({ ...ok, what: "" }).length > 0);
+  for (const g of GUIDES) assert.deepEqual(checkGuideText(g), [], g.id);
+});
