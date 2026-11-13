@@ -15,6 +15,7 @@ import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
+import { guideForCondition, GUIDE_DISCLAIMER } from "./conditionGuideData.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -94,6 +95,21 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const allergies = records.filter((r) => r.resourceType === "allergy");
   const obsGroups = groupObservations(records);
 
+  // অসুখ গাইড (স্থির সাধারণ তথ্য, AI নেই) — কার্ড খুললে ভাঁজযোগ্য; না মিললে AI চ্যাটের ইঙ্গিত
+  const guideBox = (r) => {
+    const gd = guideForCondition(r.name);
+    if (!gd) return React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "8px", lineHeight: 1.5 } }, "ℹ️ এই অসুখের গাইড এখনো নেই — মেনু → AI চ্যাট → ‘আধুনিক চিকিৎসা’-তে সাধারণ তথ্য জিজ্ঞেস করতে পারেন।");
+    const sec = (head, items) => items && items.length ? React.createElement("div", { key: head, style: { marginTop: "8px" } },
+      React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G } }, head),
+      React.createElement("ul", { style: { margin: "2px 0 0", paddingLeft: "18px", fontSize: "14px", color: "#3E4E49", lineHeight: 1.55 } }, items.map((x, i) => React.createElement("li", { key: i }, x)))) : null;
+    return React.createElement("details", { style: { marginTop: "8px", background: "#F3F8F5", border: "1px solid " + LINE, borderRadius: "12px", padding: "0 10px" } },
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: G } }, "ℹ️ অসুখ গাইড — " + gd.title),
+      React.createElement("div", { style: { paddingBottom: "10px" } },
+        React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", lineHeight: 1.55 } }, gd.what),
+        sec("সাধারণ কারণ", gd.causes), sec("যা মানবেন / ছাড়বেন", gd.habits), sec("খাদ্যাভ্যাস", gd.food), sec("সতর্কতা", gd.caution),
+        React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "10px", lineHeight: 1.5 } }, "সূত্র: " + gd.src.join(", ") + " · " + GUIDE_DISCLAIMER)));
+  };
+
   const conditionCard = (r) => {
     const tp = r.treatingPhysician || {};
     const sub = [tp.name && "👨‍⚕️ " + tp.name, tp.hospital && "🏥 " + tp.hospital, tp.chamberContact && "📞 " + tp.chamberContact].filter(Boolean).join(" · ");
@@ -107,6 +123,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
       open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
         line("Category", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
         line("শুরু", r.onsetDate ? bnDate(r.onsetDate) : null), line("নোট", r.notes),
+        guideBox(r),
         actions(r)));
   };
 
