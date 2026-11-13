@@ -482,6 +482,18 @@ describe('Health Assistant — Firestore Rules', function () {
       );
     });
 
+    it('7f-2. নিজের commonCare রেকর্ড (সাধারণ চিকিৎসা) তৈরি করা যায়', async () => {
+      await assertSucceeds(
+        setDoc(famDoc(dbAs('uidA'), 'healthRecords', 'cc1'), newRecord('mA', 'mA', { resourceType: 'commonCare', disease: 'জ্বর', brand: 'Napa' }))
+      );
+    });
+
+    it('7f-3. অন্যের commonCare রেকর্ডে অনুমতি ছাড়া লেখা reject', async () => {
+      await assertFails(
+        setDoc(famDoc(dbAs('uidB'), 'healthRecords', 'cc2'), newRecord('mA', 'mB', { resourceType: 'commonCare', disease: 'জ্বর' }))
+      );
+    });
+
     it('7g. update-এ memberId বদলে অন্যের নামে সরানো reject', async () => {
       await seedRecord('r1', 'mA');
       await assertFails(

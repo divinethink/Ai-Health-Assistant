@@ -68,7 +68,7 @@ export async function buildTimeline(familyId, targetMemberId, opts) {
     getWeekDaily(familyId, targetMemberId, last7DatesISO()).catch(() => []),
   ]);
 
-  const recordEntries = records.map((r) => {
+  const recordEntries = records.filter((r) => r.resourceType !== "commonCare").map((r) => { // সাধারণ চিকিৎসা = রেফারেন্স-তালিকা, ঘটনা নয়
     // resourceType-ভেদে date-field আলাদা জায়গায় থাকে (Architecture Plan §2 schema) —
     // allergy-তে কোনো explicit date নেই বলে createdAt fallback ব্যবহার হয়।
     const explicitDate = r.onsetDate || r.date || r.startDate || null;

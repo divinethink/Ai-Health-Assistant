@@ -27,6 +27,8 @@ import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
+import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
+import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
@@ -322,7 +324,7 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   );
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, chip }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, chip, selectedMemberId }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
@@ -331,7 +333,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   const wrapStyle = { paddingTop: "8px", paddingLeft: "12px", paddingRight: "12px", paddingBottom: (BOTTOM_NAV_HEIGHT + 12) + "px", color: "var(--hs-text)" };
 
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], lock: ["🔒", t("menu.lockTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], settings: ["⚙️", t("menu.settingsTitle")] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -346,6 +348,10 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
           ),
         })
       );
+    } else if (sub === "timeline") {
+      // টাইমলাইন + টিকা — হেলথ-পিল থেকে মেনুতে সরানো (owner-request ২০২৬-১১-১৩); কম্পোনেন্ট অপরিবর্তিত
+      body = React.createElement(HealthTimeline, { familyId, callerMemberId: memberId, selectedMemberId,
+        vaccineSlot: React.createElement(VaccinationScheduler, { familyId, callerMemberId: memberId, selectedMemberId, inline: true }) });
     } else if (sub === "data") {
       body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
     } else if (sub === "lock") {
@@ -414,6 +420,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(ThemeSwitcher),
     React.createElement("div", { style: { borderRadius: "18px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", overflow: "hidden", boxShadow: "0 3px 12px rgba(14,75,67,0.09)" } },
       row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
+      row("🕘", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
       row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
       row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
       row("⚙️", t("menu.settingsTitle"), t("menu.settingsSub"), () => setSub("settings"), true))
@@ -511,7 +518,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip,
+      onOpenDoctorDetails: () => setShowDoctorDetails(true), onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip, selectedMemberId,
     });
   }
 

@@ -455,7 +455,7 @@ service cloud.firestore {
           && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
         allow create: if request.auth != null
           && request.resource.data.resourceType in
-             ['condition', 'observation', 'medicationStatement', 'allergy']
+             ['condition', 'observation', 'medicationStatement', 'allergy', 'commonCare']
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow update: if request.auth != null
           && request.resource.data.memberId == resource.data.memberId

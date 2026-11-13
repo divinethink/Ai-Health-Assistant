@@ -20,6 +20,7 @@ export const RESOURCE_TYPE_LABELS = {
   observation: "পরিমাপ/পরীক্ষা",
   medicationStatement: "ওষুধ",
   allergy: "অ্যালার্জি",
+  commonCare: "সাধারণ চিকিৎসা",
 };
 
 // resourceType-নির্দিষ্ট field-সেট আলাদা করা হলো (Architecture Plan §2 schema অনুযায়ী) —
@@ -70,6 +71,11 @@ export function buildHealthRecordFields(resourceType, fields) {
   }
   if (resourceType === "allergy") {
     return { substance: fields.name.trim(), reaction: fields.reaction.trim(), severity: fields.severity };
+  }
+  if (resourceType === "commonCare") {
+    // সদস্যের নিজের লেখা রেফারেন্স-তালিকা (ডাক্তারের পরামর্শ); অ্যাপ ডোজ বানায় না, AI/dose-engine-এর সাথে যোগ নেই
+    const c = (v) => (v || "").trim();
+    return { disease: c(fields.disease), brand: c(fields.brand), generic: c(fields.generic), dose: c(fields.dose), frequency: c(fields.frequency), note: c(fields.note) };
   }
   throw new Error("অজানা resourceType: " + resourceType);
 }

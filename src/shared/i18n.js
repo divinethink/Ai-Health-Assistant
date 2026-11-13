@@ -43,7 +43,7 @@ const DICT = {
     "title.docs": "📁 নথি", "title.menu": "☰ মেনু",
 
     "tab.today": "আজ", "tab.profile": "প্রোফাইল", "tab.healthProfile": "স্বাস্থ্য প্রোফাইল", "tab.records": "স্বাস্থ্য তথ্য", "tab.diet": "খাদ্য নির্দেশিকা",
-    "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "টাইমলাইন", "tab.food": "🍽️ খাদ্য",
+    "tab.medication": "ওষুধ ও রিমাইন্ডার", "tab.timeline": "টাইমলাইন", "tab.commonCare": "সাধারণ চিকিৎসা", "tab.food": "🍽️ খাদ্য",
     "tab.symptom": "🩺 লক্ষণ যাচাই", "tab.medsci": "⚕️ আধুনিক চিকিৎসা", "tab.herbal": "🌿 ভেষজ", "tab.homeo": "💧 হোমিওপ্যাথি",
     "tab.nutrition": "🥗 পুষ্টি", "tab.fitness": "🏃 ব্যায়াম", "tab.upload": "📁 জমা নথি", "tab.export": "🩺 ডাক্তার",
 
@@ -85,7 +85,7 @@ const DICT = {
     "title.docs": "📁 Documents", "title.menu": "☰ Menu",
 
     "tab.today": "Today", "tab.profile": "Profile", "tab.records": "Health Info", "tab.diet": "Diet Guide",
-    "tab.medication": "Medicines & Reminders", "tab.timeline": "টাইমলাইন", "tab.food": "🍽️ খাদ্য",
+    "tab.medication": "Medicines & Reminders", "tab.timeline": "টাইমলাইন", "tab.commonCare": "General care", "tab.food": "🍽️ খাদ্য",
     "tab.symptom": "🩺 Symptom Check", "tab.medsci": "⚕️ Medical Science", "tab.herbal": "🌿 Herbal", "tab.homeo": "💧 Homeopathy",
     "tab.nutrition": "🥗 Nutrition", "tab.fitness": "🏃 Fitness", "tab.upload": "📁 My Documents", "tab.export": "🩺 Doctor",
 
