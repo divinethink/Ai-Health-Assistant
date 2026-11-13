@@ -3,7 +3,7 @@
 // আন্ডারলাইন/হাইলাইট (Firestore: wellnessGuideMarks — শুধু নিজের ডেটা)।
 // কোনো AI/dose logic নেই; পোস্টের মূল body অপরিবর্তিত থাকে।
 
-import { getMarks, saveMarks } from "./wellnessGuideData.js";
+import { getMarks, saveMarks, WELLNESS_CATEGORIES, formatAgeOrMonthRange } from "./wellnessGuideData.js";
 
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -27,8 +27,27 @@ export function readerText(post) {
   return i === -1 ? body : (body.slice(0, i).trim() + "\n\n" + body.slice(i + 6).trim()).trim();
 }
 
-function buildSegments(text, marks) {
+// "▌ শিরোনাম" লাইনগুলো (হেডিং) ও রেফারেন্স-অংশের সীমা — শুধু দেখানোর স্টাইলের জন্য;
+// টেক্সট/অফসেট অপরিবর্তিত, তাই পুরনো মার্ক ঠিক থাকে।
+function analyzeText(text) {
+  const heads = [];
+  const re = /^▌[^\n]*/gm;
+  let m;
+  while ((m = re.exec(text)) !== null) heads.push({ s: m.index, e: m.index + m[0].length, label: m[0] });
+  let refS = -1, refE = text.length;
+  for (let i = 0; i < heads.length; i++) {
+    if (/^▌\s*রেফারেন্স/.test(heads[i].label)) {
+      refS = heads[i].s;
+      for (let j = i + 1; j < heads.length; j++) { refE = heads[j].s; break; }
+      break;
+    }
+  }
+  return { heads, refS, refE };
+}
+
+function buildSegments(text, marks, extra) {
   const cuts = new Set([0, text.length]);
+  extra.forEach((c) => { if (c >= 0 && c <= text.length) cuts.add(c); });
   marks.forEach((m) => { cuts.add(m.s); cuts.add(m.e); });
   const pts = Array.from(cuts).sort((a, b) => a - b);
   const segs = [];
@@ -101,7 +120,17 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     () => marks.filter((m) => m.s >= 0 && m.e > m.s && m.e <= text.length && text.slice(m.s, m.e) === m.t),
     [marks, text]
   );
-  const segs = useMemo(() => buildSegments(text, validMarks), [text, validMarks]);
+  const info = useMemo(() => analyzeText(text), [text]);
+  const segs = useMemo(() => {
+    const extra = [];
+    info.heads.forEach((h) => { extra.push(h.s, h.e); });
+    if (info.refS !== -1) extra.push(info.refS, info.refE);
+    return buildSegments(text, validMarks, extra);
+  }, [text, validMarks, info]);
+  const [refsOpen, setRefsOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const catLabel = (WELLNESS_CATEGORIES.find(([id]) => id === post.category) || [null, ""])[1];
+  const rangeLabel = formatAgeOrMonthRange(post);
 
   // দুই-আঙুল পিঞ্চ → ফন্ট-সাইজ
   useEffect(() => {
@@ -196,23 +225,58 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
     )
   );
 
+  const accent = themeIdx === 2 ? "#7FD1B9" : "#0E7A66";
+  const inRefs = (g) => info.refS !== -1 && g.s >= info.refS && g.e <= info.refE;
+  let refToggleShown = false;
+  const segEls = [];
+  segs.forEach((g) => {
+    if (inRefs(g) && !refToggleShown) {
+      refToggleShown = true;
+      segEls.push(React.createElement("button", {
+        key: "reftoggle", type: "button", onClick: (e) => { e.stopPropagation(); setRefsOpen((o) => !o); },
+        style: { display: "block", width: "100%", textAlign: "left", margin: "18px 0 6px", padding: "10px 12px", borderRadius: "12px", border: "1px solid rgba(128,128,128,0.4)", background: "transparent", color: theme.fg, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+      }, (refsOpen ? "▲ " : "▼ ") + "রেফারেন্স " + (refsOpen ? "লুকান" : "দেখুন")));
+    }
+    if (inRefs(g) && !refsOpen) return;
+    const hl = g.covering.filter((m) => m.k === "hl").pop();
+    const ul = g.covering.some((m) => m.k === "ul");
+    const isHead = info.heads.some((h) => g.s >= h.s && g.e <= h.e);
+    const style = {};
+    if (isHead) { style.fontWeight = 700; style.color = accent; style.fontSize = "1.08em"; }
+    if (inRefs(g)) { style.fontSize = "0.88em"; style.opacity = 0.9; }
+    if (hl) style.background = hl.c || COLORS[0];
+    if (hl && themeIdx === 2) style.color = "#1F2D2A";
+    if (ul) { style.textDecoration = "underline"; style.textDecorationThickness = "2px"; style.textUnderlineOffset = "3px"; }
+    const props = { key: g.s, "data-s": g.s, "data-e": g.e, style };
+    if (g.covering.length) props["data-m"] = g.covering.map((m) => m.id).join(",");
+    segEls.push(React.createElement("span", props, text.slice(g.s, g.e)));
+  });
+
+  const titleBlock = React.createElement(
+    "div", { style: { whiteSpace: "normal", marginBottom: "18px", paddingBottom: "14px", borderBottom: "1px solid rgba(128,128,128,0.3)" } },
+    React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" } },
+      catLabel && React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", color: accent, border: "1px solid " + accent } }, catLabel),
+      rangeLabel && React.createElement("span", { style: { fontSize: "12px", padding: "3px 10px", borderRadius: "999px", border: "1px solid rgba(128,128,128,0.5)" } }, rangeLabel)
+    ),
+    React.createElement("div", { style: { fontSize: "1.35em", fontWeight: 700, lineHeight: 1.4 } }, post.title)
+  );
+
   const body = React.createElement(
     "div", {
       ref: contentRef, onClick: onContentClick,
-      style: { flex: 1, overflowY: "auto", padding: "16px 18px", touchAction: "pan-y", WebkitUserSelect: "text", userSelect: "text", fontSize: font + "px", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "break-word", color: theme.fg, background: theme.bg },
+      onScroll: (e) => { const el = e.currentTarget; const max = el.scrollHeight - el.clientHeight; setProgress(max > 0 ? Math.min(1, el.scrollTop / max) : 0); },
+      style: { flex: 1, overflowY: "auto", padding: "18px 20px 40px", touchAction: "pan-y", WebkitUserSelect: "text", userSelect: "text", fontSize: font + "px", lineHeight: 1.95, whiteSpace: "pre-wrap", wordBreak: "break-word", color: theme.fg, background: theme.bg },
     },
-    segs.map((g) => {
-      const hl = g.covering.filter((m) => m.k === "hl").pop();
-      const ul = g.covering.some((m) => m.k === "ul");
-      const style = {};
-      if (hl) style.background = hl.c || COLORS[0];
-      if (hl && themeIdx === 2) style.color = "#1F2D2A";
-      if (ul) { style.textDecoration = "underline"; style.textDecorationThickness = "2px"; style.textUnderlineOffset = "3px"; }
-      const props = { key: g.s, "data-s": g.s, "data-e": g.e, style };
-      if (g.covering.length) props["data-m"] = g.covering.map((m) => m.id).join(",");
-      return React.createElement("span", props, text.slice(g.s, g.e));
-    }),
+    React.createElement("div", { style: { maxWidth: "680px", margin: "0 auto" } },
+    titleBlock,
+    segEls,
+    post.sourceNote && React.createElement("div", { style: { whiteSpace: "normal", marginTop: "20px", fontSize: "0.8em", opacity: 0.7 } }, "সোর্স: " + post.sourceNote),
     !validMarks.length && marks.length > 0 && React.createElement("div", { style: { marginTop: "12px", fontSize: "12px", opacity: 0.7 } }, "লেখা বদলে যাওয়ায় পুরনো কিছু মার্ক এখন দেখানো হচ্ছে না।")
+    )
+  );
+  const progressBar = React.createElement(
+    "div", { style: { height: "3px", background: "rgba(128,128,128,0.2)" } },
+    React.createElement("div", { style: { height: "3px", width: (progress * 100) + "%", background: accent, transition: "width 0.1s linear" } })
   );
 
   let tool;
@@ -235,6 +299,7 @@ export function WellnessReader({ post, uid, onClose, canManage, onEdit, onTrash 
   return React.createElement(
     "div", { style: { position: "fixed", inset: 0, zIndex: 80, display: "flex", flexDirection: "column", background: theme.bg, fontFamily: "'Hind Siliguri', sans-serif" } },
     header,
+    progressBar,
     body,
     React.createElement(
       "div", { style: { padding: "8px 10px", background: theme.bar, color: theme.fg, borderTop: "1px solid rgba(128,128,128,0.3)" } },

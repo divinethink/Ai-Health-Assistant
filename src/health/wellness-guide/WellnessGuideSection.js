@@ -28,6 +28,30 @@ const CATEGORY_ICONS = {
   "outdoor-community": "🌳",
 };
 
+// প্রতি ক্যাটেগরির নিজস্ব নরম রঙ (আইকন-বৃত্ত ও চিপে ব্যবহার)।
+const CATEGORY_COLORS = {
+  "general": "#2E7D6B", "diet-fitness": "#E08A1E", "child-care": "#2F80C4", "women-health": "#C2488A",
+  "elderly-care": "#7A5C3E", "chronic-disease-prevention": "#C0392B", "mental-health": "#7B58C7",
+  "skin-beauty": "#D1707A", "sleep-lifestyle": "#3F51B5", "first-aid-emergency": "#D32F2F",
+  "education-career": "#1E88A8", "money-life-skills": "#5C8A1E", "digital-safety": "#455A64",
+  "outdoor-community": "#2E8B3E",
+};
+const tint = (c, pct) => "color-mix(in srgb, " + c + " " + pct + "%, transparent)";
+
+function categoryLabel(id) {
+  const hit = WELLNESS_CATEGORIES.find(([cid]) => cid === id);
+  return hit ? hit[1] : "";
+}
+
+// আনুমানিক পড়ার সময় (মিনিট) — [MORE]/রেফারেন্স বাদে, ~১৮০ শব্দ/মিনিট ধরে।
+function readMinutes(body) {
+  let t = String(body || "").replace(MORE_MARKER, " ");
+  const r = t.search(/^▌\s*রেফারেন্স/m);
+  if (r !== -1) t = t.slice(0, r);
+  const words = t.split(/\s+/).filter((x) => /[\p{L}\p{N}]/u.test(x)).length;
+  return Math.max(1, Math.round(words / 180));
+}
+
 function toBn(n) {
   return String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
 }
@@ -47,50 +71,42 @@ function splitBodyAtMarker(body) {
 
 const smallBtn = (extra) => ({ fontSize: "14px", padding: "4px 8px", borderRadius: "10px", border: "1px solid #D3E0D9", background: "#fff", cursor: "pointer", ...extra });
 
-function PostCard({ post, expanded, onToggle, onRead, trashMode, onRestore, onPurge }) {
+function Chip({ text, color }) {
+  return React.createElement("span", {
+    style: { fontSize: "12px", fontWeight: 600, padding: "2px 8px", borderRadius: "999px", color: color || PRIMARY, background: tint(color || PRIMARY, 14), whiteSpace: "nowrap" },
+  }, text);
+}
+
+// কার্ড: শিরোনাম + ২-৩ লাইন সারাংশ + চিপ (ক্যাটেগরি, বয়স, পড়ার সময়)। ক্লিকে সরাসরি পড়ার মোড।
+function PostCard({ post, onOpen, trashMode, onRestore, onPurge }) {
   const rangeLabel = formatAgeOrMonthRange(post);
   const split = splitBodyAtMarker(post.body);
-  const previewText = split ? split.preview : post.summary || null;
-  const remainingText = split ? split.rest : post.body;
-  const hasMore = !!split || !!post.summary;
+  let snippet = (split ? split.preview : post.summary || "")
+    .split("\n").filter((l) => l.trim() && l.trim().indexOf("▌") !== 0).join(" ").trim();
+  if (!snippet && split) snippet = split.rest.split("\n").filter((l) => l.trim() && l.trim().indexOf("▌") !== 0).join(" ").slice(0, 160);
+  const color = CATEGORY_COLORS[post.category] || PRIMARY;
 
   return React.createElement(
-    "div", { key: post.id, style: { ...PREMIUM_CARD, padding: "10px", marginBottom: "8px" } },
+    "div", {
+      key: post.id, role: trashMode ? undefined : "button",
+      onClick: trashMode ? undefined : () => onOpen(post),
+      style: { ...PREMIUM_CARD, padding: "14px", marginBottom: "10px", cursor: trashMode ? "default" : "pointer", borderLeft: "4px solid " + color },
+    },
+    React.createElement("div", { style: { fontWeight: 700, color: "var(--hs-text, #1B2430)", fontSize: "15px", lineHeight: 1.45 } }, post.title),
+    snippet && React.createElement("div", {
+      style: { fontSize: "14px", color: "var(--hs-muted, #5F716C)", marginTop: "6px", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" },
+    }, snippet),
     React.createElement(
-      "div", { style: { cursor: "pointer" }, onClick: onToggle },
-      React.createElement("div", { style: { fontWeight: 600, color: PRIMARY, fontSize: "14px" } }, post.title),
-      React.createElement(
-        "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "2px" } },
-        (rangeLabel ? rangeLabel + " · " : "") + (post.tags || []).join(", ")
-      ),
-      previewText && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "6px", whiteSpace: "pre-wrap" } }, previewText),
-      !expanded && hasMore && React.createElement(
-        "span", { style: { fontSize: "14px", color: PRIMARY, fontWeight: 600, marginTop: "4px", display: "inline-block" } },
-        "আরো পড়ুন »"
-      )
+      "div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center", marginTop: "10px" } },
+      React.createElement(Chip, { text: categoryLabel(post.category), color }),
+      rangeLabel && React.createElement(Chip, { text: rangeLabel, color: "#5F716C" }),
+      React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, "⏱ প্রায় " + toBn(readMinutes(post.body)) + " মিনিট"),
+      !trashMode && React.createElement("span", { style: { marginLeft: "auto", fontSize: "14px", fontWeight: 700, color: PRIMARY } }, "পড়ুন ›")
     ),
-    expanded && React.createElement(
-      "div", { style: { fontSize: "14px", color: "#1F2D2A", marginTop: "10px", whiteSpace: "pre-wrap", borderTop: "1px solid #D3E0D9", paddingTop: "8px" } },
-      remainingText,
-      post.sourceNote && React.createElement("div", { style: { fontSize: "14px", color: "#6B7B76", marginTop: "8px" } }, "সোর্স: " + post.sourceNote)
-    ),
-    React.createElement(
-      "div", { style: { display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" } },
-      !trashMode && onRead && React.createElement(
-        "button", {
-          onClick: (e) => { e.stopPropagation(); onRead(post); },
-          style: smallBtn({ border: "1px solid " + PRIMARY, color: PRIMARY, fontWeight: 600 }),
-        },
-        "📖 পড়ার মোড"
-      ),
-      trashMode && React.createElement(
-        "button", { onClick: (e) => { e.stopPropagation(); onRestore(post); }, style: smallBtn({ border: "1px solid " + PRIMARY, color: PRIMARY, fontWeight: 600 }) },
-        "↩ ফেরত আনুন"
-      ),
-      trashMode && React.createElement(
-        "button", { onClick: (e) => { e.stopPropagation(); onPurge(post); }, style: smallBtn({ border: "1px solid #C0392B", color: "#C0392B" }) },
-        "স্থায়ীভাবে মুছুন"
-      )
+    trashMode && React.createElement(
+      "div", { style: { display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" } },
+      React.createElement("button", { onClick: () => onRestore(post), style: smallBtn({ border: "1px solid " + PRIMARY, color: PRIMARY, fontWeight: 600 }) }, "↩ ফেরত আনুন"),
+      React.createElement("button", { onClick: () => onPurge(post), style: smallBtn({ border: "1px solid #C0392B", color: "#C0392B" }) }, "স্থায়ীভাবে মুছুন")
     )
   );
 }
@@ -117,15 +133,16 @@ function CategorySidebar({ category, onSelect, counts, total, canManage, trashCo
   );
 }
 
-function CategoryTile({ icon, label, count, onClick }) {
+function CategoryTile({ icon, label, count, color, onClick }) {
+  const c = color || PRIMARY;
   return React.createElement(
     "div", {
       onClick, role: "button",
-      style: { ...PREMIUM_CARD, padding: "12px 10px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "6px", minHeight: "84px", boxSizing: "border-box" },
+      style: { ...PREMIUM_CARD, padding: "14px 12px", cursor: "pointer", display: "flex", flexDirection: "column", gap: "10px", minHeight: "104px", boxSizing: "border-box" },
     },
-    React.createElement("div", { style: { fontSize: "26px", lineHeight: 1 } }, icon),
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: PRIMARY } }, label),
-    React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, "(" + toBn(count) + ")")
+    React.createElement("div", { style: { width: "44px", height: "44px", borderRadius: "14px", background: tint(c, 16), display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" } }, icon),
+    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-text, #1B2430)", lineHeight: 1.35 } }, label),
+    React.createElement("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", marginTop: "auto" } }, toBn(count) + "টি পোস্ট")
   );
 }
 
@@ -134,7 +151,6 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   const [category, setCategory] = useState(null);
   const [posts, setPosts] = useState(null);
   const [err, setErr] = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -214,14 +230,13 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
 
   function openCategory(catId) {
     setCategory(catId);
-    setExpandedId(null);
     setSidebarOpen(false);
     setQuery("");
   }
 
   function goBack() {
     if (showForm || editingPost) { setShowForm(false); setEditingPost(null); return; }
-    if (category !== null) { setCategory(null); setExpandedId(null); setSidebarOpen(false); return; }
+    if (category !== null) { setCategory(null); setSidebarOpen(false); return; }
     if (onExit) onExit();
   }
 
@@ -237,7 +252,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   const hdrBtn = { background: "none", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", fontSize: "18px", minWidth: "40px", minHeight: "40px", borderRadius: "10px", cursor: "pointer", flexShrink: 0 };
 
   const headerBar = React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: PRIMARY, color: "#fff" } },
+    "div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", color: "#fff", boxShadow: "0 2px 10px rgba(14,75,67,0.25)" } },
     React.createElement("button", { type: "button", onClick: goBack, "aria-label": "পিছনে", style: hdrBtn }, "←"),
     inList && !showForm && !editingPost && React.createElement("button", {
       type: "button", onClick: () => setSidebarOpen((o) => !o), "aria-label": "ক্যাটেগরি", title: "ক্যাটেগরি", style: hdrBtn,
@@ -264,9 +279,8 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   function renderCards(list, trashMode) {
     return list.map((p) =>
       React.createElement(PostCard, {
-        key: p.id, post: p, expanded: expandedId === p.id, trashMode,
-        onToggle: () => setExpandedId((id) => (id === p.id ? null : p.id)),
-        onRead: readerUid ? (post) => setReaderPost(post) : null,
+        key: p.id, post: p, trashMode,
+        onOpen: (post) => { if (readerUid) setReaderPost(post); },
         onRestore: restore,
         onPurge: (post) => setPendingPurge(post),
       })
@@ -276,7 +290,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   const searchBox = React.createElement("input", {
     type: "search", value: query, placeholder: "🔍 পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
     onChange: (e) => setQuery(e.target.value),
-    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "12px", border: "1px solid #D3E0D9", fontSize: "14px", marginBottom: "10px", fontFamily: "inherit" },
+    style: { width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "12px", border: "1px solid var(--hs-input-border, #C3D2CA)", background: "var(--hs-surface, #fff)", fontSize: "14px", marginBottom: "12px", fontFamily: "inherit" },
   });
 
   let body = null;
@@ -292,11 +306,11 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
           : renderCards(searchHits, false)
       );
     } else {
-      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সব পোস্ট", count: active.length, onClick: () => openCategory("all") })]
+      const tiles = [React.createElement(CategoryTile, { key: "all", icon: "📚", label: "সব পোস্ট", count: active.length, color: "#0E4B43", onClick: () => openCategory("all") })]
         .concat(WELLNESS_CATEGORIES.map(([id, label]) =>
-          React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "📄", label, count: counts[id] || 0, onClick: () => openCategory(id) })
+          React.createElement(CategoryTile, { key: id, icon: CATEGORY_ICONS[id] || "📄", label, color: CATEGORY_COLORS[id], count: counts[id] || 0, onClick: () => openCategory(id) })
         ));
-      if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "🗑", label: "ট্র্যাশ", count: trashed.length, onClick: () => openCategory("trash") }));
+      if (canManage) tiles.push(React.createElement(CategoryTile, { key: "trash", icon: "🗑", label: "ট্র্যাশ", color: "#C0392B", count: trashed.length, onClick: () => openCategory("trash") }));
       body = React.createElement(
         React.Fragment, null, searchBox,
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } }, tiles)
@@ -316,7 +330,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   );
 
   const mainContent = React.createElement(
-    "div", { style: { flex: 1, overflowY: "auto", padding: "12px 14px" } },
+    "div", { style: { flex: 1, overflowY: "auto", padding: "14px" } },
     pendingTrash && confirmBox("\"" + pendingTrash.title + "\" পোস্টটা ট্র্যাশে পাঠাবেন? (পরে ফেরত আনা যাবে)", confirmTrash, "হ্যাঁ, ট্র্যাশে পাঠান", () => setPendingTrash(null)),
     pendingPurge && confirmBox("\"" + pendingPurge.title + "\" পোস্টটা স্থায়ীভাবে মুছবেন? এটি আর ফেরত আসবে না।", confirmPurge, "হ্যাঁ, স্থায়ীভাবে মুছুন", () => setPendingPurge(null)),
     canManage && (showForm || editingPost) && React.createElement(WellnessGuideForm, {
@@ -338,7 +352,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   }
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
     headerBar,
     React.createElement(
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },
