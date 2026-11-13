@@ -472,6 +472,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   // "+ দ্রুত যোগ" (ধাপ ৯): বার্তা রেখে গন্তব্যে যাওয়া; হোমেই থাকলে হোম নতুন করে আঁকা (homeKey) যাতে ফর্ম খোলে
   const [quickOpen, setQuickOpen] = useState(false);
   const [homeKey, setHomeKey] = useState(0);
+  const [blogKey, setBlogKey] = useState(0); // ব্লগ ট্যাবে আবার ট্যাপ → ব্লগের হোমে ফেরা (পোস্ট/ক্যাটেগরি বন্ধ)
   const onQuickPick = (kind) => {
     const tab = quickTarget(kind);
     setQuickIntent(kind);
@@ -502,7 +503,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "tracker") {
     tabContent = React.createElement(TrackerPageSection, { mode: "plan", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onGoHome: goHome });
   } else if (activeTab === "blog") {
-    tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: goHome });
+    tabContent = React.createElement(WellnessGuideSection, { key: "blog-" + blogKey, familyId, isAdmin, myMemberId: memberId, onExit: goHome });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
@@ -516,7 +517,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
     (activeTab === "home" || activeTab === "health") && selectedMemberId && React.createElement(QuickAddFab, { onOpen: () => setQuickOpen(true) }),
     React.createElement(QuickAddSheet, { open: quickOpen, onClose: () => setQuickOpen(false), onPick: onQuickPick, memberName: ((members || []).find((m) => m.id === selectedMemberId) || {}).name || "" }),
-    React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: setActiveTab })
+    React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: (t) => { if (t === "blog" && activeTab === "blog") { setBlogKey((n) => n + 1); return; } setActiveTab(t); } })
   );
 }
 

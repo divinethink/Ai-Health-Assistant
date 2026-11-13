@@ -318,7 +318,13 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
     React.createElement("input", {
       type: "search", value: query, placeholder: "পোস্ট খুঁজুন (শিরোনাম বা ট্যাগ)",
       onChange: (e) => setQuery(e.target.value),
-      style: { flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", padding: "10px 0", fontSize: "14px", fontFamily: "inherit", boxShadow: "none" },
+      // অ্যাপের গ্লোবাল input-স্টাইল (বর্ডার/ব্যাকগ্রাউন্ড) !important-এ ঠেকাতে ref দিয়ে important সেট।
+      ref: (el) => {
+        if (!el) return;
+        [["border", "none"], ["background", "transparent"], ["box-shadow", "none"], ["border-radius", "0"], ["outline", "none"], ["padding", "10px 0"], ["margin", "0"], ["min-height", "0"], ["height", "auto"], ["width", "auto"]]
+          .forEach(([k, v]) => el.style.setProperty(k, v, "important"));
+      },
+      style: { flex: 1, minWidth: 0, fontSize: "14px", fontFamily: "inherit" },
     })
   );
 
