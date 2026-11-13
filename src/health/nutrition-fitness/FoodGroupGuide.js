@@ -37,11 +37,19 @@ export function FoodGroupGuide({ allergyTags, ctx }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(null);
   const { groups, avoid } = groupedFoodList(q);
-  const row = (key, name, chips, line, red) => h("button", { key, onClick: () => setOpen(key), style: { display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: "1px solid " + T.border, padding: "8px 2px", minHeight: "44px", cursor: "pointer", color: T.ink, fontFamily: "inherit" } },
-    h("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" } },
-      h("span", { style: { fontSize: "14px", fontWeight: 700, color: red ? "#B3261E" : T.ink } }, name),
-      chips && chips.slice(0, 2).map((x, i) => chip(x, i))),
-    line && h("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5, marginTop: "2px" } }, line));
+  // সদস্যের জন্য হলুদ !/লাল ✕ ব্যাজ (সবুজ হলে কিছু নয়, যাতে তালিকা ভিড় না হয়); লাল "প্রসেসড" সেকশনে আলাদা ব্যাজ নেই (আগে থেকেই লাল)
+  const row = (key, name, chips, line, red) => {
+    const st = red ? null : foodStatus(key, FOODS[key], { allergyTags, ctx });
+    const warn = st && st.level !== "green" ? st : null;
+    const c = warn ? STATUS_COLORS[warn.level] : null;
+    return h("button", { key, onClick: () => setOpen(key), style: { display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: "1px solid " + T.border, padding: "8px 2px", minHeight: "44px", cursor: "pointer", color: T.ink, fontFamily: "inherit" } },
+      h("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" } },
+        h("span", { style: { fontSize: "14px", fontWeight: 700, color: red ? "#B3261E" : T.ink } }, name),
+        warn && h("span", { style: { fontSize: "12px", fontWeight: 700, padding: "1px 8px", borderRadius: "999px", background: c.bg, border: "1px solid " + c.border, color: c.text, whiteSpace: "nowrap" } }, warn.icon + " " + warn.label),
+        chips && chips.slice(0, 2).map((x, i) => chip(x, i))),
+      line && h("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5, marginTop: "2px" } }, line),
+      warn && warn.reasons[0] && h("div", { style: { fontSize: "12px", color: c.text, lineHeight: 1.4, marginTop: "2px" } }, warn.reasons[0]));
+  };
   const det = (id, title, color, bg, border, rows, k) => h("details", { key: id, style: { background: bg, border: "1.5px solid " + border, borderRadius: "14px", padding: "4px 10px", marginTop: "8px" } },
     h("summary", { style: { fontSize: "14px", fontWeight: 700, color, cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center" } }, title), rows);
   return h("div", { style: { marginTop: "12px" } },

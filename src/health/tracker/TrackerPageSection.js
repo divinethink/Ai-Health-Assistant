@@ -36,6 +36,7 @@ import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
 import { AvoidCard } from "./AvoidCard.js";
+import { ExerciseGuide } from "./ExerciseGuide.js";
 import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
@@ -396,7 +397,8 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     }),
     React.createElement(AvoidCard, { domain: "exercise", age: info.age, flags: info.flags, condKeys: info.condKeys }),
     React.createElement(Notice, null, "বুকে ব্যথা, মাথা ঘোরা বা শ্বাসকষ্ট হলে থামুন ও ডাক্তার দেখান।"),
-    React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
+    React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "টিক দিলে মিনিট ‘দৈনিক ইনপুট’-এর ব্যায়ামে যোগ হয়। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"),
+    React.createElement(ExerciseGuide, { age, flags: info.flags, condKeys: info.condKeys }));
 }
 
 // ---------- ট্রেন্ড: হিটম্যাপ + সপ্তাহ|মাস|৩ মাস (TrendExtras.js); সপ্তাহ-ভিউ = WeekTrend (গত ৭ দিন, আগের মতোই) ----------
