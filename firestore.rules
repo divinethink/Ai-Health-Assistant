@@ -230,6 +230,17 @@ service cloud.firestore {
                 && request.resource.data.pages.trend.keys().hasOnly(['top', 'week'])
                 && designListOk(request.resource.data.pages.trend.get('top', []))
                 && designListOk(request.resource.data.pages.trend.get('week', []))));
+      // AI মডেল-সেটিং (provider + model নাম; API key কখনো নয়) — লেখা শুধু App Creator, পড়া সাইন-ইন সদস্য
+      // (Worker caller-এর token দিয়ে পড়ে)। model নামের ফরম্যাট-সীমা; অচেনা provider নয়।
+      allow create, update: if isBlogAdmin()
+        && docId == 'aiConfig'
+        && request.resource.data.keys().hasOnly(['provider', 'model', 'updatedAt', 'updatedBy'])
+        && request.resource.data.provider in ['groq', 'mistral', 'openrouter']
+        && request.resource.data.model is string
+        && request.resource.data.model.size() >= 3
+        && request.resource.data.model.size() <= 80
+        && request.resource.data.model.matches('^[A-Za-z0-9][A-Za-z0-9._:/-]+$')
+        && request.resource.data.updatedBy == request.auth.uid;
       allow delete: if false;
     }
 

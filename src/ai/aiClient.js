@@ -24,6 +24,10 @@ const WORKER_BASE_URL = import.meta.env.VITE_MEDIA_WORKER_URL || "";
  * @param {{ onRetry?: (attempt:number, maxRetries:number)=>void, maxRetries?: number, baseDelayMs?: number }} options
  * @returns {Promise<{ content: string, blocked?: boolean, usage?: object }>}
  */
+// সর্বশেষ AI উত্তর কোন মডেল দিল (শুধু মেমরিতে, এই সেশনে) — App Creator-এর AI মডেল-সেটিং স্ক্রিনে দেখানোর জন্য।
+let lastAiInfo = null;
+export const getLastAiInfo = () => lastAiInfo;
+
 export async function askAI(familyId, payload, conversationHistory = [], options = {}) {
   const { onRetry, maxRetries = 2, baseDelayMs = 1500, ageYears = null, useWebSearch = false } = options;
 
@@ -55,7 +59,7 @@ export async function askAI(familyId, payload, conversationHistory = [], options
       throw new Error(`AI request failed (status ${res.status}, no JSON body).`);
     }
 
-    if (res.ok) return data; // { content, blocked, usage, sources }
+    if (res.ok) { lastAiInfo = { modelUsed: data && data.modelUsed, customFailed: data && data.customFailed }; return data; } // { content, blocked, usage, sources, modelUsed }
 
     const code = data && data.error ? data.error : `http-${res.status}`;
     const isRateLimited = res.status === 429 || /429/.test(code);

@@ -932,6 +932,36 @@ describe('Health Assistant — Firestore Rules', function () {
     });
   });
 
+  describe('14. appDesign/aiConfig (AI provider+model — শুধু App Creator লেখে)', () => {
+    const CREATOR = 'bZrGqbY0dFVTkIXKvEAwfHbMhRk1';
+    const ref = (db, id = 'aiConfig') => doc(db, 'appDesign', id);
+    const good = { provider: 'openrouter', model: 'meta-llama/llama-4-maverick', updatedAt: new Date(), updatedBy: CREATOR };
+
+    it('14a. Creator বৈধ provider+model লিখতে পারে; সাইন-ইন সদস্য পড়তে পারে', async () => {
+      await assertSucceeds(setDoc(ref(dbAs(CREATOR)), good));
+      await assertSucceeds(setDoc(ref(dbAs(CREATOR)), { ...good, provider: 'groq', model: 'qwen/qwen3.8-27b' }));
+      await assertSucceeds(getDoc(ref(dbAs('uidA'))));
+      await assertFails(getDoc(ref(testEnv.unauthenticatedContext().firestore())));
+    });
+    it('14b. Family Admin / অন্য সদস্য / অনাম লিখতে পারে না', async () => {
+      await assertFails(setDoc(ref(dbAs(ADMIN_UID)), good));
+      await assertFails(setDoc(ref(dbAs('uidA')), good));
+      await assertFails(setDoc(ref(testEnv.unauthenticatedContext().firestore()), good));
+    });
+    it('14c. অচেনা provider / অতিরিক্ত ফিল্ড (key সহ) / খারাপ model নাম / ভুল updatedBy / মোছা — সব বন্ধ', async () => {
+      const db = dbAs(CREATOR);
+      await assertFails(setDoc(ref(db), { ...good, provider: 'evil' }));
+      await assertFails(setDoc(ref(db), { ...good, apiKey: 'sk-secret' }));
+      await assertFails(setDoc(ref(db), { ...good, model: 'a b' }));
+      await assertFails(setDoc(ref(db), { ...good, model: 'ab' }));
+      await assertFails(setDoc(ref(db), { ...good, model: 'x'.repeat(81) }));
+      await assertFails(setDoc(ref(db), { ...good, model: 123 }));
+      await assertFails(setDoc(ref(db), { ...good, updatedBy: 'someoneElse' }));
+      await seed(async (sdb) => { await setDoc(ref(sdb), good); });
+      await assertFails(deleteDoc(ref(db)));
+    });
+  });
+
   describe('11. Global reference DB', () => {
     it('11. medicineDatabase: শুধু verified পড়া যায়; client write সবসময় বন্ধ', async () => {
       await seed(async (db) => {

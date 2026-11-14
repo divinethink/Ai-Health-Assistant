@@ -578,7 +578,7 @@ function cleanLLMContent(rawContent) {
   return content;
 }
 
-async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
+async function callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch, modelOverride) {
   const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
 
   // Controlled Web Search (§6.3.1/§10.1) — compound বাদ, Brave Search + bounded
@@ -599,10 +599,11 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     }
   }
 
+  const groqModel = modelOverride || "qwen/qwen3.8-27b";
   const body = {
     messages,
     max_tokens: 1500,
-    model: "qwen/qwen3.8-27b",
+    model: groqModel,
     // reasoning_effort:"none" — dual-mode (thinking/non-thinking) model-এ
     // thinking mode বন্ধ করে দেয়। আমাদের বাংলা health-guidance conversational
     // use-case-এ জটিল multi-step reasoning দরকার নেই, আর thinking mode-ই
@@ -612,6 +613,8 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
     // API-স্তরেই suppress করে।
     reasoning_format: "hidden",
   };
+  // এই দুই প্যারামিটার শুধু Qwen-জাতীয় dual-mode মডেলে চলে; অন্য Groq মডেলে পাঠালে 400 আসে।
+  if (!/qwen/i.test(groqModel)) { delete body.reasoning_effort; delete body.reasoning_format; }
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` };
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -636,7 +639,7 @@ async function callGroq(env, payload, conversationHistory, doseFactNote, special
 // call হয় যখন Groq (primary) ব্যর্থ হয় এবং env.MISTRAL_API_KEY set করা আছে (owner
 // `wrangler secret put MISTRAL_API_KEY` চালালেই সক্রিয় হয়, না চালালে Phase 1-এর
 // মতোই আচরণ অপরিবর্তিত থাকে — কোনো ভাঙা পরিবর্তন না)। OpenAI-compatible endpoint।
-async function callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+async function callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote, modelOverride) {
   const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
 
   const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
@@ -646,7 +649,7 @@ async function callMistral(env, payload, conversationHistory, doseFactNote, spec
       Authorization: `Bearer ${env.MISTRAL_API_KEY}`,
     },
     body: JSON.stringify({
-      model: env.MISTRAL_MODEL || "mistral-small-latest",
+      model: modelOverride || env.MISTRAL_MODEL || "mistral-small-latest",
       messages,
       max_tokens: 1500,
     }),
@@ -686,13 +689,13 @@ async function callCerebras(env, payload, conversationHistory, doseFactNote, spe
   return { content, usage: data.usage || null, sources: [] };
 }
 
-async function callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote) {
+async function callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote, modelOverride) {
   const messages = buildLLMMessages(payload, conversationHistory, doseFactNote, specialtyNote);
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
     body: JSON.stringify({
-      model: env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
+      model: modelOverride || env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
       messages,
       max_tokens: 1500,
     }),
@@ -716,13 +719,51 @@ async function callOpenRouter(env, payload, conversationHistory, doseFactNote, s
 // root cause এটাই ছিল); family-facing health-guidance-এ ভুল-ভাষার ঝুঁকি নেওয়া হচ্ছে না।
 // callCerebras()/callOpenRouter() ফাংশন মুছে
 // ফেলা হয়নি (future re-enable সহজ রাখতে), শুধু এই চেইন থেকে বাদ।
-async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch) {
+// App Creator-এর বাছা provider/model (Firestore appDesign/aiConfig)। কেবল caller-এর ID-token দিয়ে
+// rules-gated পড়া (rules-এ লেখা শুধু App Creator)। অবৈধ/অনুপস্থিত/পড়া-ব্যর্থ হলে null → ডিফল্ট চেইন
+// (Groq Qwen → Mistral) হুবহু আগের মতো। model নামের ফরম্যাট এখানেও যাচাই (rules-এর পাশাপাশি)।
+const AI_CFG_PROVIDERS = ["groq", "mistral", "openrouter"];
+const AI_CFG_MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._:\/-]{2,79}$/;
+async function readAiConfig(env, idToken) {
   try {
-    return await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
+    const res = await fetch(firestoreDocUrl(env, "appDesign/aiConfig"), { headers: { Authorization: `Bearer ${idToken}` } });
+    if (!res.ok) return null;
+    const f = fsFieldsToPlain((await res.json()).fields);
+    if (!AI_CFG_PROVIDERS.includes(f.provider) || typeof f.model !== "string" || !AI_CFG_MODEL_RE.test(f.model)) return null;
+    return { provider: f.provider, model: f.model };
+  } catch (e) {
+    return null;
+  }
+}
+
+// ফল: { content, usage, sources, modelUsed, customFailed? }। customFailed = বাছা মডেল ব্যর্থ হয়ে ডিফল্টে ফিরেছে
+// (শুধু ত্রুটির ধরন, যেমন "openrouter-error-401" — upstream-এর বার্তা নয়)।
+async function callLLM(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch, aiCfg) {
+  let customFailed;
+  if (aiCfg) {
+    const keyEnv = { groq: "GROQ_API_KEY", mistral: "MISTRAL_API_KEY", openrouter: "OPENROUTER_API_KEY" }[aiCfg.provider];
+    if (!env[keyEnv]) {
+      customFailed = `${aiCfg.provider}-key-missing`;
+    } else {
+      try {
+        let out;
+        if (aiCfg.provider === "groq") out = await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch, aiCfg.model);
+        else if (aiCfg.provider === "mistral") out = await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote, aiCfg.model);
+        else out = await callOpenRouter(env, payload, conversationHistory, doseFactNote, specialtyNote, aiCfg.model);
+        return { ...out, modelUsed: `${aiCfg.provider}/${aiCfg.model}` };
+      } catch (e) {
+        customFailed = String((e && e.message) || "error").split(":")[0].slice(0, 40);
+      }
+    }
+  }
+  try {
+    const out = await callGroq(env, payload, conversationHistory, doseFactNote, specialtyNote, useWebSearch);
+    return { ...out, modelUsed: "groq/qwen/qwen3.8-27b (default)", ...(customFailed ? { customFailed } : {}) };
   } catch (primaryErr) {
     if (!env.MISTRAL_API_KEY) throw primaryErr;
     try {
-      return await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote);
+      const out = await callMistral(env, payload, conversationHistory, doseFactNote, specialtyNote);
+      return { ...out, modelUsed: "mistral/default", ...(customFailed ? { customFailed } : {}) };
     } catch (secondaryErr) {
       throw primaryErr;
     }
@@ -1014,7 +1055,8 @@ export default {
           highRiskContext = false;
         }
 
-        const { content, usage, sources } = await callLLM(env, payload, conversationHistory, doseFactNote, combinedSpecialtyNote, useWebSearch);
+        const aiCfg = await readAiConfig(env, idToken);
+        const { content, usage, sources, modelUsed, customFailed } = await callLLM(env, payload, conversationHistory, doseFactNote, combinedSpecialtyNote, useWebSearch, aiCfg);
         // Detection-layer dose-numeric-scanner — শুধু তিনটা সাধারণ-আলোচনা চ্যাটে
         // (medical-science, herbal-homeopathy, nutrition-fitness) স্কিপ করা হয়
         // (owner-approved, ২০২৬-০৯-১২ — herbal/nutrition practice-based বিষয় বলে
@@ -1038,6 +1080,9 @@ export default {
           // blocked হলে sources-ও suppress করা হচ্ছে — defense-in-depth,
           // suppressed-response-এর সাথে কোনো আংশিক তথ্যও যেন না যায়।
           sources: blocked ? [] : sources || [],
+          // শুধু কোন মডেল উত্তর দিল (App Creator-এর পরীক্ষার জন্য) — কোনো secret/ডেটা নয়।
+          modelUsed,
+          ...(customFailed ? { customFailed } : {}),
         });
       }
 

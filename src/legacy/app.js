@@ -43,6 +43,7 @@ import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
 import { PasscodeSettings } from "../components/PasscodeSettings.js";
 import { PageLayoutScreen } from "../components/PageLayoutScreen.js";
+import { AiModelSettings } from "../components/AiModelSettings.js";
 import { isAppCreatorUid } from "./appDesign.js";
 import { PAGE_IDS, PAGE_DEFS } from "../shared/pageLayout.js";
 import { clearPasscode } from "../shared/appLock.js";
@@ -368,7 +369,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   }
 
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"], design: ["🎛️", "কাস্টমাইজ"] };
+    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"], design: ["🎛️", "কাস্টমাইজ"], aimodel: ["🤖", "AI মডেল"] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -398,6 +399,9 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
         React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
           PAGE_IDS.map((pid) => React.createElement("button", { key: pid, type: "button", onClick: () => setDesignPage(pid),
             style: { flex: "1 1 40%", minHeight: "70px", borderRadius: "16px", border: "1px solid var(--hs-border)", background: "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 3px 10px rgba(14,75,67,0.09)" } }, PAGE_DEFS[pid].label))));
+    } else if (sub === "aimodel" && isCreator) {
+      // শুধু App Creator: AI provider + model বদল (API key নয়) — Worker পরের চ্যাট থেকেই ব্যবহার করে
+      body = React.createElement(AiModelSettings, { uid, isCreator });
     } else if (sub === "theme") {
       body = React.createElement(ThemeSwitcher);
     } else {
@@ -463,6 +467,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
       row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
       isCreator && row("🎛️", "কাস্টমাইজ", "পেজের কার্ড সাজান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("design")),
+      isCreator && row("🤖", "AI মডেল", "provider ও model বদলান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("aimodel")),
       row("🎨", "থিম", currentThemeLabel(), () => setSub("theme")),
       row("🌐", "ভাষা", t("lang." + getLang()), () => setSub("lang"), true))
   );
