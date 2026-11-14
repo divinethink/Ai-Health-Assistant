@@ -10,7 +10,7 @@ import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
-import { T } from "../tracker/trackerTheme.js";
+import { BottomSheet } from "../../shared/BottomSheet.js";
 
 const { useState, useEffect, useRef } = React;
 import { takeQuickIntent } from "../../shared/quickIntent.js";
@@ -44,9 +44,6 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
     else if (k) { setPresetType(k === "observation" ? "observation" : k); setAdding(true); }
     // eslint-disable-next-line
   }, []);
-  useEffect(() => { if (adding && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [adding]);
-  // ✎ সম্পাদনা চাপলে ফর্ম খোলে ও দৃশ্যে আসে
-  useEffect(() => { if (editingRecord && formRef.current && formRef.current.scrollIntoView) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); }, [editingRecord]);
 
   if (!targetMemberId) {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "সদস্য বেছে নিন।");
@@ -72,12 +69,9 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
           onAdded: () => { setRefreshTick((t) => t + 1); setAdding(false); setPresetObs(null); setPresetType(null); if (onRecordAdded) onRecordAdded(); },
         });
         // নতুন যোগ: হোমের মতো নিচ-থেকে-ওঠা পপআপ (ব্যাকড্রপ চাপলে বন্ধ নয় — লেখা হারানো ঠেকাতে শুধু ✕); edit আগের মতো ইনলাইন
-        if (!(adding && !editingRecord)) return form;
-        return React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 80 } },
-          React.createElement("div", { "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" } }),
-          React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": "কী যোগ করবেন?", style: { position: "absolute", left: 0, right: 0, bottom: 0, background: T.canvas, borderRadius: "28px 28px 0 0", padding: "14px 16px 20px", fontFamily: "'Hind Siliguri', sans-serif", maxHeight: "85%", overflowY: "auto" } },
-            React.createElement("div", { style: { width: "44px", height: "5px", borderRadius: "3px", background: T.border, margin: "0 auto 10px" } }),
-            form));
+        if (!form) return form;
+        // যোগ ও সম্পাদনা দুটোই নিচ-থেকে-ওঠা শিটে (পেজ স্ক্রল/লাফ নেই); ব্যাকড্রপ চাপলে বন্ধ নয় — লেখা হারানো ঠেকাতে শুধু ✕/Back
+        return React.createElement(BottomSheet, { title: null, hideHeader: true, lockBackdrop: true, onClose: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); setPresetType(null); } }, form);
       })(),
       ),
     (section === "all" || section === "records") && React.createElement(HealthRecordList, {

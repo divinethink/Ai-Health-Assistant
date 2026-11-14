@@ -9,6 +9,7 @@
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { t } from "../../shared/i18n.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
+import { BottomSheet } from "../../shared/BottomSheet.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
 import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
@@ -79,6 +80,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     try {
       await deleteHealthRecord(familyId, r.id, targetMemberId, callerMemberId);
       setConfirmId(null);
+      setOpenKey(null);
       onDeleted && onDeleted();
     } catch (e) {
       setErr(e.code === "permission-denied" ? "এই রেকর্ড মোছার অনুমতি আপনার নেই।" : (e.message || String(e)));
@@ -97,7 +99,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   // ✎ সম্পাদনা + 🗑 মুছুন (২-ধাপ)
   const actions = (r) => React.createElement(React.Fragment, null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
-      React.createElement("button", { onClick: () => onEdit && onEdit(r), style: btn(G, "#E6F2EC") }, "✎ সম্পাদনা"),
+      React.createElement("button", { onClick: () => { setOpenKey(null); onEdit && onEdit(r); }, style: btn(G, "#E6F2EC") }, "✎ সম্পাদনা"),
       React.createElement("button", { onClick: () => setConfirmId(r.id), style: btn(RED, "#FDECEA") }, "🗑 মুছুন")),
     confirmId === r.id && React.createElement(ConfirmDialog, { title: "রেকর্ডটি মুছবেন?", message: "এই রেকর্ড স্থায়ীভাবে মুছে যাবে।", busy: busyId === r.id, onConfirm: () => doDelete(r), onCancel: () => setConfirmId(null) }));
 
@@ -133,65 +135,53 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
         isCreator && editGuide === gd.id && React.createElement(ConditionGuideEditor, { key: gd.id + (gd.edited ? "e" : "d"), guide: gd, hasOverride: gd.edited, onCancel: () => setEditGuide(null), onDone: () => { setEditGuide(null); loadGuides(); } })));
   };
 
-  // খোলা কার্ডের উপরে-ডানে ✕ (টাচ-এরিয়া ৪৪px, দেখা যায় ২৮px গোল)
-  const closeX = (k) => React.createElement("button", { type: "button", onClick: () => toggle(k), "aria-label": "বন্ধ করুন", style: { position: "absolute", top: "2px", right: "2px", width: "44px", height: "44px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 } },
-    React.createElement("span", { style: { width: "28px", height: "28px", borderRadius: "50%", background: "#E9F0EC", color: G, fontSize: "16px", lineHeight: "28px", fontWeight: 700 } }, "✕"));
-  const hist = { background: "#F6FAF7", borderRadius: "12px", padding: "8px 12px", marginTop: "8px" };
+  const hist = { background: "#fff", borderRadius: "12px", padding: "8px 12px", marginTop: "8px", border: "1px solid #E3ECE6" };
+  const statusChip = (r) => { const active = r.status === "active" || r.status === "chronic"; return badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0"); };
 
-  // অসুস্থতা: একটাই কার্ডের ভেতর সারি-তালিকা (নাম + ডাক্তার/হাসপাতাল, ডানে স্ট্যাটাস-চিপ)
+  // ---- তালিকার কার্ড: ছোট ও স্থির — ট্যাপে নিচ থেকে শিট ওঠে (কার্ড নিজে বড় হয় না, লিস্ট নড়ে না) ----
   const conditionRow = (r, i) => {
     const tp = r.treatingPhysician || {};
     const sub = [tp.name, tp.hospital, tp.chamberContact].filter(Boolean).join(" · ");
-    const open = openKey === r.id;
-    const active = r.status === "active" || r.status === "chronic";
-    return React.createElement("div", { key: r.id, style: { position: "relative", borderTop: i ? "1px solid #EAF0EC" : "none" } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: open ? "13px 50px 6px 14px" : "13px 14px", cursor: "pointer", minHeight: "56px" } },
-        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-          React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, r.name),
-          sub && React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, marginTop: "2px", overflowWrap: "anywhere" } }, sub)),
-        !open && badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0"),
-        !open && React.createElement("span", { "aria-hidden": true, style: { color: MUTED, fontSize: "18px" } }, "›")),
-      open && closeX(r.id),
-      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
-        React.createElement("div", { style: { marginBottom: "6px" } }, badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0")),
-        line("ক্যাটাগরি", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
-        line("শুরু", r.onsetDate ? bnDate(r.onsetDate) : null), line("নোট", r.notes),
-        guideBox(r),
-        actions(r)));
+    return React.createElement("button", { key: r.id, onClick: () => toggle(r.id), "aria-haspopup": "dialog", style: { all: "unset", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", cursor: "pointer", minHeight: "56px", borderTop: i ? "1px solid #EAF0EC" : "none" } },
+      React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, r.name),
+        sub && React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, marginTop: "2px", overflowWrap: "anywhere" } }, sub)),
+      statusChip(r),
+      React.createElement("span", { "aria-hidden": true, style: { color: MUTED, fontSize: "18px" } }, "›"));
   };
-
-  // অ্যালার্জি: হালকা লাল-আভা ছোট কার্ড
-  const allergyCard = (r) => {
-    const open = openKey === r.id;
-    return React.createElement("div", { key: r.id, style: { ...cardBase, position: "relative", padding: 0, background: "#FFF8F7", border: "1px solid #F0CCC7", boxShadow: "none", gridColumn: open ? "1 / -1" : undefined } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: open ? "12px 50px 8px 14px" : "12px 14px", cursor: "pointer", minHeight: "48px" } },
-        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: RED, overflowWrap: "anywhere" } }, r.substance),
-        r.reaction && React.createElement("div", { style: { fontSize: "13.5px", color: "#5B4A47", marginTop: "2px" } }, r.reaction)),
-      open && closeX(r.id),
-      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
-        line("তীব্রতা", r.severity ? t("sev." + r.severity) : null), actions(r)));
-  };
-
-  // পরিমাপ: কমপ্যাক্ট কার্ড — নাম (১–২ লাইন), বড় মান + পাশে ↑↓ চিপ, তারিখ। গ্রাফ শুধু খুললে।
+  const allergyCard = (r) => React.createElement("button", { key: r.id, onClick: () => toggle(r.id), "aria-haspopup": "dialog", style: { ...cardBase, all: "unset", boxSizing: "border-box", display: "block", padding: "12px 14px", cursor: "pointer", minHeight: "48px", background: "#FFF8F7", border: "1px solid #F0CCC7", boxShadow: "none", borderRadius: "18px" } },
+    React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: RED, overflowWrap: "anywhere" } }, r.substance),
+    r.reaction && React.createElement("div", { style: { fontSize: "13.5px", color: "#5B4A47", marginTop: "2px" } }, r.reaction));
   const obsCard = (g) => {
-    const k = "obs:" + g.key, open = openKey === k;
-    const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
-    const alBadge = al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4");
-    const trBadge = tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC");
-    const valRow = React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" } },
-      React.createElement("span", { style: { fontSize: "24px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15 } }, latest.value),
-      latest.unit && React.createElement("span", { style: { fontSize: "13.5px", color: MUTED } }, unitLabelBn(latest.unit)));
-    return React.createElement("div", { key: k, style: { ...cardBase, position: "relative", padding: 0, alignSelf: "start", gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
-      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: open ? "12px 50px 8px 14px" : "11px 12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: open ? "unset" : 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
-        React.createElement("div", { style: { marginTop: "3px" } }, valRow),
-        !open && (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" } }, alBadge, trBadge),
-        !open && latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "5px" } }, shortDate(latest.date))),
-      open && closeX(k),
-      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
-        (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "4px" } }, alBadge, trBadge),
+    const k = "obs:" + g.key, latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
+    return React.createElement("button", { key: k, onClick: () => toggle(k), "aria-haspopup": "dialog", style: { ...cardBase, all: "unset", boxSizing: "border-box", display: "block", alignSelf: "start", padding: "11px 12px", cursor: "pointer", minHeight: "44px", background: "#fff", borderRadius: "18px", boxShadow: SOFT, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
+      React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
+      React.createElement("div", { style: { marginTop: "3px", display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" } },
+        React.createElement("span", { style: { fontSize: "24px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15 } }, latest.value),
+        latest.unit && React.createElement("span", { style: { fontSize: "13.5px", color: MUTED } }, unitLabelBn(latest.unit))),
+      (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" } },
+        al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4"),
+        tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC")),
+      latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "5px" } }, shortDate(latest.date)));
+  };
+
+  // ---- বিস্তারিত শিট (নিচ থেকে ওঠে) ----
+  const closeSheet = () => { setOpenKey(null); setConfirmId(null); };
+  const detailSheet = () => {
+    if (!openKey) return null;
+    if (openKey.startsWith("obs:")) {
+      const g = obsGroups.find((x) => "obs:" + x.key === openKey);
+      if (!g) return null;
+      const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
+      return React.createElement(BottomSheet, { title: g.label, onClose: closeSheet },
+        React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: "6px", flexWrap: "wrap" } },
+          React.createElement("span", { style: { fontSize: "32px", fontWeight: 800, color: al ? RED : "#1F2D2A" } }, latest.value),
+          latest.unit && React.createElement("span", { style: { fontSize: "15px", color: MUTED } }, unitLabelBn(latest.unit))),
+        (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" } },
+          al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4"),
+          tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC")),
         React.createElement(Spark, { items: g.items }),
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G, margin: "12px 0 0" } }, "ইতিহাস (" + g.items.length + ")"),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G, margin: "14px 0 0" } }, "ইতিহাস (" + g.items.length + ")"),
         g.items.map((r) => React.createElement("div", { key: r.id, style: hist },
           React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "baseline" } },
             React.createElement("b", { style: { fontSize: "16px" } }, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")),
@@ -201,7 +191,21 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
             docsById[r.sourceDocId] && docsById[r.sourceDocId].cloudinaryUrl
               ? React.createElement("a", { href: docsById[r.sourceDocId].cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: { color: G, fontWeight: 600 } }, "📄 " + docsById[r.sourceDocId].fileName + " — দেখুন")
               : "📄 " + (r.sourceDocName || "রিপোর্ট")),
-          actions(r)))));
+          actions(r))));
+    }
+    const r = records.find((x) => x.id === openKey);
+    if (!r) return null;
+    if (r.resourceType === "allergy") {
+      return React.createElement(BottomSheet, { title: r.substance, onClose: closeSheet },
+        line("তীব্রতা", r.severity ? t("sev." + r.severity) : null), line("প্রতিক্রিয়া", r.reaction), actions(r));
+    }
+    return React.createElement(BottomSheet, { title: r.name, onClose: closeSheet },
+      React.createElement("div", { style: { marginBottom: "6px" } }, statusChip(r)),
+      line("ক্যাটাগরি", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
+      line("শুরু", r.onsetDate ? bnDate(r.onsetDate) : null), line("নোট", r.notes),
+      (() => { const tp = r.treatingPhysician || {}; return line("ডাক্তার", [tp.name, tp.hospital, tp.chamberContact].filter(Boolean).join(" · ")); })(),
+      guideBox(r),
+      actions(r));
   };
 
   // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়) — প্রতি টেস্টের সর্বশেষ মানই
@@ -211,5 +215,6 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
+    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))),
+    detailSheet());
 }
