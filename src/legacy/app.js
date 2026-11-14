@@ -115,7 +115,9 @@ function BottomNav({ active, onChange }) {
 
 // প্রোফাইল-চিপ — পুরনো স্থির TopBar-এর বদলে (৪৪px ফেরত)। প্রতিটি পেজের
 // ট্যাব-পিল-সারির বামে বসে। ড্রপডাউন position:fixed — পিল-সারির overflow-এ কাটা পড়ে না।
-function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId, onChangeMember }) {
+// variant=="name": মেনুর প্রোফাইল-কার্ডের নামটাই ট্রিগার (ড্রপডাউন কার্ডের নিচে, কার্ড-প্রস্থে)। ডিফল্ট: আগের পিল-চিপ।
+function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId, onChangeMember, variant }) {
+  const asName = variant === "name";
   const [open, setOpen] = useState(false);
   const [confirmChange, setConfirmChange] = useState(false);
   const [changeBusy, setChangeBusy] = useState(false);
@@ -134,21 +136,26 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
     React.createElement(
       "button", {
         onClick: () => setOpen((o) => !o), "aria-label": memberDoc.name,
-        style: {
+        style: asName ? {
+          display: "flex", alignItems: "center", gap: "4px", minHeight: "36px", maxWidth: "100%", minWidth: 0,
+          border: "none", background: "none", padding: 0, margin: 0, cursor: "pointer", fontFamily: "inherit",
+          color: "var(--hs-primary)", fontSize: "16px", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        } : {
           flexShrink: 0, display: "flex", alignItems: "center", gap: "4px", minHeight: "42px", maxWidth: "130px",
           border: "1px solid var(--hs-primary)", borderRadius: "999px", padding: "4px 10px", cursor: "pointer",
           background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", fontSize: "16px", fontWeight: 700,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         },
       },
-      first + " ▾"
+      (asName ? (memberDoc.name || "?") : first) + " ▾"
     ),
     open && React.createElement("div", { onClick: () => setOpen(false), style: { position: "fixed", inset: 0, zIndex: 59, background: "rgba(0,0,0,0.15)" } }),
     open && React.createElement(
       "div", {
         style: {
-          position: "fixed", left: "12px", top: "56px", zIndex: 60, background: "var(--hs-surface)",
-          border: "1px solid var(--hs-border)", borderRadius: "14px", minWidth: "220px", maxWidth: "calc(100vw - 24px)",
+          ...(asName ? { position: "absolute", left: 0, right: 0, top: "calc(100% + 6px)" } : { position: "fixed", left: "12px", top: "56px" }),
+          zIndex: 60, background: "var(--hs-surface)",
+          border: "1px solid var(--hs-border)", borderRadius: "14px", minWidth: asName ? 0 : "220px", maxWidth: "calc(100vw - 24px)",
           boxShadow: "0 8px 24px rgba(0,0,0,0.18)", padding: "10px", fontSize: "14px", color: "var(--hs-text)",
         },
       },
@@ -198,7 +205,7 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
   );
 }
 
-function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
+function ProfileMiniCard({ memberDoc, familyDoc, isAdmin, nameSlot }) {
   const [copied, setCopied] = useState(false);
   const initial = ((memberDoc.name || "?").trim()[0] || "?").toUpperCase();
   const copyCode = () => {
@@ -210,12 +217,12 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin }) {
     } catch (e) { /* noop */ }
   };
   return React.createElement(
-    "div", { style: { display: "flex", alignItems: "center", gap: "12px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "12px 14px", marginBottom: "10px", background: "linear-gradient(135deg, var(--hs-surface), var(--hs-chip-bg))", boxShadow: "0 3px 12px rgba(14,75,67,0.10)" } },
+    "div", { style: { position: "relative", display: "flex", alignItems: "center", gap: "12px", border: "1px solid var(--hs-border)", borderRadius: "18px", padding: "12px 14px", marginBottom: "10px", background: "linear-gradient(135deg, var(--hs-surface), var(--hs-chip-bg))", boxShadow: "0 3px 12px rgba(14,75,67,0.10)" } },
     React.createElement("div", { style: { width: "46px", height: "46px", flexShrink: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", fontWeight: 800, color: "var(--hs-primary-contrast)", background: "linear-gradient(135deg, var(--hs-primary), var(--hs-primary-2, var(--hs-primary)))", boxShadow: "0 3px 8px rgba(14,75,67,0.3)" } }, initial),
     React.createElement(
       "div", { style: { flex: 1, minWidth: 0 } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-        React.createElement("span", { style: { fontWeight: 800, color: "var(--hs-primary)", fontSize: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, memberDoc.name),
+        nameSlot || React.createElement("span", { style: { fontWeight: 800, color: "var(--hs-primary)", fontSize: "16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, memberDoc.name),
         React.createElement("span", { style: { fontSize: "11px", fontWeight: 700, padding: "1px 8px", borderRadius: "999px", background: "var(--hs-primary)", color: "var(--hs-primary-contrast)", flexShrink: 0 } }, isAdmin ? "Admin" : memberDoc.role)
       ),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "3px", minWidth: 0 } },
@@ -447,8 +454,8 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
 
   return React.createElement(
     "div", { style: wrapStyle },
-    React.createElement("div", { style: { display: "flex", marginBottom: "10px" } }, chip),
-    React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin }),
+    // উপরের আলাদা নাম-চিপ সরানো (owner-request ২০২৬-১১-১৪) — কার্ডের নামই ড্রপডাউন-ট্রিগার (সদস্য-বদল/Change Gmail/Log out)
+    React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin, nameSlot: React.cloneElement(chip, { variant: "name", key: "profile-name" }) }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
