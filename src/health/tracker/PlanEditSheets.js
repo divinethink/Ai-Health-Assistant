@@ -10,8 +10,8 @@ import { bnNum } from "../../shared/dates.js";
 import { FOODS, itemText, qtyText, foodK, foodNote, hasFoodOverride, MAX_FOOD_KCAL, MAX_FOOD_NOTE } from "./mealPlanData.js";
 import { medFoodNotes } from "./medFoodNotes.js";
 import { foodEnglish } from "../../shared/searchAliases.js";
-import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, tagsOf, posTagsOf } from "./foodCatalog.js";
-import { foodStatus, STATUS_COLORS } from "./foodStatus.js";
+import { FOOD_GROUPS, TAGS, POS_TAGS, searchFoods, posTagsOf } from "./foodCatalog.js";
+import { foodStatus, relevantTagsOf, STATUS_COLORS } from "./foodStatus.js";
 import { per100Of, fmtMacro } from "./foodCalc.js";
 import {
   EXERCISE_TYPES, MAX_QTY, MAX_EX_MIN, MIN_EX_MIN, MAX_KCAL, exerciseOptions, searchExercises, mealWarnings, exerciseWarnings,
@@ -125,7 +125,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
           React.createElement("span", { style: { flex: 1, minWidth: 0 } },
             React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700 } }, f.n, React.createElement("span", { style: { fontWeight: 500, fontSize: "12.5px", color: MUTED } }, " · " + foodEnglish(key, f)),
               hasFoodOverride(key) && React.createElement("span", { style: POS_CHIP }, "আমার"), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ অ্যালার্জি"),
-              tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))),
+              relevantTagsOf(f, avoidCtx).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))),
             React.createElement("span", { style: { display: "block", fontSize: "12px", color: MUTED, marginTop: "2px" } },
               n ? "প্রতি ১০০ গ্রামে · প্রোটিন " + fmtMacro(n.p) + " · কার্ব " + fmtMacro(n.c) + " · ফ্যাট " + fmtMacro(n.f) : "১ " + f.u + "-এ")),
           React.createElement("span", { style: { textAlign: "right", flexShrink: 0 } },
@@ -137,7 +137,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
         onClick: () => onPick(key),
         title: st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : ""),
         style: { ...BTN, fontWeight: 600, padding: "6px 12px", border: "1px solid " + sc.border, background: sc.bg, color: st.level === "green" ? "#1F2D2A" : sc.text },
-      }, st.icon + " " + foodEnglish(key, f) + " · " + bnNum(foodK(key)), hasFoodOverride(key) && React.createElement("span", { style: POS_CHIP }, "আমার"), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ অ্যালার্জি"), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), tagsOf(f).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))), onEdit && React.createElement("button", { onClick: () => onEdit(key), "aria-label": foodEnglish(key, f) + " এডিট করুন", style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 8px" } }, "✎")); })),
+      }, st.icon + " " + foodEnglish(key, f) + " · " + bnNum(foodK(key)), hasFoodOverride(key) && React.createElement("span", { style: POS_CHIP }, "আমার"), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ অ্যালার্জি"), posTagsOf(key).map((t) => React.createElement("span", { key: t, style: POS_CHIP }, POS_TAGS[t][0])), relevantTagsOf(f, avoidCtx).map((t) => React.createElement("span", { key: t, style: TAG_CHIP }, TAGS[t][0]))), onEdit && React.createElement("button", { onClick: () => onEdit(key), "aria-label": foodEnglish(key, f) + " এডিট করুন", style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 8px" } }, "✎")); })),
     React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "✓ সবুজ = ঠিক · ! হলুদ = সীমিত রাখুন · ✕ লাল = এড়িয়ে চলুন (যেমন অ্যালার্জি মিলতে পারে)। শুধু সতর্কতা, বাছতে বাধা নেই; ডাক্তারের পরামর্শ প্রাধান্য পায়।"),
     found.some(({ key }) => posTagsOf(key).length > 0) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "সবুজ চিপ = প্রোটিন/আঁশের সাধারণ উৎস (শুধু তথ্য)।"),
     found.length >= 40 && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "6px" } }, "আরও দেখতে নাম লিখে খুঁজুন বা গ্রুপ বেছে নিন।"),
@@ -213,7 +213,7 @@ export function MealEditSheet({ slot, planTotal, target, sex, allergyTags, avoid
           React.createElement("div", { style: { fontSize: "12px", color: MUTED } }, bnNum(Math.round(foodK(r.food) * r.qty)) + " কিলোক্যালরি"),
           foodNote(r.food) && React.createElement("div", { style: { fontSize: "12px", color: MUTED, marginTop: "2px" } }, "📝 " + foodNote(r.food)),
           FOODS[r.food].al && (allergyTags || []).includes(FOODS[r.food].al) && React.createElement("div", { style: { fontSize: "12px", color: "#B3261E", marginTop: "2px", fontWeight: 600 } }, "⚠ প্রোফাইলের অ্যালার্জির সাথে মিলতে পারে — সতর্ক থাকুন"),
-          tagsOf(FOODS[r.food]).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1])),
+          relevantTagsOf(FOODS[r.food], avoidCtx).map((t) => React.createElement("div", { key: t, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px" } }, "⚠ " + TAGS[t][1])),
           medFoodNotes(activeMeds, r.food).map((n) => React.createElement("div", { key: n.rule + n.med, style: { fontSize: "12px", color: "#7A5200", marginTop: "2px", fontWeight: 600 } }, "💊 " + n.text))),
         Stepper(qtyText(r.qty), () => setDraft(changeDraftQty(draft, i, -0.5)), () => setDraft(changeDraftQty(draft, i, 0.5)), r.qty <= 0.5, r.qty >= MAX_QTY, FOODS[r.food].n),
         onFoodSave && React.createElement("button", { onClick: () => setEditKey(r.food), "aria-label": FOODS[r.food].n + " এডিট করুন", style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN } }, "✎"),

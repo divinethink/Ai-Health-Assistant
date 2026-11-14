@@ -61,6 +61,5 @@ export function FoodGroupGuide({ allergyTags, ctx }) {
     avoid.length > 0 && h("div", { style: { fontSize: "13px", fontWeight: 700, color: "#B3261E", marginTop: "12px" } }, "🚫 প্রসেসড ও ভাজাপোড়া — ক্ষতিকর প্রভাবসহ"),
     avoid.map((g) => det("a_" + g.id, g.label + " (" + g.items.length + ")", "#B3261E", "#FDF0EE", "#DB9C95",
       g.items.map((x) => row(x.key, x.name, null, x.h, true)))),
-    h("div", { style: { fontSize: "12px", color: T.muted, marginTop: "8px" } }, "খাবারে ট্যাপ করলে বিস্তারিত দেখাবে। " + FOOD_INFO_DISCLAIMER),
     open && h(Sheet, { foodKey: open, allergyTags, ctx, onClose: () => setOpen(null) }));
 }

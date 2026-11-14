@@ -17,6 +17,7 @@ import { getGoal, getWeekDaily } from "../tracker/trackerData.js";
 import { ageYears, detectFlagsFromConditions, safetyGate } from "../tracker/trackerCalc.js";
 import { allergyTagsOf } from "../tracker/mealPlanData.js";
 import { conditionKeysOf } from "../tracker/avoidRules.js";
+import { activeMedNames } from "../tracker/medFoodNotes.js";
 import { recentDates, buildRecentFoodCards } from "../tracker/recentFoods.js";
 
 const { useState, useEffect } = React;
@@ -67,12 +68,13 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact, middl
         const bmiTag = deriveBmiTag(records);
         const age = member ? ageYears(member.dob) : null;
         const detected = detectFlagsFromConditions(records);
+        const activeMeds = activeMedNames(records);
         const flags = { diabetes: !!(goal && goal.flags && goal.flags.diabetes) || detected.diabetes, kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney, pregnant: !!(goal && goal.flags && goal.flags.pregnant) };
         let recent;
         try {
-          recent = buildRecentFoodCards({ dailyDocs, goal, allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records) }, gateBlocked: safetyGate({ age, flags }).blocked });
+          recent = buildRecentFoodCards({ dailyDocs, goal, allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records), activeMeds }, gateBlocked: safetyGate({ age, flags }).blocked });
         } catch (e) { recent = undefined; }
-        setResult({ statusCtx: { allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records) } }, ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
+        setResult({ statusCtx: { allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records), activeMeds } }, ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
       })
       .catch((e) => setLoadErr(e.message || String(e)));
   }, [familyId, targetMemberId]);
@@ -97,7 +99,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact, middl
 
   const guide = result ? React.createElement(FoodGroupGuide, { allergyTags: result.statusCtx.allergyTags, ctx: result.statusCtx.ctx }) : null;
   // middle (ঐচ্ছিক): "এড়িয়ে চলুন/খাবেন"-এর পরে, "অভ্যাস ও জীবনযাত্রা"-র আগে বসে (ট্র্যাকারের ডায়েট প্ল্যান)। key দিয়ে রাখা — লোড-অবস্থা বদলালে middle-এর state হারায় না।
-  const mid = middle ? React.createElement(React.Fragment, { key: "mid" }, middle) : null;
+  const mid = middle ? React.createElement("div", { key: "mid", style: { margin: "14px 0" } }, middle) : null;
   const hasTags = result && result.matchedTags.length > 0;
   return React.createElement(
     "div", { style: { marginTop: "0" } },

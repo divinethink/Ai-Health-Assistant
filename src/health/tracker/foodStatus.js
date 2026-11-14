@@ -5,6 +5,7 @@
 
 import { TAGS } from "./foodCatalog.js";
 import { tagAvoidReason } from "./avoidRules.js";
+import { medFoodNotes } from "./medFoodNotes.js";
 
 export const STATUS_META = {
   green: { icon: "✓", label: "ঠিক আছে" },
@@ -21,9 +22,18 @@ export function foodStatus(key, f, opts = {}) {
   if (avoid) red.push(String(avoid));
   ((f && f.tg) || []).filter((t) => TAGS[t]).forEach((t) => { const r = tagAvoidReason(t, opts.ctx || {}); if (r && !red.includes(r)) red.push(r); });
   if (red.length) return { level: "red", ...STATUS_META.red, reasons: red };
-  const yellow = ((f && f.tg) || []).filter((t) => TAGS[t]).map((t) => TAGS[t][1]);
+  // হলুদ = শুধু সদস্যের প্রোফাইলে প্রযোজ্য সতর্কতা (owner-request ২০২৬-১১-১৪): বয়স/রোগ না মিললে gut/choke/caffeine কিছুই দেখানো হয় না;
+  // ওষুধ-সময় নোট শুধু সক্রিয় ওষুধ (ctx.activeMeds) মিললে। চিনি-সতর্কতা সাধারণ (ডায়াবেটিস হলে ওপরে লাল)।
+  const yellow = [];
+  if (((f && f.tg) || []).includes("sugar")) yellow.push(TAGS.sugar[1]);
+  medFoodNotes((opts.ctx || {}).activeMeds, key).forEach((n) => yellow.push(n.text));
   if (yellow.length) return { level: "yellow", ...STATUS_META.yellow, reasons: yellow };
   return { level: "green", ...STATUS_META.green, reasons: [] };
+}
+
+// খাবারের tg-র মধ্যে যেগুলো এই সদস্যের বয়স/রোগে প্রযোজ্য (চিপ/⚠ বার্তার জন্য); ওষুধ-সময় নোট আলাদা (medFoodNotes)।
+export function relevantTagsOf(f, ctx = {}) {
+  return ((f && f.tg) || []).filter((t) => TAGS[t] && t !== "medgap" && (t === "sugar" || tagAvoidReason(t, ctx)));
 }
 
 export const STATUS_COLORS = {

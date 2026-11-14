@@ -174,24 +174,17 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
   return React.createElement("div", null,
     isFastDate(todayISO(), info.fastDays) && React.createElement(Notice, { tone: "info" }, "🌙 আজ সিয়াম/ফাস্টিং-এর দিন (পরিকল্পিত) — দিনের বেলা খাবার লগ করলে সিয়াম ধরা হবে না। মিল-প্ল্যান শুধু দেখার জন্য।"),
-    React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "4px" } },
-      "টার্গেট " + bnNum(calc.calorieTarget) + " · প্ল্যানের মোট " + bnNum(plan.total) + " কিলোক্যালরি (আনুমানিক)"),
-    React.createElement(Bar, { pct: ((d.caloriesIn || 0) / calc.calorieTarget) * 100, color: T.amber }),
-    React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "4px 0 8px" } }, "আজ খাওয়া হয়েছে " + bnNum(d.caloriesIn || 0) + " কিলোক্যালরি"),
     plan.total < calc.calorieTarget - 100 && warnings.length === 0 && React.createElement(Notice, { tone: "info" }, "প্ল্যানে টার্গেটের পুরোটা ধরে না — বাকিটা স্বাস্থ্যকর খাবার দিয়ে পূরণ করুন।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
-    plan.notes.length > 0 && React.createElement(Notice, null, plan.notes.map((n, i) => React.createElement("div", { key: i }, n))),
     err && !sheet && ErrorBox(err),
     plan.slots.map((s) => {
-      const mine = extras.map((x, idx) => ({ ...x, idx })).filter((x) => x.slot === s.id);
       return React.createElement("div", { key: s.id, style: CARD },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
           React.createElement("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "10px", background: SLOT_TINT[s.id] || T.track, display: "flex", alignItems: "center", justifyContent: "center", color: T.green } }, Icon(SLOT_LINE[s.id] || "sun", { size: 20 })),
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, s.label + " · " + bnTimeHM(s.time) + (plan.custom.includes(s.id) ? " · আমার" : ""),
               React.createElement("span", { style: { fontWeight: 400, color: T.muted, fontSize: "12px" } }, " · " + bnNum(s.kcal) + " কিলো")),
-            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "1px", lineHeight: 1.4 } }, s.items.length ? s.items.map((i) => i.text).join(", ") : "এই বেলা বাদ"),
-            mine.length > 0 && React.createElement("div", { style: { fontSize: "12px", color: "#7A5B00", marginTop: "2px", lineHeight: 1.4 } }, "আজ নিজের: " + mine.map((x) => x.name + " " + bnNum(x.kcal)).join(", "))),
+            React.createElement("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "1px", lineHeight: 1.4 } }, s.items.length ? s.items.map((i) => i.text).join(", ") : "এই বেলা বাদ")),
           React.createElement(EditIcon, { onClick: () => openSheet(s.id), disabled: busy, label: s.label + " বদলান" }),
           React.createElement(Tick, { on: eaten.includes(s.id), onClick: () => toggle(s.id), busy, label: s.label + " খেয়েছি" })));
     }),
@@ -204,8 +197,8 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       onAddExtra: (name, kcal) => writeExtras([...extras, { name, kcal, slot: sheet }]),
       onRemoveExtra: (idx) => writeExtras(extras.filter((_, i) => i !== idx)),
       onClose: closeSheet,
-    }),
-    React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের অ্যালার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
+    })
+  );
 }
 
 // লক্ষ্য (যেমন ওজন কমানো) + শরীরের টার্গেট — কমা দিয়ে একসাথে (লক্ষ্য-কার্ড ও ব্যায়াম-কার্ড একই)
