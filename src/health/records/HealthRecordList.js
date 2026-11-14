@@ -26,7 +26,8 @@ import { isBlogAdminUid } from "../wellness-guide/wellnessGuideData.js";
 const { useState, useEffect, useCallback } = React;
 
 const G = "var(--hs-primary, #0E4B43)", RED = "#B3261E", MUTED = "#5F716C", LINE = "#D3E0D9";
-const cardBase = { ...PREMIUM_CARD, padding: "12px", textAlign: "left", width: "100%", boxSizing: "border-box", fontFamily: "inherit", color: "#1F2D2A", minHeight: "44px" };
+const SOFT = "0 1px 2px rgba(14,75,67,0.06), 0 2px 8px rgba(14,75,67,0.04)";
+const cardBase = { ...PREMIUM_CARD, borderRadius: "18px", boxShadow: SOFT, padding: "12px", textAlign: "left", width: "100%", boxSizing: "border-box", fontFamily: "inherit", color: "#1F2D2A", minHeight: "44px" };
 
 const bn1 = (n) => Number(n).toLocaleString("bn-BD", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -35,7 +36,7 @@ function Spark({ items }) {
   if (vals.length < 2) return null;
   const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
   const pts = vals.map((v, i) => (i * (100 / (vals.length - 1))).toFixed(1) + "," + (22 - ((v - min) / span) * 18).toFixed(1)).join(" ");
-  return React.createElement("svg", { viewBox: "0 0 100 26", width: "100%", height: "26", "aria-hidden": true, preserveAspectRatio: "none", style: { marginTop: "6px" } },
+  return React.createElement("svg", { viewBox: "0 0 100 26", width: "100%", height: "20", "aria-hidden": true, preserveAspectRatio: "none", style: { marginTop: "8px", opacity: 0.55 } },
     React.createElement("polyline", { points: pts, fill: "none", stroke: "var(--hs-primary-2, #17705F)", strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
@@ -91,23 +92,23 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো record নেই।");
 
   const toggle = (k) => { setOpenKey((cur) => (cur === k ? null : k)); setConfirmId(null); };
-  const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid " + color, background: bg || "#fff", color, fontSize: "14px", fontWeight: 600, cursor: "pointer" });
+  const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid transparent", background: bg, color, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
 
   // ✎ সম্পাদনা + 🗑 মুছুন (২-ধাপ)
   const actions = (r) => React.createElement(React.Fragment, null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
-      React.createElement("button", { onClick: () => onEdit && onEdit(r), style: btn(G) }, "✎ সম্পাদনা"),
-      React.createElement("button", { onClick: () => setConfirmId(r.id), style: btn(RED) }, "🗑 মুছুন")),
+      React.createElement("button", { onClick: () => onEdit && onEdit(r), style: btn(G, "#E6F2EC") }, "✎ সম্পাদনা"),
+      React.createElement("button", { onClick: () => setConfirmId(r.id), style: btn(RED, "#FDECEA") }, "🗑 মুছুন")),
     confirmId === r.id && React.createElement(ConfirmDialog, { title: "রেকর্ডটি মুছবেন?", message: "এই রেকর্ড স্থায়ীভাবে মুছে যাবে।", busy: busyId === r.id, onConfirm: () => doDelete(r), onCancel: () => setConfirmId(null) }));
 
   const line = (label, v) => v ? React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "3px" } }, label + ": " + v) : null;
-  const title = (icon, text, n) => React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 8px" } },
-    React.createElement("h4", { style: { margin: 0, fontSize: "15px", color: G } }, icon + " " + text),
-    React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, n));
+  const title = (icon, text, n) => React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "22px 2px 10px" } },
+    React.createElement("h4", { style: { margin: 0, fontSize: "16px", fontWeight: 800, color: "#1F2D2A" } }, text),
+    React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
   const shortDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return Number.isNaN(d.getTime()) || d.getFullYear() !== new Date().getFullYear() ? bnDate(iso) : d.toLocaleDateString("bn-BD", { day: "numeric", month: "long" }); };
-  const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px" };
-  const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" };
+  const grid3 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" };
+  const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" };
 
   const conditions = records.filter((r) => r.resourceType === "condition");
   const allergies = records.filter((r) => r.resourceType === "allergy");
@@ -132,49 +133,55 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
         isCreator && editGuide === gd.id && React.createElement(ConditionGuideEditor, { key: gd.id + (gd.edited ? "e" : "d"), guide: gd, hasOverride: gd.edited, onCancel: () => setEditGuide(null), onDone: () => { setEditGuide(null); loadGuides(); } })));
   };
 
-  const conditionCard = (r) => {
+  // অসুস্থতা: একটাই কার্ডের ভেতর সারি-তালিকা (প্রতি সারিতে নাম + ডাক্তার/হাসপাতাল, ডানে স্ট্যাটাস-চিপ)
+  const conditionRow = (r, i) => {
     const tp = r.treatingPhysician || {};
-    const sub = [tp.name && "👨‍⚕️ " + tp.name, tp.hospital && "🏥 " + tp.hospital, tp.chamberContact && "📞 " + tp.chamberContact].filter(Boolean).join(" · ");
+    const sub = [tp.name, tp.hospital, tp.chamberContact].filter(Boolean).join(" · ");
     const open = openKey === r.id;
     const active = r.status === "active" || r.status === "chronic";
-    return React.createElement("div", { key: r.id, style: { ...cardBase, flex: (open || sub) ? "1 1 100%" : "1 1 auto", maxWidth: "100%", boxSizing: "border-box", padding: 0 } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" } },
-          React.createElement("span", { style: { fontSize: "16px", overflowWrap: "anywhere" } }, React.createElement("b", null, r.name), React.createElement("span", { style: { fontSize: "14px", color: active ? G : MUTED } }, " (" + t("st." + (r.status || "active")) + ")"))),
-        sub && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "4px" } }, sub)),
-      open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
-        line("Category", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
+    return React.createElement("div", { key: r.id, style: { borderTop: i ? "1px solid #EAF0EC" : "none" } },
+      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", cursor: "pointer", minHeight: "56px" } },
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, r.name),
+          sub && React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, marginTop: "2px", overflowWrap: "anywhere" } }, sub)),
+        badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0"),
+        React.createElement("span", { "aria-hidden": true, style: { color: MUTED, fontSize: "18px", transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "›")),
+      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
+        line("ক্যাটাগরি", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
         line("শুরু", r.onsetDate ? bnDate(r.onsetDate) : null), line("নোট", r.notes),
         guideBox(r),
         actions(r)));
   };
 
+  // অ্যালার্জি: হালকা লাল-আভা ছোট কার্ড (লাল শুধু এলার্জি/বিপদে সংরক্ষিত)
   const allergyCard = (r) => {
     const open = openKey === r.id;
-    return React.createElement("div", { key: r.id, style: { ...cardBase, padding: 0, background: "#FFF7F6", border: "1px solid #E8B4AE", gridColumn: open ? "1 / -1" : undefined } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("b", { style: { fontSize: "16px", color: RED, overflowWrap: "anywhere" } }, r.substance),
-        r.reaction && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, r.reaction)),
-      open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid #E8B4AE" } },
+    return React.createElement("div", { key: r.id, style: { ...cardBase, padding: 0, background: "#FFF8F7", border: "1px solid #F0CCC7", boxShadow: "none", gridColumn: open ? "1 / -1" : undefined } },
+      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px 14px", cursor: "pointer", minHeight: "48px" } },
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: RED, overflowWrap: "anywhere" } }, r.substance),
+        r.reaction && React.createElement("div", { style: { fontSize: "13.5px", color: "#5B4A47", marginTop: "2px" } }, r.reaction)),
+      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
         line("তীব্রতা", r.severity ? t("sev." + r.severity) : null), actions(r)));
   };
 
+  // পরিমাপ: ২ কলাম কার্ড — নাম (২ লাইন পর্যন্ত), বড় মান, ছোট ট্রেন্ড-চিপ, নিচে তারিখ
   const obsCard = (g) => {
     const k = "obs:" + g.key, open = openKey === k;
     const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
-    return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#E8B4AE" : LINE) } },
-      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "10px 8px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } }, g.label,
-          al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4")),
-        React.createElement("div", { style: { marginTop: "2px" } },
-          React.createElement("span", { style: { fontSize: "19px", fontWeight: 700, color: al ? RED : G } }, latest.value),
-          latest.unit && React.createElement("span", { style: { fontSize: "14px", color: MUTED } }, " " + unitLabelBn(latest.unit)),
-          tr && React.createElement("div", { style: { fontSize: "13px", color: al ? RED : MUTED } }, (tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff))),
+    return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
+      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px 14px", cursor: "pointer", minHeight: "44px" } },
+        React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, lineHeight: 1.3, minHeight: open ? undefined : "35px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: open ? "unset" : 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
+        React.createElement("div", { style: { marginTop: "4px", display: "flex", alignItems: "baseline", gap: "4px", flexWrap: "wrap" } },
+          React.createElement("span", { style: { fontSize: "24px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15 } }, latest.value),
+          latest.unit && React.createElement("span", { style: { fontSize: "13.5px", color: MUTED } }, unitLabelBn(latest.unit))),
+        (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" } },
+          al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4"),
+          tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC")),
         React.createElement(Spark, { items: g.items }),
-        latest.date && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } }, shortDate(latest.date))),
-      open && React.createElement("div", { style: { padding: "0 12px 12px", borderTop: "1px solid " + LINE } },
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: G, margin: "8px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
-        g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "6px 0", borderBottom: "1px solid #EEF1EF" } },
+        latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "6px" } }, shortDate(latest.date))),
+      open && React.createElement("div", { style: { padding: "0 14px 14px", borderTop: "1px solid #EAF0EC" } },
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G, margin: "10px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
+        g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEF1EF" } },
           React.createElement("div", { style: { fontSize: "14px" } }, React.createElement("b", null, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")), "  ·  ", r.date ? bnDate(r.date) : "তারিখ নেই"),
           (r.refLow != null && r.refHigh != null) && React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, "রেঞ্জ: " + r.refLow + "–" + r.refHigh),
           (r.sourceDocId || r.sourceDocName) && React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } },
@@ -189,7 +196,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   return React.createElement("div", { style: { marginTop: "4px" } },
     React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
-    conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(conditionCard))),
+    conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
+    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));
 }

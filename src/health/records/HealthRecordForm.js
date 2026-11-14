@@ -277,7 +277,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }
 
   return React.createElement(
-    "div", { style: isEdit ? { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: "#FFFBEB", ...accentVars(resourceType) } : accWrap(resourceType) },
+    "div", { style: isEdit ? { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)", background: "var(--hs-surface, #fff)", ...accentVars(resourceType) } : accWrap(resourceType) },
     React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" } },
       React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, isEdit ? t("f.edit") : t("f.new")),
       closeBtn),
