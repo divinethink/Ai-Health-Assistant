@@ -22,7 +22,7 @@ import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
 import { t, useLang, setLang, getLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
-import { rotateInviteLink, revokeInviteLink, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
+import { rotateInviteLink, revokeInviteLink, getActiveInvite, hasLiveLegacyInvite, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
 import { GoogleRelinkGate } from "../components/GoogleRelinkGate.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
@@ -313,9 +313,21 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   // UI আপডেট দেখাতে local state ব্যবহার (Firestore-এই আসল সত্য লেখা হয়ে
   // গেছে — এটা শুধু optimistic display)।
   const [localToken, setLocalToken] = useState(null);
+  // ধাপ ২: token এখন invites/{token} ডকে — Admin প্যানেল খুললে একবার পড়ে।
+  const [loaded, setLoaded] = useState(false);
+  const [loadErr, setLoadErr] = useState(false);
+  useEffect(() => {
+    if (!isAdmin) return undefined;
+    let alive = true;
+    getActiveInvite(familyId)
+      .then((a) => { if (alive) { setLocalToken(a); setLoaded(true); } })
+      .catch(() => { if (alive) { setLoadErr(true); setLoaded(true); } });
+    return () => { alive = false; };
+  }, [familyId, isAdmin]);
   if (!isAdmin) return null;
+  if (!loaded) return React.createElement("div", { style: { marginTop: "14px", fontSize: "14px", color: "var(--hs-muted)" } }, "আমন্ত্রণ লিংক লোড হচ্ছে...");
 
-  const active = localToken || familyDoc.activeInviteToken;
+  const active = localToken;
   const isLive = active && !active.revoked;
   const link = isLive ? `${window.location.origin}${window.location.pathname}?fam=${familyId}&tok=${active.token}` : null;
 
@@ -338,6 +350,8 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   return React.createElement(
     "div", { style: { marginTop: "14px", padding: "10px", border: "1px dashed var(--hs-border)", borderRadius: "14px" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary)", margin: "0 0 6px" } }, "🔗 আমন্ত্রণ লিংক"),
+    loadErr && React.createElement("div", { style: { fontSize: "13px", color: "#C0392B", marginBottom: "6px" } }, "আমন্ত্রণ লিংক পড়া যায়নি।"),
+    hasLiveLegacyInvite(familyDoc) && React.createElement("div", { style: { fontSize: "13px", marginBottom: "6px", background: "#FFF6E0", padding: "6px", borderRadius: "10px" } }, "⚠ পুরনো ধরনের একটি লিংক এখনো চালু আছে। নতুন লিংক তৈরি করলে বা বাতিল করলে সেটা বন্ধ হবে।"),
     isLive
       ? React.createElement(
           React.Fragment, null,

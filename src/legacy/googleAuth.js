@@ -192,20 +192,58 @@ function generateInviteToken() {
   return Array.from(arr, (n) => chars[n % chars.length]).join("");
 }
 
+// ধাপ ২ — token এখন `families/{fid}/invites/{token}` ডকে (ডকের নামই token)।
+// পুরনো `families.activeInviteToken` ফিল্ড ধাপ ৩ পর্যন্ত শুধু revoke করা হয়, নতুন করে লেখা হয় না।
+function invitesCol(familyId) {
+  return db.collection("families").doc(familyId).collection("invites");
+}
+
+// Admin-only: চালু (revoked=false) সর্বশেষ আমন্ত্রণ; না থাকলে null।
+export async function getActiveInvite(familyId) {
+  const snap = await invitesCol(familyId).where("revoked", "==", false).limit(10).get();
+  let best = null;
+  snap.forEach((d) => {
+    const v = d.data() || {};
+    if (!best || (v.createdAt || 0) > best.createdAt) best = { token: d.id, createdAt: v.createdAt || 0, revoked: false };
+  });
+  return best;
+}
+
+async function revokeLegacyToken(familyId) {
+  const ref = db.collection("families").doc(familyId);
+  const snap = await ref.get();
+  const legacy = snap.exists ? snap.data().activeInviteToken : null;
+  if (legacy && !legacy.revoked) {
+    await ref.update({
+      activeInviteToken: { ...legacy, revoked: true },
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+}
+
 export async function rotateInviteLink(familyId) {
   const token = generateInviteToken();
-  await db.collection("families").doc(familyId).update({
-    activeInviteToken: { token, createdAt: Date.now(), revoked: false },
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
+  const old = await invitesCol(familyId).where("revoked", "==", false).get();
+  // আগে নতুনটা লিখি (সফল না হলে পুরনো অক্ষত), তারপর পুরনোগুলো বাতিল।
+  await invitesCol(familyId).doc(token).set({ revoked: false, createdAt: Date.now() });
+  const batch = db.batch();
+  old.forEach((d) => batch.update(d.ref, { revoked: true, updatedAt: Date.now() }));
+  await batch.commit();
+  await revokeLegacyToken(familyId);
   return token;
 }
 
-export async function revokeInviteLink(familyId, activeInviteToken) {
-  await db.collection("families").doc(familyId).update({
-    activeInviteToken: { ...activeInviteToken, revoked: true },
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
+export async function revokeInviteLink(familyId, active) {
+  if (active && active.token) {
+    await invitesCol(familyId).doc(active.token).update({ revoked: true, updatedAt: Date.now() });
+  }
+  await revokeLegacyToken(familyId);
+}
+
+// পুরনো (ধাপ ৩-এর আগ পর্যন্ত) চালু লিংক আছে কিনা — শুধু Admin-প্যানেলে নোটের জন্য।
+export function hasLiveLegacyInvite(familyDoc) {
+  const l = familyDoc && familyDoc.activeInviteToken;
+  return !!(l && l.token && !l.revoked);
 }
 
 // Invite-link click করে join (non-admin self-serve, নতুন সদস্য)।
@@ -241,10 +279,17 @@ export async function joinFamilyViaInviteLink(familyId, token, { name, dob, sex 
     return { aborted: true, reason: "error", error: err.message };
   }
   if (!familySnap.exists) return { aborted: true, reason: "family-not-found" };
-  const fam = familySnap.data();
-  const active = fam.activeInviteToken;
-  if (!active || active.revoked || active.token !== token) {
+  // token যাচাই: invites/{token} ডক থাকতে ও revoked==false হতে হবে (rules-ও একই যাচাই করে)।
+  if (typeof token !== "string" || token.length < 20 || token.length > 64) {
     return { aborted: true, reason: "invalid-token" };
+  }
+  try {
+    const invSnap = await familyRef.collection("invites").doc(token).get();
+    if (!invSnap.exists || invSnap.data().revoked !== false) {
+      return { aborted: true, reason: "invalid-token" };
+    }
+  } catch (err) {
+    return { aborted: true, reason: "error", error: err.message };
   }
 
   // পূর্ব-নিবন্ধিত email (Admin-added proxy member, rare edge-case) —
@@ -283,7 +328,7 @@ export async function joinFamilyViaInviteLink(familyId, token, { name, dob, sex 
     }
   }
 
-  // নতুন member — self-create (firestore.rules-এর invite-token clause,
+  // নতুন member — self-create (firestore.rules-এর invites/{token} clause,
   // role client পাঠাতে পারে শুধু "self-managing")।
   if (!name || !name.trim()) return { aborted: true, reason: "name-required" };
   if (!dob) return { aborted: true, reason: "dob-required" };
