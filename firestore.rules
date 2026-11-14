@@ -376,6 +376,20 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(
                ['name', 'dob', 'sex', 'role', 'googleUid', 'inviteTokenAttempt', 'createdAt', 'updatedAt']);
 
+        // ধাপ ১ (additive) — নতুন Invite পথ: token = `invites/{token}` ডকের ID।
+        // পুরনো families.activeInviteToken-ভিত্তিক branch (ওপরে) ধাপ ৩ পর্যন্ত
+        // অপরিবর্তিত। দুটোর যেকোনো একটা মিললেই join সম্ভব।
+        allow create: if request.auth != null
+          && request.resource.data.googleUid == request.auth.uid
+          && request.resource.data.role == 'self-managing'
+          && request.resource.data.inviteTokenAttempt is string
+          && request.resource.data.inviteTokenAttempt.size() >= 20
+          && request.resource.data.inviteTokenAttempt.size() <= 64
+          && exists(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.inviteTokenAttempt))
+          && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.inviteTokenAttempt)).data.revoked == false
+          && request.resource.data.keys().hasOnly(
+               ['name', 'dob', 'sex', 'role', 'googleUid', 'inviteTokenAttempt', 'createdAt', 'updatedAt']);
+
         // প্রোফাইল-এডিট (Admin বা self) — role/guardianMemberIds/
         // relationshipLabel এখনো Admin-only (অপরিবর্তিত guard)। googleUid/
         // email এই branch দিয়ে কখনো বদলানো যাবে না — claim শুধু নিচের
@@ -407,6 +421,19 @@ service cloud.firestore {
           && !('email' in request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['googleUid', 'email', 'updatedAt']);
 
+        allow delete: if request.auth != null && isAdminOfFamily(familyId);
+      }
+
+      // ধাপ ১ — Invite token আলাদা ডকে। token জানা মানেই চাবি (doc-ID):
+      // get খোলা (ডকে সংবেদনশীল কিছু নেই), list/লেখা/মোছা শুধু Admin।
+      match /invites/{token} {
+        allow get: if request.auth != null;
+        allow list: if request.auth != null && isAdminOfFamily(familyId);
+        allow create, update: if request.auth != null
+          && isAdminOfFamily(familyId)
+          && token.size() >= 20 && token.size() <= 64
+          && request.resource.data.keys().hasOnly(['revoked', 'createdAt', 'updatedAt'])
+          && request.resource.data.revoked is bool;
         allow delete: if request.auth != null && isAdminOfFamily(familyId);
       }
 

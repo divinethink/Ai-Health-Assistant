@@ -301,6 +301,106 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
+  describe('3n. নতুন invites/{token} (ধাপ ১)', () => {
+    const TOK = 'N3wTokenAbcdefghjkmnpqrst2'; // ২৬ অক্ষর
+    const joinNew = (uid, token, extra = {}) => ({
+      name: 'New',
+      dob: '2000-01-01',
+      sex: 'female',
+      role: 'self-managing',
+      googleUid: uid,
+      inviteTokenAttempt: token,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...extra,
+    });
+    async function seedInvite(revoked = false, token = TOK) {
+      await seed(async (db) => {
+        await setDoc(doc(db, 'families', FAMILY_ID, 'invites', token), {
+          revoked,
+          createdAt: Date.now(),
+        });
+      });
+    }
+
+    it('3n-1. সঠিক invites token-এ self-join হয়', async () => {
+      await seedInvite(false);
+      await assertSucceeds(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinNew('uidNew', TOK))
+      );
+    });
+
+    it('3n-2. revoked token-এ join হয় না', async () => {
+      await seedInvite(true);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinNew('uidNew', TOK))
+      );
+    });
+
+    it('3n-3. ভুল/ছোট token-এ join হয় না', async () => {
+      await seedInvite(false);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinNew('uidNew', 'wrong'))
+      );
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinNew('uidNew', TOK + 'x'))
+      );
+    });
+
+    it('3n-4. token থাকলেও role admin দিয়ে join হয় না', async () => {
+      await seedInvite(false);
+      await assertFails(
+        setDoc(
+          famDoc(dbAs('uidNew'), 'members', 'mNew'),
+          joinNew('uidNew', TOK, { role: 'admin' })
+        )
+      );
+    });
+
+    it('3n-5. অন্যের uid দিয়ে join হয় না', async () => {
+      await seedInvite(false);
+      await assertFails(
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinNew('uidOther', TOK))
+      );
+    });
+
+    it('3n-6. অ-সদস্য invites list করতে পারে না; token জানলে get পারে', async () => {
+      await seedInvite(false);
+      await assertFails(getDocs(collection(dbAs('uidNew'), 'families', FAMILY_ID, 'invites')));
+      await assertSucceeds(getDoc(doc(dbAs('uidNew'), 'families', FAMILY_ID, 'invites', TOK)));
+    });
+
+    it('3n-7. Admin invites তৈরি/list/revoke/মোছা পারেন; non-admin পারেন না', async () => {
+      await seedOwned('mA', 'uidA');
+      const ref = (d) => doc(d, 'families', FAMILY_ID, 'invites', TOK);
+      await assertSucceeds(setDoc(ref(dbAs(ADMIN_UID)), { revoked: false, createdAt: Date.now() }));
+      await assertSucceeds(
+        getDocs(collection(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'invites'))
+      );
+      await assertSucceeds(updateDoc(ref(dbAs(ADMIN_UID)), { revoked: true }));
+      await assertFails(setDoc(ref(dbAs('uidA')), { revoked: false, createdAt: Date.now() }));
+      await assertFails(
+        getDocs(collection(dbAs('uidA'), 'families', FAMILY_ID, 'invites'))
+      );
+      await assertFails(deleteDoc(ref(dbAs('uidA'))));
+      await assertSucceeds(deleteDoc(ref(dbAs(ADMIN_UID))));
+    });
+
+    it('3n-8. invites-এ অতিরিক্ত ফিল্ড/ছোট token reject', async () => {
+      await assertFails(
+        setDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'invites', TOK), {
+          revoked: false,
+          extra: 1,
+        })
+      );
+      await assertFails(
+        setDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID, 'invites', 'short'), {
+          revoked: false,
+        })
+      );
+    });
+  });
+
   describe('4. uidMemberIndex ও users', () => {
     it('4. নিজের (googleUid-মেলা) সদস্যের জন্য index বানানো যায়', async () => {
       await seedMember('mA', { googleUid: 'uidA' });
