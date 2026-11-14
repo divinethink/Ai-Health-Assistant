@@ -193,7 +193,6 @@ function generateInviteToken() {
 }
 
 // ধাপ ২ — token এখন `families/{fid}/invites/{token}` ডকে (ডকের নামই token)।
-// পুরনো `families.activeInviteToken` ফিল্ড ধাপ ৩ পর্যন্ত শুধু revoke করা হয়, নতুন করে লেখা হয় না।
 function invitesCol(familyId) {
   return db.collection("families").doc(familyId).collection("invites");
 }
@@ -209,13 +208,13 @@ export async function getActiveInvite(familyId) {
   return best;
 }
 
-async function revokeLegacyToken(familyId) {
+// ধাপ ৩ — পুরনো `families.activeInviteToken` ফিল্ড মুছে ফেলা (idempotent; Admin-only rules)।
+export async function removeLegacyInviteField(familyId) {
   const ref = db.collection("families").doc(familyId);
   const snap = await ref.get();
-  const legacy = snap.exists ? snap.data().activeInviteToken : null;
-  if (legacy && !legacy.revoked) {
+  if (snap.exists && snap.data().activeInviteToken !== undefined) {
     await ref.update({
-      activeInviteToken: { ...legacy, revoked: true },
+      activeInviteToken: firebase.firestore.FieldValue.delete(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   }
@@ -229,7 +228,6 @@ export async function rotateInviteLink(familyId) {
   const batch = db.batch();
   old.forEach((d) => batch.update(d.ref, { revoked: true, updatedAt: Date.now() }));
   await batch.commit();
-  await revokeLegacyToken(familyId);
   return token;
 }
 
@@ -237,13 +235,6 @@ export async function revokeInviteLink(familyId, active) {
   if (active && active.token) {
     await invitesCol(familyId).doc(active.token).update({ revoked: true, updatedAt: Date.now() });
   }
-  await revokeLegacyToken(familyId);
-}
-
-// পুরনো (ধাপ ৩-এর আগ পর্যন্ত) চালু লিংক আছে কিনা — শুধু Admin-প্যানেলে নোটের জন্য।
-export function hasLiveLegacyInvite(familyDoc) {
-  const l = familyDoc && familyDoc.activeInviteToken;
-  return !!(l && l.token && !l.revoked);
 }
 
 // Invite-link click করে join (non-admin self-serve, নতুন সদস্য)।

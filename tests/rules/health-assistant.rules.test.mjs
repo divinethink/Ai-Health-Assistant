@@ -238,64 +238,26 @@ describe('Health Assistant — Firestore Rules', function () {
   });
 
   // ============================================================
-  describe('3. Invite-link self-join', () => {
-    const joinData = (uid, token, extra = {}) => ({
-      name: 'New',
-      dob: '1995-05-05',
-      sex: 'female',
-      role: 'self-managing',
-      googleUid: uid,
-      inviteTokenAttempt: token,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      ...extra,
-    });
-
-    async function setToken(revoked) {
+  describe('3. পুরনো families.activeInviteToken দিয়ে join বন্ধ (ধাপ ৩)', () => {
+    it('3. পুরনো ফিল্ডে token থাকলেও self-join reject', async () => {
       await seed(async (db) => {
         await setDoc(
           doc(db, 'families', FAMILY_ID),
-          { activeInviteToken: { token: 'tok123', revoked } },
+          { activeInviteToken: { token: 'tok123tok123tok123tok123tok', revoked: false } },
           { merge: true }
         );
       });
-    }
-
-    it('3. সঠিক invite token দিয়ে self-join করা যায়', async () => {
-      await setToken(false);
-      await assertSucceeds(
-        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'tok123'))
-      );
-    });
-
-    it('3b. ভুল token reject', async () => {
-      await setToken(false);
       await assertFails(
-        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'wrong'))
-      );
-    });
-
-    it('3c. role: admin দিয়ে self-join reject (privilege-escalation)', async () => {
-      await setToken(false);
-      await assertFails(
-        setDoc(
-          famDoc(dbAs('uidNew'), 'members', 'mNew'),
-          joinData('uidNew', 'tok123', { role: 'admin' })
-        )
-      );
-    });
-
-    it('3d. revoked token দিয়ে join reject', async () => {
-      await setToken(true);
-      await assertFails(
-        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidNew', 'tok123'))
-      );
-    });
-
-    it('3e. অন্যের googleUid বসিয়ে join reject', async () => {
-      await setToken(false);
-      await assertFails(
-        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), joinData('uidOther', 'tok123'))
+        setDoc(famDoc(dbAs('uidNew'), 'members', 'mNew'), {
+          name: 'New',
+          dob: '1995-05-05',
+          sex: 'female',
+          role: 'self-managing',
+          googleUid: 'uidNew',
+          inviteTokenAttempt: 'tok123tok123tok123tok123tok',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
       );
     });
   });
@@ -526,11 +488,20 @@ describe('Health Assistant — Firestore Rules', function () {
       );
     });
 
-    it('6f. Admin invite token বদলাতে পারেন; non-admin পারেন না', async () => {
+    it('6f. পুরনো activeInviteToken ফিল্ড Admin শুধু মুছতে পারেন; নতুন করে লেখা বা non-admin মোছা নয়', async () => {
       await seedOwned('mA', 'uidA');
+      await seed(async (db) => {
+        await setDoc(
+          doc(db, 'families', FAMILY_ID),
+          { activeInviteToken: { token: 'oldoldoldoldoldoldoldold', revoked: false } },
+          { merge: true }
+        );
+      });
       const tok = { activeInviteToken: { token: 't1', revoked: false }, updatedAt: new Date() };
-      await assertSucceeds(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), tok));
-      await assertFails(updateDoc(doc(dbAs('uidA'), 'families', FAMILY_ID), tok));
+      await assertFails(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), tok));
+      const del = { activeInviteToken: deleteField(), updatedAt: new Date() };
+      await assertFails(updateDoc(doc(dbAs('uidA'), 'families', FAMILY_ID), del));
+      await assertSucceeds(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), del));
     });
   });
 

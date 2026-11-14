@@ -344,12 +344,12 @@ service cloud.firestore {
                   || request.auth.uid == resource.data.firstAdminUid))
            );
 
-      // নতুন (Google Sign-in Amendment, Architecture Part A §3.0) —
-      // Invite-Link token generate/rotate/revoke, Admin-only, শুধু এই একটা
-      // field বদলাতে পারেন।
+      // ধাপ ৩ — পুরনো `activeInviteToken` ফিল্ড শুধু মুছে ফেলা যায় (Admin-only);
+      // নতুন করে লেখা নিষিদ্ধ। token এখন `invites/{token}`-এ (নিচে)।
       allow update: if request.auth != null
         && isAdminOfFamily(familyId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeInviteToken', 'updatedAt']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeInviteToken', 'updatedAt'])
+        && !('activeInviteToken' in request.resource.data);
 
       allow delete: if request.auth != null && isAppCreator();
 
@@ -362,23 +362,8 @@ service cloud.firestore {
         // দুটোই এই একই branch দিয়ে কভার হয় — অপরিবর্তিত।
         allow create: if request.auth != null && isAdminOfFamily(familyId);
 
-        // নতুন — Invite-Link দিয়ে self-join (non-admin, নতুন সদস্য নিজে
-        // নিজের member doc তৈরি করেন)। role client পাঠাতে পারে শুধু
-        // "self-managing" — privilege-escalation impossible। token-validity
-        // সরাসরি family doc-এর activeInviteToken-এর সাথে server-side verify
-        // হয় (client bypass করলেও এখানে reject হবে)।
-        allow create: if request.auth != null
-          && request.resource.data.googleUid == request.auth.uid
-          && request.resource.data.role == 'self-managing'
-          && get(/databases/$(database)/documents/families/$(familyId)).data.activeInviteToken.token
-               == request.resource.data.inviteTokenAttempt
-          && get(/databases/$(database)/documents/families/$(familyId)).data.activeInviteToken.revoked == false
-          && request.resource.data.keys().hasOnly(
-               ['name', 'dob', 'sex', 'role', 'googleUid', 'inviteTokenAttempt', 'createdAt', 'updatedAt']);
-
-        // ধাপ ১ (additive) — নতুন Invite পথ: token = `invites/{token}` ডকের ID।
-        // পুরনো families.activeInviteToken-ভিত্তিক branch (ওপরে) ধাপ ৩ পর্যন্ত
-        // অপরিবর্তিত। দুটোর যেকোনো একটা মিললেই join সম্ভব।
+        // Invite-Link দিয়ে self-join (non-admin)। token = `invites/{token}` ডকের ID;
+        // role শুধু 'self-managing'। (পুরনো families.activeInviteToken পথ ধাপ ৩-এ বন্ধ।)
         allow create: if request.auth != null
           && request.resource.data.googleUid == request.auth.uid
           && request.resource.data.role == 'self-managing'
