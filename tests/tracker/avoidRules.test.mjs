@@ -59,11 +59,11 @@ test("শিশু ও কিডনি/গর্ভাবস্থা নিয�
   assert.ok(ids("food", { age: 30, flags: { kidney: true } }).includes("kidney-food"));
   assert.ok(ids("food", { age: 30, flags: { pregnant: true } }).includes("pregnant-food"));
 });
-test("gut-ট্যাগ খাবার: IBS থাকলে লাল, নইলে হলুদ", () => {
+test("gut-ট্যাগ খাবার: IBS থাকলে লাল, নইলে কোনো সতর্কতা নয় (প্রোফাইল-ভিত্তিক)", () => {
   const f = { tg: ["gut"] };
   assert.equal(foodStatus("samosa", f, { ctx: { condKeys: ["gut"] } }).level, "red");
-  assert.equal(foodStatus("samosa", f, { ctx: { condKeys: [] } }).level, "yellow");
-  assert.equal(foodStatus("samosa", f).level, "yellow");
+  assert.equal(foodStatus("samosa", f, { ctx: { condKeys: [] } }).level, "green");
+  assert.equal(foodStatus("samosa", f).level, "green");
 });
 test("tagAvoidReason: sugar/diabetes, choke/শিশু, caffeine/শিশু", () => {
   assert.ok(tagAvoidReason("sugar", { flags: { diabetes: true } }));

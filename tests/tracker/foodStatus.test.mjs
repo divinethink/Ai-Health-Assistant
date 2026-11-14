@@ -13,9 +13,17 @@ test("অ্যালার্জি মিললে লাল, কারণস�
 test("অ্যালার্জি না মিললে লাল নয়", () => {
   assert.equal(foodStatus("egg", { al: "egg" }, { allergyTags: ["fish"] }).level, "green");
 });
-test("সতর্কতা-ট্যাগে হলুদ", () => {
-  const s = foodStatus("redTea", { tg: ["caffeine"] });
+test("সতর্কতা-ট্যাগে হলুদ (চিনি — সাধারণ সতর্কতা)", () => {
+  const s = foodStatus("laddu", { tg: ["sugar"] });
   assert.equal(s.level, "yellow"); assert.equal(s.icon, "!"); assert.equal(s.reasons.length, 1);
+});
+test("ক্যাফেইন: প্রাপ্তবয়স্কে সতর্কতা নেই, শিশুতে লাল", () => {
+  assert.equal(foodStatus("redTea", { tg: ["caffeine"] }, { ctx: { age: 34 } }).level, "green");
+  assert.equal(foodStatus("redTea", { tg: ["caffeine"] }, { ctx: { age: 8 } }).level, "red");
+});
+test("ওষুধ-সময় নোট: শুধু থাইরয়েড/আয়রন ওষুধ চললে হলুদ", () => {
+  assert.equal(foodStatus("tokDoi", { tg: ["medgap"] }).level, "green");
+  assert.equal(foodStatus("tokDoi", { tg: ["medgap"] }, { ctx: { age: 34, activeMeds: ["Levothyroxine"] } }).level, "yellow");
 });
 test("avoidMap-এ থাকলে লাল (হলুদের চেয়ে কড়া)", () => {
   const s = foodStatus("redTea", { tg: ["caffeine"] }, { avoidMap: { redTea: "উচ্চ রক্তচাপে সীমিত" } });
