@@ -10,7 +10,6 @@ import { HealthRecordForm } from "./HealthRecordForm.js";
 import { HealthRecordList } from "./HealthRecordList.js";
 import { TrendChartSection } from "../reports/TrendChartSection.js";
 import { HealthSummaryCard } from "./HealthSummaryCard.js";
-import { PregnancyStatusCard } from "./PregnancyStatusCard.js";
 import { T } from "../tracker/trackerTheme.js";
 
 const { useState, useEffect, useRef } = React;
@@ -60,7 +59,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
       familyId, selectedMemberId: targetMemberId, callerMemberId, refreshTick,
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
-    (section === "all" || section === "profile") && React.createElement(PregnancyStatusCard, { key: "preg-" + targetMemberId, familyId, selectedMemberId: targetMemberId, callerMemberId }),
+    // গর্ভাবস্থা-টগল সরানো (owner ২০২৬-১১-১৪): নারী হলেই দেখায় না — অসুখ-তালিকায় "গর্ভাবস্থা" যোগ করলেই ট্র্যাকার/খাবার/AI নিজে ধরে (effectivePregnant)।
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
     (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
       // ＋ এখন app.js-এর একটাই সাধারণ পপআপ (হোমের সাথে এক); বাছা ধরন intent হয়ে এখানে ফর্ম খোলে

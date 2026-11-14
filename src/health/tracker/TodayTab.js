@@ -411,7 +411,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।"),
     // গেট শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — হিরো ও খাবার-লগ খোলা
     gate.warn && React.createElement(Notice, null, gate.reason),
-    !gate.blocked && !calc && React.createElement(Notice, { tone: "info" }, "ক্যালরির টার্গেট ঠিক করতে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ যান।"),
+    !gate.blocked && !calc && !onFast && React.createElement("div", { style: { ...HOME_CARD, background: GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "16px" } },
+      React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, marginBottom: "6px" } }, "🎯 হিরো সেটআপ"),
+      React.createElement("div", { style: { fontSize: "14px", lineHeight: 1.5, color: T.onDark } }, "উচ্চতা ও ওজন পূরণ করে ট্র্যাকারে আপনার লক্ষ্য সেট করুন।"),
+      React.createElement("div", { style: { fontSize: "12.5px", marginTop: "6px", color: T.onDarkSoft } }, "ট্র্যাকার ▸ লক্ষ্য ও প্ল্যান ▸ লক্ষ্য সেট করুন")),
 
     // হোমের কার্ডগুলো এক জায়গায় (ক্রম/ভাঁজ ডিজাইন অনুযায়ী); ত্রুটি/লোডিং-বার্তা সবসময় উপরে
     err && ErrorBox(err),

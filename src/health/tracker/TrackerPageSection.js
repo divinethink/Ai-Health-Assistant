@@ -601,7 +601,6 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
   const flags = { pregnant, diabetes: diabetes || detected.diabetes, kidney: kidney || detected.kidney };
   const gate = safetyGate({ age, flags });
-  const showPregnant = member && member.sex === "female" && age !== null && age >= 12 && age <= 55;
   const needsTarget = goalType === "lose" || goalType === "gain";
   const bmi = bmiOf(weightKg, heightCm);
   const otherConds = (() => { const seen = new Set(); return ((info.conds) || []).map((c) => c.name).filter((n) => { const k = n.toLowerCase(); if (seen.has(k) || /diabet|ডায়াবেটিস|বহুমূত্র|sugar|kidney|renal|ckd|কিডনি|বৃক্ক/.test(k)) return false; seen.add(k); return true; }); })();
@@ -725,8 +724,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         tile("কিডনি রোগ", kidney || detected.kidney, setKidney, detected.kidney)),
       otherConds.length > 0 && React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" } }, otherConds.map((n) => tile(n, true, () => {}, true))),
       otherConds.length > 0 && React.createElement("div", { style: HINT }, "প্রোফাইলে যে অসুখগুলো আছে সেগুলো নিজে থেকে টিক। বদলাতে: Health ▸ অসুখ।")),
-    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা/বুকের দুধ — প্রোফাইল থেকে নেওয়া হয়েছে। বদলাতে: Health ▸ প্রোফাইল।"),
-    !pregnant && showPregnant && React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "0 2px 8px" } }, "গর্ভবতী বা বুকের দুধ খাওয়ালে Health ▸ প্রোফাইলে একবার জানান — এখানে নিজে থেকে ধরা পড়বে।"),
+    pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা — অসুখ-তালিকা থেকে নিজে ধরা হয়েছে; মিল ও ব্যায়াম প্ল্যান সেই অনুযায়ী। বদলাতে: Health ▸ অসুখ।"),
+    
     React.createElement("details", { style: { marginBottom: "8px" } },
       React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
       React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })),

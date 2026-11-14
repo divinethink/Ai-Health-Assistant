@@ -113,7 +113,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [openId, setOpenId] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null); // ২-ধাপ মোছা
   const [delBusy, setDelBusy] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const filter = selectedMemberId || callerMemberId; // শুধু বাছা সদস্য — অন্যের ওষুধ কখনো মেশে না
   const [savedFlash, setSavedFlash] = useState(null);
   const [calBusy, setCalBusy] = useState(null);
   const [calMsg, setCalMsg] = useState(null);
@@ -354,13 +354,11 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   return h("div", null,
     permission === "unsupported" && h("div", { style: { fontSize: F, color: "#C0392B", marginBottom: "8px" } }, "এই ব্রাউজারে Notification সাপোর্ট নেই।"),
 
-    members.length > 1 && h("div", { className: "hs-noscroll", style: { display: "flex", gap: "6px", overflowX: "auto", marginBottom: "10px", paddingBottom: "2px" } },
-      [chip(filter === "all", "সবাই", () => setFilter("all"), "all"), ...members.map((mm) => chip(filter === mm.id, mm.name, () => setFilter(mm.id), mm.id))]),
 
     // ঘ) শেষ হতে চলেছে
     endingSoon.length > 0 && h("div", { style: { ...card, background: "#FFF6E5", border: "1px solid #F0D9A8" } },
       h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#8A5A00", marginBottom: "6px" } }, "⚠️ ওষুধ শেষ হতে চলেছে"),
-      endingSoon.map((m) => h("div", { key: m.recordId, style: { fontSize: F, color: "#5B3B00", marginBottom: "3px" } }, "• " + m.genericName + (members.length > 1 ? " (" + m.memberName + ")" : "") + " — " + (daysLeft(m.endDate) === 0 ? "আজ শেষ দিন" : "আর " + bn(daysLeft(m.endDate)) + " দিন"))),
+      endingSoon.map((m) => h("div", { key: m.recordId, style: { fontSize: F, color: "#5B3B00", marginBottom: "3px" } }, "• " + m.genericName + "" + " — " + (daysLeft(m.endDate) === 0 ? "আজ শেষ দিন" : "আর " + bn(daysLeft(m.endDate)) + " দিন"))),
       h("div", { style: { fontSize: "13px", color: "#8A5A00", marginTop: "4px" } }, "চালিয়ে যেতে হলে ডাক্তারের পরামর্শ নিন ও ওষুধ কিনে রাখুন।")),
 
     // আজকের ওষুধ
@@ -387,7 +385,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     addOpen && h(SheetFrame, { accent: "medicationStatement", title: "➕ নতুন ওষুধ (ডাক্তারের দেওয়া)", onClose: () => { setAddOpen(false); setAErr(null); setSuggOpen(false); backToOrigin(); }, footer: h("div", { style: { display: "flex", gap: "8px" } },
         h("button", { onClick: handleAdd, disabled: aBusy, style: { flex: 1, minHeight: "48px", padding: "11px", borderRadius: "12px", border: "none", background: aBusy ? "#8FAFA9" : GREEN, color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer" } }, aBusy ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"),
         h("button", { onClick: () => { setAddOpen(false); setAErr(null); backToOrigin(); }, style: { minHeight: "48px", padding: "11px 16px", borderRadius: "12px", border: "1px solid #C3D2CA", background: "#fff", color: "#2B3A36", fontSize: F, cursor: "pointer" } }, "বাতিল")) },
-      members.length > 1 && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
+      false && h(React.Fragment, null, lblEl("কার জন্য"), h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, members.map((mm) => chip(aMember === mm.id, mm.name, () => setAMember(mm.id), mm.id)))),
       lblEl("ওষুধের নাম"),
       h("div", { style: { position: "relative" } },
         h("input", { type: "text", value: aName, placeholder: "বাংলা/English/ব্র্যান্ড (নাপা, Napa)", autoComplete: "off",
