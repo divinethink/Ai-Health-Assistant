@@ -789,6 +789,14 @@ const AI_CHAT_DAILY_LIMIT = 300;
 const aiChatMemMin = new Map();
 const aiChatMemDay = new Map();
 async function aiChatUnderLimit(env, uid) {
+  // Cloudflare Rate Limiting binding (wrangler.toml-এ AI_CHAT_LIMITER) — মিনিট-ভিত্তিক, রিস্টার্টে হারায় না।
+  // বাঁধা না থাকলে/ত্রুটি হলে এড়িয়ে যায় (চ্যাট ভাঙে না); নিচের মেমরি-সীমা backup হিসেবে থাকে।
+  if (env.AI_CHAT_LIMITER) {
+    try {
+      const r = await env.AI_CHAT_LIMITER.limit({ key: String(uid) });
+      if (r && r.success === false) return false;
+    } catch (e) { /* fail-open */ }
+  }
   const now = Date.now();
   const minKey = `${uid}:${Math.floor(now / 60000)}`;
   if (aiChatMemMin.size > 2000) aiChatMemMin.clear();
