@@ -778,6 +778,37 @@ async function callLLM(env, payload, conversationHistory, doseFactNote, specialt
 // কোড/আচরণ বদলায়নি — আলাদা, স্বাধীন route। AI-র ফল ক্লায়েন্টে আবার grounding-যাচাই হয়,
 // তাই এখানে শুধু "কঠোর JSON-ফরম্যাট" নিশ্চিত করা হয়।
 
+// ---- /ai-chat সুরক্ষা: আকার-সীমা + ব্যবহারকারী-প্রতি হার-সীমা (কোটা-পোড়ানো ঠেকাতে) ----
+// আকার: স্বাভাবিক চ্যাট (~৩,০০০ token ≈ ১২KB) এর চেয়ে অনেক বড়, তাই স্বাভাবিক ব্যবহারে কিছু আটকায় না।
+// হার: মিনিটে/দিনে — ডিফল্টে isolate-মেমরিতে (best-effort, নতুন সেটআপ লাগে না)। ঐচ্ছিক KV (env.AI_CHAT_KV)
+// বাঁধা থাকলে দৈনিক গণনা নির্ভরযোগ্য হয় (⚠ ফ্রি KV-তে দিনে ১০০০ লেখা — তাই বাঁধার আগে ভাবুন)।
+const AI_CHAT_MAX_BODY_CHARS = 200000;
+const AI_CHAT_MAX_HISTORY = 100;
+const AI_CHAT_PER_MIN_LIMIT = 20;
+const AI_CHAT_DAILY_LIMIT = 300;
+const aiChatMemMin = new Map();
+const aiChatMemDay = new Map();
+async function aiChatUnderLimit(env, uid) {
+  const now = Date.now();
+  const minKey = `${uid}:${Math.floor(now / 60000)}`;
+  if (aiChatMemMin.size > 2000) aiChatMemMin.clear();
+  const m = aiChatMemMin.get(minKey) || 0;
+  if (m >= AI_CHAT_PER_MIN_LIMIT) return false;
+  aiChatMemMin.set(minKey, m + 1);
+  const dayKey = `aichat:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
+  if (env.AI_CHAT_KV) {
+    const cur = Number(await env.AI_CHAT_KV.get(dayKey)) || 0;
+    if (cur >= AI_CHAT_DAILY_LIMIT) return false;
+    await env.AI_CHAT_KV.put(dayKey, String(cur + 1), { expirationTtl: 172800 });
+    return true;
+  }
+  if (aiChatMemDay.size > 2000) aiChatMemDay.clear();
+  const d = aiChatMemDay.get(dayKey) || 0;
+  if (d >= AI_CHAT_DAILY_LIMIT) return false;
+  aiChatMemDay.set(dayKey, d + 1);
+  return true;
+}
+
 const DOC_EXTRACT_TYPES = ["prescription", "lab-report", "visiting-card"];
 const DOC_EXTRACT_MAX_CHARS = 12000;
 const DOC_EXTRACT_MIN_CHARS = 20;
@@ -987,8 +1018,13 @@ export default {
       }
 
       if (request.method === "POST" && url.pathname === "/ai-chat") {
-        const { idToken, familyId, payload, conversationHistory, ageYears, useWebSearch } = await request.json();
+        const aiChatRaw = await request.text();
+        if (aiChatRaw.length > AI_CHAT_MAX_BODY_CHARS) return json(env, { error: "payload-too-large" }, 413);
+        let aiChatBody;
+        try { aiChatBody = JSON.parse(aiChatRaw); } catch (e) { return json(env, { error: "bad-json" }, 400); }
+        const { idToken, familyId, payload, conversationHistory, ageYears, useWebSearch } = aiChatBody || {};
         if (!idToken || !familyId || !payload) return json(env, { error: "missing-params" }, 400);
+        if (Array.isArray(conversationHistory) && conversationHistory.length > AI_CHAT_MAX_HISTORY) return json(env, { error: "payload-too-large" }, 413);
 
         let uid;
         try {
@@ -1000,6 +1036,8 @@ export default {
 
         const isMember = await verifyFamilyMembership(env, idToken, familyId, uid);
         if (!isMember) return json(env, { error: "forbidden" }, 403);
+
+        if (!(await aiChatUnderLimit(env, uid))) return json(env, { error: "rate-limited" }, 429);
 
         // Specialty-context routing (roadmap §4.1, উপরে বিস্তারিত কমেন্ট) —
         // পুরোপুরি soft/non-blocking, lookup ব্যর্থ/অজানা হলে safe-default:
