@@ -30,9 +30,23 @@ function normalizeUnit(u) {
   return n === "µiuml" || n === "uiuml" ? "miul" : n; // µIU/mL ≡ mIU/L (TSH-র দুই প্রচলিত একক)
 }
 
+function indexOfWord(lowerLine, needle) {
+  const isWord = (ch) => !!ch && /[a-z0-9\u0980-\u09FF]/i.test(ch);
+  let from = 0;
+  for (;;) {
+    const i = lowerLine.indexOf(needle, from);
+    if (i < 0) return -1;
+    const before = lowerLine[i - 1], after = lowerLine[i + needle.length];
+    const startsWord = isWord(needle[0]), endsWord = isWord(needle[needle.length - 1]);
+    if (!(startsWord && isWord(before)) && !(endsWord && isWord(after))) return i;
+    from = i + 1;
+  }
+}
+
 // "cumm" জাতীয় সরাসরি-সংখ্যার একক (৭৫৬০ /cumm) ও ×10³/µL-এককের ডিকশনারি-এন্ট্রি চেনা
 const COUNT_UNITS = new Set(["cumm", "cmm", "mm3", "mm³", "µl", "ul"]);
 const isCountUnit = (u) => !!u && COUNT_UNITS.has(String(u).toLowerCase().replace(/μ/g, "µ").replace(/[^a-z0-9µ³]/g, ""));
+const isGlucoseEntry = (e) => ["fbs", "rbs"].includes(e.id || e.testId) && normalizeUnit(e.unit) === "mgdl";
 const isThousandDictUnit = (u) => { const n = normalizeUnit(u); return /^10/.test(n) && /µl$/.test(n); };
 
 /**
@@ -53,15 +67,22 @@ export function extractCandidateValues(rawText, testDictionaryEntries) {
       // দীর্ঘতম synonym আগে চেষ্টা করা হয় (যেমন "Free T3" যেন শুধু "T3"-এর
       // সাথে ভুলভাবে না মেলে) — length-descending sort।
       const sortedSynonyms = [...synonyms].sort((a, b) => b.length - a.length);
-      const matchedSynonym = sortedSynonyms.find((s) => lowerLine.includes(s.toLowerCase()));
+      // পূর্ণ-শব্দ মিল (HUMASTAR-এর ভেতরের "AST" টেস্ট নয়)
+      let idx = -1;
+      const matchedSynonym = sortedSynonyms.find((s) => { idx = indexOfWord(lowerLine, s.toLowerCase()); return idx >= 0; });
       if (!matchedSynonym) continue;
 
-      const idx = lowerLine.indexOf(matchedSynonym.toLowerCase());
       const afterText = line.slice(idx + matchedSynonym.length);
       const numMatch = afterText.match(NUMBER_PATTERN);
       if (!numMatch) continue;
+      // নাম ও সংখ্যার মাঝে ":" বা বেশি দূরত্ব থাকলে ওটা অন্য ঘরের সংখ্যা (হেডার-লাইন: "Test Name : …(RBS) Sample : Serum Lab ID : 2026…")
+      const gap = afterText.slice(0, numMatch.index);
+      if (gap.includes(":") || gap.length > 40) continue;
 
       const rawValue = numMatch[1];
+      // তারিখ/আইডি নয়: ৬+ অঙ্কের পূর্ণসংখ্যা, বা সংখ্যার পরেই -/ও অঙ্ক (21-07-2026, 20260721-90066)
+      const tail = afterText.slice(numMatch.index + numMatch[0].length);
+      if (/^[0-9০-৯]{6,}$/.test(rawValue) || /^\s?[-\/][0-9০-৯]/.test(tail)) continue;
       const normalized = bnToEnDigits(rawValue).replace(",", ".");
       const value = parseFloat(normalized);
       if (Number.isNaN(value)) continue;
@@ -110,6 +131,14 @@ export function validateCandidate(candidate, dictEntry) {
   // এটা দশমিক-ভুল সংশোধন নয়, নির্দিষ্ট একক-রূপান্তর — তবু flag + mandatory review (rawValue/originalOcrValue অক্ষত)।
   let value = candidate.value;
   let converted = false;
+  // গ্লুকোজ mmol/L (রিপোর্টে 5.8 mmol/l): মূল এককেই রাখা হয় (labAlerts mmol→mg/dL মিলিয়ে দেখে); mg/dL-এর plausible-range-এর জন্য শুধু যাচাইয়ে রূপান্তর
+  const mmol = isGlucoseEntry(dictEntry) && /^mmol\/?l$/.test(String(candidate.capturedUnit || "").toLowerCase().replace(/[^a-z\/]/g, ""));
+  if (mmol) {
+    const mg = value * 18.016;
+    const flagsM = [];
+    if (mg < dictEntry.plausibleRange.low || mg > dictEntry.plausibleRange.high) flagsM.push("outside-plausible-range");
+    return { status: flagsM.length ? "needs-review" : "ok", flags: flagsM, value, unit: "mmol/L", referenceRange: dictEntry.referenceRange || null };
+  }
   if (isCountUnit(candidate.capturedUnit) && isThousandDictUnit(dictEntry.unit)) {
     value = Math.round(value) / 1000;
     converted = true;
@@ -156,9 +185,14 @@ export function validateCandidate(candidate, dictEntry) {
 export function parseAndValidateReportText(rawText, testDictionaryEntries) {
   const dictById = new Map(testDictionaryEntries.map((e) => [e.id || e.testId, e]));
   const candidates = extractCandidateValues(rawText, testDictionaryEntries);
-  return candidates.map((c) => {
+  const all = candidates.map((c) => {
     const dictEntry = dictById.get(c.testId);
     const validation = dictEntry ? validateCandidate(c, dictEntry) : { status: "needs-review", flags: ["dictionary-entry-not-found"], value: c.value, unit: null, referenceRange: null };
     return { ...c, ...validation };
   });
+  // একই টেস্টের একাধিক সম্ভাব্য মান → সবচেয়ে ভরসাযোগ্য একটা (একক পাওয়া > ok-status > আগে আসা); ক্রম বজায় থাকে
+  const score = (c) => (c.capturedUnit ? 2 : 0) + (c.status === "ok" ? 1 : 0);
+  const best = new Map();
+  for (const c of all) { const b = best.get(c.testId); if (!b || score(c) > score(b)) best.set(c.testId, c); }
+  return all.filter((c) => best.get(c.testId) === c);
 }

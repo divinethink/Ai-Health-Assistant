@@ -19,7 +19,7 @@
 import { TextField, DateField, ErrorBox, SuccessBox, PrimaryButton } from "../../shared/ui.js";
 import { createHealthRecord } from "../records/healthRecordsData.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
-import { buildLabAlerts, summarizeSaved, describeRangeBn } from "./labAlerts.js";
+import { buildLabAlerts, summarizeSaved, describeRangeBn, parseLabNumber } from "./labAlerts.js";
 import { fetchMemberSex } from "../records/memberSex.js";
 import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
@@ -50,6 +50,8 @@ function rowFromCandidate(c) {
     value: String(c.value),
     unit: c.unit || c.capturedUnit || "",
     date: "",
+    refLow: "",
+    refHigh: "",
     flags: c.flags || [],
     status: c.status,
     rawValue: c.rawValue,
@@ -87,6 +89,8 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
     setErr(null);
     const toSave = rows.filter((r) => r.include);
     if (toSave.length === 0) { setErr("অন্তত একটা মান বেছে নিন।"); return; }
+    const badRange = toSave.find((r) => { if (!r.refLow.trim() && !r.refHigh.trim()) return false; const lo = parseLabNumber(r.refLow), hi = parseLabNumber(r.refHigh); return lo === null || hi === null || lo > hi; });
+    if (badRange) { setErr(badRange.canonicalNameEn + ": রেঞ্জের নিম্ন ও উচ্চ দুটোই সংখ্যায় দিন (নিম্ন ≤ উচ্চ), নয়তো দুটোই ফাঁকা রাখুন। (\"<7.8\" হলে নিম্ন ০, উচ্চ ৭.৮)"); return; }
     setBusy(true);
     let count = 0;
     const savedObs = [];
@@ -105,8 +109,9 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
           userVerified: true, // এই ফর্ম-ই verification ধাপ — এখানে পৌঁছানো মানেই ব্যবহারকারী দেখে confirm করেছেন
           sourceDocId: sourceDoc ? sourceDoc.id : null,
           sourceDocName: sourceDoc ? sourceDoc.name : null,
+          refLow: r.refLow, refHigh: r.refHigh,
         });
-        savedObs.push({ type: r.canonicalNameEn, value: r.value, unit: r.unit, sourceDocId: sourceDoc ? sourceDoc.id : null, sourceDocName: sourceDoc ? sourceDoc.name : null });
+        savedObs.push({ type: r.canonicalNameEn, value: r.value, unit: r.unit, refLow: r.refLow.trim() || null, refHigh: r.refHigh.trim() || null, sourceDocId: sourceDoc ? sourceDoc.id : null, sourceDocName: sourceDoc ? sourceDoc.name : null });
         count++;
       }
       setSavedCount(count);
@@ -161,6 +166,8 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
       })(),
       TextField("মান", r.value, (v) => updateRow(idx, { value: v })),
       TextField("একক", r.unit, (v) => updateRow(idx, { unit: v })),
+      TextField("রেঞ্জ — নিম্ন (ঐচ্ছিক, রিপোর্টের Reference Value থেকে)", r.refLow, (v) => updateRow(idx, { refLow: v }), "যেমন: 0"),
+      TextField("রেঞ্জ — উচ্চ (ঐচ্ছিক)", r.refHigh, (v) => updateRow(idx, { refHigh: v }), "যেমন: 7.8"),
       DateField("রিপোর্টের তারিখ (ঐচ্ছিক)", r.date, (v) => updateRow(idx, { date: v })),
       r.flags.length > 0
         ? React.createElement(

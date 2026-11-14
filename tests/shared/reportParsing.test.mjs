@@ -39,3 +39,22 @@ test("WBC '7560 cumm' → ৭.৫৬ ×10³/µL, needs-review + unit-converted-c
   assert.ok(c.flags.includes("unit-converted-cumm"));
   assert.ok(!c.flags.includes("unit-mismatch") && !c.flags.includes("outside-plausible-range"));
 });
+
+test("RBS রিপোর্ট: হেডার/আইডি/HUMASTAR থেকে ভুল মান নয়; mmol/L মূল এককে; একটাই candidate", async () => {
+  const { parseAndValidateReportText } = await import("../../src/health/reports/reportParsing.js");
+  const dict = [
+    { id: "rbs", canonicalNameEn: "Random Blood Sugar (RBS)", synonyms: ["RBS"], unit: "mg/dL", referenceRange: { low: 70, high: 140 }, plausibleRange: { low: 20, high: 800 } },
+    { id: "sgot", canonicalNameEn: "SGOT (AST)", synonyms: ["SGOT", "AST"], unit: "U/L", referenceRange: { low: 8, high: 48 }, plausibleRange: { low: 1, high: 5000 } },
+  ];
+  const text = [
+    "Test Name : RANDOM BLOOD SUGAR (RBS) Sample : Serum Lab ID : 20260721-90066",
+    "Test is carried out by HUMASTAR 600",
+    "RANDOM BLOOD SUGAR (RBS) 5.8 mmol/l <7.8",
+  ].join("\n");
+  const out = parseAndValidateReportText(text, dict);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].testId, "rbs");
+  assert.equal(out[0].value, 5.8);
+  assert.equal(out[0].unit, "mmol/L");
+  assert.equal(out[0].status, "ok");
+});
