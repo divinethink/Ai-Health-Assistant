@@ -228,7 +228,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const dateText = isViewToday ? "" : new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" });
   const markedDates = new Set((info.recent || []).filter(hasDayRecord).map((x) => x.date));
   const _vd = new Date(viewDate + "T00:00:00");
-  const shortDate = _vd.toLocaleDateString("bn-BD", { day: "numeric", month: "short" }) + " - " + _vd.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const shortDate = _vd.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   // হিরোতে BMI-এর ডানে ছোট তারিখ-বাটন; অন্য দিনে কমলা + "আজ ↩"। ট্যাপ-এরিয়া ৪৪px (ভিজ্যুয়াল ছোট)।
   const pill = (bg, fg) => ({ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" });
   const hitBtn = { minHeight: "44px", margin: "-8px 0", padding: "0 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center" };
