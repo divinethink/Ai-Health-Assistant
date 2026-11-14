@@ -107,7 +107,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
   const shortDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return Number.isNaN(d.getTime()) || d.getFullYear() !== new Date().getFullYear() ? bnDate(iso) : d.toLocaleDateString("bn-BD", { day: "numeric", month: "long" }); };
-  const grid3 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" };
+  const grid3 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", alignItems: "start" };
   const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" };
 
   const conditions = records.filter((r) => r.resourceType === "condition");
@@ -133,58 +133,71 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
         isCreator && editGuide === gd.id && React.createElement(ConditionGuideEditor, { key: gd.id + (gd.edited ? "e" : "d"), guide: gd, hasOverride: gd.edited, onCancel: () => setEditGuide(null), onDone: () => { setEditGuide(null); loadGuides(); } })));
   };
 
-  // অসুস্থতা: একটাই কার্ডের ভেতর সারি-তালিকা (প্রতি সারিতে নাম + ডাক্তার/হাসপাতাল, ডানে স্ট্যাটাস-চিপ)
+  // খোলা কার্ডের উপরে-ডানে ✕ (টাচ-এরিয়া ৪৪px, দেখা যায় ২৮px গোল)
+  const closeX = (k) => React.createElement("button", { type: "button", onClick: () => toggle(k), "aria-label": "বন্ধ করুন", style: { position: "absolute", top: "2px", right: "2px", width: "44px", height: "44px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 } },
+    React.createElement("span", { style: { width: "28px", height: "28px", borderRadius: "50%", background: "#E9F0EC", color: G, fontSize: "16px", lineHeight: "28px", fontWeight: 700 } }, "✕"));
+  const hist = { background: "#F6FAF7", borderRadius: "12px", padding: "8px 12px", marginTop: "8px" };
+
+  // অসুস্থতা: একটাই কার্ডের ভেতর সারি-তালিকা (নাম + ডাক্তার/হাসপাতাল, ডানে স্ট্যাটাস-চিপ)
   const conditionRow = (r, i) => {
     const tp = r.treatingPhysician || {};
     const sub = [tp.name, tp.hospital, tp.chamberContact].filter(Boolean).join(" · ");
     const open = openKey === r.id;
     const active = r.status === "active" || r.status === "chronic";
-    return React.createElement("div", { key: r.id, style: { borderTop: i ? "1px solid #EAF0EC" : "none" } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", cursor: "pointer", minHeight: "56px" } },
+    return React.createElement("div", { key: r.id, style: { position: "relative", borderTop: i ? "1px solid #EAF0EC" : "none" } },
+      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", boxSizing: "border-box", width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: open ? "13px 50px 6px 14px" : "13px 14px", cursor: "pointer", minHeight: "56px" } },
         React.createElement("div", { style: { flex: 1, minWidth: 0 } },
           React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, r.name),
           sub && React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, marginTop: "2px", overflowWrap: "anywhere" } }, sub)),
-        badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0"),
-        React.createElement("span", { "aria-hidden": true, style: { color: MUTED, fontSize: "18px", transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" } }, "›")),
+        !open && badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0"),
+        !open && React.createElement("span", { "aria-hidden": true, style: { color: MUTED, fontSize: "18px" } }, "›")),
+      open && closeX(r.id),
       open && React.createElement("div", { style: { padding: "0 14px 14px" } },
+        React.createElement("div", { style: { marginBottom: "6px" } }, badge(t("st." + (r.status || "active")), active ? G : MUTED, active ? "#E6F2EC" : "#EEF2F0")),
         line("ক্যাটাগরি", r.category), r.chronicManagement && line("ধরন", "দীর্ঘমেয়াদি (Chronic)"),
         line("শুরু", r.onsetDate ? bnDate(r.onsetDate) : null), line("নোট", r.notes),
         guideBox(r),
         actions(r)));
   };
 
-  // অ্যালার্জি: হালকা লাল-আভা ছোট কার্ড (লাল শুধু এলার্জি/বিপদে সংরক্ষিত)
+  // অ্যালার্জি: হালকা লাল-আভা ছোট কার্ড
   const allergyCard = (r) => {
     const open = openKey === r.id;
-    return React.createElement("div", { key: r.id, style: { ...cardBase, padding: 0, background: "#FFF8F7", border: "1px solid #F0CCC7", boxShadow: "none", gridColumn: open ? "1 / -1" : undefined } },
-      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px 14px", cursor: "pointer", minHeight: "48px" } },
+    return React.createElement("div", { key: r.id, style: { ...cardBase, position: "relative", padding: 0, background: "#FFF8F7", border: "1px solid #F0CCC7", boxShadow: "none", gridColumn: open ? "1 / -1" : undefined } },
+      React.createElement("button", { onClick: () => toggle(r.id), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: open ? "12px 50px 8px 14px" : "12px 14px", cursor: "pointer", minHeight: "48px" } },
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: RED, overflowWrap: "anywhere" } }, r.substance),
         r.reaction && React.createElement("div", { style: { fontSize: "13.5px", color: "#5B4A47", marginTop: "2px" } }, r.reaction)),
+      open && closeX(r.id),
       open && React.createElement("div", { style: { padding: "0 14px 14px" } },
         line("তীব্রতা", r.severity ? t("sev." + r.severity) : null), actions(r)));
   };
 
-  // পরিমাপ: ২ কলাম কার্ড — নাম (২ লাইন পর্যন্ত), বড় মান, ছোট ট্রেন্ড-চিপ, নিচে তারিখ
+  // পরিমাপ: কমপ্যাক্ট কার্ড — নাম (১–২ লাইন), বড় মান + পাশে ↑↓ চিপ, তারিখ। গ্রাফ শুধু খুললে।
   const obsCard = (g) => {
     const k = "obs:" + g.key, open = openKey === k;
     const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
-    return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
-      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "12px 14px", cursor: "pointer", minHeight: "44px" } },
-        React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, lineHeight: 1.3, minHeight: open ? undefined : "35px", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: open ? "unset" : 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
-        React.createElement("div", { style: { marginTop: "4px", display: "flex", alignItems: "baseline", gap: "4px", flexWrap: "wrap" } },
-          React.createElement("span", { style: { fontSize: "24px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15 } }, latest.value),
-          latest.unit && React.createElement("span", { style: { fontSize: "13.5px", color: MUTED } }, unitLabelBn(latest.unit))),
-        (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" } },
-          al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4"),
-          tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC")),
+    const alBadge = al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4");
+    const trBadge = tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC");
+    const valRow = React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" } },
+      React.createElement("span", { style: { fontSize: "24px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15 } }, latest.value),
+      latest.unit && React.createElement("span", { style: { fontSize: "13.5px", color: MUTED } }, unitLabelBn(latest.unit)));
+    return React.createElement("div", { key: k, style: { ...cardBase, position: "relative", padding: 0, alignSelf: "start", gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
+      React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: open ? "12px 50px 8px 14px" : "11px 12px", cursor: "pointer", minHeight: "44px" } },
+        React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: open ? "unset" : 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
+        React.createElement("div", { style: { marginTop: "3px" } }, valRow),
+        !open && (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" } }, alBadge, trBadge),
+        !open && latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "5px" } }, shortDate(latest.date))),
+      open && closeX(k),
+      open && React.createElement("div", { style: { padding: "0 14px 14px" } },
+        (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "4px" } }, alBadge, trBadge),
         React.createElement(Spark, { items: g.items }),
-        latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "6px" } }, shortDate(latest.date))),
-      open && React.createElement("div", { style: { padding: "0 14px 14px", borderTop: "1px solid #EAF0EC" } },
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G, margin: "10px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
-        g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "8px 0", borderBottom: "1px solid #EEF1EF" } },
-          React.createElement("div", { style: { fontSize: "14px" } }, React.createElement("b", null, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")), "  ·  ", r.date ? bnDate(r.date) : "তারিখ নেই"),
-          (r.refLow != null && r.refHigh != null) && React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, "রেঞ্জ: " + r.refLow + "–" + r.refHigh),
-          (r.sourceDocId || r.sourceDocName) && React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } },
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: G, margin: "12px 0 0" } }, "ইতিহাস (" + g.items.length + ")"),
+        g.items.map((r) => React.createElement("div", { key: r.id, style: hist },
+          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "baseline" } },
+            React.createElement("b", { style: { fontSize: "16px" } }, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")),
+            React.createElement("span", { style: { fontSize: "13px", color: MUTED } }, r.date ? bnDate(r.date) : "তারিখ নেই")),
+          (r.refLow != null && r.refHigh != null) && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "2px" } }, "স্বাভাবিক রেঞ্জ: " + r.refLow + "–" + r.refHigh),
+          (r.sourceDocId || r.sourceDocName) && React.createElement("div", { style: { fontSize: "13px", color: MUTED, marginTop: "4px", overflowWrap: "anywhere" } },
             docsById[r.sourceDocId] && docsById[r.sourceDocId].cloudinaryUrl
               ? React.createElement("a", { href: docsById[r.sourceDocId].cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: { color: G, fontWeight: 600 } }, "📄 " + docsById[r.sourceDocId].fileName + " — দেখুন")
               : "📄 " + (r.sourceDocName || "রিপোর্ট")),
