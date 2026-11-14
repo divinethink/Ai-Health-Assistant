@@ -42,7 +42,7 @@ function deriveBmiTag(records) {
 
 // compact (ঐচ্ছিক, ডিফল্ট false): শুধু প্রথম ৩টি "এড়িয়ে চলুন" — ট্র্যাকারের মিল-পাতার জন্য।
 // বিদ্যমান ব্যবহার (compact ছাড়া) অপরিবর্তিত।
-export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
+export function DietGuidanceSection({ familyId, selectedMemberId, compact, middle }) {
   const [loadErr, setLoadErr] = useState(null);
   const [result, setResult] = useState(null); // { avoidFoods, includeFoods, matchedTags }
   const [openTag, setOpenTag] = useState(null);
@@ -96,28 +96,29 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact }) {
   }
 
   const guide = result ? React.createElement(FoodGroupGuide, { allergyTags: result.statusCtx.allergyTags, ctx: result.statusCtx.ctx }) : null;
+  // middle (ঐচ্ছিক): "এড়িয়ে চলুন/খাবেন"-এর পরে, "অভ্যাস ও জীবনযাত্রা"-র আগে বসে (ট্র্যাকারের ডায়েট প্ল্যান)। key দিয়ে রাখা — লোড-অবস্থা বদলালে middle-এর state হারায় না।
+  const mid = middle ? React.createElement(React.Fragment, { key: "mid" }, middle) : null;
+  const hasTags = result && result.matchedTags.length > 0;
   return React.createElement(
     "div", { style: { marginTop: "0" } },
-    !result && React.createElement("div", { style: { marginTop: "8px", color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
-    result && result.matchedTags.length === 0 && React.createElement(
-      "div", { style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } },
+    !result && React.createElement("div", { key: "load", style: { marginTop: "8px", color: "#5F716C", fontSize: F } }, "লোড হচ্ছে..."),
+    result && !hasTags && React.createElement(
+      "div", { key: "none", style: { padding: "10px", background: "#EEF5F0", borderRadius: "14px", fontSize: F, color: "#3E4E49" } },
       "কোনো নির্দিষ্ট শর্ত পাওয়া যায়নি — সাধারণ সুষম খাদ্যাভ্যাস অনুসরণ করুন।"
     ),
-    result && result.matchedTags.length === 0 && guide,
-    result && result.matchedTags.length > 0 && React.createElement(
-      React.Fragment, null,
-      React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, letterSpacing: "0.3px", color: "var(--hs-muted, #5F716C)", marginBottom: "8px" } }, "🩺 আপনার সমস্যা"),
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, result.matchedTags.map(tagChip)),
-      foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources, recent: result.recent }),
-      habitTipsBox(result.habitTips),
-      guide,
-      result.matchedTags.length > 1 && React.createElement("button", {
-        onClick: () => setOpenTag(openTag ? null : "__all"),
-        style: { marginTop: "14px", width: "100%", minHeight: "48px", padding: "10px", borderRadius: "14px", border: "1px solid var(--hs-border, #C3D2CA)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.08)", color: "var(--hs-primary, #0E4B43)", fontSize: F, fontWeight: 700, cursor: "pointer" },
-      }, openTag ? "▲ অসুখ-ভিত্তিক বিস্তারিত বন্ধ করুন" : "▼ অসুখ-ভিত্তিক বিস্তারিত দেখুন"),
-      openTag && result.byTag.map((b) => React.createElement("div", { key: b.tag, style: { marginTop: "12px", border: "1px solid var(--hs-border, #D3E0D9)", borderRadius: "18px", padding: "12px", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.06)" } },
-        tagChip(b.tag),
-        foodColumns({ avoid: b.avoid, include: b.include }), habitTipsBox(b.tips)))
-    )
+    hasTags && React.createElement("div", { key: "tags", style: { fontSize: "13px", fontWeight: 800, letterSpacing: "0.3px", color: "var(--hs-muted, #5F716C)", marginBottom: "8px" } }, "🩺 আপনার সমস্যা"),
+    hasTags && React.createElement("div", { key: "chips", style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, result.matchedTags.map(tagChip)),
+    hasTags && React.createElement(React.Fragment, { key: "cols" }, foodColumns({ avoid: result.avoidFoods, include: result.includeFoods, avoidSources: result.avoidSources, recent: result.recent })),
+    mid,
+    hasTags && React.createElement(React.Fragment, { key: "habits" }, habitTipsBox(result.habitTips)),
+    result && React.createElement(React.Fragment, { key: "guide" }, guide),
+    hasTags && result.matchedTags.length > 1 && React.createElement("button", {
+      key: "more",
+      onClick: () => setOpenTag(openTag ? null : "__all"),
+      style: { marginTop: "14px", width: "100%", minHeight: "48px", padding: "10px", borderRadius: "14px", border: "1px solid var(--hs-border, #C3D2CA)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.08)", color: "var(--hs-primary, #0E4B43)", fontSize: F, fontWeight: 700, cursor: "pointer" },
+    }, openTag ? "▲ অসুখ-ভিত্তিক বিস্তারিত বন্ধ করুন" : "▼ অসুখ-ভিত্তিক বিস্তারিত দেখুন"),
+    hasTags && openTag && result.byTag.map((b) => React.createElement("div", { key: "bt-" + b.tag, style: { marginTop: "12px", border: "1px solid var(--hs-border, #D3E0D9)", borderRadius: "18px", padding: "12px", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.06)" } },
+      tagChip(b.tag),
+      foodColumns({ avoid: b.avoid, include: b.include }), habitTipsBox(b.tips)))
   );
 }
