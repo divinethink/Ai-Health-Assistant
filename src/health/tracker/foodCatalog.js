@@ -204,6 +204,15 @@ export const CATALOG_FOODS = {
   chiraBhaja: { n: "চিড়া ভাজা", u: "মুঠো", k: 114, g: "snack", tg: ["gut"] },
   falooda: { n: "ফালুদা (হোম মেইড)", u: "গ্লাস", k: 339, al: "dairy", g: "snack", tg: ["sugar"] },
   sobjiPakora: { n: "সবজি পাকোড়া", u: "টি", k: 97, g: "snack", tg: ["gut"] },
+  puliPitha: { n: "পুলি পিঠা", u: "টি", k: 134, g: "snack", tg: ["sugar"] },
+  pakonPitha: { n: "পাকন পিঠা", u: "টি", k: 142, al: "wheat", g: "snack", tg: ["gut", "sugar"] },
+  telPitha: { n: "তেল পিঠা", u: "টি", k: 140, al: "wheat", g: "snack", tg: ["gut", "sugar"] },
+  talerPitha: { n: "তালের পিঠা", u: "টি", k: 113, al: "wheat", g: "snack", tg: ["gut", "sugar"] },
+  chitoiPitha: { n: "চিতুই পিঠা", u: "টি", k: 50, g: "snack" },
+  dudhChitoi: { n: "দুধ চিতুই পিঠা", u: "বাটি", k: 238, al: "dairy", g: "snack", tg: ["gut", "sugar"] },
+  chapraPitha: { n: "চাপড়া পিঠা", u: "টি", k: 95, g: "snack" },
+  sujiLadduHome: { n: "সুজির লাড্ডু (হোম মেইড)", u: "টি", k: 133, al: "wheat", g: "snack", tg: ["sugar"] },
+  besanLadduHome: { n: "বেসনের লাড্ডু (হোম মেইড)", u: "টি", k: 165, al: "dairy", g: "snack", tg: ["sugar"] },
   // পানীয়
   milkTea: { n: "দুধ চা (চিনিসহ)", u: "কাপ", k: 80, al: "dairy", g: "drink", tg: ["caffeine", "sugar"] },
   milk: { n: "গরুর দুধ", u: "গ্লাস", k: 150, al: "dairy", g: "drink", tg: ["gut", "medgap"] },
@@ -224,7 +233,7 @@ export const CATALOG_FOODS = {
   mintGingerWater: { n: "আদা-পুদিনা পানি", u: "গ্লাস", k: 5, g: "drink" },
   blackCoffee: { n: "ব্ল্যাক কফি", u: "কাপ", k: 2, g: "drink", tg: ["caffeine"] },
   turmericTea: { n: "হলুদ চা", u: "কাপ", k: 3, g: "drink" },
-  herbTea: { n: "হার্ব টি (চিনি ছাড়া)", u: "কাপ", k: 0, g: "drink" },
+  herbTea: { n: "হার্ব টি/মশলা চা (চিনি ছাড়া)", u: "কাপ", k: 0, g: "drink" },
 };
 
 // foods: FOODS-এর মতো অবজেক্ট। ফল: [{ key, f }] — এলার্জি-মেলা বাদ নয় (allergy:true চিহ্ন, শুধু সতর্কতা), নাম-সার্চ ও গ্রুপ-ফিল্টার, সীমা limit।
