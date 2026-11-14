@@ -229,9 +229,9 @@ function ProfileMiniCard({ memberDoc, familyDoc, isAdmin, nameSlot }) {
         React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted)", flexShrink: 0 } }, t("top.familyCode")),
         React.createElement("b", { style: { fontSize: "12.5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 } }, familyDoc.familyCodeDisplay),
         React.createElement("button", {
-          onClick: copyCode, "aria-label": t("menu.copy"),
-          style: { fontSize: "12px", padding: "2px 9px", borderRadius: "999px", border: "1px solid var(--hs-primary)", background: "transparent", color: "var(--hs-primary)", cursor: "pointer", flexShrink: 0, fontFamily: "inherit" },
-        }, copied ? t("menu.copied") : "📋 " + t("menu.copy"))
+          type: "button", onClick: copyCode, "aria-label": copied ? t("menu.copied") : t("menu.copy"), title: copied ? t("menu.copied") : t("menu.copy"),
+          style: { width: "32px", height: "32px", minWidth: "32px", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, border: "none", borderRadius: "10px", background: "transparent", color: "var(--hs-primary)", cursor: "pointer", flexShrink: 0 },
+        }, Icon(copied ? "check" : "copy", { size: 18, stroke: 2 }))
       )
     )
   );
@@ -361,6 +361,19 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   );
 }
 
+// মেনুর প্রিমিয়াম আইকন-বাবল: প্রতিটির নিজস্ব হালকা রঙ (রঙ-এর alpha পটভূমি, তাই সব থিমে মানায়)
+const MENU_ICONS = {
+  family: ["users", "#1F7A5C"], timeline: ["clock", "#3B82B6"], data: ["save", "#D08A2E"], lock: ["lock", "#7A5BB0"],
+  design: ["sliders", "#5F7A8A"], aimodel: ["bot", "#3E6BC4"], theme: ["palette", "#C25B8A"], lang: ["globe", "#2A9AA8"],
+  aichat: ["health", "#1F7A5C"], notif: ["bell", "#D08A2E"], emergency: ["phone", "#C0392B"],
+};
+function menuBubble(id, size) {
+  const [icon, color] = MENU_ICONS[id] || ["home", "#1F7A5C"];
+  const sz = size || 38;
+  return React.createElement("span", { "aria-hidden": "true", style: { width: sz + "px", height: sz + "px", flexShrink: 0, borderRadius: Math.round(sz * 0.32) + "px", display: "flex", alignItems: "center", justifyContent: "center", color, background: "linear-gradient(145deg, " + color + "29, " + color + "14)", boxShadow: "inset 0 0 0 1px " + color + "30" } },
+    Icon(icon, { size: Math.round(sz * 0.52), stroke: 1.9 }));
+}
+
 function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, chip, selectedMemberId }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
@@ -376,7 +389,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   }
 
   if (sub) {
-    const titles = { family: ["👨‍👩‍👧‍👦", t("menu.familyTitle")], data: ["💾", t("menu.dataTitle")], timeline: ["🕘", "টাইমলাইন"], lock: ["🔒", t("menu.lockTitle")], theme: ["🎨", "থিম"], lang: ["🌐", "ভাষা"], design: ["🎛️", "কাস্টমাইজ"], aimodel: ["🤖", "AI মডেল"] };
+    const titles = { family: ["family", t("menu.familyTitle")], data: ["data", t("menu.dataTitle")], timeline: ["timeline", "টাইমলাইন"], lock: ["lock", t("menu.lockTitle")], theme: ["theme", "থিম"], lang: ["lang", "ভাষা"], design: ["design", "কাস্টমাইজ"], aimodel: ["aimodel", "AI মডেল"] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -423,34 +436,35 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
           style: { border: "none", background: "none", color: "var(--hs-primary)", fontSize: "15px", fontWeight: 700, cursor: "pointer", padding: "6px 0", minHeight: "44px" },
         }, t("menu.back")),
         React.createElement("button", { type: "button", onClick: () => setSub(null), "aria-label": "বন্ধ করুন", style: { minWidth: "44px", minHeight: "44px", border: "none", borderRadius: "12px", background: "var(--hs-chip-bg)", color: "var(--hs-primary)", fontSize: "20px", fontWeight: 700, cursor: "pointer" } }, "✕")),
-      React.createElement("h3", { style: { fontSize: "18px", color: "var(--hs-primary)", margin: "2px 0 12px" } }, titles[sub][0] + " " + titles[sub][1]),
+      React.createElement("h3", { style: { display: "flex", alignItems: "center", gap: "10px", fontSize: "18px", color: "var(--hs-primary)", margin: "2px 0 12px" } }, menuBubble(titles[sub][0], 34), titles[sub][1]),
       body
     );
   }
 
   // কমপ্যাক্ট প্রিমিয়াম: ছোট দ্রুত-টাইল (গ্রেডিয়েন্ট + আইকন-বাবল) + এক কার্ডে ভাগ-করা সারি-তালিকা
-  const tile = (icon, label, onClick, urgent) => React.createElement("button", {
+  const tile = (id, label, onClick, urgent) => React.createElement("button", {
     key: label, type: "button", onClick,
     style: {
-      flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", minHeight: "70px", padding: "8px 4px",
-      borderRadius: "16px", cursor: "pointer", fontSize: "13px", fontWeight: 700, lineHeight: 1.2, textAlign: "center", fontFamily: "inherit",
-      border: "1px solid " + (urgent ? "#E5A29A" : "var(--hs-border)"),
-      background: urgent ? "linear-gradient(180deg, #FFF6F4, #FFE9E5)" : "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))",
+      flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "88px", padding: "12px 4px",
+      borderRadius: "20px", cursor: "pointer", fontSize: "13px", fontWeight: 700, lineHeight: 1.2, textAlign: "center", fontFamily: "inherit",
+      border: "1px solid " + (urgent ? "#EBB5AE" : "var(--hs-border)"),
+      background: urgent ? "linear-gradient(180deg, #FFF8F6, #FFECE8)" : "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))",
       color: urgent ? "#C0392B" : "var(--hs-primary)",
-      boxShadow: "0 3px 10px rgba(14,75,67,0.09)",
+      boxShadow: "0 4px 14px rgba(14,75,67,0.10)",
     },
-  }, React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1 } }, icon), React.createElement("span", { style: { maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, label));
+  }, menuBubble(id, 40), React.createElement("span", { style: { maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, label));
 
-  const row = (icon, title, subtitle, onClick, last) => React.createElement("button", {
+  const row = (id, title, subtitle, onClick, last) => React.createElement("button", {
     key: title, type: "button", onClick,
-    style: { width: "100%", display: "flex", alignItems: "center", gap: "12px", minHeight: "56px", padding: "8px 14px", border: "none", borderBottom: last ? "none" : "1px solid var(--hs-border)", background: "transparent", cursor: "pointer", textAlign: "left", color: "var(--hs-text)", fontFamily: "inherit" },
+    style: { width: "100%", display: "flex", alignItems: "center", gap: "14px", minHeight: "64px", padding: "10px 16px", border: "none", borderBottom: last ? "none" : "1px solid var(--hs-border)", background: "transparent", cursor: "pointer", textAlign: "left", color: "var(--hs-text)", fontFamily: "inherit" },
   },
-    React.createElement("span", { "aria-hidden": "true", style: { width: "36px", height: "36px", flexShrink: 0, borderRadius: "11px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "19px", background: "var(--hs-chip-bg)", boxShadow: "inset 0 0 0 1px var(--hs-border)" } }, icon),
+    menuBubble(id, 40),
     React.createElement("span", { style: { flex: 1, minWidth: 0 } },
       React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700, color: "var(--hs-primary)", lineHeight: 1.25 } }, title),
-      React.createElement("span", { style: { display: "block", fontSize: "12.5px", color: "var(--hs-muted)", marginTop: "1px", lineHeight: 1.25 } }, subtitle)),
-    React.createElement("span", { "aria-hidden": "true", style: { fontSize: "20px", color: "var(--hs-muted)" } }, "›")
+      React.createElement("span", { style: { display: "block", fontSize: "12.5px", color: "var(--hs-muted)", marginTop: "2px", lineHeight: 1.3 } }, subtitle)),
+    React.createElement("span", { "aria-hidden": "true", style: { color: "var(--hs-muted)", opacity: 0.7, display: "flex" } }, Icon("chevronRight", { size: 18, stroke: 2 }))
   );
+  const group = (children) => React.createElement("div", { style: { borderRadius: "20px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", overflow: "hidden", boxShadow: "0 4px 14px rgba(14,75,67,0.09)", marginBottom: "14px" } }, children);
 
   return React.createElement(
     "div", { style: wrapStyle },
@@ -459,24 +473,27 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(
       "div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
-      tile("🩺", t("nav.aichat"), onOpenAIChat, false),
-      tile("🔔", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
-      tile(showCare ? "✕" : "📞", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
+      tile("aichat", t("nav.aichat"), onOpenAIChat, false),
+      tile("notif", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
+      tile("emergency", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
     ),
     showCare && React.createElement(
       "div", { style: { marginBottom: "14px" } },
       React.createElement("h4", { style: { fontSize: "15px", color: "var(--hs-primary)", margin: "0 0 8px" } }, t("menu.care")),
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
-    React.createElement("div", { style: { borderRadius: "18px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", overflow: "hidden", boxShadow: "0 3px 12px rgba(14,75,67,0.09)" } },
-      row("👨‍👩‍👧‍👦", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
-      row("🕘", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
-      row("💾", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data")),
-      row("🔒", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
-      isCreator && row("🎛️", "কাস্টমাইজ", "পেজের কার্ড সাজান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("design")),
-      isCreator && row("🤖", "AI মডেল", "provider ও model বদলান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("aimodel")),
-      row("🎨", "থিম", currentThemeLabel(), () => setSub("theme")),
-      row("🌐", "ভাষা", t("lang." + getLang()), () => setSub("lang"), true))
+    group([
+      row("family", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
+      row("timeline", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
+      row("data", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data"), true),
+    ]),
+    group([
+      row("lock", t("menu.lockTitle"), t("menu.lockSub"), () => setSub("lock")),
+      isCreator && row("design", "কাস্টমাইজ", "পেজের কার্ড সাজান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("design")),
+      isCreator && row("aimodel", "AI মডেল", "provider ও model বদলান (শুধু অ্যাপ-ক্রিয়েটর)", () => setSub("aimodel")),
+      row("theme", "থিম", currentThemeLabel(), () => setSub("theme")),
+      row("lang", "ভাষা", t("lang." + getLang()), () => setSub("lang"), true),
+    ])
   );
 }
 
