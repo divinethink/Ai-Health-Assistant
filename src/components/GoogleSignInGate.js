@@ -154,7 +154,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
   return Card(
     React.createElement(
       React.Fragment, null,
-      React.createElement("div", { style: { width: "64px", height: "64px", borderRadius: "20px", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", margin: "0 auto 14px", boxShadow: "0 6px 16px rgba(14,75,67,0.3)" } }, "🩺"),
+      React.createElement("img", { src: "/icons/family-tree-512.png", alt: "", style: { width: "72px", height: "72px", borderRadius: "20px", display: "block", margin: "0 auto 14px", boxShadow: "0 6px 16px rgba(14,75,67,0.3)" } }),
       React.createElement("h1", { style: { color: "var(--hs-primary, #0E4B43)", fontSize: "24px", textAlign: "center", margin: "0" } }, "Health Companion"),
       React.createElement("p", { style: { color: "#4B5C57", fontSize: "14px", marginTop: "8px", textAlign: "center", lineHeight: 1.6 } },
         "পারিবারিক স্বাস্থ্য সহায়ক — শুরু করতে Google দিয়ে সাইন-ইন করুন।"),
