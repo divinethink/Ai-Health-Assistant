@@ -152,7 +152,8 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     try {
       const ms = await listMembers(familyId);
       setMembers(ms);
-      const perMember = await Promise.all(ms.map((m) => listHealthRecords(familyId, m.id).then((records) => ({ member: m, records }))));
+      const who = selectedMemberId || callerMemberId; // শুধু বাছা সদস্যের রেকর্ড পড়া — অন্যের অনুমতি না থাকলে "permission" ত্রুটি আসত
+      const perMember = await Promise.all(ms.filter((m) => m.id === who).map((m) => listHealthRecords(familyId, m.id).then((records) => ({ member: m, records }))));
       const flat = []; const names = []; const pastMap = {};
       const todayS = todayStr();
       perMember.forEach(({ member, records }) => {
@@ -198,7 +199,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     }
     setTaken(next);
   }
-  useEffect(() => { loadMeds(); }, [familyId]);
+  useEffect(() => { loadMeds(); }, [familyId, selectedMemberId]);
   useEffect(() => { if (selectedMemberId) setAMember(selectedMemberId); }, [selectedMemberId]);
 
   // প্রতি ৬০ সেকেন্ডে UI refresh (দেরি-হওয়া ডোজ চিহ্নিত রাখতে)। নোটিফিকেশন এখানে নেই — একটাই চালক
