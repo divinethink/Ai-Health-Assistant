@@ -59,7 +59,7 @@ test("applyMealPrefs: prefs না থাকলে প্ল্যান হু�
   assert.equal(applyMealPrefs(plan, EMPTY, []).total, plan.total);
   const r = applyMealPrefs(plan, { meal: { lunch: [{ food: "rice", qty: 1 }, { food: "egg", qty: 2 }], snack1: [] } }, []);
   const lunch = r.slots.find((s) => s.id === "lunch");
-  assert.equal(lunch.kcal, 200 + 150);
+  assert.equal(lunch.kcal, 175 + 150);
   assert.ok(lunch.items.every((i) => i.custom));
   assert.equal(r.slots.find((s) => s.id === "snack1").kcal, 0);
   assert.deepEqual(r.custom.sort(), ["lunch", "snack1"]);

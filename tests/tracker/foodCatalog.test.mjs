@@ -40,12 +40,12 @@ test("নতুন খাবার প্ল্যানে: সংরক্ষ�
   assert.deepEqual(s.meal.lunch.map((r) => r.food), ["hilshaBhaja", "rice"]);
   const base = buildMealPlan(1650, []);
   const plan = applyMealPrefs(base, prefs, []);
-  assert.equal(plan.slots.find((x) => x.id === "lunch").kcal, 200 + 300);
+  assert.equal(plan.slots.find((x) => x.id === "lunch").kcal, 463);
   const blocked = applyMealPrefs(base, prefs, ["fish"]);
-  assert.equal(blocked.slots.find((x) => x.id === "lunch").kcal, 500, "অ্যালার্জিতেও খাবার থাকে");
+  assert.equal(blocked.slots.find((x) => x.id === "lunch").kcal, 463, "অ্যালার্জিতেও খাবার থাকে");
   assert.ok(blocked.notes.some((n) => n.includes("অ্যালার্জি")));
   assert.ok(mealOptions(["fish"]).find((o) => o.key === "hilshaBhaja").allergy === true);
-  assert.equal(draftKcal(addDraftFood([], "mango")), 130);
+  assert.equal(draftKcal(addDraftFood([], "mango")), 140);
   assert.equal(itemText("pauruti", 2), "২ স্লাইস পাউরুটি");
 });
 

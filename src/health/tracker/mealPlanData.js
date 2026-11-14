@@ -26,7 +26,7 @@ export const DAYTIME_SLOT_IDS = ["breakfast", "snack1", "lunch", "snack2"];
 // k = এক ইউনিটের আনুমানিক কিলোক্যালরি; al = এলার্জি-ট্যাগ; swap = [বিকল্প খাবার, অনুপাত]
 const CORE_FOODS = {
   roti: { n: "রুটি", u: "টি", k: 80, al: "wheat", swap: ["rice", 0.5], g: "rice" },
-  rice: { n: "ভাত", u: "কাপ", k: 200, g: "rice" },
+  rice: { n: "ভাত", u: "কাপ", k: 175, g: "rice" },
   dal: { n: "ডাল", u: "বাটি", k: 110, g: "curry" },
   veg: { n: "সবজি", u: "বাটি", k: 80, g: "curry" },
   salad: { n: "সালাদ", u: "বাটি", k: 25, g: "curry" },

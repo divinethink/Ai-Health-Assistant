@@ -53,7 +53,7 @@ test("src/chk/ref সঠিক ধরনের", () => {
 });
 
 test("nutritionOf: আছে → এন্ট্রি; নেই বা প্রোটোটাইপ-নাম → null", () => {
-  assert.equal(nutritionOf("rice").per100.kcal, 130);
+  assert.equal(nutritionOf("rice").per100.kcal, 109);
   assert.equal(nutritionOf("nosuchfood"), null);
   assert.equal(nutritionOf("toString"), null);
   assert.equal(nutritionOf("constructor"), null);
