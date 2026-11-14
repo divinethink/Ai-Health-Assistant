@@ -11,7 +11,8 @@ import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, wa
 import { Icon } from "../../shared/icons.js";
 import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT, SLOT_LINE } from "./trackerTheme.js";
 import { ringDash, pctOf, weekSummary, last30DatesISO } from "./todaySummary.js";
-import { buildMealPlan } from "./mealPlanData.js";
+import { buildMealPlan, FOODS } from "./mealPlanData.js";
+import { foodStatus, STATUS_COLORS } from "./foodStatus.js";
 import { fastOnDate, slotsForDay, fastDefaultSlot } from "./fastDay.js";
 import { applyMealPrefs, caloriesForDay, sanitizeExtraFoods, sanitizeExerciseLog, checkExerciseLog, recentExerciseEntries, EXERCISE_TYPES } from "./planPrefs.js";
 import { entryAmountText, fmtMacro, sumNutrition, slotBudgets, recentFoodEntries, tickedPlanEntries } from "./foodCalc.js";
@@ -226,7 +227,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   };
   const dateText = isViewToday ? "" : new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" });
   const markedDates = new Set((info.recent || []).filter(hasDayRecord).map((x) => x.date));
-  const shortDate = new Date(viewDate + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "short" });
+  const _vd = new Date(viewDate + "T00:00:00");
+  const shortDate = _vd.toLocaleDateString("bn-BD", { day: "numeric", month: "short" }) + " - " + _vd.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   // হিরোতে BMI-এর ডানে ছোট তারিখ-বাটন; অন্য দিনে কমলা + "আজ ↩"। ট্যাপ-এরিয়া ৪৪px (ভিজ্যুয়াল ছোট)।
   const pill = (bg, fg) => ({ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" });
   const hitBtn = { minHeight: "44px", margin: "-8px 0", padding: "0 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center" };
@@ -390,12 +392,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { style: { fontSize: "12.5px", color: bud && bud.eaten > bud.planned ? "#B26A00" : T.muted, fontWeight: bud && bud.eaten > bud.planned ? 700 : 400 } }, mine.length ? head : bud ? "এখনও কিছু যোগ হয়নি · " + bnNum(bud.eaten) + " / " + bnNum(bud.planned) + " কিলোক্যালরি" : "এখনও কিছু যোগ হয়নি")),
           React.createElement("button", { type: "button", onClick: () => openFood(sl.id), "aria-label": sl.label + "-এ খাবার যোগ করুন", style: { flexShrink: 0, width: "44px", height: "44px", margin: "-6px -6px -6px 0", padding: 0, border: "none", background: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" } },
             React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "20px", fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } }, "＋"))),
-        mine.map((x) => React.createElement("div", { key: x.idx, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 0", borderTop: "1px solid " + T.border, marginTop: "6px" } },
+        mine.map((x) => { const st = x.key && Object.prototype.hasOwnProperty.call(FOODS, x.key) ? foodStatus(x.key, FOODS[x.key], { allergyTags: info.allergyTags, ctx: { age: info.age, flags: info.flags, condKeys: info.condKeys } }) : null; const sc = st && STATUS_COLORS[st.level]; return React.createElement("div", { key: x.idx, title: st ? st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : "") : undefined, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "10px", border: "1px solid " + (sc ? sc.border : "transparent"), background: sc ? sc.bg : "transparent", marginTop: "6px" } },
           React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-            React.createElement("div", { style: { fontSize: "14px", color: T.ink } }, x.name),
+            React.createElement("div", { style: { fontSize: "14px", color: sc ? sc.text : T.ink, fontWeight: sc ? 600 : 400 } }, st ? st.icon + " " + x.name : x.name),
+            st && st.level !== "green" && React.createElement("div", { style: { fontSize: "12px", color: sc.text } }, st.label + (st.reasons.length ? " — " + st.reasons[0] : "")),
             React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, [entryAmountText(x), bnNum(x.kcal) + " ক্যাল", x.p !== undefined ? "প্রো " + fmtMacro(x.p) + " · কার্ব " + fmtMacro(x.c) + " · ফ্যাট " + fmtMacro(x.f) : ""].filter(Boolean).join(" · "))),
           React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, bnNum(x.kcal)),
-          React.createElement("button", { onClick: () => writeExtras(extras.filter((_, i) => i !== x.idx)), disabled: busy, "aria-label": x.name + " মুছুন", style: { minWidth: "44px", minHeight: "44px", borderRadius: "12px", border: "none", background: "#FDECEA", color: "#A32018", fontSize: "16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 } }, "✕"))));
+          React.createElement("button", { onClick: () => writeExtras(extras.filter((_, i) => i !== x.idx)), disabled: busy, "aria-label": x.name + " মুছুন", style: { minWidth: "44px", minHeight: "44px", borderRadius: "12px", border: "none", background: "#FDECEA", color: "#A32018", fontSize: "16px", cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 } }, "✕")); }));
     }),
     ],
   };

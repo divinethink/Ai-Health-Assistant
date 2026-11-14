@@ -95,7 +95,10 @@ export const FOOD_CSS = ".hs-fp-pills>div{scrollbar-width:none;-ms-overflow-styl
 export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
-  const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 40 });
+  const LV = { green: 0, yellow: 1, red: 2 }; // সবুজ → হলুদ → লাল (স্টেবল সর্ট; দলের ভেতরে আগের ক্রম)
+  const found = searchFoods(FOODS, { query: q, group: grp, allergyTags, limit: 200 })
+    .map((x) => ({ x, l: LV[foodStatus(x.key, x.f, { allergyTags, ctx: avoidCtx }).level] }))
+    .sort((a, b) => a.l - b.l).slice(0, 40).map((o) => o.x);
   return React.createElement("div", { className: "hs-fp-pills" },
     React.createElement("style", null, FOOD_CSS),
     React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#F3F7F4", padding: "2px 0 6px" } },

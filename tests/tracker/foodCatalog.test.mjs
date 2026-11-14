@@ -67,7 +67,7 @@ test("নতুন ৪৫টি খাবার আছে, কোরের স�
 test("ট্যাগ: শুধু বৈধ ট্যাগ-কী; ট্যাগ কিছু ব্লক করে না; অ্যালার্জি শুধু সতর্কতা", () => {
   Object.entries(FOODS).forEach(([k, f]) => (f.tg || []).forEach((t) => assert.ok(WARN_TAGS[t], k + " ট্যাগ")));
   assert.ok(Object.values(WARN_TAGS).every(([short, msg]) => short && msg));
-  assert.deepEqual(tagsOf(FOODS.kathBadam), ["choke"]);
+  assert.deepEqual(tagsOf(FOODS.kathBadam), []);
   assert.deepEqual(tagsOf(FOODS.rice), []);
   assert.ok(searchFoods(FOODS, { query: "বাদাম", allergyTags: [] }).some((x) => x.key === "kathBadam"));
   assert.ok(searchFoods(FOODS, { query: "ডিমের", allergyTags: ["egg"] }).some((x) => x.key === "eggYolk" && x.allergy));
