@@ -37,7 +37,7 @@ import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
 import { AvoidCard } from "./AvoidCard.js";
 import { ExerciseGuide } from "./ExerciseGuide.js";
-import { FoodListButton } from "./FoodListButton.js";
+import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
@@ -129,8 +129,8 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [sheet, setSheet] = useState(null); // বেলার id
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
 
-  if (gate.blocked) return React.createElement("div", null, React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের ‘আজ এড়িয়ে চলুন’ ও নথি → খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।"), React.createElement(FoodListButton, { info }));
-  if (!calc) return React.createElement("div", null, React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।"), React.createElement(FoodListButton, { info }));
+  if (gate.blocked) return React.createElement("div", null, React.createElement(Notice, null, React.createElement("b", null, "মিল-প্ল্যান বন্ধ"), React.createElement("br"), gate.reason, React.createElement("br"), "সুষম খাবারের সাধারণ গাইড নিচের খাদ্য নির্দেশিকায় দেখুন; নির্দিষ্ট প্ল্যান ডাক্তারের সাথে ঠিক করুন।"));
+  if (!calc) return React.createElement("div", null, React.createElement(Notice, { tone: "info" }, "মিল-প্ল্যানের জন্য আগে ‘লক্ষ্য ও প্ল্যান’ ট্যাবের ‘আমার লক্ষ্য’-এ ক্যালরির টার্গেট ঠিক করুন।"));
 
   const base = buildMealPlan(calc.calorieTarget, allergyTags, goal.planPrefs, { flags: info.flags, condKeys: info.condKeys });
   const plan = applyMealPrefs(base, goal.planPrefs, allergyTags);
@@ -205,7 +205,6 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       onRemoveExtra: (idx) => writeExtras(extras.filter((_, i) => i !== idx)),
       onClose: closeSheet,
     }),
-    React.createElement(FoodListButton, { info }),
     React.createElement("p", { style: { fontSize: "12px", color: T.muted } }, "ট্যাপ করলে ‘খেয়েছি’ হিসেবে ক্যালরি যোগ হয়। ক্যালরি আনুমানিক; প্রোফাইলের অ্যালার্জি অনুযায়ী খাবার বদলানো হয়েছে, তবু সন্দেহ হলে খাবেন না। এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 
@@ -509,7 +508,8 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         !gate.blocked && foldChip("why", "💡 কেন এই প্ল্যান?")),
       panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
       React.createElement(MealTab, common),
-      React.createElement(AvoidCard, { domain: "food", age, flags: info.flags, condKeys: info.condKeys }),
+      // Food Habit (owner-request ২০২৬-১১-১৪): আলাদা ট্যাব নেই; মিল-প্ল্যানের নিচেই — সমস্যা/এড়িয়ে চলুন/সাম্প্রতিক খাবার/খাদ্য-তালিকা
+      React.createElement(DietGuidanceSection, { key: "diet-" + memberId, familyId, selectedMemberId: memberId }),
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, margin: "4px 0 0" } }, "তালিকা সদস্যের রোগ, অ্যালার্জি ও BMI থেকে স্বয়ংক্রিয়। খাবারে সন্দেহ থাকলে ডাক্তারকে জিজ্ঞেস করুন।"))
   );
 }

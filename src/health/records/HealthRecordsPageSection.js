@@ -38,7 +38,6 @@ import { t } from "../../shared/i18n.js";
 import { HealthRecordsSection } from "./HealthRecordsSection.js";
 import { MedicationReminders } from "./MedicationReminders.js";
 import { CommonCareSection } from "../commonCare/CommonCareSection.js";
-import { DietGuidanceSection } from "../nutrition-fitness/DietGuidanceSection.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
 import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
@@ -89,7 +88,6 @@ function usePillCounts(familyId, memberId, tick) {
 // mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = স্বাস্থ্য প্রোফাইল (প্রোফাইল+স্বাস্থ্য তথ্য) · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
 const HEALTH_TABS = [
   { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + স্বাস্থ্য তথ্য একসাথে (owner-approved ২০২৬-১১-১১)
-  { id: "diet", label: "tab.food" }, // খাদ্য: স্বাস্থ্য প্রোফাইলের ঠিক পরে (owner-request ২০২৬-১১-১২)
   { id: "care", label: "tab.commonCare" }, // সাধারণ চিকিৎসা (টাইমলাইন মেনুতে সরানো — owner-request ২০২৬-১১-১৩)
   { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
 ];
@@ -172,7 +170,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         docSub === "summary" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
         // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode
         docSub === "doctors" && React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
-      isHealth && activeTab === "diet" && React.createElement(DietGuidanceSection, { familyId, callerMemberId, selectedMemberId }),
       isHealth && activeTab === "care" && React.createElement(CommonCareSection, { familyId, callerMemberId, selectedMemberId })
     )
   );
