@@ -16,7 +16,8 @@ import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
 import { groupObservations } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
-import { buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
+import { buildLabAlerts, LEVEL_WORD, alertLine } from "../reports/labAlerts.js";
+import { listDocuments } from "../documents/documentsData.js";
 import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "../calendar/epiSchedule.js";
 
 const { useState, useEffect } = React;
@@ -90,6 +91,7 @@ function glance(icon, label, value, tone) {
 
 export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, refreshTick, onVitalsSaved }) {
   const [editing, setEditing] = useState(false); // ✎ চাপলে উচ্চতা/ওজন ফর্ম নিচে খোলে
+  const [labOpen, setLabOpen] = useState(false); // "ল্যাব রিপোর্ট সতর্কতা" ট্যাপে প্রতি মানের উৎস-রিপোর্ট দেখায়
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [data, setData] = useState(null);
@@ -103,9 +105,10 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       listHealthRecords(familyId, selectedMemberId),
       // সম্পূরক লাইন (টিকা/অ্যাপয়েন্টমেন্ট) — এই read ব্যর্থ হলে পুরো কার্ড আটকাবে না, শুধু ঐ দুই লাইন বাদ যাবে।
       listCalendarEvents(familyId).catch(() => null),
-      fetchTestNameDictionary().catch(() => []), // ল্যাব সতর্কতা — না এলে শুধু ঐ টাইল বাদ
+      fetchTestNameDictionary().catch(() => []), // ল্যাব রিপোর্ট সতর্কতা — না এলে শুধু ঐ টাইল বাদ
+      listDocuments(familyId, selectedMemberId).catch(() => []), // সতর্কতার উৎস-রিপোর্টের লিংক (না এলে শুধু নাম)
     ])
-      .then(([members, records, calEvents, dict]) => {
+      .then(([members, records, calEvents, dict, docs]) => {
         const member = members.find((m) => m.id === selectedMemberId) || null;
 
         const heightObs = records.filter((r) => r.resourceType === "observation" && r.type === "height").sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -123,9 +126,9 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
         const vaccination = calEvents ? vaccinationSummaryOf(member, ageForVax, calEvents, today) : null;
 
         // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়)
-        const labAlerts = buildLabAlerts(groupObservations(records).map((g) => g.items[0]), dict);
+        const labAlerts = buildLabAlerts(groupObservations(records).map((g) => g.items[0]), dict, member ? member.sex : null);
 
-        setData({ member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts });
+        setData({ member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts, docs });
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
@@ -135,7 +138,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   if (err) return ErrorBox(err);
   if (loading || !data) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts, docs } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
@@ -152,7 +155,18 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     condShown.map((c, i) => mkChip("c" + i, [Icon("health", { key: "i", size: 14 }), shortCondName(c.name)], "#fff", "var(--hs-primary, #0E4B43)")),
     conds.length > condShown.length && h("span", { key: "cm", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(conds.length - condShown.length) + "টি")) : null;
   const glanceRows = [
-    labAlerts.length > 0 && glance(Icon("alert", { size: 14, color: "#B3261E" }), "ল্যাব সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : "")),
+    labAlerts.length > 0 && h("div", { key: "lab" },
+      h("button", { type: "button", onClick: () => setLabOpen((v) => !v), "aria-expanded": labOpen, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", cursor: "pointer", minHeight: "44px" } },
+        glance(Icon("alert", { size: 14, color: "#B3261E" }), "ল্যাব রিপোর্ট সতর্কতা", labAlerts.slice(0, 2).map((x) => x.name + (LEVEL_WORD[x.level] ? " " + LEVEL_WORD[x.level] : x.value ? " " + x.value : "")).join(", ") + (labAlerts.length > 2 ? " +" + bn(labAlerts.length - 2) : "") + (labOpen ? " ▲" : " ▼"))),
+      labOpen && h("div", { style: { padding: "0 0 8px", fontSize: "13.5px", lineHeight: 1.5, color: "#3E4E49" } },
+        labAlerts.map((a, i) => {
+          const d = a.sourceDocId ? (docs || []).find((x) => x.id === a.sourceDocId) : null;
+          return h("div", { key: a.testId + i, style: { padding: "5px 0", borderTop: i ? "1px dashed #D3E0D9" : "none" } },
+            h("div", { style: { fontWeight: 700, color: "#B3261E", overflowWrap: "anywhere" } }, alertLine(a)),
+            d && d.cloudinaryUrl
+              ? h("a", { href: d.cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: { color: INK, fontWeight: 600 } }, "📄 উৎস রিপোর্ট: " + d.fileName + " — দেখুন")
+              : h("div", { style: { color: "#5F716C" } }, a.sourceDocName ? "📄 উৎস রিপোর্ট: " + a.sourceDocName : "উৎস রিপোর্ট যুক্ত নেই — নিচে 'অসুখ' ট্যাবে মানটির ✎ সম্পাদনা থেকে যুক্ত/সংশোধন করুন।"));
+        }))),
     vaccination && glance(Icon("syringe", { size: 14 }), "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · " + bn(vaccination.overdue) + "টির মেয়াদ পার" : "")),
   ].filter(Boolean);
 
@@ -184,6 +198,6 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
     (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে বিএমআই ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
     chipRow,
-    // এক নজরে: ল্যাব সতর্কতা/টিকা (থাকলেই); "পরবর্তী অ্যাপয়েন্টমেন্ট" এখন নিচের "আসন্ন" গ্রিডে
+    // এক নজরে: ল্যাব রিপোর্ট সতর্কতা/টিকা (থাকলেই); "পরবর্তী অ্যাপয়েন্টমেন্ট" এখন নিচের "আসন্ন" গ্রিডে
     glanceRows.length > 0 && h("div", { style: { marginTop: "6px", padding: "1px 12px", borderRadius: "12px", background: "var(--hs-surface, #fff)", color: "#1F2D2A", border: "1px solid #CFE0D5" } }, glanceRows));
 }

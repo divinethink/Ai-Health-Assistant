@@ -57,7 +57,7 @@ function ocrNotesView(n, openManual) {
   return items.length > 0 ? React.createElement(React.Fragment, null, items.map((x, i) => React.cloneElement(x, { key: i }))) : null;
 }
 
-export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, presetFile, preOcr, initialManual }) {
+export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, presetFile, preOcr, initialManual, docId }) {
   const [handwrittenMode, setHandwrittenMode] = useState(!!initialManual);
   const [file, setFile] = useState(presetFile || null);
   const [savedCount, setSavedCount] = useState(0);
@@ -201,6 +201,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     candidates
       ? React.createElement(ReportVerificationForm, {
           familyId, targetMemberId, callerMemberId, candidates, extractionMethod,
+          sourceDoc: docId ? { id: docId, name: presetFile ? presetFile.name : "" } : null,
           onSaved: (n, alerts, summary) => { setCandidates(null); setSavedCount(n || 0); setSavedAlerts(alerts || []); setSavedSummary(summary || null); },
         })
       : null,

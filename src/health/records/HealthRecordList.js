@@ -15,6 +15,8 @@ import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
+import { fetchMemberSex } from "./memberSex.js";
+import { listDocuments } from "../documents/documentsData.js";
 import { guideForCondition, mergeGuide, GUIDE_DISCLAIMER } from "./conditionGuideData.js";
 import { listGuideOverrides } from "./conditionGuideStore.js";
 import { ConditionGuideEditor } from "./ConditionGuideEditor.js";
@@ -46,10 +48,18 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const [guideOv, setGuideOv] = useState({});        // অসুখ গাইডের সংশোধন (না এলে ডিফল্ট লেখা)
   const [editGuide, setEditGuide] = useState(null);    // সম্পাদনায় থাকা গাইডের id (শুধু অ্যাপ-ক্রিয়েটর)
   const [dict, setDict] = useState([]);           // ধাপ ৫: রেঞ্জ-ডিকশনারি (না এলে সতর্কতা ছাড়াই চলে)
+  const [sex, setSex] = useState(null);           // সদস্যের লিঙ্গ — পুরুষ/নারী আলাদা রেঞ্জ বাছতে
+  const [docsById, setDocsById] = useState({});   // উৎস-রিপোর্টের লিংক (না এলে শুধু নাম)
 
   const loadGuides = useCallback(() => { listGuideOverrides().then(setGuideOv).catch(() => setGuideOv({})); }, []);
   useEffect(() => { loadGuides(); }, [loadGuides]);
   useEffect(() => { fetchTestNameDictionary().then(setDict).catch(() => setDict([])); }, []);
+  useEffect(() => {
+    let alive = true;
+    fetchMemberSex(familyId, targetMemberId).then((x) => alive && setSex(x));
+    listDocuments(familyId, targetMemberId).then((ds) => alive && setDocsById(Object.fromEntries(ds.map((d) => [d.id, d])))).catch(() => alive && setDocsById({}));
+    return () => { alive = false; };
+  }, [familyId, targetMemberId, refreshTick]);
 
   useEffect(() => {
     setRecords(null);
@@ -151,7 +161,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   const obsCard = (g) => {
     const k = "obs:" + g.key, open = openKey === k;
-    const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict);
+    const latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
     return React.createElement("div", { key: k, style: { ...cardBase, padding: 0, gridColumn: open ? "1 / -1" : undefined, border: "1px solid " + (al ? "#E8B4AE" : LINE) } },
       React.createElement("button", { onClick: () => toggle(k), "aria-expanded": open, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", padding: "10px 8px", cursor: "pointer", minHeight: "44px" } },
         React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } }, g.label,
@@ -166,14 +176,19 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: G, margin: "8px 0 2px" } }, "ইতিহাস (" + g.items.length + ")"),
         g.items.map((r) => React.createElement("div", { key: r.id, style: { padding: "6px 0", borderBottom: "1px solid #EEF1EF" } },
           React.createElement("div", { style: { fontSize: "14px" } }, React.createElement("b", null, r.value + (r.unit ? " " + unitLabelBn(r.unit) : "")), "  ·  ", r.date ? bnDate(r.date) : "তারিখ নেই"),
+          (r.refLow != null && r.refHigh != null) && React.createElement("div", { style: { fontSize: "13px", color: MUTED } }, "রেঞ্জ: " + r.refLow + "–" + r.refHigh),
+          (r.sourceDocId || r.sourceDocName) && React.createElement("div", { style: { fontSize: "13px", color: MUTED, overflowWrap: "anywhere" } },
+            docsById[r.sourceDocId] && docsById[r.sourceDocId].cloudinaryUrl
+              ? React.createElement("a", { href: docsById[r.sourceDocId].cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: { color: G, fontWeight: 600 } }, "📄 " + docsById[r.sourceDocId].fileName + " — দেখুন")
+              : "📄 " + (r.sourceDocName || "রিপোর্ট")),
           actions(r)))));
   };
 
   // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়) — প্রতি টেস্টের সর্বশেষ মানই
-  const labAlerts = buildLabAlerts(obsGroups.map((g) => g.items[0]), dict);
+  const labAlerts = buildLabAlerts(obsGroups.map((g) => g.items[0]), dict, sex);
 
   return React.createElement("div", { style: { marginTop: "4px" } },
-    React.createElement(LabAlertBox, { alerts: labAlerts }),
+    React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(conditionCard))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", "ট্যাপে ইতিহাস"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))));

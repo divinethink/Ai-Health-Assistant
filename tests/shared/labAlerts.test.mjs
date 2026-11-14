@@ -1,7 +1,7 @@
 // চালান: node --test tests/shared/*.test.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { findDictEntry, evaluateLabValue, buildLabAlerts, alertForGroup, alertLine, summarizeAlerts, parseLabNumber, summarizeSaved } from "../../src/health/reports/labAlerts.js";
+import { findDictEntry, evaluateLabValue, buildLabAlerts, alertForGroup, alertLine, summarizeAlerts, parseLabNumber, summarizeSaved, describeRangeBn } from "../../src/health/reports/labAlerts.js";
 
 const Q = "qualitative (Positive/Negative)";
 const dict = [
@@ -93,4 +93,37 @@ test("summarizeSaved: 🔴/🟢/অযাচাইযোগ্য আলাদ�
   assert.equal(r.ok.length, 2);
   assert.equal(r.unchecked, 2);
   assert.deepEqual(summarizeSaved(null, dict), { alerts: [], ok: [], unchecked: 0 });
+});
+
+// ---- একক-স্কেল (/cumm) ও লিঙ্গভিত্তিক রেঞ্জ ----
+const wbc = { id: "wbc", canonicalNameEn: "Total WBC Count", synonyms: ["WBC"], unit: "×10³/µL", referenceRange: { low: 4, high: 11 } };
+const hb = { id: "hb", canonicalNameEn: "Hemoglobin (Hb)", synonyms: ["Hb"], unit: "g/dL", referenceRange: { low: 12, high: 16 } };
+const dict2 = [...dict, wbc, hb];
+const ev2 = (type, value, unit, sex, extra) => evaluateLabValue({ type, value, unit, ...extra }, findDictEntry(type, dict2), sex);
+
+test("WBC ৭৫৬০ /cumm স্বাভাবিক; পুরনো ভুল-সেভ (৭৫৬০ ×10³/µL)ও স্বাভাবিক", () => {
+  assert.equal(ev2("Total WBC Count", "7560", "cumm"), null);
+  assert.equal(ev2("Total WBC Count", "7560", "×10³/µL"), null);
+  assert.equal(ev2("Total WBC Count", "7.56", "×10³/µL"), null);
+});
+test("WBC /cumm-এ বেশি হলে সতর্কতা, রেঞ্জ ৪০০০–১১০০০ দেখায়", () => {
+  const a = ev2("Total WBC Count", "15000", "/cumm");
+  assert.equal(a.level, "high");
+  assert.deepEqual(a.range, { low: 4000, high: 11000 });
+  assert.equal(ev2("Total WBC Count", "15", "×10³/µL").level, "high");
+});
+test("Hb: পুরুষ ১৩–১৮, নারী ১১.৫–১৬.৫, লিঙ্গ অজানা হলে বিস্তৃত সীমা", () => {
+  assert.equal(ev2("Hb", "12", "g/dL", "male").level, "low");
+  assert.equal(ev2("Hb", "12", "g/dL", "female"), null);
+  assert.equal(ev2("Hb", "17.5", "g/dL", "female").level, "high");
+  assert.equal(ev2("Hb", "12", "g/dL", null), null);
+  assert.equal(ev2("Hb", "13.5", "g/dL", "male"), null);
+});
+test("রেকর্ডের নিজস্ব রেঞ্জ (refLow/refHigh) আগে ধরা হয়", () => {
+  assert.equal(ev2("Hb", "12", "g/dL", "male", { refLow: 11, refHigh: 16 }), null);
+  assert.equal(ev2("Hb", "12", "g/dL", "male", { refLow: 13, refHigh: 18 }).level, "low");
+});
+test("describeRangeBn: লিঙ্গভেদ ও সাধারণ", () => {
+  assert.equal(describeRangeBn(hb), "পুরুষ ১৩–১৮ · নারী ১১.৫–১৬.৫ g/dL");
+  assert.equal(describeRangeBn(wbc), "৪–১১ ×10³/µL");
 });

@@ -28,7 +28,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
   useEffect(() => { if (takeQuickIntent(["report"])) { fromRef.current = takeQuickOrigin(); setPanel({ mode: "add" }); } }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
 
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
-  const startAnalyze = useCallback((file, preOcr) => setPanel({ mode: "analyze", file, preOcr, key: Date.now() }), []);
+  const startAnalyze = useCallback((file, preOcr, docId) => setPanel({ mode: "analyze", file, preOcr, docId, key: Date.now() }), []);
   const startPrescription = useCallback((file, preOcr, docId) => setPanel({ mode: "prescription", file, preOcr, docId, key: Date.now() }), []);
   const startCard = useCallback((file, preOcr) => setPanel({ mode: "card", file, preOcr, key: Date.now() }), []);
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
@@ -59,7 +59,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
       }),
       panel.mode === "analyze" && React.createElement(ReportAnalysisPanel, {
         key: "analyze-" + targetMemberId + "-" + panel.key,
-        familyId, targetMemberId, callerMemberId, presetFile: panel.file, preOcr: panel.preOcr,
+        familyId, targetMemberId, callerMemberId, presetFile: panel.file, preOcr: panel.preOcr, docId: panel.docId,
       }),
       panel.mode === "prescription" && React.createElement(PrescriptionPanel, {
         key: "rx-" + targetMemberId + "-" + panel.key,

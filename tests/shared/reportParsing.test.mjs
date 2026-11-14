@@ -27,3 +27,15 @@ test("withExtraSynonyms মূল তালিকা বদলায় না; 
   assert.ok(out[1].synonyms.includes("F-T4") && !base[1].synonyms.includes("F-T4"));
   assert.strictEqual(out[0], base[0]);
 });
+
+test("WBC '7560 cumm' → ৭.৫৬ ×10³/µL, needs-review + unit-converted-cumm flag, rawValue অক্ষত", async () => {
+  const { parseAndValidateReportText } = await import("../../src/health/reports/reportParsing.js");
+  const dict = [{ id: "wbc", canonicalNameEn: "Total WBC Count", synonyms: ["WBC"], unit: "×10³/µL", referenceRange: { low: 4, high: 11 }, plausibleRange: { low: 0.1, high: 100 } }];
+  const [c] = parseAndValidateReportText("Total WBC Count (TC) 7560 cumm", dict);
+  assert.equal(c.value, 7.56);
+  assert.equal(c.unit, "×10³/µL");
+  assert.equal(c.rawValue, "7560");
+  assert.equal(c.status, "needs-review");
+  assert.ok(c.flags.includes("unit-converted-cumm"));
+  assert.ok(!c.flags.includes("unit-mismatch") && !c.flags.includes("outside-plausible-range"));
+});

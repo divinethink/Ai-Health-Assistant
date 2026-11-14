@@ -19,10 +19,11 @@
 import { TextField, DateField, ErrorBox, SuccessBox, PrimaryButton } from "../../shared/ui.js";
 import { createHealthRecord } from "../records/healthRecordsData.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
-import { buildLabAlerts, summarizeSaved } from "./labAlerts.js";
+import { buildLabAlerts, summarizeSaved, describeRangeBn } from "./labAlerts.js";
+import { fetchMemberSex } from "../records/memberSex.js";
 import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
-const { useState, useCallback } = React;
+const { useState, useCallback, useEffect } = React;
 
 // candidate-এর flags[]-কে ব্যবহারকারীর জন্য সহজ বাংলা ব্যাখ্যায় রূপান্তর —
 // reportParsing.js-এ flag-string ঠিক রেখে শুধু UI-তে label আলাদা রাখা হলো।
@@ -31,6 +32,7 @@ const FLAG_LABELS = {
   "possible-decimal-shift(×10)": "দশমিক-বিন্দু ভুল হতে পারে (১০ দিয়ে গুণ করলে স্বাভাবিক রেঞ্জে পড়ে)",
   "possible-decimal-shift(÷10)": "দশমিক-বিন্দু ভুল হতে পারে (১০ দিয়ে ভাগ করলে স্বাভাবিক রেঞ্জে পড়ে)",
   "unit-unconfirmed": "একক (unit) নিশ্চিত করা যায়নি — নিজে যাচাই করে বসান",
+  "unit-converted-cumm": "রিপোর্টে একক /cumm ছিল — অ্যাপের এককে (×10³/µL) ১০০০ দিয়ে ভাগ করে বসানো হয়েছে; রিপোর্টের সাথে মিলিয়ে নিন",
   "unit-mismatch": "একক প্রত্যাশিত এককের সাথে মিলছে না — যাচাই করুন",
   "qualitative-test-numeric-value-unexpected": "এই টেস্টের ফলাফল সাধারণত Positive/Negative — এখানে সংখ্যা পাওয়া গেছে, নিজে বসান",
   "dictionary-entry-not-found": "এই টেস্ট আমাদের ডেটাবেসে নেই — নিজে confirm করুন",
@@ -61,11 +63,18 @@ function rowFromCandidate(c) {
  * @param {string} props.targetMemberId
  * @param {string} props.callerMemberId
  * @param {Array<object>} props.candidates - reportParsing.parseAndValidateReportText() output
+ * @param {{id: string, name: string}|null} [props.sourceDoc] - আপলোড-করা রিপোর্ট-নথি; সেভ-করা প্রতিটা মানে sourceDocId/sourceDocName (উৎস-লিংক)
  * @param {"direct-text"|"ocr"} props.extractionMethod
  * @param {(savedCount: number, alerts: Array<object>, summary: {alerts: object[], ok: object[], unchecked: number}) => void} [props.onSaved] - alerts/summary: সেভ-করা মান থেকে labAlerts.js-এর ফল
  */
-export function ReportVerificationForm({ familyId, targetMemberId, callerMemberId, candidates, extractionMethod, onSaved }) {
+export function ReportVerificationForm({ familyId, targetMemberId, callerMemberId, candidates, extractionMethod, onSaved, sourceDoc }) {
   const [rows, setRows] = useState(() => candidates.map(rowFromCandidate));
+  const [dict, setDict] = useState([]); // রেঞ্জ-লাইনের জন্য (পুরুষ/নারী আলাদা); না এলে আগের সাধারণ রেঞ্জই দেখায়
+  const [sex, setSex] = useState(null);
+  useEffect(() => {
+    fetchTestNameDictionary().then(setDict).catch(() => setDict([]));
+    fetchMemberSex(familyId, targetMemberId).then(setSex);
+  }, [familyId, targetMemberId]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [savedCount, setSavedCount] = useState(0);
@@ -94,14 +103,16 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
           extractionConfidence: r.status === "ok" ? "high" : "needs-review",
           originalOcrValue: r.rawValue,
           userVerified: true, // এই ফর্ম-ই verification ধাপ — এখানে পৌঁছানো মানেই ব্যবহারকারী দেখে confirm করেছেন
+          sourceDocId: sourceDoc ? sourceDoc.id : null,
+          sourceDocName: sourceDoc ? sourceDoc.name : null,
         });
-        savedObs.push({ type: r.canonicalNameEn, value: r.value, unit: r.unit });
+        savedObs.push({ type: r.canonicalNameEn, value: r.value, unit: r.unit, sourceDocId: sourceDoc ? sourceDoc.id : null, sourceDocName: sourceDoc ? sourceDoc.name : null });
         count++;
       }
       setSavedCount(count);
       // সতর্কতা শুধু দেখানোর জন্য — dictionary না এলে নীরবে বাদ, সেভ-সফলতা প্রভাবিত নয়
-      const dict = await fetchTestNameDictionary().catch(() => []);
-      onSaved && onSaved(count, buildLabAlerts(savedObs, dict), summarizeSaved(savedObs, dict));
+      const dictNow = await fetchTestNameDictionary().catch(() => []);
+      onSaved && onSaved(count, buildLabAlerts(savedObs, dictNow, sex), summarizeSaved(savedObs, dictNow, sex));
     } catch (e) {
       setErr(e.code === "permission-denied"
         ? "এই সদস্যের জন্য স্বাস্থ্য রেকর্ড যোগ করার অনুমতি আপনার নেই।"
@@ -109,7 +120,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
     } finally {
       setBusy(false);
     }
-  }, [rows, familyId, targetMemberId, callerMemberId, extractionMethod, onSaved]);
+  }, [rows, familyId, targetMemberId, callerMemberId, extractionMethod, onSaved, sourceDoc, sex]);
 
   if (!candidates || candidates.length === 0) {
     return React.createElement(
@@ -139,10 +150,15 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
         React.createElement("input", { type: "checkbox", checked: r.include, onChange: (e) => updateRow(idx, { include: e.target.checked }) }),
         r.canonicalNameEn
       ),
-      r.referenceRange
-        ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px" } },
-            "স্বাভাবিক রেঞ্জ: " + r.referenceRange.low + "–" + r.referenceRange.high + (r.unit ? " " + r.unit : ""))
-        : null,
+      (() => {
+        const entry = dict.find((d) => (d.id || d.testId) === r.testId);
+        const line = entry && describeRangeBn(entry);
+        if (line) return React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px" } }, "স্বাভাবিক রেঞ্জ: " + line);
+        return r.referenceRange
+          ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px" } },
+              "স্বাভাবিক রেঞ্জ: " + r.referenceRange.low + "–" + r.referenceRange.high + (r.unit ? " " + r.unit : ""))
+          : null;
+      })(),
       TextField("মান", r.value, (v) => updateRow(idx, { value: v })),
       TextField("একক", r.unit, (v) => updateRow(idx, { unit: v })),
       DateField("রিপোর্টের তারিখ (ঐচ্ছিক)", r.date, (v) => updateRow(idx, { date: v })),

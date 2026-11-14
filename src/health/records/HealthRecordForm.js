@@ -12,6 +12,10 @@ import { DoctorFieldsRow } from "../doctor-details/DoctorFieldsRow.js";
 import { buildCandidates, suggestDoctors, pickPatch, isDuplicate } from "../doctor-details/doctorSuggest.js";
 
 import { OBS_PRESETS } from "../quickadd/quickAddTargets.js";
+import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
+import { findDictEntry, describeRangeBn, rangesOf, parseLabNumber } from "../reports/labAlerts.js";
+import { fetchMemberSex } from "./memberSex.js";
+import { listDocuments } from "../documents/documentsData.js";
 const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
 // ধাপ ৫: টাইল (resourceType, আইকন, নাম) — ওষুধও একই createHealthRecord পথে; রিমাইন্ডার-সময় পরে "ওষুধ" তালিকা থেকে
@@ -44,6 +48,12 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   const [reaction, setReaction] = useState("");
   const [severity, setSeverity] = useState("mild");
   const [date, setDate] = useState("");
+  const [refLow, setRefLow] = useState("");   // রেকর্ডের নিজস্ব রেঞ্জ (ঐচ্ছিক) — থাকলে সতর্কতা এই রেঞ্জ ধরেই
+  const [refHigh, setRefHigh] = useState("");
+  const [srcDocId, setSrcDocId] = useState(""); // কোন রিপোর্ট থেকে এই মান (ঐচ্ছিক)
+  const [dict, setDict] = useState([]);
+  const [sex, setSex] = useState(null);
+  const [labDocs, setLabDocs] = useState([]);
   // Treating Physician Contact — শুধু condition-এর জন্য (roadmap §12.5)
   const [phys, setPhys] = useState(EMPTY_PHYS);
   const [keepInDirectory, setKeepInDirectory] = useState(false);
@@ -83,6 +93,9 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     setReaction(r.reaction || "");
     setSeverity(r.severity || "mild");
     setDate(r.onsetDate || r.date || r.startDate || "");
+    setRefLow(r.refLow != null ? String(r.refLow) : "");
+    setRefHigh(r.refHigh != null ? String(r.refHigh) : "");
+    setSrcDocId(r.sourceDocId || "");
     const tp = r.treatingPhysician || {};
     setPhys({ name: tp.name || "", specialtyCategory: tp.specialtyCategory || "", area: tp.area || "", hospital: tp.hospital || "", phone: tp.chamberContact || "", doctorId: tp.doctorId || "" });
     setKeepInDirectory(false);
@@ -90,7 +103,7 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }, [editingRecord]);
 
   const resetFields = useCallback(() => {
-    setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate("");
+    setName(""); setObsType(""); setValue(""); setUnit(""); setReaction(""); setDate(""); setRefLow(""); setRefHigh(""); setSrcDocId("");
     setPhys(EMPTY_PHYS); setKeepInDirectory(false); setChronicManagement(false);
     setFrequency(""); setDurationDays(""); setConditionNotes("");
   }, []);
@@ -106,6 +119,10 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     if (submitting.current) return; // double-tap রোধ
     if (resourceType === "condition" && !name.trim()) { setErr(t("err.condition")); return; }
     if (resourceType === "observation" && (!obsType.trim() || !value.trim())) { setErr(t("err.observation")); return; }
+    if (resourceType === "observation" && (refLow.trim() || refHigh.trim())) {
+      const lo = parseLabNumber(refLow), hi = parseLabNumber(refHigh);
+      if (lo === null || hi === null || lo > hi) { setErr("রেঞ্জের নিম্ন ও উচ্চ দুটোই সংখ্যায় দিন (নিম্ন ≤ উচ্চ), নয়তো দুটোই ফাঁকা রাখুন।"); return; }
+    }
     if (resourceType === "medicationStatement" && !name.trim()) { setErr(t("err.medicine")); return; }
     if (resourceType === "allergy" && !name.trim()) { setErr(t("err.allergy")); return; }
     submitting.current = true;
@@ -117,6 +134,12 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
         doctorId = await ensureDoctorInDirectory(familyId, callerMemberId, phys);
       }
       const fields = { name, category, status, chronicManagement, conditionNotes, type: obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, physicianName: phys.name, physicianContact: phys.phone, physicianHospital: phys.hospital, physicianArea: phys.area, physicianCategory: phys.specialtyCategory, physicianDoctorId: doctorId };
+      if (resourceType === "observation") {
+        const sd = labDocs.find((d) => d.id === srcDocId);
+        Object.assign(fields, { refLow, refHigh, sourceDocId: srcDocId, sourceDocName: srcDocId ? (sd ? sd.fileName : (editingRecord && editingRecord.sourceDocName) || "") : "" });
+        // সম্পাদনায় উৎস-ধরন/যাচাই-চিহ্ন যেন "manual"-এ না বদলায় (লিংক ও যাচাইকৃত অবস্থা অক্ষত)
+        if (isEdit) Object.assign(fields, { source: editingRecord.source, extractionMethod: editingRecord.extractionMethod, extractionConfidence: editingRecord.extractionConfidence, originalOcrValue: editingRecord.originalOcrValue, userVerified: editingRecord.userVerified });
+      }
       if (isEdit) {
         await updateHealthRecord(familyId, editingRecord.id, resourceType, callerMemberId, fields);
         onAdded();
@@ -134,7 +157,17 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
       submitting.current = false;
       setBusy(false);
     }
-  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, phys, keepInDirectory, onAdded, resetFields, isEdit, editingRecord, onCancelEdit]);
+  }, [familyId, targetMemberId, callerMemberId, resourceType, name, category, status, chronicManagement, conditionNotes, obsType, value, unit, tier, frequency, durationDays, reaction, severity, date, phys, keepInDirectory, onAdded, resetFields, isEdit, editingRecord, onCancelEdit, refLow, refHigh, srcDocId, labDocs]);
+
+  // পরিমাপের ফর্মে রেঞ্জ-নির্দেশ ও উৎস-রিপোর্টের তালিকা (শুধু পড়া; ব্যর্থ হলে ফর্ম আগের মতোই চলে)
+  useEffect(() => {
+    if (resourceType !== "observation") return undefined;
+    let alive = true;
+    fetchTestNameDictionary().then((d) => alive && setDict(d)).catch(() => {});
+    fetchMemberSex(familyId, targetMemberId).then((x) => alive && setSex(x));
+    listDocuments(familyId, targetMemberId).then((d) => alive && setLabDocs(d.filter((x) => x.docType !== "prescription"))).catch(() => {});
+    return () => { alive = false; };
+  }, [familyId, targetMemberId, resourceType]);
 
   // সাজেশন-উৎস: ডিরেক্টরি + এই সদস্যের আগের রেকর্ড (ব্যর্থ হলে সাজেশন ছাড়াই চলে)।
   useEffect(() => {
@@ -185,7 +218,19 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   } else if (resourceType === "observation") {
     typeFields.push(TextField(t("f.obsType"), obsType, setObsType, "যেমন: রক্তের শর্করা"));
     typeFields.push(TextField(t("f.value"), value, setValue, obsType === "রক্তচাপ" || /blood pressure/i.test(obsType) ? "যেমন: 120/80" : "যেমন: 110"));
+    // স্বাভাবিক রেঞ্জ (ডিকশনারি থেকে; পুরুষ/নারী আলাদা হলে দুটোই, সদস্যেরটা চিহ্নিত)
+    const entry = findDictEntry(obsType, dict), rl = entry && describeRangeBn(entry);
+    if (rl) {
+      const split = rangesOf(entry).split;
+      typeFields.push(React.createElement("div", { key: "rng", style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px", lineHeight: 1.5 } },
+        "স্বাভাবিক রেঞ্জ: " + rl + (split && sex ? " — এই সদস্য: " + (sex === "male" ? "পুরুষ" : "নারী") : split ? " (সদস্যের লিঙ্গ দেওয়া নেই)" : "")));
+    }
     moreFields.push(TextField(t("f.unit"), unit, setUnit, "যেমন: mg/dL"));
+    moreFields.push(TextField("রেঞ্জ — নিম্ন (ঐচ্ছিক, রিপোর্টের রেঞ্জ)", refLow, setRefLow, "যেমন: 4"));
+    moreFields.push(TextField("রেঞ্জ — উচ্চ (ঐচ্ছিক)", refHigh, setRefHigh, "যেমন: 11"));
+    moreFields.push(SelectField("উৎস রিপোর্ট (ঐচ্ছিক)", srcDocId, setSrcDocId, [["", "— যুক্ত নেই —"]]
+      .concat(labDocs.map((d) => [d.id, (d.date ? d.date + " · " : "") + d.fileName]))
+      .concat(srcDocId && !labDocs.some((d) => d.id === srcDocId) ? [[srcDocId, (editingRecord && editingRecord.sourceDocName) || "মুছে যাওয়া রিপোর্ট"]] : [])));
     moreFields.push(DateField(t("f.date"), date, setDate));
   } else if (resourceType === "medicationStatement") {
     typeFields.push(TextField(t("f.medName"), name, setName, "যেমন: Paracetamol"));

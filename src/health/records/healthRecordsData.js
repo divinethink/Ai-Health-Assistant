@@ -14,6 +14,7 @@ import { notifyMember } from "../../legacy/accessGrants.js";
 import { listDoctors, createDoctor } from "../doctor-details/doctorDetailsData.js";
 import { isDuplicate } from "../doctor-details/doctorSuggest.js";
 import { getMemberRecords, invalidateMemberHealth } from "./memberHealthStore.js";
+import { parseLabNumber } from "../reports/labAlerts.js";
 
 export const RESOURCE_TYPE_LABELS = {
   condition: "রোগ/সমস্যা",
@@ -52,7 +53,21 @@ export function buildHealthRecordFields(resourceType, fields) {
     // ম্যানুয়াল entry (HealthRecordForm.js) এই field গুলো পাঠায় না বলে default
     // "manual"/userVerified:true হয় — এটাই সঠিক আচরণ (ব্যবহারকারী নিজে টাইপ
     // করেছেন মানেই verified, roadmap §8-এর userVerified-gate নীতির সাথে সংগতিপূর্ণ)।
+    // refLow/refHigh (রেকর্ডের নিজস্ব রেঞ্জ) ও sourceDocId/sourceDocName (কোন রিপোর্ট থেকে) — additive ঐচ্ছিক;
+    // কলার না পাঠালে key-ই থাকে না (বিদ্যমান মান অক্ষত), পাঠিয়ে খালি দিলে null (মুছে ফেলা)।
+    const extra = {};
+    if (fields.refLow !== undefined || fields.refHigh !== undefined) {
+      const lo = parseLabNumber(fields.refLow), hi = parseLabNumber(fields.refHigh);
+      const ok = lo !== null && hi !== null && lo <= hi;
+      extra.refLow = ok ? lo : null;
+      extra.refHigh = ok ? hi : null;
+    }
+    if (fields.sourceDocId !== undefined) {
+      extra.sourceDocId = fields.sourceDocId || null;
+      extra.sourceDocName = fields.sourceDocId ? (fields.sourceDocName || null) : null;
+    }
     return {
+      ...extra,
       type: fields.type.trim(), value: fields.value.trim(), unit: fields.unit.trim(), date: fields.date || null,
       source: fields.source || "manual",
       extractionMethod: fields.extractionMethod || null,

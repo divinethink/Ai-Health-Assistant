@@ -16,6 +16,13 @@ const MMOL_GLUCOSE = 18.016;
 const GLUCOSE_IDS = ["fbs", "rbs"];
 // সমতুল্য একক (লোয়ারকেস, স্পেস ছাড়া)
 const UNIT_GROUPS = [["miu/l", "µiu/ml", "uiu/ml"]];
+// রিপোর্টে কোষ-সংখ্যা সরাসরি লেখা হয় (৭৫৬০ /cumm); ডিকশনারিতে ×10³/µL (৭.৫৬) — তুলনায় ১০০০ দিয়ে ভাগ
+const SCALE_UNITS = ["/cumm", "cumm", "/cmm", "cmm", "/mm3", "mm3", "/mm³", "mm³", "/µl", "µl", "/ul", "ul"];
+// পুরুষ/নারীর আলাদা রেঞ্জ (ল্যাব-রিপোর্টের প্রচলিত মান)। ডিকশনারি-ডকে referenceRangeMale/Female থাকলে সেটাই আগে।
+const SEX_RANGES = {
+  hb: { male: { low: 13, high: 18 }, female: { low: 11.5, high: 16.5 } },
+  esr: { male: { low: 0, high: 10 }, female: { low: 0, high: 20 } },
+};
 
 const POSITIVE_RE = /^(weakly\s+)?(positive|reactive|detected|পজিটিভ|রিঅ্যাকটিভ)/i;
 const NEGATED_RE = /^(non[\s-]*reactive|not\s+detected|undetected)/i;
@@ -36,6 +43,41 @@ export function parseLabNumber(v) {
 
 const isQualitative = (e) => !e.referenceRange || /^qualitative/i.test(e.unit || "");
 
+const isThousandUnit = (u) => /10(\^3|³)/.test(normUnit(u));
+
+/** টেস্টের পুরুষ/নারী/সাধারণ রেঞ্জ। split = দুই লিঙ্গের রেঞ্জ আলাদা */
+export function rangesOf(e) {
+  const s = (e && SEX_RANGES[e.id || e.testId]) || {};
+  const male = (e && e.referenceRangeMale) || s.male || null;
+  const female = (e && e.referenceRangeFemale) || s.female || null;
+  return { male, female, common: (e && e.referenceRange) || null, split: !!(male && female) };
+}
+
+/** সদস্যের লিঙ্গ ("male"/"female") অনুযায়ী রেঞ্জ; লিঙ্গ অজানা হলে দুটোর বিস্তৃত সীমা (ভুল সতর্কতার চেয়ে নীরবতা নিরাপদ) */
+export function rangeForSex(e, sex) {
+  const r = rangesOf(e);
+  if (!r.split) return r.common;
+  if (sex === "male") return r.male;
+  if (sex === "female") return r.female;
+  return { low: Math.min(r.male.low, r.female.low), high: Math.max(r.male.high, r.female.high) };
+}
+
+/** রেকর্ডে ব্যবহারকারীর নিজের বসানো রেঞ্জ (refLow/refHigh, রেকর্ডের নিজের এককে) — দুটোই সংখ্যা হলে */
+export function customRange(obs) {
+  const lo = parseLabNumber(obs && obs.refLow), hi = parseLabNumber(obs && obs.refHigh);
+  return lo !== null && hi !== null && lo <= hi ? { low: lo, high: hi } : null;
+}
+
+// ×10³/µL এককের টেস্টে মান /cumm-স্কেলে থাকলে ১০০০; নইলে null।
+// পুরনো ভুল সেভ (একক ×10³/µL কিন্তু মান ৭৫৬০) — সংখ্যা ≥১০০০ হলে একইভাবে ধরা হয়।
+function scaleOf(obsUnit, e, n) {
+  if (!isThousandUnit(e.unit)) return null;
+  if (SCALE_UNITS.includes(normUnit(obsUnit))) return 1000;
+  return sameUnit(obsUnit, e.unit) && n >= 1000 ? 1000 : null;
+}
+
+const isGlucoseMmol = (obs, e) => GLUCOSE_IDS.includes(e.id || e.testId) && normUnit(obs.unit) === "mmol/l";
+
 /** observation-এর type (নাম/synonym, বড়-ছোট হাত নির্বিশেষে হুবহু মিল) থেকে dictionary entry */
 export function findDictEntry(type, dict) {
   const k = String(type || "").trim().toLowerCase();
@@ -46,14 +88,23 @@ export function findDictEntry(type, dict) {
 
 const shortName = (e) => (e.synonyms && e.synonyms[0]) || e.canonicalNameEn || e.id || "";
 
-// ব্যবহারকারীর এককে রেঞ্জ ও মান: mmol/L গ্লুকোজ হলে mg/dL-এ নিয়ে তুলনা, দেখানো হয় মূল এককেই
-function numericAlert(obs, e, n) {
-  let ref = e.referenceRange, cmp = n, show = ref;
-  if (!sameUnit(obs.unit, e.unit)) {
-    const glucose = GLUCOSE_IDS.includes(e.id || e.testId) && normUnit(obs.unit) === "mmol/l";
-    if (!glucose) return null;
-    cmp = n * MMOL_GLUCOSE;
-    show = { low: Math.round((ref.low / MMOL_GLUCOSE) * 10) / 10, high: Math.round((ref.high / MMOL_GLUCOSE) * 10) / 10 };
+// ব্যবহারকারীর এককে রেঞ্জ ও মান: mmol/L গ্লুকোজ হলে mg/dL-এ নিয়ে তুলনা, /cumm হলে ১০০০ দিয়ে ভাগ; দেখানো হয় মূল এককেই।
+// রেকর্ডের নিজস্ব রেঞ্জ (refLow/refHigh) থাকলে সেটাই (রেকর্ডের এককে) — ডিকশনারি/লিঙ্গ-রেঞ্জ ধরা হয় না।
+function numericAlert(obs, e, n, sex) {
+  const own = customRange(obs);
+  const ref = own || rangeForSex(e, sex);
+  if (!ref) return null;
+  let cmp = n, show = ref;
+  if (!own) {
+    const k = scaleOf(obs.unit, e, n);
+    if (k) {
+      cmp = n / k;
+      show = { low: ref.low * k, high: ref.high * k };
+    } else if (!sameUnit(obs.unit, e.unit)) {
+      if (!isGlucoseMmol(obs, e)) return null;
+      cmp = n * MMOL_GLUCOSE;
+      show = { low: Math.round((ref.low / MMOL_GLUCOSE) * 10) / 10, high: Math.round((ref.high / MMOL_GLUCOSE) * 10) / 10 };
+    }
   }
   const side = ONE_SIDED[e.id || e.testId];
   let level = null;
@@ -66,30 +117,33 @@ function numericAlert(obs, e, n) {
  * একটা observation থেকে সতর্কতা (না থাকলে null)।
  * @returns {{testId, name, level: "high"|"low"|"positive", value: string, unit: string, range: object|null}|null}
  */
-export function evaluateLabValue(obs, e) {
+export function evaluateLabValue(obs, e, sex) {
   if (!obs || !e) return null;
   const raw = String(obs.value == null ? "" : obs.value).trim();
-  const base = { testId: e.id || e.testId, name: shortName(e), value: raw, unit: obs.unit || "", range: null };
+  const base = {
+    testId: e.id || e.testId, name: shortName(e), value: raw, unit: obs.unit || "", range: null,
+    recordId: obs.id || null, sourceDocId: obs.sourceDocId || null, sourceDocName: obs.sourceDocName || null,
+  };
   if (isQualitative(e)) {
     return POSITIVE_RE.test(raw) && !NEGATED_RE.test(raw) ? { ...base, level: "positive" } : null;
   }
   const n = parseLabNumber(raw);
   if (n === null) return null;
-  const r = numericAlert(obs, e, n);
+  const r = numericAlert(obs, e, n, sex);
   return r ? { ...base, level: r.level, range: r.range } : null;
 }
 
 /** observation-তালিকা থেকে সব সতর্কতা (ইনপুটের ক্রম বজায় থাকে) */
-export function buildLabAlerts(observations, dict) {
+export function buildLabAlerts(observations, dict, sex) {
   return (observations || [])
-    .map((o) => evaluateLabValue(o, findDictEntry(o.type, dict)))
+    .map((o) => evaluateLabValue(o, findDictEntry(o.type, dict), sex))
     .filter(Boolean);
 }
 
 /** একই টেস্টের একাধিক সেভ-করা মান থাকলে শুধু সর্বশেষটা (items নতুন→পুরনো ধরে) */
-export function alertForGroup(items, dict) {
+export function alertForGroup(items, dict, sex) {
   const latest = items && items[0];
-  return latest ? evaluateLabValue(latest, findDictEntry(latest.type, dict)) : null;
+  return latest ? evaluateLabValue(latest, findDictEntry(latest.type, dict), sex) : null;
 }
 
 export const LEVEL_WORD = { high: "বেশি", low: "কম", positive: "" };
@@ -101,6 +155,14 @@ const fmtRange = (r) => {
   const d = (x) => (Number.isInteger(r.low) && Number.isInteger(r.high) ? fmt(x) : toBn((Math.round(x * 10) / 10).toFixed(1)));
   return d(r.low) + "–" + d(r.high);
 };
+
+/** ফর্মে দেখানোর রেঞ্জ-লাইন: "পুরুষ ১৩–১৮ · নারী ১১.৫–১৬.৫ g/dL" বা "৪–১১ ×10³/µL" (রেঞ্জ না থাকলে "") */
+export function describeRangeBn(e) {
+  if (!e) return "";
+  const r = rangesOf(e), u = e.unit && !/^qualitative/i.test(e.unit) ? " " + e.unit : "";
+  if (r.split) return "পুরুষ " + fmtRange(r.male) + " · নারী " + fmtRange(r.female) + u;
+  return r.common ? fmtRange(r.common) + u : "";
+}
 
 /** "TSH বেশি — ৮.২ (০.৪–৪.০)"; qualitative: "Dengue NS1 — Positive" */
 export function alertLine(a) {
@@ -122,18 +184,18 @@ export function summarizeAlerts(alerts, max = 3) {
  * সেভ-করা মান → ট্র্যাফিক-লাইট সারাংশ। alerts = 🔴, ok = 🟢 (dictionary-তে পরিচিত + রেঞ্জের ভেতরে),
  * unchecked = dictionary-তে নেই/একক-মান না মেলায় যাচাই করা যায়নি (চুপ থাকে, "ঠিক" বলা হয় না)।
  */
-export function summarizeSaved(observations, dict) {
+export function summarizeSaved(observations, dict, sex) {
   const alerts = [], ok = [];
   let unchecked = 0;
   for (const o of observations || []) {
     const e = findDictEntry(o.type, dict);
     if (!e) { unchecked++; continue; }
-    const a = evaluateLabValue(o, e);
+    const a = evaluateLabValue(o, e, sex);
     if (a) { alerts.push(a); continue; }
     // রেঞ্জ-তুলনা সম্ভব ছিল কিনা: qualitative বা সংখ্যা + মেলা একক (বা গ্লুকোজ mmol)
     const comparable = isQualitative(e)
       ? !!String(o.value || "").trim()
-      : parseLabNumber(o.value) !== null && (sameUnit(o.unit, e.unit) || (GLUCOSE_IDS.includes(e.id || e.testId) && normUnit(o.unit) === "mmol/l"));
+      : parseLabNumber(o.value) !== null && (!!customRange(o) || sameUnit(o.unit, e.unit) || isGlucoseMmol(o, e) || !!scaleOf(o.unit, e, parseLabNumber(o.value)));
     if (comparable) ok.push({ name: shortName(e), value: String(o.value).trim(), unit: o.unit || "" });
     else unchecked++;
   }

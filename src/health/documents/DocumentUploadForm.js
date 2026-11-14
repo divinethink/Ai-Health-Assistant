@@ -95,7 +95,7 @@ export function DocumentUploadForm({ familyId, targetMemberId, callerMemberId, o
       onUploaded && onUploaded();
       if (andNext) {
         if (kind === "prescription" && onPrescription) onPrescription(f, p, up && up.id);
-        else if (kind === "lab-report" && onAnalyze) onAnalyze(f, p);
+        else if (kind === "lab-report" && onAnalyze) onAnalyze(f, p, up && up.id);
         else if (kind === "visiting-card" && onCard) onCard(f, p);
       }
     } catch (e) {

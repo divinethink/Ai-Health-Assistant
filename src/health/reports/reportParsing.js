@@ -30,6 +30,11 @@ function normalizeUnit(u) {
   return n === "µiuml" || n === "uiuml" ? "miul" : n; // µIU/mL ≡ mIU/L (TSH-র দুই প্রচলিত একক)
 }
 
+// "cumm" জাতীয় সরাসরি-সংখ্যার একক (৭৫৬০ /cumm) ও ×10³/µL-এককের ডিকশনারি-এন্ট্রি চেনা
+const COUNT_UNITS = new Set(["cumm", "cmm", "mm3", "mm³", "µl", "ul"]);
+const isCountUnit = (u) => !!u && COUNT_UNITS.has(String(u).toLowerCase().replace(/μ/g, "µ").replace(/[^a-z0-9µ³]/g, ""));
+const isThousandDictUnit = (u) => { const n = normalizeUnit(u); return /^10/.test(n) && /µl$/.test(n); };
+
 /**
  * raw text-এর প্রতিটা line-এ dictionary-entry-র synonym খুঁজে, পাশে numeric
  * value থাকলে candidate হিসেবে বের করে।
@@ -101,14 +106,24 @@ export function validateCandidate(candidate, dictEntry) {
     };
   }
 
+  // একক-রূপান্তর (সংখ্যা সরাসরি → ×10³/µL): রিপোর্টে "7560 cumm" থাকলে অ্যাপের একক ×10³/µL-এ ১০০০ দিয়ে ভাগ।
+  // এটা দশমিক-ভুল সংশোধন নয়, নির্দিষ্ট একক-রূপান্তর — তবু flag + mandatory review (rawValue/originalOcrValue অক্ষত)।
+  let value = candidate.value;
+  let converted = false;
+  if (isCountUnit(candidate.capturedUnit) && isThousandDictUnit(dictEntry.unit)) {
+    value = Math.round(value) / 1000;
+    converted = true;
+    flags.push("unit-converted-cumm");
+  }
+
   const { low, high } = dictEntry.plausibleRange;
-  if (candidate.value < low || candidate.value > high) {
+  if (value < low || value > high) {
     flags.push("outside-plausible-range");
 
     // Decimal-shift heuristic — OCR-এ প্রায়ই দশমিক-বিন্দু miss/extra হয়;
     // ×10/÷10 করলে plausible-range-এ পড়ে কিনা শুধু নোট করা হয়, auto-correct না।
-    const shiftedUp = candidate.value * 10;
-    const shiftedDown = candidate.value / 10;
+    const shiftedUp = value * 10;
+    const shiftedDown = value / 10;
     if (shiftedUp >= low && shiftedUp <= high) flags.push("possible-decimal-shift(×10)");
     if (shiftedDown >= low && shiftedDown <= high) flags.push("possible-decimal-shift(÷10)");
   }
@@ -119,14 +134,14 @@ export function validateCandidate(candidate, dictEntry) {
   // review-এর জন্য flag হয় (silently accept করা হয় না)।
   if (!candidate.capturedUnit) {
     flags.push("unit-unconfirmed");
-  } else if (normalizeUnit(candidate.capturedUnit) !== normalizeUnit(dictEntry.unit)) {
+  } else if (!converted && normalizeUnit(candidate.capturedUnit) !== normalizeUnit(dictEntry.unit)) {
     flags.push("unit-mismatch");
   }
 
   return {
     status: flags.length > 0 ? "needs-review" : "ok",
     flags,
-    value: candidate.value,
+    value,
     unit: dictEntry.unit,
     referenceRange: dictEntry.referenceRange || null,
   };
