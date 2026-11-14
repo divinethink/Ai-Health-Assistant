@@ -208,18 +208,6 @@ export async function getActiveInvite(familyId) {
   return best;
 }
 
-// ধাপ ৩ — পুরনো `families.activeInviteToken` ফিল্ড মুছে ফেলা (idempotent; Admin-only rules)।
-export async function removeLegacyInviteField(familyId) {
-  const ref = db.collection("families").doc(familyId);
-  const snap = await ref.get();
-  if (snap.exists && snap.data().activeInviteToken !== undefined) {
-    await ref.update({
-      activeInviteToken: firebase.firestore.FieldValue.delete(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-  }
-}
-
 export async function rotateInviteLink(familyId) {
   const token = generateInviteToken();
   const old = await invitesCol(familyId).where("revoked", "==", false).get();

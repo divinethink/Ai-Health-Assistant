@@ -344,13 +344,6 @@ service cloud.firestore {
                   || request.auth.uid == resource.data.firstAdminUid))
            );
 
-      // ধাপ ৩ — পুরনো `activeInviteToken` ফিল্ড শুধু মুছে ফেলা যায় (Admin-only);
-      // নতুন করে লেখা নিষিদ্ধ। token এখন `invites/{token}`-এ (নিচে)।
-      allow update: if request.auth != null
-        && isAdminOfFamily(familyId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeInviteToken', 'updatedAt'])
-        && !('activeInviteToken' in request.resource.data);
-
       allow delete: if request.auth != null && isAppCreator();
 
       match /members/{memberId} {

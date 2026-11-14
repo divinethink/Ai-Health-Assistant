@@ -488,20 +488,11 @@ describe('Health Assistant — Firestore Rules', function () {
       );
     });
 
-    it('6f. পুরনো activeInviteToken ফিল্ড Admin শুধু মুছতে পারেন; নতুন করে লেখা বা non-admin মোছা নয়', async () => {
+    it('6f. families ডকে activeInviteToken কেউ (Admin-ও) লিখতে পারেন না', async () => {
       await seedOwned('mA', 'uidA');
-      await seed(async (db) => {
-        await setDoc(
-          doc(db, 'families', FAMILY_ID),
-          { activeInviteToken: { token: 'oldoldoldoldoldoldoldold', revoked: false } },
-          { merge: true }
-        );
-      });
       const tok = { activeInviteToken: { token: 't1', revoked: false }, updatedAt: new Date() };
       await assertFails(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), tok));
-      const del = { activeInviteToken: deleteField(), updatedAt: new Date() };
-      await assertFails(updateDoc(doc(dbAs('uidA'), 'families', FAMILY_ID), del));
-      await assertSucceeds(updateDoc(doc(dbAs(ADMIN_UID), 'families', FAMILY_ID), del));
+      await assertFails(updateDoc(doc(dbAs('uidA'), 'families', FAMILY_ID), tok));
     });
   });
 

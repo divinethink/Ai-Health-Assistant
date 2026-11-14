@@ -22,7 +22,7 @@ import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
 import { t, useLang, setLang, getLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
-import { rotateInviteLink, revokeInviteLink, getActiveInvite, removeLegacyInviteField, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
+import { rotateInviteLink, revokeInviteLink, getActiveInvite, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
 import { GoogleRelinkGate } from "../components/GoogleRelinkGate.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
@@ -319,13 +319,11 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
   useEffect(() => {
     if (!isAdmin) return undefined;
     let alive = true;
-    // ধাপ ৩: পুরনো ফিল্ড থাকলে একবার মুছে ফেলা (ব্যর্থ হলে চুপচাপ, পরের বার আবার চেষ্টা)।
-    if (familyDoc && familyDoc.activeInviteToken !== undefined) removeLegacyInviteField(familyId).catch(() => {});
     getActiveInvite(familyId)
       .then((a) => { if (alive) { setLocalToken(a); setLoaded(true); } })
       .catch(() => { if (alive) { setLoadErr(true); setLoaded(true); } });
     return () => { alive = false; };
-  }, [familyId, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [familyId, isAdmin]);
   if (!isAdmin) return null;
   if (!loaded) return React.createElement("div", { style: { marginTop: "14px", fontSize: "14px", color: "var(--hs-muted)" } }, "আমন্ত্রণ লিংক লোড হচ্ছে...");
 
