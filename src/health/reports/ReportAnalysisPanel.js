@@ -180,20 +180,23 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
     );
   }
 
+  const linkBtn = { background: "none", border: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 700, cursor: "pointer", minHeight: "44px", padding: "0 6px", fontFamily: "inherit", textDecoration: "underline", textUnderlineOffset: "3px" };
   return React.createElement(
-    "div", { style: { marginTop: "14px", padding: "12px", border: "1px solid #D3E0D9", borderRadius: "14px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
-    React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: 0 } }, "রিপোর্ট বিশ্লেষণ করুন (AI/OCR)"),
-    React.createElement("p", { style: { fontSize: "14px", color: "#5F716C", margin: "4px 0" } },
-      "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান স্বয়ংক্রিয়ভাবে শনাক্ত করার চেষ্টা করা হবে (পরের ধাপে আপনাকে যাচাই করতে হবে)।"
-    ),
-    presetFile
-      ? React.createElement("div", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", fontWeight: 600, margin: "6px 0" } }, "📄 " + presetFile.name)
-      : React.createElement("input", {
-          ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange,
-          style: { fontSize: "14px" },
-        }),
-    SecondaryButton(busy ? busyLabel : (presetFile ? "আবার বিশ্লেষণ করুন" : "বিশ্লেষণ করুন"), analyze, busy),
-    SecondaryButton("এটা হাতে-লেখা রিপোর্ট? সরাসরি লিখুন", () => setHandwrittenMode(true), false),
+    "div", { style: { marginTop: "4px" } },
+    // ফাইল-কার্ড: কোন ফাইল বিশ্লেষণ হচ্ছে + দ্রুত ক্রিয়া
+    React.createElement("div", { style: { background: "#fff", border: "1px solid #DCE6E0", borderRadius: "16px", padding: "12px 14px", boxShadow: "0 1px 3px rgba(14,75,67,0.06)" } },
+      presetFile
+        ? React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+            React.createElement("span", { "aria-hidden": true, style: { fontSize: "26px" } }, "📄"),
+            React.createElement("div", { style: { minWidth: 0 } },
+              React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, presetFile.name),
+              React.createElement("div", { style: { fontSize: "13px", color: "#5F716C" } }, busy ? busyLabel : (candidates ? "বিশ্লেষণ শেষ" : "ল্যাব রিপোর্ট"))))
+        : React.createElement(React.Fragment, null,
+            React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px", lineHeight: 1.5 } }, "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান শনাক্ত করে আপনাকে যাচাই করতে দেওয়া হবে।"),
+            React.createElement("input", { ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange, style: { fontSize: "14px", maxWidth: "100%" } })),
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px", marginTop: "10px" } },
+        React.createElement("button", { type: "button", onClick: analyze, disabled: busy, style: { minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit" } }, busy ? busyLabel : (presetFile ? "↻ আবার বিশ্লেষণ" : "বিশ্লেষণ করুন")),
+        React.createElement("button", { type: "button", onClick: () => setHandwrittenMode(true), style: linkBtn }, "✍️ হাতে-লেখা? সরাসরি লিখুন"))),
     err ? ErrorBox(err) : null,
     ocrNotes && ocrNotesView(ocrNotes, () => setHandwrittenMode(true)),
     aiJob ? React.createElement(AiAssistBar, { familyId, docType: "lab-report", ocrText: aiJob.text, onSettled: onAiSettled, label: "টেস্টের মান ঠিকমতো পড়া যায়নি — AI-র সাহায্য নেবেন?" }) : null,

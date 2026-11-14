@@ -58,3 +58,11 @@ test("RBS রিপোর্ট: হেডার/আইডি/HUMASTAR থেক
   assert.equal(out[0].unit, "mmol/L");
   assert.equal(out[0].status, "ok");
 });
+
+test("Urine মাইক্রোস্কোপি-সারি (Pus Cells/WBC 4-5 /HPF) Total WBC হিসেবে ধরা পড়ে না; আসল CBC সারি ঠিক ধরে", () => {
+  const dict = [{ id: "wbc", canonicalNameEn: "Total WBC Count", synonyms: ["WBC", "TC"], unit: "×10³/µL", referenceRange: { low: 4, high: 11 }, plausibleRange: { low: 0.1, high: 100 } }];
+  const urine = ["Epithelial Cells 1-2 /HPF 0-5", "Pus Cells/WBC 4-5 /HPF 0-3", "Pus Cells/WBC 4 - 5 HPF", "Pus Cells/WBC 4–5 /HPF", "WBC Cast 2 /HPF", "WBC Cast Nil /HPF"].join("\n");
+  assert.deepEqual(parseAndValidateReportText(urine, dict), []);
+  const cbc = parseAndValidateReportText("Total WBC Count (TC) 7560 cumm", dict);
+  assert.equal(cbc.length, 1); assert.equal(cbc[0].value, 7.56);
+});

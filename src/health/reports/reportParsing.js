@@ -71,6 +71,10 @@ export function extractCandidateValues(rawText, testDictionaryEntries) {
       let idx = -1;
       const matchedSynonym = sortedSynonyms.find((s) => { idx = indexOfWord(lowerLine, s.toLowerCase()); return idx >= 0; });
       if (!matchedSynonym) continue;
+      // মাইক্রোস্কোপি/তালিকা-সারি (প্রস্রাব-মল রিপোর্ট) কোনো ডিকশনারি-টেস্ট নয়:
+      // "Pus Cells/WBC 4-5 /HPF" থেকে Total WBC = ৪ ধরা ভুল। প্রতি-HPF/LPF সারি, "X/WBC" যৌগ নাম, "WBC Cast/Cells" বাদ।
+      if (/(^|[^a-z])[hl]pf\b/i.test(line)) continue;
+      if (/\/\s*$/.test(line.slice(0, idx))) continue;
 
       const afterText = line.slice(idx + matchedSynonym.length);
       const numMatch = afterText.match(NUMBER_PATTERN);
@@ -83,6 +87,8 @@ export function extractCandidateValues(rawText, testDictionaryEntries) {
       // তারিখ/আইডি নয়: ৬+ অঙ্কের পূর্ণসংখ্যা, বা সংখ্যার পরেই -/ও অঙ্ক (21-07-2026, 20260721-90066)
       const tail = afterText.slice(numMatch.index + numMatch[0].length);
       if (/^[0-9০-৯]{6,}$/.test(rawValue) || /^\s?[-\/][0-9০-৯]/.test(tail)) continue;
+      if (/^\s*[-–—~]\s*[0-9০-৯]/.test(tail)) continue; // "4 - 5", "4–5" = রেঞ্জ, একক মান নয়
+      if (/^\s*(casts?|cells?)\b/i.test(gap)) continue; // "WBC Cast 2" = কাস্ট, মোট WBC নয়
       const normalized = bnToEnDigits(rawValue).replace(",", ".");
       const value = parseFloat(normalized);
       if (Number.isNaN(value)) continue;
