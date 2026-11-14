@@ -12,6 +12,7 @@ import { t } from "../../shared/i18n.js";
 import { SheetFrame } from "../../shared/ui.js";
 import { DocumentUploadForm } from "./DocumentUploadForm.js";
 import { DocumentList } from "./DocumentList.js";
+import { fetchDocumentFile } from "./documentsData.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { DoctorCardPanel } from "../doctor-details/DoctorCardPanel.js";
@@ -30,6 +31,11 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
   const refresh = useCallback(() => setRefreshTick((n) => n + 1), []);
   const startAnalyze = useCallback((file, preOcr, docId) => setPanel({ mode: "analyze", file, preOcr, docId, key: Date.now() }), []);
   const startPrescription = useCallback((file, preOcr, docId) => setPanel({ mode: "prescription", file, preOcr, docId, key: Date.now() }), []);
+  // সংরক্ষিত রিপোর্ট আবার বিশ্লেষণ: ফাইল নামিয়ে একই বিশ্লেষণ-ফ্লোতে (docId সহ, তাই নতুন মান একই রিপোর্টে লিংক হয়)
+  const reanalyze = useCallback(async (d) => {
+    const file = await fetchDocumentFile(d);
+    setPanel({ mode: "analyze", file, preOcr: null, docId: d.id, key: Date.now() });
+  }, []);
   const startCard = useCallback((file, preOcr) => setPanel({ mode: "card", file, preOcr, key: Date.now() }), []);
   const startManual = useCallback(() => setPanel({ mode: "manual", key: Date.now() }), []);
 
@@ -76,7 +82,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
     ),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
-      onDeleted: refresh, onAdd: hideAdd ? undefined : () => setPanel({ mode: "add" }), excludeType, emptyText,
+      onReanalyze: reanalyze, onDeleted: refresh, onAdd: hideAdd ? undefined : () => setPanel({ mode: "add" }), excludeType, emptyText,
     })
   );
 }

@@ -7,7 +7,7 @@
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
-import { listDocuments, deleteDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
+import { listDocuments, deleteDocument, renameDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
 
 const { useState, useEffect, useCallback } = React;
 
@@ -40,13 +40,17 @@ function chipStyle(active) {
   };
 }
 
-export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd, onlyType, excludeType, emptyText, medsByDoc }) {
+export function DocumentList({ familyId, targetMemberId, callerMemberId, refreshTick, onDeleted, onAdd, onlyType, excludeType, emptyText, medsByDoc, onReanalyze }) {
   const [docs, setDocs] = useState(null);
   const [err, setErr] = useState(null);
   const [filter, setFilter] = useState("all");
   const [menuId, setMenuId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [renameId, setRenameId] = useState(null); // নাম-বদলের ইনলাইন ঘর
+  const [renameVal, setRenameVal] = useState("");
+  const [menuErr, setMenuErr] = useState(null);   // মেনু-ক্রিয়ার ত্রুটি (তালিকা না লুকিয়ে)
+  const [menuBusy, setMenuBusy] = useState(false);
   const [yearOpen, setYearOpen] = useState({}); // সাল → খোলা/বন্ধ; অনুল্লেখিত হলে সর্বশেষ সালটাই খোলা
 
   useEffect(() => {
@@ -72,6 +76,19 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
       setBusyId(null);
     }
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
+
+  const doRename = async (d) => {
+    setMenuBusy(true); setMenuErr(null);
+    try {
+      const name = await renameDocument(familyId, d.id, callerMemberId, renameVal);
+      setDocs((all) => (all || []).map((x) => (x.id === d.id ? { ...x, fileName: name } : x)));
+      setRenameId(null); setMenuId(null);
+    } catch (e) { setMenuErr(e.message || String(e)); } finally { setMenuBusy(false); }
+  };
+  const doReanalyze = async (d) => {
+    setMenuBusy(true); setMenuErr(null);
+    try { await onReanalyze(d); setMenuId(null); } catch (e) { setMenuErr(e.message || String(e)); } finally { setMenuBusy(false); }
+  };
 
   if (err) return ErrorBox(err);
   if (!docs) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
@@ -122,7 +139,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
             isRx && medsByDoc && medsByDoc[d.id] && medsByDoc[d.id].length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, "এই প্রেসক্রিপশনের ওষুধ: " + medsByDoc[d.id].join(", "))
           ),
           React.createElement("button", {
-            onClick: () => { setMenuId(menuId === d.id ? null : d.id); setConfirmId(null); },
+            onClick: () => { setMenuId(menuId === d.id ? null : d.id); setConfirmId(null); setRenameId(null); setMenuErr(null); },
             "aria-label": "আরও",
             style: { border: "none", background: "none", fontSize: "20px", cursor: "pointer", padding: "0 6px", color: "#5F716C" },
           }, "⋮")
@@ -135,11 +152,18 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           React.createElement("a", { href: getDownloadUrl(d.cloudinaryUrl), target: "_blank", rel: "noopener noreferrer", style: linkStyle(false) }, "⬇ ডাউনলোড")
         ),
         menuId === d.id && React.createElement(
-          "div", { style: { display: "flex", gap: "12px", alignItems: "center", marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #D3E0D9" } },
-          React.createElement("button", {
-            onClick: () => setConfirmId(d.id),
-            style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: "8px 0", minHeight: "44px" },
-          }, "🗑 মুছুন"),
+          "div", { style: { marginTop: "10px", paddingTop: "8px", borderTop: "1px dashed #D3E0D9" } },
+          menuErr && ErrorBox(menuErr),
+          renameId === d.id
+            ? React.createElement("div", null,
+                React.createElement("input", { type: "text", value: renameVal, onChange: (e) => setRenameVal(e.target.value), "aria-label": "নতুন নাম", style: { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px" } }),
+                React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
+                  React.createElement("button", { onClick: () => doRename(d), disabled: menuBusy, style: { ...linkStyle(true), minHeight: "44px", cursor: "pointer" } }, "সংরক্ষণ"),
+                  React.createElement("button", { onClick: () => setRenameId(null), disabled: menuBusy, style: { ...linkStyle(false), minHeight: "44px", cursor: "pointer" } }, "বাতিল")))
+            : React.createElement("div", { style: { display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap" } },
+                React.createElement("button", { onClick: () => { setRenameId(d.id); setRenameVal(d.fileName || ""); setMenuErr(null); }, style: { fontSize: "14px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", padding: "8px 0", minHeight: "44px", fontFamily: "inherit" } }, "✏️ নাম বদল"),
+                onReanalyze && d.docType === "lab-report" && d.status === "ready" && React.createElement("button", { onClick: () => doReanalyze(d), disabled: menuBusy, style: { fontSize: "14px", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", cursor: "pointer", padding: "8px 0", minHeight: "44px", fontFamily: "inherit" } }, menuBusy ? "লোড হচ্ছে..." : "🔬 আবার বিশ্লেষণ"),
+                React.createElement("button", { onClick: () => setConfirmId(d.id), style: { fontSize: "14px", border: "none", background: "none", color: "#C0392B", cursor: "pointer", padding: "8px 0", minHeight: "44px", fontFamily: "inherit" } }, "🗑 মুছুন")),
           confirmId === d.id && React.createElement(ConfirmDialog, { title: "নথিটি মুছবেন?", message: "\"" + d.fileName + "\" স্থায়ীভাবে মুছে যাবে।", busy: busyId === d.id, onConfirm: () => doDelete(d), onCancel: () => setConfirmId(null) })
         )
       );

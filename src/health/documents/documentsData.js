@@ -118,6 +118,29 @@ export async function uploadDocument(familyId, targetMemberId, callerMemberId, f
   }
 }
 
+// দেখানোর নাম বদল (শুধু fileName; ফাইল/লিংক/অন্য ফিল্ড অক্ষত)। rules: বিদ্যমান documents-update (hasWriteAccess) — নতুন rules লাগে না।
+export async function renameDocument(familyId, docId, callerMemberId, fileName) {
+  const name = String(fileName || "").trim().slice(0, 120);
+  if (!name) throw new Error("নাম ফাঁকা রাখা যাবে না।");
+  await db.collection("families").doc(familyId).collection("documents").doc(docId).update({
+    fileName: name,
+    lastEditedByMemberId: callerMemberId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  return name;
+}
+
+// সংরক্ষিত নথির ফাইল আবার নামানো (আবার-বিশ্লেষণের জন্য) — File হিসেবে
+export async function fetchDocumentFile(d) {
+  let blob;
+  try {
+    const res = await fetch(d.cloudinaryUrl);
+    if (!res.ok) throw new Error("status " + res.status);
+    blob = await res.blob();
+  } catch (e) { throw new Error("ফাইলটি আনা যায়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন।"); }
+  return new File([blob], d.fileName || "report", { type: d.originalContentType || blob.type });
+}
+
 export async function listDocuments(familyId, targetMemberId) {
   const snap = await db.collection("families").doc(familyId).collection("documents")
     .where("memberId", "==", targetMemberId).get();

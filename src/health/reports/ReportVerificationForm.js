@@ -21,6 +21,7 @@ import { createHealthRecord } from "../records/healthRecordsData.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
 import { buildLabAlerts, summarizeSaved, describeRangeBn, parseLabNumber } from "./labAlerts.js";
 import { fetchMemberSex } from "../records/memberSex.js";
+import { listHealthRecords } from "../records/healthRecordsData.js";
 import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
 const { useState, useCallback, useEffect } = React;
@@ -73,6 +74,21 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
   const [rows, setRows] = useState(() => candidates.map(rowFromCandidate));
   const [dict, setDict] = useState([]); // রেঞ্জ-লাইনের জন্য (পুরুষ/নারী আলাদা); না এলে আগের সাধারণ রেঞ্জই দেখায়
   const [sex, setSex] = useState(null);
+  const [saved, setSaved] = useState([]); // এই রিপোর্ট থেকে আগে সংরক্ষিত মান (আবার-বিশ্লেষণে তুলনার জন্য)
+  const savedFor = (r) => saved.find((o) => o.type === r.canonicalNameEn) || null; // নতুন→পুরনো ক্রমে প্রথমটাই সর্বশেষ
+  const sameAs = (r, o) => !!o && String(o.value).trim() === String(r.value).trim() && String(o.unit || "").trim() === String(r.unit || "").trim();
+  useEffect(() => {
+    if (!sourceDoc) return;
+    listHealthRecords(familyId, targetMemberId, { fresh: true })
+      .then((all) => {
+        const mine = all.filter((o) => o.resourceType === "observation" && o.sourceDocId === sourceDoc.id);
+        setSaved(mine);
+        // আগের মতো একই মান আবার সেভ করে ডুপ্লিকেট না হতে ডিফল্টে টিক-ছাড়া
+        setRows((prev) => prev.map((r) => { const o = mine.find((x) => x.type === r.canonicalNameEn); return o && sameAs(r, o) ? { ...r, include: false } : r; }));
+      })
+      .catch(() => {});
+    // eslint-disable-next-line
+  }, [familyId, targetMemberId, sourceDoc && sourceDoc.id]);
   useEffect(() => {
     fetchTestNameDictionary().then(setDict).catch(() => setDict([]));
     fetchMemberSex(familyId, targetMemberId).then(setSex);
@@ -163,6 +179,13 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
           ? React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", margin: "2px 0 6px" } },
               "স্বাভাবিক রেঞ্জ: " + r.referenceRange.low + "–" + r.referenceRange.high + (r.unit ? " " + r.unit : ""))
           : null;
+      })(),
+      (() => {
+        const o = savedFor(r);
+        if (!o) return null;
+        return React.createElement("div", { style: { fontSize: "14px", margin: "4px 0", color: sameAs(r, o) ? "#1E8A57" : "#8A5A00" } },
+          sameAs(r, o) ? "✅ এই রিপোর্ট থেকে আগেই সংরক্ষিত — একই মান (ডুপ্লিকেট এড়াতে টিক-ছাড়া)"
+            : "🔄 আগে সংরক্ষিত: " + o.value + (o.unit ? " " + o.unit : "") + " → নতুন: " + r.value + (r.unit ? " " + r.unit : "") + "। টিক দিয়ে সেভ করলে নতুন মান যোগ হবে (পুরনোটা ইতিহাসে থাকবে)।");
       })(),
       TextField("মান", r.value, (v) => updateRow(idx, { value: v })),
       TextField("একক", r.unit, (v) => updateRow(idx, { unit: v })),

@@ -55,7 +55,7 @@ import { peekQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 // id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
 const RECORD_SUBS = [
   { id: "meds", label: "মেডিসিন", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
-  { id: "records", label: "অসুখ", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
+  { id: "records", label: "রেকর্ড", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
   { id: "docs", label: "রিপোর্ট", hint: "ল্যাব রিপোর্ট, ইমেজিং, ডিসচার্জ ও অন্যান্য নথি" }, // জমা নথি (ধাপ ৩-এ প্রেসক্রিপশন ওষুধ-পিলে যাবে)
 ];
 const BN_DIGITS = "০১২৩৪৫৬৭৮৯";

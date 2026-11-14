@@ -165,7 +165,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
             h("div", { style: { fontWeight: 700, color: "#B3261E", overflowWrap: "anywhere" } }, alertLine(a)),
             d && d.cloudinaryUrl
               ? h("a", { href: d.cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: { color: INK, fontWeight: 600 } }, "📄 উৎস রিপোর্ট: " + d.fileName + " — দেখুন")
-              : h("div", { style: { color: "#5F716C" } }, a.sourceDocName ? "📄 উৎস রিপোর্ট: " + a.sourceDocName : "উৎস রিপোর্ট যুক্ত নেই — নিচে 'অসুখ' ট্যাবে মানটির ✎ সম্পাদনা থেকে যুক্ত/সংশোধন করুন।"));
+              : h("div", { style: { color: "#5F716C" } }, a.sourceDocName ? "📄 উৎস রিপোর্ট: " + a.sourceDocName : "উৎস রিপোর্ট যুক্ত নেই — নিচে 'রেকর্ড' ট্যাবে মানটির ✎ সম্পাদনা থেকে যুক্ত/সংশোধন করুন।"));
         }))),
     vaccination && glance(Icon("syringe", { size: 14 }), "টিকা", vaccination.done + "/" + vaccination.total + " সম্পন্ন" + (vaccination.overdue > 0 ? " · " + bn(vaccination.overdue) + "টির মেয়াদ পার" : "")),
   ].filter(Boolean);
