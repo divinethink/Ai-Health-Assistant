@@ -73,7 +73,8 @@ function TriggerCard({ trg }) {
 export function ReviewCards({ docs, endISO, scoreCtx, rateCtx, gutEntries, showGut, full, past }) {
   const rep = weeklyReport({ docs, endISO, scoreCtx, rateCtx });
   const focus = pickFocus(rep, rateCtx);
-  const nodes = [h(ReportCard, { key: "r", rep, past }), h(FocusCard, { key: "f", focus })];
+  // মাস-ভিউ (full): সাপ্তাহিক রিপোর্ট ও ফোকাস সপ্তাহ-ভিউয়ে আছে — এখানে পুনরাবৃত্তি নয়
+  const nodes = full ? [] : [h(ReportCard, { key: "r", rep, past }), h(FocusCard, { key: "f", focus })];
   if (full) {
     nodes.push(h(PatternCard, { key: "p", pat: habitPatterns({ docs, endISO, rateCtx }) }));
     if (showGut) nodes.push(h(TriggerCard, { key: "t", trg: triggerSearch({ docs, gutEntries, endISO }) }));

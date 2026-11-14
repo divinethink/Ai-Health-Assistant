@@ -14,21 +14,39 @@ import { Sheet, FoodPicker, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets
 
 const { useState } = React;
 
+// পরিমাণ-ধাপের শুরুর মান (সাম্প্রতিক/এডিটের আগের এন্ট্রি থেকে; অবৈধ হলে ডিফল্ট)
+function initPick(k, pre) {
+  const ms = measuresOf(k);
+  const unit = !ms.length || hasFoodOverride(k);
+  let mId = unit ? null : ms[0].id, q = 1, gt = ms.length ? String(ms[0].g) : "";
+  if (pre) {
+    const pq = Number(pre.qty);
+    if (unit) { if (pq > 0) q = pq; }
+    else if (pre.measure && ms.some((m) => m.id === pre.measure) && pq > 0) { mId = pre.measure; q = pq; }
+    else if (Number(pre.grams) > 0) { mId = "g"; gt = String(pre.grams); }
+  }
+  return { mId, q, gt };
+}
+
 const GREEN = "var(--hs-primary, #0E4B43)";
 const MUTED = "#5F716C";
 const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#fff", color: on ? "#fff" : "#1F2D2A" });
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
 // props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), recent (ঐচ্ছিক, foodCalc.recentFoodEntries), busy, err, onAdd(entry) → Promise<boolean>, onClose
-export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
-  const [slot, setSlot] = useState(initialSlot || slotForNow());
-  const [stage, setStage] = useState(pickFirst ? "pick" : "food"); // "pick" = বেলার তালিকা (Healthify-র মতো), "food" = খাবার খোঁজা
-  const [key, setKey] = useState(null);
-  const [measureId, setMeasureId] = useState(null); // measure id | "g" (গ্রাম)
-  const [qty, setQty] = useState(1);
-  const [gramsText, setGramsText] = useState("");
+export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirst, allergyTags, avoidCtx, activeMeds, count, slotBudgets, recent, busy, err, onAdd, onClose }) {
+  // এডিট: লগ করা খাবারে ট্যাপ করলে আগের পরিমাণসহ খোলে; "সংরক্ষণ" পুরনো এন্ট্রি বদলায় (নতুন যোগ নয়)
+  const editKey = editEntry && editEntry.key && FOODS[editEntry.key] ? editEntry.key : null;
+  const [slot, setSlot] = useState((editEntry && editEntry.slot) || initialSlot || slotForNow());
+  const [stage, setStage] = useState(pickFirst && !editEntry ? "pick" : "food"); // "pick" = বেলার তালিকা (Healthify-র মতো), "food" = খাবার খোঁজা
+  const pre0 = editKey ? initPick(editKey, editEntry) : null;
+  const [key, setKey] = useState(editKey);
+  const [measureId, setMeasureId] = useState(pre0 ? pre0.mId : null); // measure id | "g" (গ্রাম)
+  const [qty, setQty] = useState(pre0 ? pre0.q : 1);
+  const [gramsText, setGramsText] = useState(pre0 ? pre0.gt : "");
   const [notice, setNotice] = useState(null);
-  const [own, setOwn] = useState(null); // null = বন্ধ; অবজেক্ট = "নিজে যোগ করুন" ফর্ম
+  const s0 = (v) => (v === undefined || v === null ? "" : String(v));
+  const [own, setOwn] = useState(editEntry && !editKey ? { name: s0(editEntry.name), kcal: s0(editEntry.kcal), grams: s0(editEntry.grams), p: s0(editEntry.p), c: s0(editEntry.c), f: s0(editEntry.f), fib: s0(editEntry.fib) } : null); // null = বন্ধ; অবজেক্ট = "নিজে যোগ করুন" ফর্ম
   const [ownErr, setOwnErr] = useState(null);
   const [showInfo, setShowInfo] = useState(false); // "হিসাবের তথ্য" ভাঁজ
   const slotList = slots || MEAL_SLOTS;
@@ -37,15 +55,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
 
   // pre (ঐচ্ছিক) = সাম্প্রতিক এন্ট্রি: আগের বারের মাপ/পরিমাণ/গ্রাম আগে থেকে বসে; অবৈধ হলে ডিফল্ট।
   const pick = (k, pre) => {
-    const ms = measuresOf(k);
-    const unit = !ms.length || hasFoodOverride(k);
-    let mId = unit ? null : ms[0].id, q = 1, gt = ms.length ? String(ms[0].g) : "";
-    if (pre) {
-      const pq = Number(pre.qty);
-      if (unit) { if (pq > 0) q = pq; }
-      else if (pre.measure && ms.some((m) => m.id === pre.measure) && pq > 0) { mId = pre.measure; q = pq; }
-      else if (Number(pre.grams) > 0) { mId = "g"; gt = String(pre.grams); }
-    }
+    const { mId, q, gt } = initPick(k, pre);
     setKey(k); setNotice(null); setQty(q); setMeasureId(mId); setGramsText(gt);
   };
   const back = () => { setKey(null); };
@@ -74,7 +84,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
       if (r.error) { setOwnErr(r.error); return; }
       setOwnErr(null);
       const ok = await onAdd(r.entry);
-      if (ok) { setNotice("✓ " + r.entry.name + " যোগ হয়েছে (" + slotLabel + ") — পরে ‘সাম্প্রতিক’-এ ১ ট্যাপে পাবেন"); setOwn(null); }
+      if (ok) { if (editEntry) { onClose(); return; } setNotice("✓ " + r.entry.name + " যোগ হয়েছে (" + slotLabel + ") — পরে ‘সাম্প্রতিক’-এ ১ ট্যাপে পাবেন"); setOwn(null); }
     };
     return React.createElement(Sheet, { title: "নিজে যোগ করুন", subtitle: slotLabel + " · আপনার দেওয়া আনুমানিক মান", onClose, soft: true },
       React.createElement("button", { onClick: () => { setOwn(null); setOwnErr(null); }, style: { ...BTN, border: "none", background: "#EEF3F0", color: GREEN, marginBottom: "6px" } }, "← খাবার খুঁজুন"),
@@ -88,7 +98,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
       (ownErr || err) && Msg(ownErr || err, "err"),
       full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। আগের কোনোটি মুছুন।", "warn"),
       React.createElement("div", { style: { position: "sticky", bottom: 0, display: "flex", gap: "8px", marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff" } },
-        primaryBtn("যোগ করুন (" + slotLabel + ")", saveOwn, busy, full)));
+        primaryBtn((editEntry ? "সংরক্ষণ করুন (" : "যোগ করুন (") + slotLabel + ")", saveOwn, busy, full)));
   }
 
   // ---------- বেলা বাছাই: "খাওয়া / বরাদ্দ" সহ তালিকা ----------
@@ -154,7 +164,7 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
   const submit = async () => {
     if (!entry || busy || full) return;
     const ok = await onAdd(entry);
-    if (ok) { setNotice("✓ " + f.n + " যোগ হয়েছে (" + slotLabel + ")"); setKey(null); }
+    if (ok) { if (editEntry) { onClose(); return; } setNotice("✓ " + f.n + " যোগ হয়েছে (" + slotLabel + ")"); setKey(null); }
   };
 
   // ---- পরিমাণ-ধাপের নতুন বিন্যাস: ফল (ক্যালরি+ম্যাক্রো) আগে → কতটুকু (মাপ-চিপ + বড় ± স্টেপার) → তথ্য ভাঁজে → স্থির বাটন ----
@@ -221,5 +231,5 @@ export function FoodLogSheet({ dateText, slots, initialSlot, pickFirst, allergyT
     // "হিসাবের তথ্য" বামে, "যোগ করুন" একই লাইনে সর্ব ডানে
     h("div", { style: { position: "sticky", bottom: 0, marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2", display: "flex", alignItems: "center", gap: "10px" } },
       h("button", { type: "button", onClick: () => setShowInfo((v) => !v), "aria-expanded": showInfo, style: { minHeight: "48px", padding: "0 4px", border: "none", background: "transparent", color: GREEN, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flex: "0 0 auto" } }, "ℹ️ হিসাবের তথ্য"),
-      primaryBtn((st.level === "red" ? "তবু যোগ করুন" : "যোগ করুন") + " (" + slotLabel + ")", submit, busy, !entry || full)));
+      primaryBtn((st.level === "red" ? "তবু " : "") + (editEntry ? "সংরক্ষণ করুন" : "যোগ করুন") + " (" + slotLabel + ")", submit, busy, !entry || full)));
 }

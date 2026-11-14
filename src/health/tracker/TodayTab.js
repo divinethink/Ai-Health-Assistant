@@ -28,7 +28,9 @@ import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
 
 const { useState, useEffect, useRef } = React;
-import { takeQuickIntent } from "../../shared/quickIntent.js";
+import { takeQuickIntent, peekQuickIntent } from "../../shared/quickIntent.js";
+
+let keepSel = { memberId: null, date: null }; // ⊕ দ্রুত-যোগের রিমাউন্টে বাছা তারিখ রাখার জন্য (শুধু মেমোরিতে)
 
 const SHORT_DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
 
@@ -87,7 +89,11 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
   const today = todayISO();
-  const [selDate, setSelDate] = useState(today);
+  // ⊕ দ্রুত-যোগে পেজ নতুন করে আঁকা হয় — তখন বাছা তারিখ ধরে রাখি (নইলে গতকালের বদলে আজকে লেখা হতো)
+  const [selDate, setSelDate] = useState(() => (peekQuickIntent(["weight", "sleep", "food", "water"]) && keepSel.memberId === memberId && keepSel.date && inRange(keepSel.date, today) ? keepSel.date : today));
+  useEffect(() => { keepSel = { memberId, date: selDate }; }, [memberId, selDate]);
+  const [weekInfo, setWeekInfo] = useState(false);
+  const [editIdx, setEditIdx] = useState(null); // খাবার-লগে ট্যাপ করে এডিট: extras-এর index
   const [dietOpen, setDietOpen] = useState(false);
   const [gutOpen, setGutOpen] = useState(false);
   const viewDate = clampISO(selDate, today);
@@ -174,7 +180,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     catch (x) { setFoodErr(x.code === "permission-denied" ? "এই সদস্যের তথ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x))); try { await onSaved(); } catch (_e) { /* রিফ্রেশ ব্যর্থ — মূল ত্রুটিই দেখানো হচ্ছে */ } return false; }
     finally { setBusy(false); }
   };
-  const openFood = (slotId) => { setFoodErr(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
+  const openFood = (slotId) => { setFoodErr(null); setEditIdx(null); setFoodSlot(typeof slotId === "string" ? slotId : null); setFoodOpen(true); };
+  const openEdit = (idx) => { if (busy || !extras[idx]) return; setFoodErr(null); setEditIdx(idx); setFoodSlot(extras[idx].slot); setFoodOpen(true); };
+  const closeFood = () => { setFoodErr(null); setEditIdx(null); setFoodOpen(false); };
 
   // ধাপ ৩: ব্যায়াম/ঘুম/স্টেপ/ওজন শিট। saveDaily একই (নির্দিষ্ট ডক-ID + merge); busy লক = double-tap নিরাপদ।
   const [wFlash, setWFlash] = useState(false);
@@ -210,7 +218,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   // তারিখ-নেভিগেশন: ক্যালেন্ডার-শিট, সোয়াইপ। শিট খোলা থাকলে সোয়াইপ বন্ধ (ইনপুটে টান দিয়ে দিন বদলে না যায়)।
   const [calOpen, setCalOpen] = useState(false);
   const touch = useRef(null);
-  const pickDay = (iso) => { if (inRange(iso, today)) { setSelDate(iso); setFoodOpen(false); setInKind(null); setCalOpen(false); } };
+  const pickDay = (iso) => { if (inRange(iso, today)) { setSelDate(iso); setEditIdx(null); setFoodOpen(false); setInKind(null); setCalOpen(false); } };
   const goDay = (n) => pickDay(shiftISO(viewDate, n));
   const swipeOk = !(foodOpen || inKind || calOpen);
   const onTouchStart = (e) => {
@@ -346,6 +354,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: T.ink } }, "এই সপ্তাহ"),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
           React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, bnNum(week.hitCount) + "/৭ দিন টার্গেটে"),
+          React.createElement("button", { type: "button", onClick: () => setWeekInfo((v) => !v), "aria-label": "সপ্তাহের হিসাবের নিয়ম", "aria-expanded": weekInfo, style: { minWidth: "44px", minHeight: "44px", margin: "-12px -8px -12px -6px", border: "none", background: "none", color: T.green, fontSize: "18px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "ⓘ"),
           // পুরো ট্রেন্ড হোমে নয় — শুধু প্রবেশ-পথ (হোম হালকা থাকে); ট্যাপ এরিয়া ৪৪px, ভিজ্যুয়াল ছোট
           onOpenTrend && React.createElement("button", { type: "button", onClick: onOpenTrend, "aria-label": "অ্যাক্টিভিটি রিভিউ দেখুন", style: { minHeight: "44px", margin: "-12px -6px -12px 0", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, "রিভিউ ›"))),
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginTop: "6px" } },
@@ -360,7 +369,14 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
               boxShadow: isSel ? "0 0 0 2px var(--hs-surface, #fff), 0 0 0 4px " + T.green : "none",
               border: partial ? "2px solid " + (isToday ? T.orange : T.green) : hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : partial ? bnNum(x.metCount) : isToday ? "আজ" : isFast ? "🌙" : ""));
         })),
-      React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, "✓ = টার্গেট (২+ লক্ষ্য) · সংখ্যা = পূরণ হওয়া লক্ষ্য")),
+      React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, "✓ = টার্গেট (২+ লক্ষ্য) · সংখ্যা = পূরণ হওয়া লক্ষ্য"),
+      weekInfo && React.createElement("div", { role: "note", style: { marginTop: "8px", padding: "8px 10px", borderRadius: "12px", background: "var(--hs-chip-bg, #E4F0E9)", fontSize: "12.5px", lineHeight: 1.6, color: T.ink } },
+        React.createElement("div", { style: { fontWeight: 700 } }, "বৃত্তের সংখ্যা = ওই দিন কয়টি লক্ষ্য পূরণ হয়েছে"),
+        calc && React.createElement("div", null, "• ক্যালরি: টার্গেটের ৮০%–১১০% (" + bnNum(Math.round(calc.calorieTarget * 0.8)) + "–" + bnNum(Math.round(calc.calorieTarget * 1.1)) + ")"),
+        React.createElement("div", null, "• ব্যায়াম: কমপক্ষে " + bnNum(exTarget) + " মিনিট"),
+        waterTarget && React.createElement("div", null, "• পানি: কমপক্ষে " + bnNum(waterTarget) + " গ্লাস"),
+        React.createElement("div", null, "• ঘুম: কমপক্ষে " + bnNum(sMin) + " ঘণ্টা"),
+        React.createElement("div", { style: { marginTop: "4px" } }, "✓ = ২টি বা বেশি লক্ষ্য পূরণ। স্টেপ এই গণনায় নেই। সিয়ামের দিনে ক্যালরি ধরা হয় না."))),
     ],
     meds: () => [
     // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)
@@ -393,7 +409,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
           React.createElement("button", { type: "button", onClick: () => openFood(sl.id), "aria-label": sl.label + "-এ খাবার যোগ করুন", style: { flexShrink: 0, width: "44px", height: "44px", margin: "-6px -6px -6px 0", padding: 0, border: "none", background: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontFamily: "inherit" } },
             React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, color: T.green, fontSize: "20px", fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } }, "＋"))),
         mine.map((x) => { const st = x.key && Object.prototype.hasOwnProperty.call(FOODS, x.key) ? foodStatus(x.key, FOODS[x.key], { allergyTags: info.allergyTags, ctx: { age: info.age, flags: info.flags, condKeys: info.condKeys } }) : null; const sc = st && STATUS_COLORS[st.level]; return React.createElement("div", { key: x.idx, title: st ? st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : "") : undefined, style: { display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", borderRadius: "10px", border: "1px solid " + (sc ? sc.border : "transparent"), background: sc ? sc.bg : "transparent", marginTop: "6px" } },
-          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { role: "button", tabIndex: 0, "aria-label": x.name + " বদলান", onClick: () => openEdit(x.idx), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(x.idx); } }, style: { flex: 1, minWidth: 0, cursor: busy ? "default" : "pointer" } },
             React.createElement("div", { style: { fontSize: "14px", color: sc ? sc.text : T.ink, fontWeight: sc ? 600 : 400 } }, st ? st.icon + " " + x.name : x.name),
             st && st.level !== "green" && React.createElement("div", { style: { fontSize: "12px", color: sc.text } }, st.label + (st.reasons.length ? " — " + st.reasons[0] : "")),
             React.createElement("div", { style: { fontSize: "12px", color: T.muted } }, [entryAmountText(x), bnNum(x.kcal) + " ক্যাল", x.p !== undefined ? "প্রো " + fmtMacro(x.p) + " · কার্ব " + fmtMacro(x.c) + " · ফ্যাট " + fmtMacro(x.f) : ""].filter(Boolean).join(" · "))),
@@ -428,7 +444,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       dateText, slots: slotsForDay(plannedFast, dayDoc), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
-      count: extras.length, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras([...extras, entry]), onClose: () => { setFoodErr(null); setFoodOpen(false); },
+      count: editIdx !== null ? extras.length - 1 : extras.length, editEntry: editIdx !== null ? extras[editIdx] : null, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras(editIdx !== null ? extras.map((x, i) => (i === editIdx ? entry : x)) : [...extras, entry]), onClose: closeFood,
     }),
 
 
