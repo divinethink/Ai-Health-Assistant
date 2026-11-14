@@ -230,10 +230,18 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   // হিরোতে BMI-এর ডানে ছোট তারিখ-বাটন; অন্য দিনে কমলা + "আজ ↩"। ট্যাপ-এরিয়া ৪৪px (ভিজ্যুয়াল ছোট)।
   const pill = (bg, fg) => ({ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "12.5px", fontWeight: 700, whiteSpace: "nowrap" });
   const hitBtn = { minHeight: "44px", margin: "-8px 0", padding: "0 2px", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center" };
-  const dateChip = React.createElement("span", { style: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "2px" } },
-    !isViewToday && React.createElement("button", { type: "button", onClick: () => pickDay(today), "aria-label": "আজকের দিনে ফিরুন", style: hitBtn }, React.createElement("span", { style: pill("rgba(255,255,255,0.18)", T.onDark) }, "আজ ↩")),
+  // ‹ › = আগের/পরের দিন (আজকে › বন্ধ, ৩০ দিনের সীমায় ‹ বন্ধ); "আজ ↩" বাটন বাদ (owner-approved ২০২৬-১১-১৪) — সোয়াইপ আগের মতোই
+  const canPrev = inRange(shiftISO(viewDate, -1), today), canNext = inRange(shiftISO(viewDate, 1), today);
+  const navBtn = (dir, ok, dark) => React.createElement("button", { type: "button", disabled: !ok, onClick: () => goDay(dir), "aria-label": dir < 0 ? "আগের দিন" : "পরের দিন",
+    style: { ...hitBtn, minWidth: "36px", justifyContent: "center", margin: "-8px -6px", cursor: ok ? "pointer" : "default", opacity: ok ? 1 : 0.35 } },
+    React.createElement("span", { style: { width: "26px", height: "26px", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", background: dark ? "rgba(255,255,255,0.18)" : "var(--hs-chip-bg)", color: dark ? T.onDark : T.green } },
+      Icon(dir < 0 ? "chevronLeft" : "chevronRight", { size: 16, stroke: 2.4 })));
+  const mkChip = (dark) => React.createElement("span", { style: { marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "2px", flexShrink: 0 } },
+    navBtn(-1, canPrev, dark),
     React.createElement("button", { type: "button", onClick: () => setCalOpen(true), "aria-label": "তারিখ বেছে নিন, এখন " + shortDate, style: hitBtn },
-      React.createElement("span", { style: pill(isViewToday ? "#F3E6CC" : T.orange, isViewToday ? T.green : T.onDark) }, Icon("calendar", { size: 14 }), shortDate)));
+      React.createElement("span", { style: pill(isViewToday ? "#F3E6CC" : T.orange, isViewToday ? T.green : T.onDark) }, Icon("calendar", { size: 14 }), shortDate)),
+    navBtn(1, canNext, dark));
+  const dateChip = mkChip(true);
 
   const glasses = wLocal !== null ? wLocal : (d.waterGlasses || 0);
   const bmiVal = bmiOf(info.weightKg, info.heightCm);
@@ -253,13 +261,14 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     // হিরো-কার্ড: নাম/বয়স/BMI + ক্যালরি রিং + আজকের হিসাব (গ্রাম, শুধু যোগফল — টার্গেট/শতাংশ নেই)। AlertStrip নিচে।
     calc && React.createElement("div", { style: { ...HOME_CARD, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
-      React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 10px", marginBottom: "6px" } },
-        React.createElement("span", { style: { fontSize: "21px", fontWeight: 700, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" } }, info.member && info.member.name ? info.member.name : "আমার"),
-        info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, bnNum(info.age) + " বছর"),
-        // BMI — শুধু সংখ্যা (ইংরেজি, রং/মন্তব্য নেই); ট্যাপে আজকের ওজন যোগ/বদলের শিট
-        React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "28px", padding: "0 4px", borderRadius: "999px", border: "none", background: "transparent", color: T.onDark, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px" } },
-          bmiVal ? "বিএমআই " + (Math.round(bmiVal * 10) / 10).toLocaleString("bn-BD", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "ওজন দিন",
-          React.createElement("span", { "aria-hidden": "true", style: { fontSize: "12px", opacity: 0.75 } }, "✎")),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "nowrap", gap: "10px", marginBottom: "6px" } },
+        React.createElement("span", { style: { fontSize: "21px", fontWeight: 700, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" } }, info.member && info.member.name ? info.member.name : "আমার"),
+        // বয়স + BMI: দুই লাইনের ছোট স্তম্ভ (ইংরেজি সংখ্যা); BMI-তে ট্যাপে আজকের ওজন যোগ/বদলের শিট
+        React.createElement("span", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-start", flexShrink: 0, lineHeight: 1.15 } },
+          info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "11.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, String(info.age) + (info.age === 1 ? " year" : " years")),
+          React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "16px", padding: 0, border: "none", background: "transparent", color: T.onDark, fontSize: "11.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px", lineHeight: 1.15 } },
+            bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
+            React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎"))),
         dateChip),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
         React.createElement(Ring, { pct: onFast ? 0 : (eaten > calc.calorieTarget ? 100 : pctOf(eaten, calc.calorieTarget)), redFrom: !onFast && eaten > calc.calorieTarget ? (calc.calorieTarget / eaten) * 100 : undefined, size: 96, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
@@ -393,7 +402,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
   return React.createElement("div", { onTouchStart, onTouchEnd },
     // হিরো না থাকলে (গেট/উপবাস) তারিখ-বাটন আলাদা সারিতে
-    (!calc || !heroFixed) && React.createElement("div", { style: { display: "flex", marginBottom: "6px" } }, dateChip),
+    (!calc || !heroFixed) && React.createElement("div", { style: { display: "flex", marginBottom: "6px" } }, mkChip(false)),
     gate.blocked && React.createElement(Notice, null,
       React.createElement("b", null, "ক্যালরি-টার্গেটের জন্য তথ্য লাগবে"), React.createElement("br"), gate.reason,
       React.createElement("br"), "এখানে পানি, ব্যায়াম ও ঘুম ট্র্যাক করা যাবে।"),

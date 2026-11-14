@@ -58,6 +58,7 @@ const P = {
   bot: [["path", { d: "M12 8V4H8" }], ["rect", { x: 4, y: 8, width: 16, height: 12, rx: 2 }], ["path", { d: "M2 14h2" }], ["path", { d: "M20 14h2" }], ["path", { d: "M15 13v2" }], ["path", { d: "M9 13v2" }]],
   copy: [["rect", { x: 8, y: 8, width: 14, height: 14, rx: 2 }], ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" }]],
   check: [["path", { d: "M20 6 9 17l-5-5" }]],
+  chevronLeft: [["path", { d: "m15 18-6-6 6-6" }]],
   chevronRight: [["path", { d: "m9 18 6-6-6-6" }]],
   search: [["circle", { cx: 11, cy: 11, r: 8 }], ["path", { d: "m21 21-4.3-4.3" }]],
 };
