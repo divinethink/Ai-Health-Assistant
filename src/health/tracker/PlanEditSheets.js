@@ -104,7 +104,7 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
     React.createElement("div", { style: { position: "sticky", top: 0, zIndex: 2, background: "#F3F7F4", padding: "2px 0 6px" } },
       React.createElement("div", { style: { position: "relative" } },
         React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "18px", pointerEvents: "none" } }, "🔍"),
-        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — ভাত, Rice, ইলিশ", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
+        React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — ভাত, Rice, ইলিশ", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 0 0 3px rgba(212,175,55,0.10), 0 0 14px rgba(212,175,55,0.20), 0 3px 10px rgba(14,75,67,0.08)" } }))),
     between || null,
     React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "16px 2px 6px", letterSpacing: "0.3px" } }, "ধরন অনুযায়ী"),
     // ধরন-ট্যাগ: ছোট-কোণ আয়তাকার, হালকা-বেগুনি ভরাট + বেগুনি বর্ডার

@@ -130,7 +130,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
       // বেলা-চিপ: ছোট, স্ক্রিনে আঁটে (সোয়াইপ/স্ক্রলবার নেই); বেশি হলে নিচের লাইনে নামে
       // বেলা-ট্যাব: একটাই সেগমেন্টেড বার (গোল পিল নয়) — নিচের খাবার-ধরন চিপ থেকে আকারে আলাদা
       React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "-6px 2px 6px", letterSpacing: "0.3px" } }, "কোন বেলা?"),
-      React.createElement("div", { role: "tablist", "aria-label": "বেলা", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "#E3ECE6", boxShadow: "inset 0 1px 3px rgba(14,75,67,0.12)", marginBottom: "18px" } },
+      React.createElement("div", { role: "tablist", "aria-label": "বেলা", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "#E3ECE6", boxShadow: "inset 0 1px 3px rgba(14,75,67,0.12)", marginBottom: "8px" } },
         slotList.map((s) => { const on = s.id === slot; return React.createElement("button", { key: s.id, type: "button", role: "tab", onClick: () => setSlot(s.id), "aria-selected": on, "aria-pressed": on,
           style: { flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
             boxShadow: on ? "0 4px 10px rgba(14,75,67,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
