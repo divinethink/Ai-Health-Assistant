@@ -121,7 +121,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
     React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "2px 2px 6px", letterSpacing: "0.3px" } }, "সাম্প্রতিক খাবার"),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "6px" } },
       quick.slice(0, 6).map((e) => React.createElement("button", { key: e.name, type: "button", onClick: () => openQuick(e), disabled: busy || (full && !(e.key && FOODS[e.key])), title: e.name, "aria-label": e.name + " " + (entryAmountText(e) || "") + " — পরিমাণ বেছে " + slotLabel + "-এ যোগ করুন",
-        style: { minHeight: "44px", padding: "4px 6px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", lineHeight: 1.2, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+        style: { minHeight: "36px", padding: "2px 6px", borderRadius: "12px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", lineHeight: 1.2, textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
           border: "1px solid rgba(127,150,140,0.22)", borderLeft: "3px solid #17705F", background: "linear-gradient(180deg, #fff, #F7FAF8)", boxShadow: "0 2px 6px rgba(14,75,67,0.08)", opacity: busy ? 0.5 : 1 } }, e.name))));
 
   // ---------- ধাপ ১: খোঁজা ----------

@@ -8,7 +8,7 @@ import { foodMatches } from "../../shared/searchAliases.js";
 
 export const FOOD_GROUPS = [
   ["rice", "ভাত-রুটি"], ["curry", "তরকারি-ডাল"], ["protein", "মাছ-মাংস-ডিম"],
-  ["fruit", "ফল"], ["snack", "নাস্তা-মিষ্টি"], ["drink", "পানীয়"],
+  ["snack", "নাস্তা-মিষ্টি"], ["fruit", "ফল"], ["drink", "পানীয়"],
 ];
 
 
