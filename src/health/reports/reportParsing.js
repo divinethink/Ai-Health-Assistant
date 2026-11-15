@@ -49,6 +49,43 @@ const isCountUnit = (u) => !!u && COUNT_UNITS.has(String(u).toLowerCase().replac
 const isGlucoseEntry = (e) => ["fbs", "rbs"].includes(e.id || e.testId) && normalizeUnit(e.unit) === "mgdl";
 const isThousandDictUnit = (u) => { const n = normalizeUnit(u); return /^10/.test(n) && /µl$/.test(n); };
 
+// প্রস্রাব-রিপোর্ট চেনার চিহ্ন (context:"urine" এন্ট্রি শুধু এমন রিপোর্টেই মেলে)
+const CONTEXT_PATTERNS = { urine: /urin|r\/m\/e|\bhpf\b|প্রস্রাব|ইউরিন/i };
+
+// প্রস্রাব-সারির মান: নাম-এর ঠিক পরে (":" থাকতে পারে) Nil/Negative/Positive/Trace/+/সংখ্যা/১-২ রেঞ্জ
+const ROW_VALUE_RE = /^\s*:?\s*(nil|negative|positive|absent|present|trace|normal|plenty|numerous|few|occasional|[0-9০-৯]+\s*\+|\++|[0-9০-৯]+(?:\.[0-9০-৯]+)?(?:\s*[-–]\s*[0-9০-৯]+(?:\.[0-9০-৯]+)?)?)(?![a-z])/i;
+const ROW_UNIT_RE = /^\s*(\/?\s*[hl]pf\b|mg\s*\/\s*d[lL]|g\s*\/\s*d[lL]|mmol\s*\/\s*l)/i;
+const ROW_REF_RE = /^\s*([0-9০-৯]+(?:\.[0-9০-৯]+)?)\s*[-–]\s*([0-9০-৯]+(?:\.[0-9০-৯]+)?)/;
+
+function normalizeRowUnit(u) {
+  const t = String(u || "").replace(/\s+/g, "");
+  if (/^\/?hpf$/i.test(t)) return "/HPF";
+  if (/^\/?lpf$/i.test(t)) return "/LPF";
+  return t.replace(/L$/, "L").replace(/dl$/i, "dL");
+}
+
+/** প্রস্রাব-সারি (Nil / ৪-৫ /HPF / Positive / ১.০১৫) → candidate-অংশ, না মিললে null */
+function parseRowValue(afterText, entry) {
+  if (entry.excludeAfter && entry.excludeAfter.test(afterText)) return null;
+  const m = afterText.match(ROW_VALUE_RE);
+  if (!m) return null;
+  const raw = m[1].replace(/\s+/g, "");
+  if (entry.kind === "numeric" && !/^[0-9০-৯]+(?:\.[0-9০-৯]+)?$/.test(raw)) return null;
+  let rest = afterText.slice(m[0].length);
+  const um = rest.match(ROW_UNIT_RE);
+  const capturedUnit = um ? normalizeRowUnit(um[1]) : null;
+  if (um) rest = rest.slice(um[0].length);
+  const rm = rest.match(ROW_REF_RE); // ল্যাবের নিজের স্বাভাবিক রেঞ্জ (যেমন "0-3", "1.010 - 1.030")
+  const toEn = (x) => bnToEnDigits(x);
+  return {
+    rawValue: raw,
+    value: entry.kind === "numeric" ? parseFloat(toEn(raw)) : toEn(raw),
+    capturedUnit,
+    refLow: rm ? toEn(rm[1]) : "",
+    refHigh: rm ? toEn(rm[2]) : "",
+  };
+}
+
 /**
  * raw text-এর প্রতিটা line-এ dictionary-entry-র synonym খুঁজে, পাশে numeric
  * value থাকলে candidate হিসেবে বের করে।
@@ -71,6 +108,13 @@ export function extractCandidateValues(rawText, testDictionaryEntries) {
       let idx = -1;
       const matchedSynonym = sortedSynonyms.find((s) => { idx = indexOfWord(lowerLine, s.toLowerCase()); return idx >= 0; });
       if (!matchedSynonym) continue;
+      if (entry.context && !(CONTEXT_PATTERNS[entry.context] || /$^/).test(rawText)) continue;
+      if (entry.kind) { // প্রস্রাব-জাতীয় সারি: Nil/Positive/রেঞ্জ-মান — HPF/"/"-নিয়ম এখানে প্রযোজ্য নয়
+        const row = parseRowValue(line.slice(idx + matchedSynonym.length), entry);
+        if (!row || Number.isNaN(row.value)) continue;
+        candidates.push({ testId: entry.id || entry.testId, canonicalNameEn: entry.canonicalNameEn, matchedSynonym, ...row, line });
+        continue;
+      }
       // মাইক্রোস্কোপি/তালিকা-সারি (প্রস্রাব-মল রিপোর্ট) কোনো ডিকশনারি-টেস্ট নয়:
       // "Pus Cells/WBC 4-5 /HPF" থেকে Total WBC = ৪ ধরা ভুল। প্রতি-HPF/LPF সারি, "X/WBC" যৌগ নাম, "WBC Cast/Cells" বাদ।
       if (/(^|[^a-z])[hl]pf\b/i.test(line)) continue;
@@ -121,6 +165,19 @@ export function extractCandidateValues(rawText, testDictionaryEntries) {
  */
 export function validateCandidate(candidate, dictEntry) {
   const flags = [];
+
+  // প্রস্রাব-জাতীয় সারি (kind): একক-যাচাই/দশমিক-সরানো নয় — মান ব্যবহারকারী যাচাই করবেনই
+  if (dictEntry.kind) {
+    if (dictEntry.kind === "numeric" && dictEntry.plausibleRange && (candidate.value < dictEntry.plausibleRange.low || candidate.value > dictEntry.plausibleRange.high)) flags.push("outside-plausible-range");
+    return {
+      status: flags.length ? "needs-review" : "ok",
+      flags,
+      value: candidate.value,
+      unit: dictEntry.kind === "numeric" ? "" : (candidate.capturedUnit || dictEntry.unit || ""),
+      referenceRange: dictEntry.referenceRange || null,
+      kind: dictEntry.kind,
+    };
+  }
 
   // qualitative test (যেমন Dengue NS1/IgM/IgG) — সংখ্যাসূচক value প্রত্যাশিত না।
   if (!dictEntry.plausibleRange) {

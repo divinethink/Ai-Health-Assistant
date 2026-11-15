@@ -15,6 +15,7 @@
 
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { buildPdfLines } from "./pdfLines.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
@@ -38,7 +39,8 @@ export async function extractPdfText(file) {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
-    const pageText = content.items.map((item) => item.str || "").join(" ").trim();
+    // সারি-ভিত্তিক (আগে পুরো পাতা এক লাইন হতো — লাইন-নিয়মগুলো ভেঙে যেত)
+    const pageText = buildPdfLines(content.items).join("\n");
     if (pageText) fullText += pageText + "\n";
   }
 

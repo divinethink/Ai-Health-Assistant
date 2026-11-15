@@ -8,6 +8,7 @@
 
 import { db } from "../../legacy/firebaseConfig.js";
 import { withExtraSynonyms } from "./testSynonyms.js";
+import { withBuiltinTests } from "./builtinTests.js";
 
 let cachedEntries = null;
 
@@ -17,6 +18,6 @@ let cachedEntries = null;
 export async function fetchTestNameDictionary({ forceRefresh = false } = {}) {
   if (cachedEntries && !forceRefresh) return cachedEntries;
   const snap = await db.collection("testNameDictionary").get();
-  cachedEntries = withExtraSynonyms(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  cachedEntries = withBuiltinTests(withExtraSynonyms(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
   return cachedEntries;
 }

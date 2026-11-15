@@ -52,8 +52,9 @@ function rowFromCandidate(c) {
     value: String(c.value),
     unit: c.unit || c.capturedUnit || "",
     date: "",
-    refLow: "",
-    refHigh: "",
+    refLow: c.refLow || "", // ল্যাবের নিজের রেঞ্জ রিপোর্ট-লাইন থেকে পড়া গেলে (প্রস্রাব-রিপোর্ট)
+    refHigh: c.refHigh || "",
+    kind: c.kind || null,
     flags: c.flags || [],
     status: c.status,
     rawValue: c.rawValue,
@@ -113,7 +114,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
     const savedObs = [];
     try {
       for (const r of toSave) {
-        if (!r.value.trim() || !r.unit.trim()) continue; // ফাঁকা মান/একক নিয়ে save করা হবে না
+        if (!r.value.trim() || (!r.unit.trim() && !r.kind)) continue; // ফাঁকা মান/একক নিয়ে save করা হবে না (প্রস্রাব-জাতীয় সারিতে একক ঐচ্ছিক: Nil, pH, S. Gravity)
         await createHealthRecord(familyId, targetMemberId, callerMemberId, "observation", {
           type: r.canonicalNameEn,
           value: r.value,
@@ -174,7 +175,7 @@ export function ReportVerificationForm({ familyId, targetMemberId, callerMemberI
         ai ? chip("🤖 AI", AI_COLORS.text, AI_COLORS.bg, AI_COLORS.border) : !ok ? chip("যাচাই দরকার", "#8A5A00", "#FFF6E5", "#E0A72E") : null),
       rangeLine && React.createElement("div", { style: { fontSize: "13.5px", color: MUTED, margin: "-2px 0 8px 32px" } }, "স্বাভাবিক রেঞ্জ: " + rangeLine),
       React.createElement("div", { style: grid2 },
-        small("মান", r.value, (v) => updateRow(idx, { value: v }), "", { inputMode: "decimal" }),
+        small("মান", r.value, (v) => updateRow(idx, { value: v }), "", { inputMode: r.kind === "numeric" || !r.kind ? "decimal" : "text" }),
         small("একক", r.unit, (v) => updateRow(idx, { unit: v }))),
       r.flags.length > 0 && React.createElement("div", { style: { marginTop: "8px", padding: "8px 10px", borderRadius: "10px", background: "#FFF6E5", color: "#8A5A00", fontSize: "13.5px", lineHeight: 1.45 } },
         r.flags.map((f) => React.createElement("div", { key: f }, "⚠️ " + (FLAG_LABELS[f] || f)))),
