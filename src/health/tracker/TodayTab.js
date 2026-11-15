@@ -407,12 +407,12 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     homeExtra || null,
     ],
     foodHead: () => [
-    // আজকের খাবার-লগ হেডার (পেট ডায়েরি বাটন এখন পানির পাশে — owner-request ২০২৬-১১-১৫)।
+    // আজকের খাবার-লগ হেডার: মাঝে-সাজানো গাঢ় গ্রেডিয়েন্ট ব্যানার (ট্যাপ-যোগ্য নয়; owner-request ২০২৬-১১-১৫)। পেট ডায়েরি এখন পানির পাশে।
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
     canLog && React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch", marginBottom: "8px" } },
-      React.createElement("div", { style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "আজকের খাবার-লগ" : dateText + "-এর খাবার-লগ"),
-        React.createElement("div", { title: "প্ল্যানের টিকসহ", style: { fontSize: "12px", color: T.muted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি"),
+      React.createElement("div", { style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, background: "linear-gradient(135deg, var(--hs-hero-1, #0E4B43), var(--hs-hero-2, #17705F))", border: "none", boxShadow: "0 6px 14px rgba(14,75,67,0.28)", padding: "10px 12px", textAlign: "center" } },
+        React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, color: T.onDark, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "আজকের খাবার-লগ" : dateText + "-এর খাবার-লগ"),
+        React.createElement("div", { title: "প্ল্যানের টিকসহ", style: { fontSize: "12.5px", color: "rgba(255,255,255,0.85)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি"),
         foodErr && !foodOpen && ErrorBox(foodErr))),
     ],
     slots: () => [
