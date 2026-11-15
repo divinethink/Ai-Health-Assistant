@@ -11,6 +11,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { Icon } from "../../shared/icons.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
+import { subscribeMemberHealth } from "./memberHealthStore.js";
 import { HealthVitalsWidget } from "./HealthVitalsWidget.js";
 import { getAgeInYears } from "../triage/triageEngine.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
@@ -20,7 +21,7 @@ import { buildLabAlerts, LEVEL_WORD, alertLine } from "../reports/labAlerts.js";
 import { listDocuments } from "../documents/documentsData.js";
 import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "../calendar/epiSchedule.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 function bmiCategoryOf(bmi) {
   if (bmi == null) return null;
@@ -95,10 +96,16 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [data, setData] = useState(null);
+  const [storeTick, setStoreTick] = useState(0); // রেকর্ড বদলের সংকেত (যেমন "সতর্কতা সরান") — হিরো নীরবে রিফ্রেশ হয়
+  const quiet = useRef(false);
+  useEffect(() => subscribeMemberHealth(({ familyId: f, memberId: m }) => {
+    if (f === null || (f === familyId && (!m || m === selectedMemberId))) { quiet.current = true; setStoreTick((n) => n + 1); }
+  }), [familyId, selectedMemberId]);
 
   useEffect(() => {
     if (!selectedMemberId) return;
-    setLoading(true);
+    if (!quiet.current) setLoading(true);
+    quiet.current = false;
     setErr(null);
     Promise.all([
       listMembers(familyId),
@@ -132,7 +139,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       })
       .catch((e) => setErr(e.message || String(e)))
       .finally(() => setLoading(false));
-  }, [familyId, selectedMemberId, refreshTick]);
+  }, [familyId, selectedMemberId, refreshTick, storeTick]);
 
   if (!selectedMemberId) return null;
   if (err) return ErrorBox(err);

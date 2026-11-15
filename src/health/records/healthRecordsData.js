@@ -14,7 +14,7 @@ import { notifyMember } from "../../legacy/accessGrants.js";
 import { listDoctors, createDoctor } from "../doctor-details/doctorDetailsData.js";
 import { isDuplicate } from "../doctor-details/doctorSuggest.js";
 import { getMemberRecords, invalidateMemberHealth } from "./memberHealthStore.js";
-import { parseLabNumber } from "../reports/labAlerts.js";
+import { parseLabNumber, alertSig } from "../reports/labAlerts.js";
 
 export const RESOURCE_TYPE_LABELS = {
   condition: "রোগ/সমস্যা",
@@ -121,6 +121,15 @@ export async function updateHealthRecord(familyId, recordId, resourceType, calle
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   } finally { invalidateMemberHealth(familyId); }
+}
+
+// "সতর্কতা সরান": শুধু alertAck (স্বাক্ষর-স্ট্রিং) লেখে — নতুন ঐচ্ছিক ফিল্ড, rules/স্কিমা বদল নেই।
+// মান/রেঞ্জ পরে বদলালে স্বাক্ষর আর মেলে না, সতর্কতা আবার আসে (labAlerts.isAlertAcked)। idempotent।
+export async function ackLabAlert(familyId, obs, targetMemberId, callerMemberId) {
+  const ref = db.collection("families").doc(familyId).collection("healthRecords").doc(obs.id);
+  try {
+    await ref.update({ alertAck: alertSig(obs), lastEditedByMemberId: callerMemberId, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  } finally { invalidateMemberHealth(familyId, targetMemberId); }
 }
 
 // "ডিরেক্টরিতে রাখুন": idempotent — একই নাম+ফোনের ডাক্তার আগে থেকে থাকলে নতুন

@@ -155,9 +155,17 @@ export function evaluateLabValue(obs, e, sex) {
   return r ? { ...base, level: r.level, range: r.range } : null;
 }
 
-/** observation-তালিকা থেকে সব সতর্কতা (ইনপুটের ক্রম বজায় থাকে) */
+/**
+ * "সতর্কতা সরান" (alertAck): সরানোর মুহূর্তের মান+একক+রেঞ্জের স্বাক্ষর রেকর্ডে থাকে।
+ * মান/একক/রেঞ্জ বদলালে স্বাক্ষর মেলে না → সতর্কতা নিজে থেকে আবার আসে। পরিমাপের লাল রং এতে প্রভাবিত নয়।
+ */
+export const alertSig = (o) => [o && o.value, o && o.unit, o && o.refLow, o && o.refHigh].map((v) => String(v == null ? "" : v).trim()).join("|");
+export const isAlertAcked = (o) => !!(o && o.alertAck && o.alertAck === alertSig(o));
+
+/** observation-তালিকা থেকে সব সতর্কতা (ইনপুটের ক্রম বজায় থাকে); সরানো সতর্কতা বাদ */
 export function buildLabAlerts(observations, dict, sex) {
   return (observations || [])
+    .filter((o) => !isAlertAcked(o))
     .map((o) => evaluateLabValue(o, findDictEntry(o.type, dict), sex))
     .filter(Boolean);
 }

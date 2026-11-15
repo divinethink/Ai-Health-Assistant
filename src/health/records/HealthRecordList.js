@@ -11,10 +11,10 @@ import { t } from "../../shared/i18n.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { BottomSheet } from "../../shared/BottomSheet.js";
 import { bnDate } from "../../shared/dates.js";
-import { listHealthRecords, deleteHealthRecord } from "./healthRecordsData.js";
+import { listHealthRecords, deleteHealthRecord, ackLabAlert } from "./healthRecordsData.js";
 import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
-import { alertForGroup, buildLabAlerts, LEVEL_WORD } from "../reports/labAlerts.js";
+import { alertForGroup, buildLabAlerts, alertSig, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
 import { fetchMemberSex } from "./memberSex.js";
 import { listDocuments } from "../documents/documentsData.js";
@@ -47,6 +47,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
   const [openKey, setOpenKey] = useState(null);   // খোলা কার্ড (record id বা "obs:<key>")
   const [confirmId, setConfirmId] = useState(null); // ২-ধাপ delete-confirm
   const [busyId, setBusyId] = useState(null);
+  const [ackBusy, setAckBusy] = useState(null);   // "সতর্কতা সরান" চলমান recordId
   const [guideOv, setGuideOv] = useState({});        // অসুখ গাইডের সংশোধন (না এলে ডিফল্ট লেখা)
   const [editGuide, setEditGuide] = useState(null);    // সম্পাদনায় থাকা গাইডের id (শুধু অ্যাপ-ক্রিয়েটর)
   const [dict, setDict] = useState([]);           // ধাপ ৫: রেঞ্জ-ডিকশনারি (না এলে সতর্কতা ছাড়াই চলে)
@@ -208,11 +209,24 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
       actions(r));
   };
 
+  // "সতর্কতা সরান": রেকর্ডে স্বাক্ষর সেভ → এখানে সাথে সাথে সরে (লোকাল আপডেট), হিরো cache-সংকেতে নিজে রিফ্রেশ করে
+  const doAck = async (id) => {
+    const r = records.find((x) => x.id === id);
+    if (!r || ackBusy) return;
+    setAckBusy(id);
+    try {
+      await ackLabAlert(familyId, r, targetMemberId, callerMemberId);
+      setRecords((rs) => rs.map((x) => (x.id === id ? { ...x, alertAck: alertSig(x) } : x)));
+    } catch (e) {
+      setErr(e.code === "permission-denied" ? "সতর্কতা সরানোর অনুমতি আপনার নেই।" : "সতর্কতা সরানো যায়নি — নেটওয়ার্ক দেখে আবার চেষ্টা করুন।");
+    } finally { setAckBusy(null); }
+  };
+
   // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়) — প্রতি টেস্টের সর্বশেষ মানই
   const labAlerts = buildLabAlerts(obsGroups.map((g) => g.items[0]), dict, sex);
 
   return React.createElement("div", { style: { marginTop: "4px" } },
-    React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
+    React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onAck: doAck, ackBusy, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
     obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))),
