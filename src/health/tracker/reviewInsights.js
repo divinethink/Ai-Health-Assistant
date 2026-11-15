@@ -149,7 +149,8 @@ export function habitPatterns({ docs, endISO, rateCtx, days = 28 }) {
 
 // সম্ভাব্য ট্রিগার: পেটের লক্ষণ-লগ (Bristol) × খাবার-লগ (extraFoods)। শুধু পাশাপাশি মিল — কারণ/রোগনির্ণয় নয়।
 // "অস্বস্তির দিন" = ওই দিনে Bristol ১–২ বা ৬–৭ আছে; "স্বাভাবিক দিন" = সব এন্ট্রি ৩–৫। প্রতিটি দিনের জন্য ওই দিন ও আগের দিনের খাবার দেখা হয়।
-export function triggerSearch({ docs, gutEntries, endISO, days = 35 }) {
+// max/badHigh ঐচ্ছিক (ডিফল্ট ৩ / ৬ = আগের আচরণ); পেট-ডায়েরির সতর্কতা ৫টি ও স্কোর ≥৫ দিয়ে ডাকে।
+export function triggerSearch({ docs, gutEntries, endISO, days = 35, max = 3, badHigh = 6 }) {
   const by = byDate(docs);
   const dates = new Set(windowDates(endISO, days));
   const perDay = {};
@@ -164,8 +165,8 @@ export function triggerSearch({ docs, gutEntries, endISO, days = 35 }) {
   const stat = {};
   dayKeys.forEach((date) => {
     const sc = perDay[date];
-    const bad = sc.some((s) => s <= 2 || s >= 6);
-    const ok = !bad && sc.every((s) => s >= 3 && s <= 5);
+    const bad = sc.some((s) => s <= 2 || s >= badHigh);
+    const ok = !bad && sc.every((s) => s >= 3 && s < badHigh);
     if (!bad && !ok) return;
     const foods = foodsOn(date);
     if (!foods.size) return; // ওই দিনে খাবার-লগ নেই → তুলনায় ধরা হয় না
@@ -179,6 +180,6 @@ export function triggerSearch({ docs, gutEntries, endISO, days = 35 }) {
     .map(([name, s]) => ({ name, bad: s.bad, ok: s.ok, total: s.bad + s.ok, rate: s.bad / (s.bad + s.ok) }))
     .filter((x) => x.bad >= 2 && x.total >= 3 && x.rate >= 0.5 && x.rate >= (badDays / compared) + 0.2)
     .sort((a, b) => b.rate - a.rate || b.bad - a.bad)
-    .slice(0, 3);
+    .slice(0, max);
   return out;
 }
