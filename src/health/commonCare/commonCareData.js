@@ -1,7 +1,9 @@
 // সাধারণ চিকিৎসা — সদস্যের নিজের তালিকা। বিদ্যমান healthRecords-এ resourceType "commonCare"।
 // সব লেখা-পড়া বিদ্যমান createHealthRecord/updateHealthRecord/deleteHealthRecord দিয়ে (permission আগের নিয়মে)।
-import { createHealthRecord, updateHealthRecord, deleteHealthRecord } from "../records/healthRecordsData.js";
+import { createHealthRecord, updateHealthRecord, deleteHealthRecord, buildHealthRecordFields } from "../records/healthRecordsData.js";
 import { useMemberHealth } from "../records/useMemberHealth.js";
+import { invalidateMemberHealth } from "../records/memberHealthStore.js";
+import { db } from "../../legacy/firebaseConfig.js";
 
 export const COMMON_CARE_TYPE = "commonCare";
 
@@ -11,6 +13,21 @@ export function validateCareForm(f) {
   if (!f.disease.trim()) return "অসুখের নাম লিখুন।";
   if (!f.brand.trim() && !f.generic.trim()) return "ব্র্যান্ড বা জেনেরিক নামের অন্তত একটা লিখুন।";
   return null;
+}
+
+// নতুন রেকর্ডের আইডি আগে থেকে তৈরি — সেভ আবার চাপলে (নেটওয়ার্ক-ব্যর্থতা/ডবল-ট্যাপ) duplicate হয় না
+export const newCareDocId = (fid) => db.collection("families").doc(fid).collection("healthRecords").doc().id;
+
+// এক অসুখের একাধিক ওষুধ একসাথে (atomic: সব সেভ হয়, নয়তো কিছুই না)। items = [{ docId, fields }]
+export async function addCareBatch(fid, memberId, callerId, items) {
+  const col = db.collection("families").doc(fid).collection("healthRecords");
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  items.forEach(({ docId, fields }) => batch.set(col.doc(docId), {
+    memberId, resourceType: COMMON_CARE_TYPE, ...buildHealthRecordFields(COMMON_CARE_TYPE, fields),
+    lastEditedByMemberId: callerId, createdAt: now, updatedAt: now,
+  }));
+  try { await batch.commit(); } finally { invalidateMemberHealth(fid, memberId); }
 }
 
 export const addCare = (fid, memberId, callerId, f) => createHealthRecord(fid, memberId, callerId, COMMON_CARE_TYPE, f);

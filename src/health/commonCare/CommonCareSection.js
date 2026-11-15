@@ -3,9 +3,13 @@
 import { TextField, PrimaryButton, SheetFrame, ConfirmDialog, ErrorBox, Skeleton } from "../../shared/ui.js";
 import { MED_ALIAS } from "../../shared/searchAliases.js";
 import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
-import { emptyCareForm, validateCareForm, addCare, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
+import { addCareBatch, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
+import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS } from "./careMeds.js";
 
-const { useState } = React;
+const { useState, useRef } = React;
+// নেটওয়ার্ক বন্ধ থাকলে অনির্দিষ্ট অপেক্ষা নয়; পুনঃচেষ্টা নিরাপদ (রেকর্ড-আইডি স্থির)
+const withTimeout = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+const inputStyle = { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 const card = { background: "#fff", border: "1px solid #D9E5DE", borderRadius: "16px", padding: "12px", marginBottom: "8px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 const iconBtn = { minWidth: "44px", minHeight: "44px", border: "none", background: "none", fontSize: "18px", cursor: "pointer" };
 const h = (txt) => React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "14px 0 8px" } }, txt);
@@ -22,26 +26,46 @@ function genericFromBrand(brand) {
 
 export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }) {
   const { records, loading, error } = useMemberHealth(familyId, selectedMemberId);
-  const [form, setForm] = useState(null); // null | { id|null, f }
+  const [form, setForm] = useState(null); // null | { id|null, disease, meds[], openKey }
+  const idsRef = useRef({}); // ওষুধ-কার্ড key → রেকর্ড-আইডি (retry-তে duplicate রোধ)
   const [del, setDel] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [openDef, setOpenDef] = useState(false);
 
-  const set = (k) => (v) => setForm((s) => {
-    const f = { ...s.f, [k]: v };
-    if (k === "brand" && !s.f.generic.trim()) { const g = genericFromBrand(v); if (g) f.generic = g; }
-    return { ...s, f };
+  const openNew = (disease, med) => { const m = med || emptyMed(); setErr(null); setForm({ id: null, disease: disease || "", meds: [m], openKey: m.key }); };
+  const setDisease = (v) => setForm((s) => ({ ...s, disease: v }));
+  const setMed = (key, k) => (v) => setForm((s) => ({ ...s, meds: s.meds.map((m) => {
+    if (m.key !== key) return m;
+    const n = { ...m, [k]: v };
+    if (k === "brand" && !m.generic.trim()) { const g = genericFromBrand(v); if (g) n.generic = g; }
+    return n;
+  }) }));
+  const addMed = () => setForm((s) => {
+    if (s.meds.length >= MAX_MEDS) return s;
+    const m = emptyMed();
+    return { ...s, meds: [...s.meds, m], openKey: m.key };
+  });
+  const removeMed = (key) => setForm((s) => {
+    const meds = s.meds.filter((m) => m.key !== key);
+    return { ...s, meds, openKey: s.openKey === key ? meds[meds.length - 1].key : s.openKey };
   });
   const save = async () => {
-    const msg = validateCareForm(form.f);
-    if (msg) { setErr(msg); return; }
+    const v = validateCareMeds(form.disease, form.meds);
+    if (v) { setErr(v.msg); if (v.key) setForm((s) => ({ ...s, openKey: v.key })); return; }
+    const disease = form.disease.trim();
+    const fieldsOf = (m) => ({ disease, brand: m.brand, generic: m.generic, dose: m.dose, frequency: m.frequency, note: m.note });
     setBusy(true); setErr(null);
     try {
-      if (form.id) await editCare(familyId, form.id, callerMemberId, form.f);
-      else await addCare(familyId, selectedMemberId, callerMemberId, form.f);
+      if (form.id) await withTimeout(editCare(familyId, form.id, callerMemberId, fieldsOf(filledMeds(form.meds)[0])));
+      else {
+        const items = filledMeds(form.meds).map((m) => ({ docId: idsRef.current[m.key] || (idsRef.current[m.key] = newCareDocId(familyId)), fields: fieldsOf(m) }));
+        await withTimeout(addCareBatch(familyId, selectedMemberId, callerMemberId, items));
+      }
       setForm(null);
-    } catch (e) { setErr("সংরক্ষণ করা যায়নি — অনুমতি/নেটওয়ার্ক দেখুন।"); } finally { setBusy(false); }
+    } catch (e) {
+      setErr(e && e.message === "timeout" ? "নেটওয়ার্ক ধীর বা বন্ধ — সংরক্ষণ নিশ্চিত হয়নি। ইন্টারনেট দেখে আবার চাপুন (দুবার সেভ হবে না)।" : "সংরক্ষণ করা যায়নি — অনুমতি/নেটওয়ার্ক দেখুন।");
+    } finally { setBusy(false); }
   };
   const doDelete = async () => {
     setBusy(true);
@@ -50,13 +74,14 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
   };
 
   const groups = records ? groupByDisease(records) : [];
+  const names = diseaseNames(groups);
   const line = (r) => [r.dose, r.frequency].filter(Boolean).join(" · ");
 
   return React.createElement(React.Fragment, null,
-    React.createElement("div", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5B6B66)", lineHeight: 1.5 } }, "ডাক্তারের পরামর্শ অনুযায়ী নিজের রেকর্ড। ডোজ ও মাত্রা আপনি নিজে লিখবেন — অ্যাপ ঠিক করে না।"),
+    React.createElement("div", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5B6B66)", lineHeight: 1.5 } }, "ডাক্তারের পরামর্শ অনুযায়ী নিজের রেকর্ড। ডোজ ও মাত্রা আপনি নিজে লিখবেন — অ্যাপ ঠিক করে না। তালিকা আপনার অ্যাকাউন্টে সংরক্ষিত থাকে; নতুন ফোনে লগইন করলেই ফিরে আসবে।"),
     err && !form && ErrorBox(err),
     error && ErrorBox("তালিকা পড়া যায়নি।"),
-    React.createElement("button", { type: "button", onClick: () => { setErr(null); setForm({ id: null, f: emptyCareForm() }); }, style: { marginTop: "10px", width: "100%", minHeight: "48px", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ নতুন যোগ করুন"),
+    React.createElement("button", { type: "button", onClick: () => openNew(""), style: { marginTop: "10px", width: "100%", minHeight: "48px", borderRadius: "14px", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ নতুন যোগ করুন"),
 
     h("আমার তালিকা"),
     loading && !records ? Skeleton(2, 64)
@@ -68,26 +93,45 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
               React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, overflowWrap: "anywhere" } }, [r.brand, r.generic && (r.brand ? "(" + r.generic + ")" : r.generic)].filter(Boolean).join(" ")),
               line(r) && React.createElement("div", { style: { fontSize: "13px", color: "#2B3A36" } }, line(r)),
               r.note && React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66" } }, r.note)),
-            React.createElement("button", { type: "button", "aria-label": "সম্পাদনা", title: "সম্পাদনা", style: iconBtn, onClick: () => { setErr(null); setForm({ id: r.id, f: { disease: r.disease || "", brand: r.brand || "", generic: r.generic || "", dose: r.dose || "", frequency: r.frequency || "", note: r.note || "" } }); } }, "✎"),
-            React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))))),
+            React.createElement("button", { type: "button", "aria-label": "সম্পাদনা", title: "সম্পাদনা", style: iconBtn, onClick: () => { const m = { ...emptyMed(), brand: r.brand || "", generic: r.generic || "", dose: r.dose || "", frequency: r.frequency || "", note: r.note || "" }; setErr(null); setForm({ id: r.id, disease: r.disease || "", meds: [m], openKey: m.key }); } }, "✎"),
+            React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))),
+          React.createElement("button", { type: "button", onClick: () => openNew(disease === "অন্যান্য" ? "" : disease), style: { marginTop: "4px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1.5px dashed var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ এই অসুখে আরেকটি ওষুধ"))),
 
     React.createElement("button", { type: "button", onClick: () => setOpenDef((v) => !v), "aria-expanded": openDef, style: { width: "100%", minHeight: "44px", textAlign: "left", border: "none", background: "none", padding: 0, margin: "14px 0 8px", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontFamily: "inherit" } }, (openDef ? "▾ " : "▸ ") + "সাধারণ তালিকা (সবার জন্য)"),
     openDef && COMMON_CARE_DEFAULTS.map((d) => React.createElement("div", { key: d.key, style: card },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 800 } }, d.disease),
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px" } }, d.generic + " — " + d.brands.join(", ")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
-      React.createElement("button", { type: "button", onClick: () => { setErr(null); setForm({ id: null, f: { ...emptyCareForm(), disease: d.disease, generic: d.generic, brand: d.brands[0] } }); }, style: { marginTop: "6px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ আমার তালিকায় নিন"))),
+      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] }), style: { marginTop: "6px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ আমার তালিকায় নিন"))),
     openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, "সাধারণ তথ্য মাত্র; ডোজ নেই। ফার্মাসিস্ট রিভিউ হয়নি।"),
 
     form && React.createElement(SheetFrame, { title: form.id ? "সম্পাদনা" : "নতুন যোগ", onClose: () => setForm(null), accent: "medicationStatement",
-      footer: PrimaryButton("সংরক্ষণ", save, busy) },
+      footer: PrimaryButton(!form.id && filledMeds(form.meds).length > 1 ? "সংরক্ষণ (" + toBn(filledMeds(form.meds).length) + "টি ওষুধ)" : "সংরক্ষণ", save, busy) },
       err && ErrorBox(err),
-      TextField("অসুখের নাম", form.f.disease, set("disease"), "যেমন: সাধারণ জ্বর"),
-      TextField("ওষুধের ব্র্যান্ড নাম", form.f.brand, set("brand"), "যেমন: Napa"),
-      TextField("জেনেরিক নাম", form.f.generic, set("generic"), "যেমন: Paracetamol"),
-      TextField("ডোজ (ডাক্তারের লেখা)", form.f.dose, set("dose"), "যেমন: 500 mg"),
-      TextField("সেবনের মাত্রা", form.f.frequency, set("frequency"), "যেমন: দিনে ৪ বার"),
-      TextField("নোট (ঐচ্ছিক)", form.f.note, set("note"), "যেমন: শিশুর জন্য, ১০ কেজি")),
+      React.createElement("div", { style: { marginTop: "14px" } },
+        React.createElement("label", { htmlFor: "cc-disease", style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", display: "block", marginBottom: "6px" } }, "অসুখের নাম"),
+        React.createElement("input", { id: "cc-disease", type: "text", list: "cc-diseases", value: form.disease, placeholder: "যেমন: সাধারণ জ্বর", onChange: (e) => setDisease(e.target.value), style: inputStyle }),
+        React.createElement("datalist", { id: "cc-diseases" }, names.map((n) => React.createElement("option", { key: n, value: n })))),
+      form.meds.map((m, i) => {
+        const open = form.openKey === m.key;
+        const canRemove = !form.id && form.meds.length > 1;
+        return React.createElement("div", { key: m.key, style: { marginTop: "12px", background: "#fff", border: "1.5px solid " + (open ? "var(--hs-primary, #6A4BB0)" : "#D9E5DE"), borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" } },
+          React.createElement("div", { style: { display: "flex", alignItems: "center" } },
+            React.createElement("button", { type: "button", "aria-expanded": open, onClick: () => setForm((s) => ({ ...s, openKey: open ? null : m.key })), style: { flex: 1, minWidth: 0, minHeight: "52px", display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", border: "none", background: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit" } },
+              React.createElement("span", { style: { flexShrink: 0, width: "26px", height: "26px", borderRadius: "50%", background: "var(--hs-primary, #6A4BB0)", color: "#fff", fontSize: "13px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" } }, toBn(i + 1)),
+              React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, open ? ("ওষুধ " + toBn(i + 1)) : (medSummary(m) || "ওষুধ " + toBn(i + 1) + " (নতুন)")),
+              React.createElement("span", { "aria-hidden": "true", style: { color: "var(--hs-primary, #6A4BB0)", fontSize: "13px" } }, open ? "▲" : "▼")),
+            canRemove && React.createElement("button", { type: "button", "aria-label": "এই ওষুধ বাদ দিন", title: "বাদ দিন", style: { ...iconBtn, color: "#B3261E" }, onClick: () => removeMed(m.key) }, "✕")),
+          open && React.createElement("div", { style: { padding: "0 12px 14px" } },
+            TextField("ওষুধের ব্র্যান্ড নাম", m.brand, setMed(m.key, "brand"), "যেমন: Napa"),
+            TextField("জেনেরিক নাম", m.generic, setMed(m.key, "generic"), "যেমন: Paracetamol"),
+            TextField("ডোজ (ডাক্তারের লেখা)", m.dose, setMed(m.key, "dose"), "যেমন: 500 mg"),
+            TextField("সেবনের মাত্রা", m.frequency, setMed(m.key, "frequency"), "যেমন: দিনে ৪ বার"),
+            TextField("নোট (ঐচ্ছিক)", m.note, setMed(m.key, "note"), "যেমন: শিশুর জন্য, ১০ কেজি")));
+      }),
+      !form.id && (form.meds.length < MAX_MEDS
+        ? React.createElement("button", { type: "button", onClick: addMed, style: { marginTop: "12px", width: "100%", minHeight: "50px", borderRadius: "14px", border: "1.5px dashed var(--hs-primary, #6A4BB0)", background: "#fff", color: "var(--hs-primary, #6A4BB0)", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ আরেকটি ওষুধ যোগ করুন")
+        : React.createElement("div", { style: { marginTop: "12px", fontSize: "12.5px", color: "#5B6B66", textAlign: "center" } }, "একবারে সর্বোচ্চ " + toBn(MAX_MEDS) + "টি ওষুধ।"))),
     del && React.createElement(ConfirmDialog, { title: "মুছে ফেলবেন?", message: (del.brand || del.generic || "") + " — " + (del.disease || ""), confirmLabel: "মুছুন", cancelLabel: "বাতিল", busy, onConfirm: doDelete, onCancel: () => setDel(null) })
   );
 }
