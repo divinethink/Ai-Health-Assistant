@@ -103,13 +103,13 @@ function SubPills(tabs, active, onChange) {
   const hk = "trk:" + tabs.map((x) => x[0]).join("|"); // আগের Pills-এর একই কী — Back বাটনে আগের উপ-ট্যাবে ফেরা
   histBind(hk, active, onChange);
   // স্বাস্থ্য ▸ মেডিসিন|অসুখ|রিপোর্ট-এর মতো এক লাইনের সেগমেন্ট: ধূসর-সবুজ ট্রে, সমান চওড়া ৩ ঘর, বাছাইটা সবুজ ভরাট
-  return React.createElement("div", { role: "tablist", "aria-label": "লক্ষ্য ও প্ল্যান", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "#E3ECE6", boxShadow: "inset 0 1px 3px rgba(14,75,67,0.12)", margin: "0 0 10px" } },
+  return React.createElement("div", { role: "tablist", "aria-label": "লক্ষ্য ও প্ল্যান", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "var(--hs-pill-tray, #E3ECE6)", boxShadow: "inset 0 1px 3px rgba(60,30,100,0.12)", margin: "0 0 10px" } },
     tabs.map(([id, label]) => {
       const on = id === active;
       return React.createElement("button", { key: id, type: "button", role: "tab", onClick: () => histChange(hk, active, id, onChange), "aria-selected": on, "aria-pressed": on,
         style: { flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
-          boxShadow: on ? "0 4px 10px rgba(14,75,67,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
-          background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "transparent", color: on ? "#fff" : "#3E524C" } }, label);
+          boxShadow: on ? "0 4px 10px rgba(60,30,100,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
+          background: on ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)" } }, label);
     }));
 }
 function Pills(tabs, active, onChange, leading) {

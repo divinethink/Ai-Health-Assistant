@@ -143,13 +143,13 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
           onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
           belowSummary: React.createElement("div", { key: "subs", style: { marginTop: "16px", marginBottom: "0" } },
-            React.createElement("div", { role: "tablist", "aria-label": "ফিল্টার", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "14px", background: "#E3ECE6", marginBottom: "6px" } },
+            React.createElement("div", { role: "tablist", "aria-label": "ফিল্টার", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "14px", background: "var(--hs-pill-tray, #E3ECE6)", marginBottom: "6px" } },
               RECORD_SUBS.map((sb) => { const on = recordSub === sb.id; return React.createElement("button", {
                 key: sb.id, type: "button", role: "tab", onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-selected": on, "aria-pressed": on,
                 style: {
                   flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "11px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
-                  boxShadow: on ? "0 1px 4px rgba(14,75,67,0.22)" : "none",
-                  background: on ? "var(--hs-surface, #fff)" : "transparent", color: on ? "var(--hs-primary, #0E4B43)" : "#52665F",
+                  boxShadow: on ? "0 3px 8px rgba(60,30,100,0.30)" : "none",
+                  background: on ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)",
                 },
               }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
             null),

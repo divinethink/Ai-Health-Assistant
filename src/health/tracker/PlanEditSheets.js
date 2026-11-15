@@ -107,12 +107,12 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
         React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), placeholder: "খাবার খুঁজুন — ভাত, Rice, ইলিশ", "aria-label": "খাবার খুঁজুন", className: "hs-fp-search", style: { ...INPUT, minHeight: "52px", paddingLeft: "46px", borderRadius: "16px", border: "1.5px solid #9CC5B4", background: "#fff", fontSize: "15px", boxShadow: "0 3px 10px rgba(14,75,67,0.10)" } }))),
     between || null,
     React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "16px 2px 6px", letterSpacing: "0.3px" } }, "ধরন অনুযায়ী"),
-    // ধরন-ট্যাগ: ছোট-কোণ আয়তাকার, হালকা-সবুজ ভরাট + সবুজ বর্ডার (বেলা-বারের গাঢ় সবুজ গোল থেকে আলাদা)
+    // ধরন-ট্যাগ: ছোট-কোণ আয়তাকার, হালকা-বেগুনি ভরাট + বেগুনি বর্ডার
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "0 0 10px" } },
       [["", "সব"], ...FOOD_GROUPS].map(([id, label]) => React.createElement("button", { key: id || "all", type: "button", onClick: () => setGrp(id), "aria-pressed": grp === id,
         style: { fontSize: "13px", fontWeight: grp === id ? 800 : 600, padding: "4px 12px", minHeight: "36px", borderRadius: "10px", cursor: "pointer", fontFamily: "inherit",
-          border: grp === id ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px dashed #B5C9BF", boxShadow: "none",
-          background: grp === id ? "#D9EDE2" : "transparent", color: grp === id ? "var(--hs-primary, #0E4B43)" : "#3E524C" } }, (grp === id ? "✓ " : "") + label))),
+          border: grp === id ? "1.5px solid var(--hs-pill, #6B3FA0)" : "1px dashed var(--hs-pill-border, #BFA6DE)", boxShadow: "none",
+          background: grp === id ? "var(--hs-pill-tint, #EFE7F7)" : "transparent", color: grp === id ? "var(--hs-pill, #6B3FA0)" : "var(--hs-pill-ink, #4B3070)" } }, (grp === id ? "✓ " : "") + label))),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     layout === "list" ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
       found.map(({ key, f, allergy }) => {
