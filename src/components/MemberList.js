@@ -86,7 +86,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
       border: "1.5px solid " + (on ? "var(--hs-primary, #0E4B43)" : "#C3D2CA"),
       background: on ? "var(--hs-primary, #0E4B43)" : "#fff", color: on ? "#fff" : "#4B5C57",
     },
-  }, (on ? "✓ " : "") + label);
+  }, label);
 
   return React.createElement(
     "div", { style: { marginTop: "4px" } },

@@ -42,7 +42,7 @@ export function FocusSheet({ sex, current, customDays, busy, err, onSave, onClos
         const on = sel.includes(o.id);
         const dis = !on && full;
         return React.createElement("button", { key: o.id, type: "button", onClick: () => toggle(o.id), disabled: dis, "aria-pressed": on,
-          style: { ...BTN, fontWeight: 600, padding: "8px 14px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#F1F6F2", color: on ? "#fff" : "#1F2D2A", opacity: dis ? 0.45 : 1 } }, (on ? "✓ " : "") + o.label);
+          style: { ...BTN, fontWeight: 600, padding: "8px 14px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#F1F6F2", color: on ? "#fff" : "#1F2D2A", opacity: dis ? 0.45 : 1 } }, o.label);
       })),
     full && React.createElement("div", { style: { fontSize: "12px", color: "#5F716C", marginTop: "6px" } }, "সর্বোচ্চ " + bnNum(MAX_FOCUS) + "টি বাছা হয়েছে। নতুন বাছতে আগে একটি বাদ দিন।"),
     sel.includes("belly") && Msg("পেটের চর্বি আলাদা করে কমানো যায় না — তাই কার্ডিও + কোর + মিল-প্ল্যান একসাথে ধরা হবে।", "warn"),

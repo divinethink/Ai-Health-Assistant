@@ -177,7 +177,7 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
               fontWeight: m.id === selectedMemberId ? 700 : 500,
             },
           },
-          (m.id === selectedMemberId ? "✓ " : "") + m.name
+          m.name
         ))
       ),
       auth.currentUser && hasGoogleProvider(auth.currentUser) && React.createElement(
@@ -275,7 +275,7 @@ function ThemeSwitcher() {
         style: { minHeight: "76px", padding: "10px 12px", borderRadius: "16px", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", flexDirection: "column", gap: "8px",
           border: on ? "2px solid var(--hs-primary)" : "1.5px solid var(--hs-border)", background: "var(--hs-surface)", color: "var(--hs-text)", boxShadow: on ? "0 3px 10px rgba(14,75,67,0.18)" : "none" } },
         React.createElement("span", { style: { display: "flex", paddingLeft: "6px" } }, dot(bg), dot(surface), dot(primary)),
-        React.createElement("span", { style: { fontSize: "14px", fontWeight: 700 } }, (on ? "✓ " : "") + t(label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")),
+        React.createElement("span", { style: { fontSize: "14px", fontWeight: 700 } }, t(label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")),
         React.createElement("span", { style: { fontSize: "12px", color: "var(--hs-muted)" } }, mode));
     }));
 }

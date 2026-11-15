@@ -151,7 +151,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
           border: on ? "1.5px solid var(--hs-pill, #8B5A2B)" : "1px solid var(--hs-pill-border, #D6C3A5)", boxShadow: on ? "0 4px 10px rgba(90,60,10,0.34), inset 0 -3px 0 rgba(255,255,255,0.30)" : "0 2px 5px rgba(90,60,10,0.16), inset 0 -2px 0 rgba(90,60,10,0.06)",
           background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "linear-gradient(180deg, var(--hs-pill-top, #FFFFFF), var(--hs-pill-tint, #F6EEE0))", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4F3414)",
                 },
-              }, on && React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", left: "6px", top: "50%", transform: "translateY(-50%)" } }, "✓"), sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
+              }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
             null),
         }),
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
