@@ -109,7 +109,7 @@ function SubPills(tabs, active, onChange) {
       return React.createElement("button", { key: id, type: "button", role: "tab", onClick: () => histChange(hk, active, id, onChange), "aria-selected": on, "aria-pressed": on,
         style: { flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
           boxShadow: on ? "0 4px 10px rgba(90,60,10,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
-          background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #1B2430)" } }, label);
+          background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4F3414)" } }, label);
     }));
 }
 function Pills(tabs, active, onChange, leading) {
