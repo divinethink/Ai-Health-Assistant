@@ -110,9 +110,9 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
     // ধরন-ট্যাগ: ছোট-কোণ আয়তাকার, হালকা-বেগুনি ভরাট + বেগুনি বর্ডার
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px", margin: "0 0 10px", padding: "8px", borderRadius: "16px", background: "var(--hs-pill-tray, #EAE2F4)", boxShadow: "inset 0 1px 3px rgba(60,30,100,0.12)" } },
       [["", "সব"], ...FOOD_GROUPS].map(([id, label]) => React.createElement("button", { key: id || "all", type: "button", onClick: () => setGrp(id), "aria-pressed": grp === id,
-        style: { fontSize: "13px", fontWeight: grp === id ? 800 : 600, padding: "4px 12px", minHeight: "36px", borderRadius: "10px", cursor: "pointer", fontFamily: "inherit",
-          border: grp === id ? "1.5px solid var(--hs-pill, #6B3FA0)" : "1px dashed var(--hs-pill-border, #BFA6DE)", boxShadow: grp === id ? "0 3px 8px rgba(60,30,100,0.30)" : "none",
-          background: grp === id ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "transparent", color: grp === id ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)" } }, (grp === id ? "✓ " : "") + label))),
+        style: { fontSize: "13px", fontWeight: grp === id ? 800 : 600, padding: "4px 12px", minHeight: "40px", flex: "1 1 auto", whiteSpace: "nowrap", textAlign: "center", borderRadius: "10px", cursor: "pointer", fontFamily: "inherit",
+          border: grp === id ? "1.5px solid var(--hs-pill, #6B3FA0)" : "1px solid var(--hs-pill-border, #BFA6DE)", boxShadow: grp === id ? "0 4px 10px rgba(60,30,100,0.34), inset 0 -3px 0 rgba(255,255,255,0.30)" : "0 2px 5px rgba(60,30,100,0.16), inset 0 -2px 0 rgba(60,30,100,0.06)",
+          background: grp === id ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "linear-gradient(180deg, var(--hs-pill-top, #FFFFFF), var(--hs-pill-tint, #EFE7F7))", color: grp === id ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)" } }, (grp === id ? "✓ " : "") + label))),
     found.length === 0 && React.createElement("div", { style: { fontSize: "13px", color: MUTED, padding: "6px 0" } }, "কিছু পাওয়া যায়নি। নিজের খাবার ‘আজ শুধু’-তে নাম ও কিলোক্যালরি দিয়ে যোগ করা যায়।"),
     layout === "list" ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } },
       found.map(({ key, f, allergy }) => {
