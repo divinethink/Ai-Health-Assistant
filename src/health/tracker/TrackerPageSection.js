@@ -32,7 +32,7 @@ import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { FocusSheet, focusLabels } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
-import { weighDayOf, onlyWeighDays, DEFAULT_WEIGH_DAY } from "./weighDay.js";
+import { weighDayOf, countedWeighPoints, DEFAULT_WEIGH_DAY } from "./weighDay.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
@@ -425,7 +425,7 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
   const none = (txt) => React.createElement("div", { style: { fontSize: "13px", color: T.muted, padding: "2px 0" } }, txt);
   const targetKg = !gate.blocked && goal && Number(goal.targetWeightKg) > 0 ? Number(goal.targetWeightKg) : null;
   const wDayIdx = weighDayOf(goal), wDayName = DAY_LABELS[wDayIdx];
-  const wPts = onlyWeighDays(t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg })), wDayIdx); // ট্রেন্ডে শুধু ওজনের দিনের মান (অন্য দিনের ওজন সংরক্ষিত থাকে)
+  const wPts = countedWeighPoints(t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg }))); // ট্রেন্ডে সাপ্তাহিক-একটা (৫ দিনের ব্যবধান; বাকি ওজন সংরক্ষিত থাকে)
   const points = reviewPoints(t, bnNum);
   // ১টা মাপে চার্ট অর্থহীন → মান-কার্ড; ২+ হলে চার্ট (ধাপ ২)
   const lastW = wPts.length ? wPts[wPts.length - 1].value : null;

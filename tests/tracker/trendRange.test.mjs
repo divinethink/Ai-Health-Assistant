@@ -37,7 +37,7 @@ test("heatWeeks: শনি-শুরু ৭-ঘরের কলাম, আজে
 test("monthStats: গণনা ও আজের পরের দিন বাদ", () => {
   const docs = [
     { date: "2026-11-01", ...GOOD, weightKg: 70 },
-    { date: "2026-11-02", caloriesIn: 3000, exerciseMin: 10, sleepMinutes: 300, weightKg: 69 },
+    { date: "2026-11-08", caloriesIn: 3000, exerciseMin: 10, sleepMinutes: 300, weightKg: 69 }, // ১ নভেম্বরের ৬+ দিন পরে → চার্টে ধরা
     { date: "2026-11-20", ...GOOD }, // আজের পরে
   ];
   const s = monthStats(docs, 2026, 10, ctx, "2026-11-13");

@@ -7,7 +7,7 @@ import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO, getDaily, getMonthDaily } from "./trackerData.js";
 import { macroTargets } from "./macroTargets.js";
 import { weekDatesISO, DAY_LABELS } from "./exercisePlanData.js";
-import { weighState, weighDayOf, isWeighDate, WEIGH_TIP } from "./weighDay.js";
+import { weighState, weighDayOf, wouldCountOnChart, WEIGH_TIP } from "./weighDay.js";
 import { WeighButton, weighCue } from "./WeighCue.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { Icon } from "../../shared/icons.js";
@@ -95,6 +95,9 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const [selDate, setSelDate] = useState(() => (peekQuickIntent(["weight", "sleep", "food", "water"]) && keepSel.memberId === memberId && keepSel.date && inRange(keepSel.date, today) ? keepSel.date : today));
   useEffect(() => { keepSel = { memberId, date: selDate }; }, [memberId, selDate]);
   const [weekInfo, setWeekInfo] = useState(false);
+  const [macroInfo, setMacroInfo] = useState(false);
+  const [nowHM, setNowHM] = useState(() => new Date().toTimeString().slice(0, 5)); // সন্ধ্যা ৭টায় ওজন-কার্ড নিজে লাল হতে (রিফ্রেশ ছাড়া)
+  useEffect(() => { const id = setInterval(() => setNowHM(new Date().toTimeString().slice(0, 5)), 30000); return () => clearInterval(id); }, []);
   const [editIdx, setEditIdx] = useState(null); // খাবার-লগে ট্যাপ করে এডিট: extras-এর index
   const [dietOpen, setDietOpen] = useState(false);
   const [gutOpen, setGutOpen] = useState(false);
@@ -259,10 +262,10 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const bmiVal = bmiOf(info.weightKg, info.heightCm);
   // সাপ্তাহিক ওজনের দিন (ডিফল্ট শুক্র): শেষ ৩০ দিনের ডক + আজকের ডক থেকে অবস্থা; শিশু/গেট-ব্লকে শুধু নরম বার্তা
   const wDayIdx = weighDayOf(goal), wDayName = DAY_LABELS[wDayIdx];
-  const ws = weighState({ today, weighDay: wDayIdx, docs: [...(info.recent || []), daily], soft: !!gate.blocked || (age !== null && age < 18) });
+  const ws = weighState({ today, weighDay: wDayIdx, docs: [...(info.recent || []), daily], nowHHMM: nowHM, soft: !!gate.blocked || (age !== null && age < 18) });
   const weighCard = weighCue(ws, wDayName);
-  // ওজনের দিন বাকি থাকলে (আজ/গত ২ দিন) কার্ড ট্যাপে সেই দিনের তারিখেই ওজন বসে — গত শুক্রবারের ওজন শনিবারেও ঠিক তারিখে যায়
-  const openWeigh = () => { if ((ws.kind === "due" || ws.kind === "missed") && viewDate !== ws.dueDate) pickDay(ws.dueDate); openIn("weight"); };
+  // ওজন বাকি থাকলে (বৃহস্পতি সন্ধ্যা ৭টা থেকে শুক্র শেষ) কার্ড ট্যাপে আজকের তারিখেই ওজন বসে
+  const openWeigh = () => { if (ws.kind === "due" && ws.entryDate && viewDate !== ws.entryDate) pickDay(ws.entryDate); openIn("weight"); };
   const eaten = d.caloriesIn || 0;
   const left = calc ? calc.calorieTarget - eaten : 0;
 
@@ -307,7 +310,8 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     ],
     macros: () => [
     // পুষ্টির হিসাব: হিরো-কার্ডের নিচে আলাদা কার্ডে (owner-request ২০২৬-১১-১২)। খালি অবস্থায়ও থাকে (০ ও টার্গেট); ডেটা বদলায় না, শুধু দেখানো।
-    calc && canLog && React.createElement("div", { style: { ...HOME_CARD, padding: "6px 12px 7px", color: T.ink, marginBottom: "8px" }, "aria-label": "আজকের পুষ্টির হিসাব (গ্রাম, আনুমানিক)" },
+    calc && canLog && React.createElement("div", { style: { ...HOME_CARD, padding: "6px 12px 7px", color: T.ink, marginBottom: "8px", position: "relative" }, "aria-label": "আজকের পুষ্টির হিসাব (গ্রাম, আনুমানিক)" },
+      React.createElement("button", { type: "button", onClick: () => setMacroInfo((v) => !v), "aria-label": "পুষ্টির রঙ ও বারের নিয়ম", "aria-expanded": macroInfo, style: { position: "absolute", top: "0", right: "0", minWidth: "44px", minHeight: "44px", border: "none", background: "none", color: T.green, fontSize: "18px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", zIndex: 1 } }, "ⓘ"),
       React.createElement("div", { style: { display: "flex", gap: "10px", alignItems: "flex-end" } },
         [["প্রোটিন", macros.p, "#2E9E5B", "p"], ["কার্ব", macros.c, "#E0892B", "c"], ["ফ্যাট", macros.f, "#8A6FD6", "f"], ["ফাইবার", macros.fib, "#3C86D6", "fib"]].map(([name, v, col, key]) => {
           const tg = mt ? (key === "fib" ? mt.fiber : mt[key]) : null; // null = এই ম্যাক্রোর টার্গেট নেই
@@ -319,6 +323,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? T.border : col, marginTop: "2px" } },
               tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
+      macroInfo && React.createElement("div", { role: "note", style: { marginTop: "8px", padding: "8px 10px", borderRadius: "12px", background: "var(--hs-chip-bg, #E4F0E9)", fontSize: "12.5px", lineHeight: 1.6, color: T.ink } },
+        React.createElement("div", { style: { fontWeight: 700 } }, "রঙ ও বার কী বোঝায়"),
+        React.createElement("div", null, "• প্রতিটি পুষ্টির নিজস্ব চেনা-রঙ: প্রোটিন সবুজ · কার্ব কমলা · ফ্যাট বেগুনি · ফাইবার নীল"),
+        React.createElement("div", null, "• বার = আজ যা খেয়েছেন ÷ টার্গেট; বার পূর্ণ হলে টার্গেট ছোঁয়া"),
+        React.createElement("div", null, "• লাল = প্রোটিন/কার্ব/ফ্যাট টার্গেট ছাড়িয়েছে (ফাইবার বেশি হলে লাল হয় না)"),
+        React.createElement("div", null, "• ধূসর বার ও “—” = এই পুষ্টির টার্গেট নেই"),
+        mt && React.createElement("div", null, "• টার্গেট: " + (mt.mode === "max" ? "সর্বোচ্চ সীমা (≤)" : "ক্যালরি-টার্গেটের ভাগ (প্রোটিন ২০% · কার্ব ৫০% · ফ্যাট ৩০%; ডায়াবেটিসে কার্ব ৪৫% · ফ্যাট ৩৫%)") + "; ফাইবার ১০০০ কিলোক্যালরিতে ১৪ গ্রাম। " + mt.note)),
       macros.total > 0 && macros.withMacro < macros.total && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, bnNum(macros.total - macros.withMacro) + "টি এন্ট্রিতে ম্যাক্রোর তথ্য নেই (আংশিক হিসাব)।")),
     ],
     alert: () => [
@@ -461,7 +472,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", dateText, initialType: "walk", entries: exLog, recent: recentExerciseEntries(info.recent), busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
     (inKind === "sleep" || inKind === "steps" || inKind === "weight") && React.createElement(DailyInputSheet, {
       key: inKind, dateText, kind: inKind, daily: dayDoc, latestWeight: info.latestWeight, stepsTarget: stTarget, busy, err: inErr,
-      weighInfo: inKind === "weight" ? { isWeighDate: isWeighDate(viewDate, wDayIdx), dayName: wDayName, delta: ws.delta, tip: WEIGH_TIP } : null,
+      weighInfo: inKind === "weight" ? { isWeighDate: wouldCountOnChart(viewDate, [...(info.recent || []), daily]), dayName: wDayName, delta: ws.delta, tip: WEIGH_TIP } : null,
       onSave: (fields) => writeIn(fields, true), onClose: closeIn,
     }),
 

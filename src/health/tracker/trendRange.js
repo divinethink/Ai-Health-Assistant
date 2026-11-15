@@ -3,7 +3,7 @@
 // "টার্গেট-পূরণ" নিয়ম todaySummary.metricsOf/dayHit-এর সাথে একই (এক সূত্র)।
 
 import { metricsOf, dayHit } from "./todaySummary.js";
-import { isWeighDate } from "./weighDay.js";
+import { countedWeighPoints } from "./weighDay.js";
 import { hasDayRecord, monthDatesISO } from "./dateNav.js";
 
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -67,12 +67,13 @@ export function monthStats(docs, y, m, ctx, todayISO) {
   (docs || []).forEach((d) => { if (d && d.date) by[d.date] = d; });
   const dates = monthDatesISO(y, m).filter((d) => d <= todayISO);
   const st = { y, m, days: dates.length, loggedDays: 0, weights: [], calDays: 0, calHit: 0, exTotal: 0, exActive: 0, exHit: 0, waterDays: 0, waterHit: 0, sleepDays: 0, sleepHit: 0, sleepSum: 0, hitDays: 0 };
+  const wRaw = [];
   dates.forEach((date) => {
     const doc = by[date];
     if (!hasDayRecord(doc)) return;
     st.loggedDays++;
     const { applicable, met } = metricsOf(doc, ctx, date);
-    if (doc.weightKg > 0 && (ctx.weighDay === undefined || isWeighDate(date, ctx.weighDay))) st.weights.push(doc.weightKg); // শুধু ওজনের দিন (ctx.weighDay থাকলে)
+    if (doc.weightKg > 0) wRaw.push({ date, kg: doc.weightKg }); // চার্টে সাপ্তাহিক-একটা: লুপ-শেষে countedWeighPoints
     if (doc.caloriesIn > 0 && applicable.includes("calories")) { st.calDays++; if (met.includes("calories")) st.calHit++; }
     st.exTotal += doc.exerciseMin || 0;
     if ((doc.exerciseMin || 0) > 0) st.exActive++;
@@ -81,6 +82,7 @@ export function monthStats(docs, y, m, ctx, todayISO) {
     if (doc.sleepMinutes > 0) { st.sleepDays++; st.sleepSum += doc.sleepMinutes; if (met.includes("sleep")) st.sleepHit++; }
     if (dayHit(doc, ctx, date)) st.hitDays++;
   });
+  st.weights = countedWeighPoints(wRaw).map((p) => p.kg);
   st.weightAvg = st.weights.length ? r1(avg(st.weights)) : null;
   st.weightChange = st.weights.length >= 2 ? r1(st.weights[st.weights.length - 1] - st.weights[0]) : null;
   st.sleepAvgH = st.sleepDays ? r1(st.sleepSum / st.sleepDays / 60) : null;

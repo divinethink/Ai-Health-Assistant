@@ -2,7 +2,7 @@
 // শুধু ব্যবহারকারীর নিজের দেওয়া ডাটা থেকে; নতুন সংখ্যা বানানো হয় না।
 
 import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate, activeFastDays } from "./trackerCalc.js";
-import { weighDayOf } from "./weighDay.js";
+import { weighDayOf, countedWeighPoints } from "./weighDay.js";
 import { fastOnDate } from "./fastDay.js";
 import { dayHit, calorieMet } from "./todaySummary.js";
 
@@ -34,7 +34,7 @@ export function buildTrend(docs, dates, opts) {
     };
   });
 
-  const weights = days.filter((x) => x.weightKg);
+  const weights = countedWeighPoints(days.filter((x) => x.weightKg));
   const weightChange = weights.length >= 2 ? round1(weights[weights.length - 1].weightKg - weights[0].weightKg) : null;
   const calDays = days.filter((x) => x.calories);
   const T = opts.calorieTarget;
@@ -92,7 +92,7 @@ export function weeklySummary(docs, dates, ctx) {
   if (!days.length) return null;
   const kcal = days.filter((d) => d.caloriesIn > 0).map((d) => d.caloriesIn);
   const sleep = days.filter((d) => d.sleepMinutes > 0).map((d) => d.sleepMinutes);
-  const weights = dates.map((date) => (byDate[date] || {}).weightKg).filter((w) => w > 0);
+  const weights = countedWeighPoints(dates.map((date) => ({ date, w: (byDate[date] || {}).weightKg })).filter((x) => x.w > 0)).map((x) => x.w);
   const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
   return {
     loggedDays: days.length,

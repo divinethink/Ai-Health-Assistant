@@ -75,7 +75,7 @@ test("ট্রেন্ড-সারাংশ ও মন্তব্য", () =>
   assert.ok(reviewPoints(t, bn).some((x) => x.includes("কমেছে")));
   assert.ok(reviewComment(t, bn).some((x) => x.includes("100")));
   assert.equal(reviewComment(buildTrend([], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null }), bn).length, 1);
-  const big = buildTrend([{ date: dates[0], weightKg: 70 }, { date: dates[1], weightKg: 68 }, { date: dates[2], exerciseMin: 1 }], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null });
+  const big = buildTrend([{ date: dates[0], weightKg: 70 }, { date: dates[6], weightKg: 68 }, { date: dates[2], exerciseMin: 1 }], dates, { calorieTarget: null, sleepMinH: 7, weeklyExerciseTarget: null });
   assert.ok(reviewComment(big, bn).some((x) => x.includes("ডাক্তার")));
 });
 
