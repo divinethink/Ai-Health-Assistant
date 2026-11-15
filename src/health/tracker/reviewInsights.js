@@ -4,6 +4,7 @@
 // তাই "গত সপ্তাহের ফোকাসে এ সপ্তাহে কী হলো" ডেটা থেকেই হিসাব করা যায় (নতুন ফিল্ড/rules লাগে না)।
 
 import { metricsOf } from "./todaySummary.js";
+import { isWeighDate } from "./weighDay.js";
 import { dayScore } from "./trendScore.js";
 import { hasDayRecord, shiftISO } from "./dateNav.js";
 
@@ -44,7 +45,7 @@ function windowStats(by, dates, scoreCtx, rateCtx) {
     const s = dayScore(by[date], scoreCtx, date);
     if (s !== null) scores.push(s);
   });
-  const weights = dates.map((d) => (by[d] && by[d].weightKg > 0 ? { date: d, kg: by[d].weightKg } : null)).filter(Boolean);
+  const weights = dates.map((d) => (by[d] && by[d].weightKg > 0 && (!rateCtx || rateCtx.weighDay === undefined || isWeighDate(d, rateCtx.weighDay)) ? { date: d, kg: by[d].weightKg } : null)).filter(Boolean);
   return { logged, avg: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null, metrics: metricRates(by, dates, rateCtx), weights };
 }
 

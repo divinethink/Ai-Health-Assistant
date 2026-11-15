@@ -5,7 +5,8 @@
 
 import { listHealthRecords } from "../records/healthRecordsData.js";
 import { listCalendarEvents } from "../calendar/calendarData.js";
-import { getGoal, getMedTaken } from "./trackerData.js";
+import { getGoal, getMedTaken, getDaily } from "./trackerData.js";
+import { weighDayOf, weighReminderDue } from "./weighDay.js";
 import { subscribeMemberHealth } from "../records/memberHealthStore.js";
 import { buildActiveMeds, dueMedDoses, endingSoonMeds } from "../records/medReminderCalc.js";
 import { normalizeReminders, anyReminderOn, expandReminders, buildReminderContext, dueCalendarEvents } from "./reminderData.js";
@@ -78,7 +79,8 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
     const settings = data ? normalizeReminders(data.goal && data.goal.reminders) : null;
     const trackerOn = !!(settings && anyReminderOn(settings));
     const medOn = !settings || settings.medicine.on; // সেটিং লোড হওয়ার আগে/না থাকলে ডিফল্ট চালু
-    if (!trackerOn && !(medOn && medData.length)) return undefined;
+    const weighOn = !!(settings && settings.weigh.on); // সাপ্তাহিক ওজনের দিনের নোটিফিকেশন (ডিফল্ট চালু)
+    if (!trackerOn && !(medOn && medData.length) && !weighOn) return undefined;
     const member = (members || []).find((m) => m.id === memberId) || null;
 
     // ডোজের সময়ে সর্বশেষ "খেয়েছি" অবস্থা সার্ভার থেকে দেখে নেওয়া; পড়া না গেলে (অফলাইন) রিমাইন্ডার দেওয়াই নিরাপদ।
@@ -87,6 +89,12 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
       try { taken = !!(await getMedTaken(familyId, d.memberId, today))[d.key]; } catch (e) { /* ignore */ }
       if (taken) return;
       try { new Notification(d.title, { body: d.body }); } catch (e) { /* ignore */ }
+    };
+
+    // ওজনের দিনে ওজন বাকি থাকলে একবার; পাঠানোর ঠিক আগে সার্ভার থেকে ফ্রেশ দেখে (দিয়ে ফেললে আর আসে না); পড়া না গেলে (অফলাইন) জানানোই নিরাপদ।
+    const fireWeigh = async (w, today) => {
+      try { const d = await getDaily(familyId, memberId, today); if (d && d.weightKg > 0) return; } catch (e) { /* ignore */ }
+      try { new Notification(w.title, { body: w.body }); } catch (e) { /* ignore */ }
     };
 
     const check = () => {
@@ -106,6 +114,10 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
           if (alreadyShown(c.id)) return;
           try { new Notification(c.title, { body: c.body }); } catch (e) { /* ignore */ }
         });
+      }
+      if (weighOn) {
+        const w = weighReminderDue(settings.weigh, weighDayOf(data.goal), today, now);
+        if (w && !alreadyShown(w.id)) fireWeigh(w, today);
       }
       if (!medOn) return;
       dueMedDoses(medData, now, today).forEach((d) => { if (!alreadyShown(d.id)) fireDose(d, today); });

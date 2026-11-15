@@ -1,6 +1,6 @@
 // আজ ট্যাবের ছোট ইনপুট-শিট (ধাপ ৩): ওজন · স্টেপ · ঘুম। শুধু UI — যাচাই dailyInputCalc.js-এ, লেখা বাবা-কম্পোনেন্টের onSave-এ (saveDaily)।
 // ব্যায়াম আলাদা: বিদ্যমান ExerciseLogSheet (PlanEditSheets.js)।
-// props: kind ("weight"|"steps"|"sleep"), daily, latestWeight, stepsTarget, busy, err, onSave(fields), onClose
+// props: kind ("weight"|"steps"|"sleep"), daily, latestWeight, stepsTarget, busy, err, onSave(fields), onClose, weighInfo ({isWeighDate, dayName, delta:{kg}|null, tip}) — শুধু ওজনে
 
 import { bnNum } from "../../shared/dates.js";
 import { T } from "./trackerTheme.js";
@@ -22,7 +22,7 @@ const STEP_PRESETS = [2000, 5000, 8000, 10000];
 const LAB = { fontSize: "13px", fontWeight: 600, color: "#1F2D2A", display: "block", margin: "10px 0 4px" };
 const SM = { ...BTN, border: "1.5px solid " + T.green, background: "#fff", color: T.green, minHeight: "40px", fontSize: "13px" };
 
-export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarget, busy, err, onSave, onClose }) {
+export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarget, busy, err, onSave, onClose, weighInfo }) {
   const d = daily || {};
   const [weight, setWeight] = useState(d.weightKg ? String(d.weightKg) : (latestWeight ? String(latestWeight) : ""));
   const [steps, setSteps] = useState(d.steps !== undefined ? String(d.steps) : "");
@@ -55,6 +55,11 @@ export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarg
         React.createElement("input", { type: "number", inputMode: "decimal", step: "0.1", value: weight, onChange: (e) => { setLocalErr(null); setWeight(e.target.value); }, "aria-label": "ওজন (কেজি)", style: { ...INPUT, textAlign: "center", flex: 1 } }),
         React.createElement("button", { onClick: () => { setLocalErr(null); setWeight(stepWeight(weight, 0.1, latestWeight)); }, "aria-label": "ওজন ০.১ বাড়ান", style: { ...BTN, border: "none", background: "#E4ECE7", color: T.green } }, "+")),
       latestWeight && React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "সর্বশেষ সংরক্ষিত: " + bnNum(latestWeight) + " কেজি"),
+      weighInfo && React.createElement("div", { style: { marginTop: "10px", padding: "9px 12px", borderRadius: "14px", background: weighInfo.isWeighDate ? "var(--hs-chip-bg, #E4F0E9)" : T.sand, border: "1px solid " + (weighInfo.isWeighDate ? "transparent" : T.sandBorder), fontSize: "13px", lineHeight: 1.5, color: T.ink } },
+        React.createElement("div", { style: { fontWeight: 700 } }, weighInfo.isWeighDate ? "✓ ওজনের দিন — এই ওজন ট্রেন্ডে ধরা হবে" : "ওজনের দিন " + weighInfo.dayName),
+        !weighInfo.isWeighDate && React.createElement("div", { style: { color: T.muted } }, "এই তারিখের ওজন সংরক্ষিত থাকবে, তবে ট্রেন্ডে শুধু " + weighInfo.dayName + "েরটা ধরা হয়।"),
+        weighInfo.delta && React.createElement("div", { style: { color: T.muted, marginTop: "2px" } }, "আগের ওজন-দিনের তুলনায় " + (weighInfo.delta.kg === 0 ? "অপরিবর্তিত" : (weighInfo.delta.kg > 0 ? "+" : "−") + bnNum(Math.abs(weighInfo.delta.kg)) + " কেজি") + " (শুধু সংখ্যা)"),
+        weighInfo.tip && React.createElement("div", { style: { color: T.muted, marginTop: "2px" } }, "💡 " + weighInfo.tip)),
       React.createElement(VitalsLinkNote, null)),
 
     kind === "steps" && React.createElement("div", null,

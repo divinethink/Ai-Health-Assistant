@@ -2,6 +2,7 @@
 // শুধু ব্যবহারকারীর নিজের দেওয়া ডাটা থেকে; নতুন সংখ্যা বানানো হয় না।
 
 import { sleepTargetHours, exerciseTargetMinPerDay, waterTargetFor, safetyGate, activeFastDays } from "./trackerCalc.js";
+import { weighDayOf } from "./weighDay.js";
 import { fastOnDate } from "./fastDay.js";
 import { dayHit, calorieMet } from "./todaySummary.js";
 
@@ -79,7 +80,7 @@ export function reviewComment(t, bn) {
 export function targetCtxFor({ age, flags, goal }) {
   const gate = safetyGate({ age, flags });
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
-  return { calorieTarget: calc ? calc.calorieTarget : null, exTarget: exerciseTargetMinPerDay(age), waterTarget: waterTargetFor(age, flags, goal && goal.waterTarget), sleepMinH: sleepTargetHours(age)[0], fastDays: activeFastDays(goal, { age, flags }) };
+  return { calorieTarget: calc ? calc.calorieTarget : null, exTarget: exerciseTargetMinPerDay(age), waterTarget: waterTargetFor(age, flags, goal && goal.waterTarget), sleepMinH: sleepTargetHours(age)[0], fastDays: activeFastDays(goal, { age, flags }), weighDay: weighDayOf(goal) };
 }
 
 // docs: দৈনিক ডক; dates: সাতটি ISO তারিখ; ctx: targetCtxFor()। কোনো দিনের ডক না থাকলে null (সেকশন লুকাবে)।

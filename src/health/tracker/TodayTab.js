@@ -6,7 +6,9 @@ import { ErrorBox } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO, getDaily, getMonthDaily } from "./trackerData.js";
 import { macroTargets } from "./macroTargets.js";
-import { weekDatesISO } from "./exercisePlanData.js";
+import { weekDatesISO, DAY_LABELS } from "./exercisePlanData.js";
+import { weighState, weighDayOf, isWeighDate, WEIGH_TIP } from "./weighDay.js";
+import { WeighButton, weighCue } from "./WeighCue.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { Icon } from "../../shared/icons.js";
 import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT, SLOT_LINE } from "./trackerTheme.js";
@@ -255,6 +257,12 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
   const glasses = wLocal !== null ? wLocal : (d.waterGlasses || 0);
   const bmiVal = bmiOf(info.weightKg, info.heightCm);
+  // সাপ্তাহিক ওজনের দিন (ডিফল্ট শুক্র): শেষ ৩০ দিনের ডক + আজকের ডক থেকে অবস্থা; শিশু/গেট-ব্লকে শুধু নরম বার্তা
+  const wDayIdx = weighDayOf(goal), wDayName = DAY_LABELS[wDayIdx];
+  const ws = weighState({ today, weighDay: wDayIdx, docs: [...(info.recent || []), daily], soft: !!gate.blocked || (age !== null && age < 18) });
+  const weighCard = weighCue(ws, wDayName);
+  // ওজনের দিন বাকি থাকলে (আজ/গত ২ দিন) কার্ড ট্যাপে সেই দিনের তারিখেই ওজন বসে — গত শুক্রবারের ওজন শনিবারেও ঠিক তারিখে যায়
+  const openWeigh = () => { if ((ws.kind === "due" || ws.kind === "missed") && viewDate !== ws.dueDate) pickDay(ws.dueDate); openIn("weight"); };
   const eaten = d.caloriesIn || 0;
   const left = calc ? calc.calorieTarget - eaten : 0;
 
@@ -323,11 +331,11 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement(MiniRing, { empty: !d.sleepMinutes, icon: "moon", value: d.sleepMinutes ? fmtH(d.sleepMinutes) : "—", pct: pctOf(d.sleepMinutes, sMin * 60), color: T.purple, caption: d.sleepMinutes ? "গত রাতের ঘুম" : "লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax) + " ঘ.", label: "ঘুম", onTap: () => openIn("sleep") }),
       stTarget && React.createElement(MiniRing, { empty: !d.steps, icon: "steps", value: bnNum(d.steps || 0), pct: pctOf(d.steps, stTarget), color: T.leaf, caption: d.steps ? "স্টেপ / " + bnNum(stTarget) : "লক্ষ্য " + bnNum(stTarget), label: "স্টেপ", onTap: () => openIn("steps") }),
       // হিরো না থাকলে (উপবাস/টার্গেট-ব্লক) BMI কার্ড এখানে ফেরে — নইলে ওজন দেওয়ার পথ থাকত না
-      !calc && React.createElement("div", { role: "button", tabIndex: 0, "aria-label": "আজকের ওজন যোগ/বদলান", onClick: () => openIn("weight"), onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openIn("weight"); } },
+      !calc && React.createElement("div", { role: "button", tabIndex: 0, className: weighCard.className, "aria-label": "ওজন যোগ/বদলান" + (weighCard.label ? " — " + weighCard.label : ""), onClick: openWeigh, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openWeigh(); } },
         style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, padding: "6px 4px 7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer" } },
         React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px", lineHeight: 1.2 } }, "⚖️"),
         React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bmiVal ? bnNum(Math.round(bmiVal * 10) / 10) : "—"),
-        React.createElement("div", { style: { fontSize: "12px", color: T.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, bmiVal && info.weightKg ? "BMI · " + bnNum(info.weightKg) + " কেজি" : "ওজন দিন"))),
+        React.createElement("div", { style: { fontSize: "12px", color: weighCard.label ? weighCard.color : T.muted, fontWeight: weighCard.label ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" } }, weighCard.label || (bmiVal && info.weightKg ? "BMI · " + bnNum(info.weightKg) + " কেজি" : "ওজন দিন")))),
     ],
     waterFood: () => [
     // পানি (৩/৪) + ওজন-যোগ (১/৪) এক সারিতে। খাবার যোগ: হোমের ＋ ও খাবার-লগের প্রতি বেলার ＋ থেকে (আলাদা খাবার-কার্ড বাদ — owner-request ২০২৬-১১-১৪)।
@@ -342,9 +350,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
           React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: !oldReady || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "32px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", borderRadius: "12px", border: "none", background: !oldReady ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: !oldReady ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: !oldReady ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, [Icon("plus", { key: "p", size: 16, stroke: 2.2 }), " ১ গ্লাস"]),
           React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: !oldReady || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "32px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: T.track, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: glasses <= 0 ? 0.45 : 1, fontFamily: "inherit" } }, Icon("minus", { size: 18, stroke: 2.4 })))),
-      calc && React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { ...HOME_CARD, marginBottom: 0, flex: 1, minWidth: 0, color: T.green, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "4px", cursor: "pointer", fontFamily: "inherit" } },
-        React.createElement("span", { "aria-hidden": "true", style: { width: "30px", height: "30px", borderRadius: "50%", background: T.track, display: "flex", alignItems: "center", justifyContent: "center" } }, Icon("plus", { size: 18, stroke: 2.2 })),
-        React.createElement("span", { style: { fontSize: "14px", fontWeight: 800 } }, "ওজন"))),
+      calc && React.createElement(WeighButton, { ws, dayName: wDayName, onClick: openWeigh, cardStyle: { ...HOME_CARD, marginBottom: 0, flex: 1, minWidth: 0 } })),
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     ],
@@ -455,6 +461,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     inKind === "exercise" && React.createElement(ExerciseLogSheet, { key: "ex", dateText, initialType: "walk", entries: exLog, recent: recentExerciseEntries(info.recent), busy, err: inErr, onAdd: addExLog, onRemove: removeExLog, onClose: closeIn }),
     (inKind === "sleep" || inKind === "steps" || inKind === "weight") && React.createElement(DailyInputSheet, {
       key: inKind, dateText, kind: inKind, daily: dayDoc, latestWeight: info.latestWeight, stepsTarget: stTarget, busy, err: inErr,
+      weighInfo: inKind === "weight" ? { isWeighDate: isWeighDate(viewDate, wDayIdx), dayName: wDayName, delta: ws.delta, tip: WEIGH_TIP } : null,
       onSave: (fields) => writeIn(fields, true), onClose: closeIn,
     }),
 

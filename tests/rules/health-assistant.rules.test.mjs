@@ -922,6 +922,42 @@ describe('Health Assistant — Firestore Rules', function () {
     });
   });
 
+  // সাপ্তাহিক ওজনের দিন: goal-এর ঐচ্ছিক `weighDay` (পূর্ণসংখ্যা ০–৬)
+  describe('12i. Tracker goal: weighDay', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const goal = (extra = {}) => ({
+      type: 'goal', memberId: 'mA', sources: {}, lastEditedByMemberId: 'mA', createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+
+    it('12i-1. owner বৈধ weighDay (০–৬) লিখতে পারেন — তৈরি ও merge; fastDays/waterTarget-এর সাথেও', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goal({ weighDay: 6 })));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { weighDay: 0, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { fastDays: [1], waterTarget: 9, weighDay: 3, lastEditedByMemberId: 'mA' }, { merge: true }));
+    });
+
+    it('12i-2. অবৈধ weighDay (সীমা/ধরন/null) reject; daily-ডকে চলে না', async () => {
+      const db = dbAs('uidA');
+      const f = (id, d) => assertFails(setDoc(famDoc(db, 'healthTracker', id), d));
+      await f('w1', goal({ weighDay: 7 }));
+      await f('w2', goal({ weighDay: -1 }));
+      await f('w3', goal({ weighDay: 2.5 }));
+      await f('w4', goal({ weighDay: '6' }));
+      await f('w5', goal({ weighDay: null }));
+      await f('w6', { ...goal({ weighDay: 6 }), type: 'daily', date: '2026-11-13' });
+    });
+
+    it('12i-3. অন্যের ডকে (grant ছাড়া) weighDay লেখা যায় না; update-পথেও একই নিয়ম', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goal()); });
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { weighDay: 1, lastEditedByMemberId: 'mB' }, { merge: true }));
+      await assertFails(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { weighDay: 8, lastEditedByMemberId: 'mA' }));
+      await assertSucceeds(updateDoc(famDoc(dbAs('uidA'), 'healthTracker', 'goal_mA'), { weighDay: 5, lastEditedByMemberId: 'mA' }));
+    });
+  });
+
   // ধাপ ২: daily-ডকের ঐচ্ছিক `medTaken` ("ওষুধ খেয়েছি" লগ)
   describe('12i. Tracker daily: medTaken (ওষুধ খেয়েছি)', () => {
     beforeEach(async () => {

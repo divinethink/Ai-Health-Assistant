@@ -71,6 +71,8 @@ export function ReminderSettings({ info, familyId, memberId, callerMemberId, onS
   const flexRow = { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", fontSize: "14px" };
   const tiles = [
     { key: "medicine", icon: "💊", short: "ওষুধ", title: "ওষুধ", on: s.medicine.on },
+    { key: "weigh", icon: "⚖️", short: "ওজন", title: "সাপ্তাহিক ওজন", on: s.weigh.on, note: "ওজনের দিনে (ডিফল্ট শুক্রবার) ওজন বাকি থাকলে একবার জানানো হবে। দিন বদলাতে: লক্ষ্য ও ইনপুট → আরও সেটিং।",
+      children: timeInput(s.weigh.time, (v) => set("weigh", { time: v }), "ওজনের নোটিফিকেশনের সময়") },
     { key: "meal", icon: "🍽️", short: "খাবার", title: "খাবার", on: s.meal.on, note: "মিল-প্ল্যান থাকলে নোটিফিকেশনে খাবারের নামও আসে।",
       children: MEAL_SLOTS.map((slot) => h("div", { key: slot.id, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "4px 0" } },
         h("span", { style: { fontSize: "14px", color: "#1F2D2A" } }, MEAL_TITLES[slot.id]),

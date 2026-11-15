@@ -3,6 +3,7 @@
 // "টার্গেট-পূরণ" নিয়ম todaySummary.metricsOf/dayHit-এর সাথে একই (এক সূত্র)।
 
 import { metricsOf, dayHit } from "./todaySummary.js";
+import { isWeighDate } from "./weighDay.js";
 import { hasDayRecord, monthDatesISO } from "./dateNav.js";
 
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -71,7 +72,7 @@ export function monthStats(docs, y, m, ctx, todayISO) {
     if (!hasDayRecord(doc)) return;
     st.loggedDays++;
     const { applicable, met } = metricsOf(doc, ctx, date);
-    if (doc.weightKg > 0) st.weights.push(doc.weightKg);
+    if (doc.weightKg > 0 && (ctx.weighDay === undefined || isWeighDate(date, ctx.weighDay))) st.weights.push(doc.weightKg); // শুধু ওজনের দিন (ctx.weighDay থাকলে)
     if (doc.caloriesIn > 0 && applicable.includes("calories")) { st.calDays++; if (met.includes("calories")) st.calHit++; }
     st.exTotal += doc.exerciseMin || 0;
     if ((doc.exerciseMin || 0) > 0) st.exActive++;

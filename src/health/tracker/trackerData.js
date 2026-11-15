@@ -9,6 +9,7 @@ import { db } from "../../legacy/firebaseConfig.js";
 import { createHealthRecord, updateHealthRecord, listHealthRecords } from "../records/healthRecordsData.js";
 import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
 import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
+import { sanitizeWeighDay } from "./weighDay.js";
 import { sanitizeTaken } from "../records/medTaken.js";
 import { monthDatesISO } from "./dateNav.js";
 import { sanitizeFocusAreas } from "./homeWorkout.js";
@@ -52,10 +53,13 @@ export async function saveGoal(familyId, memberId, callerMemberId, { goalType, a
 // পার্ট ১০: ঐচ্ছিক goal-ফিল্ড `fastDays` (উপবাস-দিবস, ≤২) ও `waterTarget` (১–২০, null = ডিফল্ট)।
 // mergeFields — অন্য goal-ফিল্ড (লক্ষ্য/রিমাইন্ডার/planPrefs) ছোঁয় না; নির্দিষ্ট ডক-ID তাই retry-নিরাপদ।
 // সেফটি-গেট এখানে নেই (বয়স/রোগ এই স্তরে অজানা): সেভের আগে checkFastDaysInput ও পড়ার সময় activeFastDays গেট প্রয়োগ করে।
-export async function saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget }, prevGoal) {
-  const fields = ["type", "memberId", "fastDays", "waterTarget", "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
+// ঐচ্ছিক `weighDay` (০–৬, সাপ্তাহিক ওজনের দিন): শুধু পাঠালে লেখা হয় — না পাঠালে আগের মান অক্ষত।
+export async function saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget, weighDay }, prevGoal) {
+  const withDay = weighDay !== undefined;
+  const fields = ["type", "memberId", "fastDays", "waterTarget", ...(withDay ? ["weighDay"] : []), "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
   await col(familyId).doc("goal_" + memberId).set({
     type: "goal", memberId, fastDays: sanitizeFastDays(fastDays), waterTarget: sanitizeWaterTarget(waterTarget),
+    ...(withDay ? { weighDay: sanitizeWeighDay(weighDay) } : {}),
     lastEditedByMemberId: callerMemberId, updatedAt: ts(),
     ...(prevGoal ? {} : { createdAt: ts() }),
   }, { mergeFields: fields });

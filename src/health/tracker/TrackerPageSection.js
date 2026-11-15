@@ -32,6 +32,7 @@ import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { FocusSheet, focusLabels } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
+import { weighDayOf, onlyWeighDays, DEFAULT_WEIGH_DAY } from "./weighDay.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
@@ -423,7 +424,8 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
     sub && React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, sub), body);
   const none = (txt) => React.createElement("div", { style: { fontSize: "13px", color: T.muted, padding: "2px 0" } }, txt);
   const targetKg = !gate.blocked && goal && Number(goal.targetWeightKg) > 0 ? Number(goal.targetWeightKg) : null;
-  const wPts = t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg }));
+  const wDayIdx = weighDayOf(goal), wDayName = DAY_LABELS[wDayIdx];
+  const wPts = onlyWeighDays(t.days.filter((x) => x.weightKg).map((x) => ({ date: x.date, value: x.weightKg })), wDayIdx); // ট্রেন্ডে শুধু ওজনের দিনের মান (অন্য দিনের ওজন সংরক্ষিত থাকে)
   const points = reviewPoints(t, bnNum);
   // ১টা মাপে চার্ট অর্থহীন → মান-কার্ড; ২+ হলে চার্ট (ধাপ ২)
   const lastW = wPts.length ? wPts[wPts.length - 1].value : null;
@@ -432,14 +434,14 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
     React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" } },
       React.createElement("span", { style: { color: T.green, whiteSpace: "nowrap" } }, React.createElement("b", { style: { fontSize: "28px" } }, bnNum(lastW)), React.createElement("span", { style: { fontSize: "14px", color: T.muted, marginLeft: "4px" } }, "কেজি")),
       targetKg && React.createElement("span", { style: { fontSize: "13px", color: T.muted } }, "লক্ষ্য " + bnNum(targetKg))),
-    React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } }, (gapKg !== null ? (gapKg < 0.1 ? "লক্ষ্য ওজনে আছেন · " : "আরও " + bnNum(gapKg) + " কেজি বাকি · ") : "") + "আরেকটা মাপ যোগ হলে চার্ট দেখা যাবে"));
+    React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } }, (gapKg !== null ? (gapKg < 0.1 ? "লক্ষ্য ওজনে আছেন · " : "আরও " + bnNum(gapKg) + " কেজি বাকি · ") : "") + "প্রতি " + wDayName + " ওজন ধরা হয় — পরের সপ্তাহের মাপ যোগ হলে তুলনা দেখা যাবে"));
   // মাত্র ১ দিনের ডেটা হলে গ্রাফ অর্থবহ নয় — বার্তা + "দৈনিক ইনপুট" বাটন
   const fewData = t.loggedDays <= 1;
 
   // App Creator-এর ডিজাইন অনুযায়ী কার্ড (ক্রম/দৃশ্যমানতা/ভাঁজ); ডিফল্ট = আগের ক্রম হুবহু।
   const nodes = {
     weight: () => [
-    card("ওজন (কেজি)", "গত ৭ দিন", wPts.length === 1 ? weightValueCard : wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে ওজন দেওয়া হয়নি।")),
+    card("ওজন (কেজি)", "সাপ্তাহিক ওজন · " + wDayName, wPts.length === 1 ? weightValueCard : wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে " + wDayName + "ের ওজন দেওয়া হয়নি।")),
     ],
     calSleep: () => [
     // ক্যালরি ও ঘুম — এক লাইনে পাশাপাশি, আলাদা কার্ড (ক্যালরি-টার্গেট না থাকলে ঘুম পুরো প্রস্থে)
@@ -526,6 +528,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
   const gate = fastModeGate({ age, flags });
   const [days, setDays] = useState(() => sanitizeFastDays(g.fastDays));
   const [water, setWater] = useState(g.waterTarget ? String(g.waterTarget) : "");
+  const [wDay, setWDay] = useState(() => weighDayOf(g));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [ok, setOk] = useState(false);
@@ -540,7 +543,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
     if (e) { setErr(e); return; }
     setBusy(true);
     try {
-      await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: fd, waterTarget: waterLocked ? null : water }, goal);
+      await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: fd, waterTarget: waterLocked ? null : water, weighDay: wDay }, goal);
       setOk(true);
       await onSaved();
     } catch (x) {
@@ -549,7 +552,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
   };
 
   return React.createElement("div", { style: CARD },
-    React.createElement("b", null, "সিয়াম/ফাস্টিং ও পানির লক্ষ্য (ঐচ্ছিক)"),
+    React.createElement("b", null, "সিয়াম/ফাস্টিং, পানির লক্ষ্য ও ওজনের দিন (ঐচ্ছিক)"),
     React.createElement("div", null,
       gate.warn && React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, gate.reason)),
         React.createElement("label", { style: LABEL }, "সিয়াম/ফাস্টিং-এর দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
@@ -564,6 +567,14 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
       React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => { setWater(e.target.value); setOk(false); }, style: INPUT }),
       React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।")),
     waterLocked && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "8px" } }, "এই ক্ষেত্রে পানির পরিমাণ ডাক্তার ঠিক করেন — তাই লক্ষ্য দেওয়া যায় না।"),
+    React.createElement("div", { style: { marginTop: "10px" } },
+      React.createElement("label", { style: LABEL }, "সাপ্তাহিক ওজনের দিন (ডিফল্ট " + DAY_LABELS[DEFAULT_WEIGH_DAY] + ")"),
+      React.createElement("div", { role: "radiogroup", "aria-label": "সাপ্তাহিক ওজনের দিন", style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+        DAY_LABELS.map((lbl, i) => React.createElement("button", {
+          key: i, type: "button", role: "radio", "aria-checked": wDay === i, onClick: () => { setWDay(i); setOk(false); }, disabled: busy,
+          style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid " + T.green, background: wDay === i ? T.green : "#fff", color: wDay === i ? "#fff" : T.green },
+        }, lbl))),
+      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "প্রতি সপ্তাহে একদিন ওজন মাপলেই যথেষ্ট। অন্য দিনেও ওজন দেওয়া যাবে, কিন্তু ট্রেন্ডে শুধু এই দিনের ওজন ধরা হবে।")),
     err && ErrorBox(err),
     ok && React.createElement(Notice, { tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
     PrimaryButton("সংরক্ষণ", submit, busy));
@@ -673,7 +684,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
       React.createElement("details", { style: { marginTop: "8px", marginBottom: "8px" } },
-        React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
+        React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানি, ওজনের দিন"),
         React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));
   }
 
@@ -720,7 +731,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা — অসুখ-তালিকা থেকে নিজে ধরা হয়েছে; মিল ও ব্যায়াম প্ল্যান সেই অনুযায়ী। বদলাতে: Health ▸ অসুখ।"),
     
     React.createElement("details", { style: { marginBottom: "8px" } },
-      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানির লক্ষ্য"),
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানি, ওজনের দিন"),
       React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
