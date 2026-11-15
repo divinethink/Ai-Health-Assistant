@@ -167,8 +167,9 @@
   html[data-theme="dark"], html[data-theme="night-pulse"] { --hs-accent: #B8651B; --hs-accent-2: #D07A2A; --hs-sand: #2B2A22; --hs-sand-border: #4A4634; --hs-blue-soft: #243546; --hs-track: #2C3A38; }
   html[data-theme="herbal"] { --hs-accent: #A16207; --hs-accent-2: #C58A1B; }
   /* নিচের (দ্বিতীয় স্তরের) পিল: সবুজ থেকে আলাদা এক বেগুনি — সক্রিয় গাঢ়, নিষ্ক্রিয় হালকা টিন্ট (owner-request ২০২৬-১১-১৫) */
-  :root { --hs-pill-top: #FFFFFF; --hs-pill: #8B5A2B; --hs-pill-2: #A5703A; --hs-pill-text: #FFFFFF; --hs-pill-tray: #EFE4D2; --hs-pill-tint: #F6EEE0; --hs-pill-border: #D6C3A5; --hs-pill-ink: #4F3414; }
-  html[data-theme="dark"], html[data-theme="night-pulse"] { --hs-pill-top: #473826; --hs-pill: #D1A06A; --hs-pill-2: #E0B583; --hs-pill-text: #1B1206; --hs-pill-tray: #2C2419; --hs-pill-tint: #382D1E; --hs-pill-border: #66543A; --hs-pill-ink: #EBD9BE; }
+  /* ট্রে/নিষ্ক্রিয় অংশ = প্রতি থিমের নিজস্ব নিরপেক্ষ রং (chip-bg/surface/border/text), শুধু সক্রিয় পিল ব্রোঞ্জ — তাই সব থিম ও হলুদ-সতর্কতার সাথে সংঘাত নেই */
+  :root { --hs-pill: #8B5A2B; --hs-pill-2: #A5703A; --hs-pill-text: #FFFFFF; --hs-pill-tray: var(--hs-chip-bg, #E4F0E9); --hs-pill-top: var(--hs-surface, #FFFFFF); --hs-pill-tint: var(--hs-chip-bg, #E4F0E9); --hs-pill-border: var(--hs-border, #D9E5DE); --hs-pill-ink: var(--hs-text, #1B2430); }
+  html[data-theme="dark"], html[data-theme="night-pulse"] { --hs-pill: #D1A06A; --hs-pill-2: #E0B583; --hs-pill-text: #1B1206; }
   /* অনুভূমিক স্ক্রল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (স্ক্রল কাজ করে) */
   .hs-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
   .hs-noscroll::-webkit-scrollbar { display: none; }

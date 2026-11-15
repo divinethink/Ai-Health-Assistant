@@ -149,7 +149,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
                 style: {
                   flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "11px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
                   boxShadow: on ? "0 3px 8px rgba(90,60,10,0.30)" : "none",
-                  background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4F3414)",
+                  background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #1B2430)",
                 },
               }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
             null),
