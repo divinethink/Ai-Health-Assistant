@@ -8,7 +8,7 @@ import { saveDaily, todayISO, getDaily, getMonthDaily } from "./trackerData.js";
 import { macroTargets } from "./macroTargets.js";
 import { weekDatesISO, DAY_LABELS } from "./exercisePlanData.js";
 import { weighState, weighDayOf, wouldCountOnChart, WEIGH_TIP } from "./weighDay.js";
-import { WeighButton, weighCue } from "./WeighCue.js";
+import { weighCue } from "./WeighCue.js";
 import { GOAL_LABELS, sleepTargetHours, exerciseTargetMinPerDay, stepsTarget, waterTargetFor, isFastDate, fastModeGate, bmiOf } from "./trackerCalc.js";
 import { Icon } from "../../shared/icons.js";
 import { T, GRADIENT_HERO, CARD_STYLE, HOME_CARD, MAX_WATER, SLOT_TINT, SLOT_LINE } from "./trackerTheme.js";
@@ -351,7 +351,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     waterFood: () => [
     // পানি (৩/৪) + ওজন-যোগ (১/৪) এক সারিতে। খাবার যোগ: হোমের ＋ ও খাবার-লগের প্রতি বেলার ＋ থেকে (আলাদা খাবার-কার্ড বাদ — owner-request ২০২৬-১১-১৪)।
     // ওজন-বাটন শুধু হিরো-কার্ড থাকলে (না থাকলে উপরের রিং-সারিতে BMI/ওজন কার্ড আছে)। উচ্চতা কমানো: প্যাডিং/গ্লাস/বাটন ছোট।
-    (waterTarget || calc) && React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
+    React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px", alignItems: "stretch" } },
       waterTarget && React.createElement("div", { style: { ...HOME_CARD, ...(wFlash ? { border: "2px solid " + T.blue } : {}), flex: 3, minWidth: 0, marginBottom: 0, padding: "6px 12px 8px", display: "flex", flexDirection: "column", gap: "4px" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "4px" } },
           React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "15px", fontWeight: 700, color: T.ink } }, Icon("droplet", { size: 18, color: T.blue }), "পানি"),
@@ -361,7 +361,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", { style: { display: "flex", gap: "6px", marginTop: "auto" } },
           React.createElement("button", { onClick: () => setWater(glasses + 1), disabled: !oldReady || glasses >= MAX_WATER, "aria-label": "১ গ্লাস পানি যোগ", style: { flex: 1, minHeight: "32px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", borderRadius: "12px", border: "none", background: !oldReady ? "#8FAFA9" : T.green, color: T.onDark, fontSize: "14px", fontWeight: 700, cursor: !oldReady ? "default" : "pointer", fontFamily: "inherit", padding: "0 4px", boxShadow: !oldReady ? "none" : "0 4px 10px rgba(14,75,67,0.28)" } }, [Icon("plus", { key: "p", size: 16, stroke: 2.2 }), " ১ গ্লাস"]),
           React.createElement("button", { onClick: () => setWater(glasses - 1), disabled: !oldReady || glasses <= 0, "aria-label": "১ গ্লাস কমান", style: { minWidth: "44px", minHeight: "32px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: T.track, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: glasses <= 0 ? 0.45 : 1, fontFamily: "inherit" } }, Icon("minus", { size: 18, stroke: 2.4 })))),
-      calc && React.createElement(WeighButton, { ws, dayName: wDayName, onClick: openWeigh, cardStyle: { ...HOME_CARD, marginBottom: 0, flex: 1, minWidth: 0 } })),
+      // পেট ডায়েরি (১/৪) — আজ লগ থাকলে হালকা সবুজ। ওজন-বাটন বাদ: ওজন যোগ হয় ＋ থেকে (নিয়ম অপরিবর্তিত)।
+      React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
+        style: { ...HOME_CARD, flex: waterTarget ? 1 : "1 1 auto", minWidth: 0, marginBottom: 0, padding: "4px 3px", minHeight: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 800, color: T.green, textAlign: "center", lineHeight: 1.2,
+          background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("health", { key: "i", size: 22 }), "পেট ডায়েরি"])),
+    // ওজনের দিন (আগের সন্ধ্যা ৭টা থেকে) ইনপুট বাকি থাকলে হোমে স্মরণ-লাইন — ট্যাপে ওজন-শিট (আগের কার্ডের মতোই)
+    calc && weighCard.pending && React.createElement("button", { type: "button", onClick: openWeigh, className: weighCard.className, "aria-label": "ওজন যোগ/বদলান — " + weighCard.label,
+      style: { ...HOME_CARD, width: "100%", marginBottom: "8px", minHeight: "44px", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: weighCard.color } }, "⚖️ " + weighCard.label),
     flags.kidney && React.createElement(Notice, { tone: "info" }, "কিডনি রোগে পানির পরিমাণ ডাক্তার ঠিক করে দেন — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     !flags.kidney && waterTarget === null && React.createElement(Notice, { tone: "info" }, "২ বছরের কম বয়সে পানির পরিমাণ শিশুর দুধ/খাবারের সাথে ডাক্তারের নির্দেশমতো ঠিক হয় — তাই পানির টার্গেট দেখানো হচ্ছে না।"),
     ],
@@ -401,16 +407,13 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
     homeExtra || null,
     ],
     foodHead: () => [
-    // আজকের খাবার-লগ হেডার + পাশে "পেট ডায়েরি" (এক লাইনের আলাদা কার্ড; উচ্চতা বাড়ে না — দুটোই একই সারিতে সমান উচ্চতা)।
+    // আজকের খাবার-লগ হেডার (পেট ডায়েরি বাটন এখন পানির পাশে — owner-request ২০২৬-১১-১৫)।
     // নিজে-যোগ-করা খাবারই এখানে; প্ল্যানের টিক আলাদা (লক্ষ্য ও প্ল্যান → মিল), তবে হিরো-কার্ডের মোটে ধরা হয়।
-    React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch", marginBottom: "8px" } },
-      canLog && React.createElement("div", { style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
+    canLog && React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch", marginBottom: "8px" } },
+      React.createElement("div", { style: { ...HOME_CARD, flex: 1, minWidth: 0, marginBottom: 0, background: "#E8F1EC", borderColor: "#B7D3C6", padding: "8px 12px" } },
         React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, isViewToday ? "আজকের খাবার-লগ" : dateText + "-এর খাবার-লগ"),
         React.createElement("div", { title: "প্ল্যানের টিকসহ", style: { fontSize: "12px", color: T.muted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, "মোট " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) + " কিলোক্যালরি"),
-        foodErr && !foodOpen && ErrorBox(foodErr)),
-      React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
-        style: { ...HOME_CARD, flex: canLog ? "0 0 auto" : 1, marginBottom: 0, padding: "0 12px", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 800, color: T.green,
-          background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("health", { key: "i", size: 18 }), "পেট ডায়েরি"])),
+        foodErr && !foodOpen && ErrorBox(foodErr))),
     ],
     slots: () => [
     canLog && slotsForDay(plannedFast, dayDoc).map((sl) => {
