@@ -103,13 +103,13 @@ function SubPills(tabs, active, onChange) {
   const hk = "trk:" + tabs.map((x) => x[0]).join("|"); // আগের Pills-এর একই কী — Back বাটনে আগের উপ-ট্যাবে ফেরা
   histBind(hk, active, onChange);
   // স্বাস্থ্য ▸ মেডিসিন|অসুখ|রিপোর্ট-এর মতো এক লাইনের সেগমেন্ট: ধূসর-সবুজ ট্রে, সমান চওড়া ৩ ঘর, বাছাইটা সবুজ ভরাট
-  return React.createElement("div", { role: "tablist", "aria-label": "লক্ষ্য ও প্ল্যান", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "var(--hs-pill-tray, #E3ECE6)", boxShadow: "inset 0 1px 3px rgba(60,30,100,0.12)", margin: "0 0 10px" } },
+  return React.createElement("div", { role: "tablist", "aria-label": "লক্ষ্য ও প্ল্যান", style: { display: "flex", gap: "2px", padding: "4px", borderRadius: "16px", background: "var(--hs-pill-tray, #E3ECE6)", boxShadow: "inset 0 1px 3px rgba(90,60,10,0.12)", margin: "0 0 10px" } },
     tabs.map(([id, label]) => {
       const on = id === active;
       return React.createElement("button", { key: id, type: "button", role: "tab", onClick: () => histChange(hk, active, id, onChange), "aria-selected": on, "aria-pressed": on,
         style: { flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "12px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
-          boxShadow: on ? "0 4px 10px rgba(60,30,100,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
-          background: on ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)" } }, label);
+          boxShadow: on ? "0 4px 10px rgba(90,60,10,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
+          background: on ? "linear-gradient(135deg, var(--hs-pill, #946310), var(--hs-pill-2, #B07D1E))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #5C4410)" } }, label);
     }));
 }
 function Pills(tabs, active, onChange, leading) {
@@ -484,10 +484,11 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
 // ভাঁজযোগ্য চিপ (মিল ও ব্যায়ামে একই) — panel/setPanel বাইরে থেকে
 function FoldChip(id, text, badge, panel, setPanel) {
   return React.createElement("button", { key: id, onClick: () => setPanel(panel === id ? null : id), "aria-expanded": panel === id,
-    style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: "6px", padding: "0 12px", borderRadius: "14px", border: "1px solid " + T.sandBorder, background: T.sand, color: T.ink, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+    // হেডলাইন-রূপ: মাঝে-সাজানো, ক্রিম গ্রেডিয়েন্ট + নরম ছায়া (খোলা কার্ডের ক্রিমের সাথে মেলে); ▼/▲ ডানে আলাদা
+    style: { flex: 1, minWidth: 0, minHeight: "48px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "0 28px", borderRadius: "14px", border: "1px solid #E3CC9A", background: "linear-gradient(135deg, #FBF1DF, #F3DFB2)", boxShadow: "0 4px 10px rgba(90,60,10,0.18)", color: "#4A3410", fontSize: "16px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", textAlign: "center" } },
     React.createElement("span", { style: { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, text),
     badge && React.createElement("span", { style: { flexShrink: 0, minWidth: "20px", padding: "0 6px", borderRadius: "999px", background: "#E4F0E9", color: T.green, fontSize: "12px", textAlign: "center" } }, badge),
-    React.createElement("span", { "aria-hidden": "true", style: { flexShrink: 0, fontSize: "12px", color: T.muted } }, panel === id ? "▲" : "▼"));
+    React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "12px", fontSize: "12px", color: "#7A5A1C" } }, panel === id ? "▲" : "▼"));
 }
 
 // ---------- মিল প্ল্যান — ধাপ A১/A২/A৩ ----------
@@ -500,8 +501,8 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // ক্রম (owner-request ২০২৬-১১-১৪): সমস্যা → এড়িয়ে চলুন → খাবেন → [কেন এই ডায়েট প্ল্যান? + ডায়েট প্ল্যান] → অভ্যাস ও জীবনযাত্রা → খাদ্য গাইড
   const plan = React.createElement(React.Fragment, null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-      !gate.blocked && foldChip("why", "💡 কেন এই ডায়েট প্ল্যান?")),
-    panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
+      !gate.blocked && foldChip("why", "💡 ডায়েট")),
+    panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, title: "কেন এই ডায়েট প্ল্যান?", lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
     React.createElement(MealTab, common));
   return React.createElement("div", null,
     React.createElement(DietGuidanceSection, { key: "diet-" + memberId, familyId, selectedMemberId: memberId, middle: plan }),

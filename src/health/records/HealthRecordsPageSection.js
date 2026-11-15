@@ -148,8 +148,8 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
                 key: sb.id, type: "button", role: "tab", onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-selected": on, "aria-pressed": on,
                 style: {
                   flex: "1 1 0", minWidth: 0, minHeight: "44px", padding: "4px 2px", borderRadius: "11px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", border: "none",
-                  boxShadow: on ? "0 3px 8px rgba(60,30,100,0.30)" : "none",
-                  background: on ? "linear-gradient(135deg, var(--hs-pill, #6B3FA0), var(--hs-pill-2, #8153B8))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4B3070)",
+                  boxShadow: on ? "0 3px 8px rgba(90,60,10,0.30)" : "none",
+                  background: on ? "linear-gradient(135deg, var(--hs-pill, #946310), var(--hs-pill-2, #B07D1E))" : "transparent", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #5C4410)",
                 },
               }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
             null),
