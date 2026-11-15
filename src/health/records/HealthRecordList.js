@@ -12,7 +12,7 @@ import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { BottomSheet } from "../../shared/BottomSheet.js";
 import { bnDate } from "../../shared/dates.js";
 import { listHealthRecords, deleteHealthRecord, ackLabAlert } from "./healthRecordsData.js";
-import { groupObservations, obsTrend, unitLabelBn } from "./recordGrouping.js";
+import { groupObservations, obsTrend, unitLabelBn, orderObsCards } from "./recordGrouping.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { alertForGroup, buildLabAlerts, alertSig, LEVEL_WORD } from "../reports/labAlerts.js";
 import { LabAlertBox } from "../reports/LabAlertBox.js";
@@ -110,7 +110,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
   const shortDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return Number.isNaN(d.getTime()) || d.getFullYear() !== new Date().getFullYear() ? bnDate(iso) : d.toLocaleDateString("bn-BD", { day: "numeric", month: "long" }); };
-  const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px", alignItems: "start" };
+  const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px", alignItems: "stretch" };
   const grid2 = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px" };
 
   const conditions = records.filter((r) => r.resourceType === "condition");
@@ -155,7 +155,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     r.reaction && React.createElement("div", { style: { fontSize: "13.5px", color: "#5B4A47", marginTop: "2px" } }, r.reaction));
   const obsCard = (g) => {
     const k = "obs:" + g.key, latest = g.items[0], tr = obsTrend(g.items), al = alertForGroup(g.items, dict, sex);
-    return React.createElement("button", { key: k, onClick: () => toggle(k), "aria-haspopup": "dialog", style: { all: "unset", ...cardBase, boxSizing: "border-box", display: "block", alignSelf: "start", padding: "10px 9px", cursor: "pointer", minHeight: "44px", background: "#fff", borderRadius: "18px", boxShadow: SOFT, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
+    return React.createElement("button", { key: k, onClick: () => toggle(k), "aria-haspopup": "dialog", style: { all: "unset", ...cardBase, boxSizing: "border-box", display: "flex", flexDirection: "column", padding: "10px 9px", minHeight: "112px", cursor: "pointer", background: "#fff", borderRadius: "18px", boxShadow: SOFT, border: "1px solid " + (al ? "#F0CCC7" : "rgba(127,150,140,0.16)") } },
       React.createElement("div", { title: g.label, style: { fontSize: "12.5px", color: MUTED, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflowWrap: "anywhere" } }, g.label),
       React.createElement("div", { style: { marginTop: "3px", display: "flex", alignItems: "baseline", gap: "5px", flexWrap: "wrap" } },
         React.createElement("span", { style: { fontSize: "21px", fontWeight: 800, color: al ? RED : "#1F2D2A", lineHeight: 1.15, overflowWrap: "anywhere" } }, latest.value),
@@ -163,7 +163,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
       (tr || al) && React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" } },
         al && badge(al.level === "positive" ? "🔴 " + al.value : "🔴 " + LEVEL_WORD[al.level], RED, "#FDE7E4"),
         tr && badge((tr.dir === "up" ? "↑ " : "↓ ") + bn1(tr.diff), al ? RED : G, al ? "#FDE7E4" : "#E6F2EC")),
-      latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "5px" } }, shortDate(latest.date)));
+      latest.date && React.createElement("div", { style: { fontSize: "12.5px", color: MUTED, marginTop: "auto", paddingTop: "5px" } }, shortDate(latest.date)));
   };
 
   // ---- বিস্তারিত শিট (নিচ থেকে ওঠে) ----
@@ -229,6 +229,6 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onAck: doAck, ackBusy, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
     conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
     allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, obsGroups.map(obsCard))),
+    obsGroups.length > 0 && React.createElement(React.Fragment, null, title("📈", "পরিমাপ", obsGroups.length + "টি"), React.createElement("div", { style: grid3 }, orderObsCards(obsGroups, (g) => !!alertForGroup(g.items, dict, sex)).map(obsCard))),
     detailSheet());
 }

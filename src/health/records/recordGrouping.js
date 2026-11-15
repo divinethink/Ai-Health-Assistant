@@ -37,6 +37,13 @@ export function groupObservations(records) {
   });
 }
 
+// কার্ড-ক্রম (শুধু দেখানো): ওজন, উচ্চতা সবসময় প্রথমে; তারপর সতর্কতা-ওয়ালা (isAlert), তারপর বাকি।
+// সমান-ধরনের (লম্বা/ছোট) কার্ড পাশাপাশি থাকে; প্রতিটি গ্রুপে মূল ক্রম বজায় (stable)।
+export function orderObsCards(groups, isAlert) {
+  const rank = (g) => (g.key === "weight" ? 0 : g.key === "height" ? 1 : isAlert && isAlert(g) ? 2 : 3);
+  return (groups || []).map((g, i) => [g, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
+}
+
 // সর্বশেষ বনাম আগের মান — দুটোই সংখ্যা ও আলাদা হলে { dir: "up"|"down", diff }, নইলে null
 // উচ্চতা বড়দের ক্ষেত্রে বদলায় না — ভুল-এন্ট্রি সংশোধনে ↑↓ বিভ্রান্তিকর, তাই কোনো তীর নয়
 export function obsTrend(items) {

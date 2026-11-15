@@ -27,3 +27,10 @@ test("উচ্চতায় তীর নেই; stool-bristol বাংল�
   assert.equal(obsTrend([o("a", "উচ্চতা", "160", "2", "cm"), o("b", "height", "162.6", "1", "cm")]), null);
   assert.equal(groupObservations([o("s", "stool-bristol", "6", "2026-11-09", "Bristol")])[0].label, "পেটের লক্ষণ (Bristol)");
 });
+
+import { orderObsCards } from "../../src/health/records/recordGrouping.js";
+test("কার্ড-ক্রম: ওজন, উচ্চতা আগে; তারপর সতর্কতা; বাকি মূল ক্রমে", () => {
+  const gs = ["tsh", "height", "hb", "weight", "urine"].map((key) => ({ key }));
+  const out = orderObsCards(gs, (g) => g.key === "urine").map((g) => g.key);
+  assert.deepEqual(out, ["weight", "height", "urine", "tsh", "hb"]);
+});
