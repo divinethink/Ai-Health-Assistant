@@ -1,11 +1,11 @@
 // "সাধারণ চিকিৎসা" পিল: সবার জন্য স্থির শুরুর তালিকা + সদস্যের নিজের তালিকা (যোগ/সম্পাদনা/মোছা)।
-// ডোজ শুধু সদস্যের নিজের লেখা; অ্যাপ বানায় না, AI/dose-engine-এর সাথে যোগ নেই।
+// সদস্যের নিজের তালিকার ডোজ সদস্যের নিজের লেখা। সাধারণ তালিকার ডোজ শুধু verified Medicine DB থেকে (doseEnforcement); অ্যাপ/AI বানায় না।
 import { TextField, PrimaryButton, SheetFrame, ConfirmDialog, ErrorBox, Skeleton } from "../../shared/ui.js";
 import { MED_ALIAS } from "../../shared/searchAliases.js";
 import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
 import { COMMON_HOMEO_DEFAULTS, HOMEO_SOURCE } from "./commonCareHomeoList.js";
 import { COMMON_HERBAL_DEFAULTS, HERBAL_SOURCE } from "./commonCareHerbalList.js";
-import { addCareBatch, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
+import { addCareBatch, loadCareDose, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
 import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, togglePattern4, composeFrequency, patternFromString, hasPattern } from "./careMeds.js";
 import { chip, lblEl, mealChips, DAY_OPTIONS } from "../records/MedicationReminders.js";
 import { SubPills } from "../../shared/SubPills.js";
@@ -63,6 +63,26 @@ function DoseBlock(m, setPattern, setMeal, setDays, setAsNeeded) {
       React.createElement("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [...DAY_OPTIONS.map((d) => chip(m.days === d, toBn(d) + " দিন", () => setDays(m.days === d ? null : d), "d" + d)), chip(m.days === 0, "চলবে (নিয়মিত)", () => setDays(m.days === 0 ? null : 0), "d0")])),
     preview && React.createElement("div", { style: { marginTop: "10px", padding: "8px 12px", background: "#F2F7F4", border: "1px solid #D9E5DE", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, color: "#0E4B43" } }, "➜ " + preview),
     !preview && m.frequency && React.createElement("div", { style: { marginTop: "8px", fontSize: "12.5px", color: "#5B6B66" } }, "আগের লেখা (বদলালে এটি মুছে যাবে): " + m.frequency));
+}
+
+// সাধারণ তালিকার কার্ডে: চাপলে নির্বাচিত সদস্যের বয়স অনুযায়ী ডোজ (শুধু verified DB থেকে; DB-তে না থাকলে দেখায় না)
+function DoseLookup({ familyId, memberId, generic }) {
+  const [st, setSt] = useState({ s: "idle" });
+  const go = async () => {
+    setSt({ s: "load" });
+    try { setSt({ s: "ok", v: await withTimeout(loadCareDose(familyId, memberId, generic)) }); }
+    catch (e) { setSt({ s: "err" }); }
+  };
+  const box = { marginTop: "8px", padding: "10px 12px", background: "#F2F7F4", border: "1px solid #D9E5DE", borderRadius: "12px", fontSize: "13px", lineHeight: 1.55, color: "#2B3A36" };
+  const v = st.s === "ok" ? st.v : null;
+  return React.createElement(React.Fragment, null,
+    React.createElement("button", { type: "button", onClick: go, disabled: st.s === "load", style: { ...pickBtn, marginRight: "8px" } }, st.s === "load" ? "দেখা হচ্ছে…" : "💊 এই সদস্যের জন্য ডোজ"),
+    st.s === "err" && React.createElement("div", { style: box }, "ডোজ আনা যায়নি — নেটওয়ার্ক দেখে আবার চাপুন।"),
+    v && v.blocked && React.createElement("div", { style: box }, v.message, v.warnings.map((w) => React.createElement("div", { key: w, style: { marginTop: "4px" } }, w))),
+    v && !v.blocked && React.createElement("div", { style: box },
+      v.lines.map((l) => React.createElement("div", { key: l }, l)),
+      v.warnings.map((w) => React.createElement("div", { key: w, style: { marginTop: "4px", color: w.startsWith("⚠") ? "#B3261E" : "#5B6B66" } }, w)),
+      React.createElement("div", { style: { marginTop: "6px", fontSize: "12px", color: "#5B6B66" } }, "উৎস: " + (v.source || "Medicine DB") + " (ফার্মাসিস্ট-যাচাইকৃত)। অ্যাপ নিজে ডোজ বানায় না; এটি ডাক্তারের পরামর্শের বিকল্প নয়।")));
 }
 
 export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }) {
@@ -146,13 +166,14 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 800 } }, (d.kid ? "👶 " : "") + d.disease),
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px" } }, d.generic + (d.brands.length ? " — " + d.brands.join(", ") : "")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
+      React.createElement(DoseLookup, { key: selectedMemberId, familyId, memberId: selectedMemberId, generic: d.dbName || d.generic }),
       React.createElement("button", { type: "button", onClick: () => openNew(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] || "" }), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
     openDef && mode !== "allopathy" && (mode === "homeopathy" ? COMMON_HOMEO_DEFAULTS : COMMON_HERBAL_DEFAULTS).map((d) => React.createElement("div", { key: d.key, style: card },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 800 } }, (d.kid ? "👶 " : "") + d.disease),
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px", overflowWrap: "anywhere" } }, "ঐতিহ্যগতভাবে ব্যবহৃত: " + d.items.join(", ")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
       React.createElement("button", { type: "button", onClick: () => openNew(d.disease, d.items.slice(0, MAX_MEDS).map((n) => ({ ...emptyMed(), brand: n }))), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
-    openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, (mode === "allopathy" ? "উৎস: WHO-EML · BNFC (প্রকল্পের Medicine DB, Tier ১)। সাধারণ তথ্য; ডোজ নেই। ফার্মাসিস্ট রিভিউ হয়নি (draft)।" : "উৎস: " + (mode === "homeopathy" ? HOMEO_SOURCE : HERBAL_SOURCE) + "। ডোজ নেই; রিভিউ হয়নি (draft)।")),
+    openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, (mode === "allopathy" ? "উৎস: WHO-EML · BNFC (প্রকল্পের Medicine DB, Tier ১)।" : "উৎস: " + (mode === "homeopathy" ? HOMEO_SOURCE : HERBAL_SOURCE) + "। ডোজ নেই; রিভিউ হয়নি (draft)।")),
 
     form && React.createElement(SheetFrame, { title: form.id ? "সম্পাদনা" : "নতুন যোগ", onClose: () => setForm(null), accent: "medicationStatement",
       footer: PrimaryButton(!form.id && filledMeds(form.meds).length > 1 ? "সংরক্ষণ (" + toBn(filledMeds(form.meds).length) + "টি " + noun + ")" : "সংরক্ষণ", save, busy) },

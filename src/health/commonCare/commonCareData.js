@@ -4,6 +4,9 @@ import { createHealthRecord, updateHealthRecord, deleteHealthRecord, buildHealth
 import { useMemberHealth } from "../records/useMemberHealth.js";
 import { invalidateMemberHealth } from "../records/memberHealthStore.js";
 import { db } from "../../legacy/firebaseConfig.js";
+import { lookupMedicineEntry } from "../../legacy/medicineDb.js";
+import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
+import { careDoseView } from "./careDose.js";
 
 export const COMMON_CARE_TYPE = "commonCare";
 
@@ -44,6 +47,13 @@ export function groupByDisease(records, mode) {
     map.get(k).push(r);
   });
   return [...map.entries()];
+}
+
+// নির্বাচিত সদস্যের জন্য ডোজ: verified DB entry + বয়স/এলার্জি/চলমান ওষুধ → careDoseView (শুধু পড়া; কিছু লেখে না)।
+export async function loadCareDose(familyId, memberId, generic) {
+  const [entry, { context, ageYears }] = await Promise.all([lookupMedicineEntry(generic), assembleHealthContext(familyId, memberId, null, {})]);
+  const c = context.relevantClinicalContext;
+  return careDoseView({ entry, ageYears, allergySubstances: c.relevantAllergies, activeMedicationNames: c.relevantMedications });
 }
 
 export { useMemberHealth };
