@@ -90,7 +90,10 @@ export function buildHealthRecordFields(resourceType, fields) {
   if (resourceType === "commonCare") {
     // সদস্যের নিজের লেখা রেফারেন্স-তালিকা (ডাক্তারের পরামর্শ); অ্যাপ ডোজ বানায় না, AI/dose-engine-এর সাথে যোগ নেই
     const c = (v) => (v || "").trim();
-    return { disease: c(fields.disease), brand: c(fields.brand), generic: c(fields.generic), dose: c(fields.dose), frequency: c(fields.frequency), note: c(fields.note) };
+    const base = { disease: c(fields.disease), brand: c(fields.brand), generic: c(fields.generic), dose: c(fields.dose), frequency: c(fields.frequency), note: c(fields.note) };
+    // Homeopathy/Herbal: ঐচ্ছিক নতুন ফিল্ড (additive); `mode` না থাকলে allopathy — পুরনো রেকর্ড অপরিবর্তিত
+    if (fields.mode === "homeopathy" || fields.mode === "herbal") return { ...base, mode: fields.mode, potency: c(fields.potency), prep: c(fields.prep) };
+    return base;
   }
   throw new Error("অজানা resourceType: " + resourceType);
 }

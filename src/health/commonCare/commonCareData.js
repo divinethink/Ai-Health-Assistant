@@ -35,9 +35,10 @@ export const editCare = (fid, id, callerId, f) => updateHealthRecord(fid, id, CO
 export const removeCare = (fid, id, memberId, callerId) => deleteHealthRecord(fid, id, memberId, callerId);
 
 // অসুখ-অনুযায়ী গ্রুপ (pure)
-export function groupByDisease(records) {
+export function groupByDisease(records, mode) {
+  const want = mode || "allopathy";
   const map = new Map();
-  records.filter((r) => r.resourceType === COMMON_CARE_TYPE).forEach((r) => {
+  records.filter((r) => r.resourceType === COMMON_CARE_TYPE && (r.mode || "allopathy") === want).forEach((r) => {
     const k = (r.disease || "").trim() || "অন্যান্য";
     if (!map.has(k)) map.set(k, []);
     map.get(k).push(r);

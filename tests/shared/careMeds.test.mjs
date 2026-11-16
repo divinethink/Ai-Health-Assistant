@@ -34,3 +34,18 @@ test("সারাংশ, বাংলা সংখ্যা, সাজেশন
   assert.equal(toBn(12), "১২");
   assert.deepEqual(diseaseNames([["জ্বর", []], ["অন্যান্য", []]]), ["জ্বর"]);
 });
+
+test("Homeopathy/Herbal: শুধু নাম লাগে (জেনেরিক নয়); নাম ছাড়া আটকায়", () => {
+  assert.equal(validateCareMeds("সর্দি", [med({ brand: "Arnica montana", potency: "30C" })], "homeopathy"), null);
+  assert.equal(validateCareMeds("সর্দি", [med({ brand: "তুলসী পাতা", prep: "রস" })], "herbal"), null);
+  assert.match(validateCareMeds("সর্দি", [med({ brand: "x" }), med({ potency: "30C" })], "homeopathy").msg, /ওষুধ 2: নাম লিখুন/);
+  assert.match(validateCareMeds("সর্দি", [emptyMed()], "herbal").msg, /অন্তত একটি ভেষজ/);
+});
+test("হোমিও: একই নামে ভিন্ন পটেন্সি আলাদা; একই পটেন্সি দুইবার আটকায়", () => {
+  assert.equal(validateCareMeds("ব্যথা", [med({ brand: "Arnica", potency: "30C" }), med({ brand: "Arnica", potency: "200C" })], "homeopathy"), null);
+  assert.match(validateCareMeds("ব্যথা", [med({ brand: "Arnica", potency: "30C" }), med({ brand: "arnica", potency: "30c" })], "homeopathy").msg, /দুইবার/);
+});
+test("সারাংশে পটেন্সি/ব্যবহারের ধরন আসে; allopathy-র সারাংশ অপরিবর্তিত", () => {
+  assert.equal(medSummary(med({ brand: "Arnica", potency: "30C", dose: "৪ ফোঁটা" })), "Arnica · 30C · ৪ ফোঁটা");
+  assert.equal(medSummary(med({ brand: "তুলসী", prep: "রস", frequency: "দিনে ২ বার" })), "তুলসী · রস · দিনে ২ বার");
+});
