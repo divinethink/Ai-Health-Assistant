@@ -30,6 +30,7 @@ export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarg
   const [wake, setWake] = useState(d.sleep && d.sleep.wake ? d.sleep.wake : "");
   const [quality, setQuality] = useState(d.sleep && d.sleep.quality ? d.sleep.quality : 0);
   const [localErr, setLocalErr] = useState(null);
+  const [qInfo, setQInfo] = useState(false);
 
   const submit = () => {
     setLocalErr(null);
@@ -71,7 +72,11 @@ export function DailyInputSheet({ dateText, kind, daily, latestWeight, stepsTarg
 
     kind === "sleep" && React.createElement("div", null,
       React.createElement("div", { style: { display: "flex", gap: "8px" } }, timeField("শোয়া", bed, setBed, "22:00"), timeField("ওঠা", wake, setWake, "06:00")),
-      React.createElement("label", { style: LAB }, "ঘুমের মান (ঐচ্ছিক)"),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "2px" } },
+        React.createElement("label", { style: LAB }, "ঘুমের মান (ঐচ্ছিক)"),
+        React.createElement("button", { type: "button", onClick: () => setQInfo((v) => !v), "aria-label": "ঘুমের মানের সংখ্যার অর্থ", "aria-expanded": qInfo, style: { minWidth: "44px", minHeight: "44px", margin: "6px 0 -4px", border: "none", background: "none", color: T.green, fontSize: "18px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "ⓘ")),
+      qInfo && React.createElement("div", { role: "note", style: { marginBottom: "8px", padding: "8px 10px", borderRadius: "12px", background: "var(--hs-chip-bg, #E4F0E9)", fontSize: "12.5px", lineHeight: 1.6, color: T.ink } },
+        "১ = খুব খারাপ (ঘুম হয়নি বা বারবার ভেঙেছে)", React.createElement("br"), "২ = খারাপ", React.createElement("br"), "৩ = মোটামুটি", React.createElement("br"), "৪ = ভালো", React.createElement("br"), "৫ = খুব ভালো (সতেজ হয়ে উঠেছেন)"),
       React.createElement("div", { style: { display: "flex", gap: "8px" } },
         [1, 2, 3, 4, 5].map((n) => React.createElement("button", {
           key: n, onClick: () => setQuality(n === quality ? 0 : n), "aria-pressed": n === quality, "aria-label": "ঘুমের মান " + bnNum(n),

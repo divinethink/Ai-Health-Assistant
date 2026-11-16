@@ -178,7 +178,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
     h("div", { style: { position: "relative", display: "flex", alignItems: "center", minHeight: "44px", marginBottom: "4px" } },
       h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto" } }, "← অন্য খাবার"),
       // "কতটুকু খাবেন?" — "অন্য খাবার"-এর একই লাইনে, মাঝ-বরাবর, বড় ফন্টে
-      h("div", { style: { position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A", pointerEvents: "none" } }, "কতটুকু খাবেন?")),
+      h("div", { style: { position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A", pointerEvents: "none" } }, "কতটুকু খাবেন/খেয়েছেন?")),
     // স্ট্যাটাস: সবুজ হলে কিছু দেখানো হয় না (শব্দ কমে); হলুদ/লাল হলে কারণসহ
     st.level !== "green" && h("div", { style: { padding: "8px 12px", borderRadius: "12px", border: "1px solid " + sc.border, background: sc.bg, color: sc.text, fontSize: "13px", marginBottom: "8px" } },
       h("b", null, st.icon + " " + st.label), st.reasons.length > 0 && " — " + st.reasons.join("; ")),
