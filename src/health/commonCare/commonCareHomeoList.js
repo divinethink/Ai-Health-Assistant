@@ -1,6 +1,6 @@
 // "সাধারণ চিকিৎসা ▸ Homeopathy" — শুধু ধারণার জন্য ঐতিহ্যগত তথ্য (কোডে স্থির; Firestore-এ নয়)।
 // উৎস: Boericke-এর Materia Medica (Homoeopathic Materia Medica) ও National Center for Homeopathy-র ঐতিহ্যগত ব্যবহার-তালিকা।
-// নিয়ম (Roadmap §৬): Evidence Level ৩ (ঐতিহ্যগত); "কার্যকর/নিরাময়" ভাষা নয়; কোনো ডোজ/পটেন্সি নেই।
+// নিয়ম (Roadmap §৬): Evidence Level ৩ (ঐতিহ্যগত); "কার্যকর/নিরাময়" ভাষা নয়; ডোজ এই ফাইলে নেই — সাধারণ-জ্ঞান মাত্রা আলাদা `commonCareDose.js`-এ।
 // kid:true = শিশু-কেন্দ্রিক এন্ট্রি। ফার্মাসিস্ট/হোমিও-চিকিৎসক রিভিউ হয়নি (draft)।
 export const HOMEO_SOURCE = "Boericke Materia Medica · NCH";
 export const HOMEO_DISCLAIMER = "নিয়ন্ত্রিত বৈজ্ঞানিক পর্যালোচনায় placebo-র তুলনায় অতিরিক্ত কার্যকারিতার নির্ভরযোগ্য প্রমাণ পাওয়া যায়নি। নিচের তালিকা শুধু ঐতিহ্যগত ব্যবহারের ধারণা; এটি চিকিৎসার পরামর্শ নয়।";
