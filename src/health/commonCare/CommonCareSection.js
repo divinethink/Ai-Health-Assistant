@@ -25,6 +25,22 @@ function genericFromBrand(brand) {
   return "";
 }
 
+// পটেন্সি: লেবেলের পাশে ⓘ; চাপলে সহজ ব্যাখ্যা খোলে/বন্ধ হয় (শুধু তথ্য, কিছু সংরক্ষণ হয় না)
+function PotencyField(label, value, onChange, ph, open, toggle) {
+  const line = { marginTop: "4px" };
+  return React.createElement("div", { style: { marginTop: "14px" } },
+    React.createElement("div", { style: { display: "flex", alignItems: "center", marginBottom: "6px" } },
+      React.createElement("label", { htmlFor: "cc-potency", style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A" } }, label),
+      React.createElement("button", { type: "button", onClick: toggle, "aria-label": "পটেন্সি কী, জানুন", "aria-expanded": open, style: { minWidth: "44px", minHeight: "44px", margin: "-12px 0 -12px 0", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "ⓘ")),
+    open && React.createElement("div", { style: { background: "#F2F7F4", border: "1px solid #D9E5DE", borderRadius: "12px", padding: "10px 12px", marginBottom: "8px", fontSize: "13.5px", lineHeight: 1.55, color: "#2B3A36" } },
+      React.createElement("div", null, "পটেন্সি হলো হোমিওপ্যাথি ওষুধের শক্তিমাত্রা, অর্থাৎ ওষুধ কতবার তরল (dilute) করা হয়েছে তার হিসাব। বোতলের গায়ে ওষুধের নামের পাশে লেখা থাকে, যেমন 6X, 30C, 200C।"),
+      React.createElement("div", { style: line }, "• X মানে প্রতি ধাপে ১ ভাগ ওষুধ ও ৯ ভাগ তরল।"),
+      React.createElement("div", null, "• C মানে প্রতি ধাপে ১ ভাগ ওষুধ ও ৯৯ ভাগ তরল।"),
+      React.createElement("div", null, "• সংখ্যা যত বড়, তত বেশি ধাপে তরল করা হয়েছে।"),
+      React.createElement("div", { style: line }, "চিকিৎসক যেটা লিখে দিয়েছেন, বোতল দেখে সেটাই লিখুন। না জানলে ঘরটি ফাঁকা রাখতে পারেন।")),
+    React.createElement("input", { id: "cc-potency", type: "text", value, placeholder: ph, onChange: (e) => onChange(e.target.value), style: inputStyle }));
+}
+
 export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }) {
   const { records, loading, error } = useMemberHealth(familyId, selectedMemberId);
   const [form, setForm] = useState(null); // null | { id|null, disease, meds[], openKey }
@@ -34,6 +50,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
   const [err, setErr] = useState(null);
   const [openDef, setOpenDef] = useState(false);
   const [mode, setMode] = useState("allopathy"); // allopathy | homeopathy | herbal
+  const [potencyInfo, setPotencyInfo] = useState(false); // পটেন্সির ⓘ ব্যাখ্যা
   const noun = MODE_NOUN[mode];
 
   const openNew = (disease, med) => { const m = med || emptyMed(); setErr(null); setForm({ id: null, disease: disease || "", meds: [m], openKey: m.key }); };
@@ -126,7 +143,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
               React.createElement("span", { "aria-hidden": "true", style: { color: "var(--hs-primary, #6A4BB0)", fontSize: "13px" } }, open ? "▲" : "▼")),
             canRemove && React.createElement("button", { type: "button", "aria-label": "এই " + noun + " বাদ দিন", title: "বাদ দিন", style: { ...iconBtn, color: "#B3261E" }, onClick: () => removeMed(m.key) }, "✕")),
           open && React.createElement("div", { style: { padding: "0 12px 14px" } },
-            MODE_FIELDS[mode].map(([k, label, ph]) => React.createElement(React.Fragment, { key: k }, TextField(label, m[k], setMed(m.key, k), ph)))));
+            MODE_FIELDS[mode].map(([k, label, ph]) => React.createElement(React.Fragment, { key: k }, k === "potency" ? PotencyField(label, m[k], setMed(m.key, k), ph, potencyInfo, () => setPotencyInfo((v) => !v)) : TextField(label, m[k], setMed(m.key, k), ph)))));
       }),
       !form.id && (form.meds.length < MAX_MEDS
         ? React.createElement("button", { type: "button", onClick: addMed, style: { marginTop: "12px", width: "100%", minHeight: "50px", borderRadius: "14px", border: "1.5px dashed var(--hs-primary, #6A4BB0)", background: "#fff", color: "var(--hs-primary, #6A4BB0)", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ আরেকটি " + noun + " যোগ করুন")
