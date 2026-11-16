@@ -3,6 +3,8 @@
 import { TextField, PrimaryButton, SheetFrame, ConfirmDialog, ErrorBox, Skeleton } from "../../shared/ui.js";
 import { MED_ALIAS } from "../../shared/searchAliases.js";
 import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
+import { COMMON_HOMEO_DEFAULTS, HOMEO_DISCLAIMER, HOMEO_SOURCE } from "./commonCareHomeoList.js";
+import { COMMON_HERBAL_DEFAULTS, HERBAL_DISCLAIMER, HERBAL_SOURCE } from "./commonCareHerbalList.js";
 import { addCareBatch, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
 import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS } from "./careMeds.js";
 import { SubPills } from "../../shared/SubPills.js";
@@ -13,6 +15,7 @@ const withTimeout = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => 
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid #C3D2CA", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit" };
 const card = { background: "#fff", border: "1px solid #D9E5DE", borderRadius: "16px", padding: "12px", marginBottom: "8px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 const iconBtn = { minWidth: "44px", minHeight: "44px", border: "none", background: "none", fontSize: "18px", cursor: "pointer" };
+const pickBtn = { marginTop: "6px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
 const h = (txt) => React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "14px 0 8px" } }, txt);
 
 // ব্র্যান্ড লিখলে জেনেরিক নিজে বসে (বিদ্যমান MED_ALIAS থেকে; নতুন ডেটা-উৎস নেই)
@@ -53,7 +56,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
   const [potencyInfo, setPotencyInfo] = useState(false); // পটেন্সির ⓘ ব্যাখ্যা
   const noun = MODE_NOUN[mode];
 
-  const openNew = (disease, med) => { const m = med || emptyMed(); setErr(null); setForm({ id: null, disease: disease || "", meds: [m], openKey: m.key }); };
+  const openNew = (disease, med) => { const ms = Array.isArray(med) ? med : [med || emptyMed()]; setErr(null); setForm({ id: null, disease: disease || "", meds: ms, openKey: ms[0].key }); };
   const setDisease = (v) => setForm((s) => ({ ...s, disease: v }));
   const setMed = (key, k) => (v) => setForm((s) => ({ ...s, meds: s.meds.map((m) => {
     if (m.key !== key) return m;
@@ -105,7 +108,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
 
     h("আমার তালিকা"),
     loading && !records ? Skeleton(2, 64)
-      : groups.length === 0 ? React.createElement("div", { style: { ...card, color: "#5B6B66", fontSize: "14px", textAlign: "center" } }, (mode === "allopathy" ? "এখনো কিছু নেই — নিচের সাধারণ তালিকা থেকে নিন, বা নতুন যোগ করুন।" : "এখনো কিছু নেই — নতুন যোগ করুন।"))
+      : groups.length === 0 ? React.createElement("div", { style: { ...card, color: "#5B6B66", fontSize: "14px", textAlign: "center" } }, "এখনো কিছু নেই — নিচের সাধারণ তালিকা থেকে নিন, বা নতুন যোগ করুন।")
       : groups.map(([disease, rows]) => React.createElement("div", { key: disease, style: card },
           React.createElement("div", { style: { fontSize: "14px", fontWeight: 800, color: "#1F2D2A", marginBottom: "4px" } }, disease),
           rows.map((r) => React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", gap: "4px", borderTop: "1px solid #EEF3F0", padding: "6px 0" } },
@@ -117,13 +120,21 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
             React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))),
           React.createElement("button", { type: "button", onClick: () => openNew(disease === "অন্যান্য" ? "" : disease), style: { marginTop: "4px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1.5px dashed var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ এই অসুখে আরেকটি " + noun))),
 
-    mode === "allopathy" && React.createElement("button", { type: "button", onClick: () => setOpenDef((v) => !v), "aria-expanded": openDef, style: { width: "100%", minHeight: "44px", textAlign: "left", border: "none", background: "none", padding: 0, margin: "14px 0 8px", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontFamily: "inherit" } }, (openDef ? "▾ " : "▸ ") + "সাধারণ তালিকা (সবার জন্য)"),
-    mode === "allopathy" && openDef && COMMON_CARE_DEFAULTS.map((d) => React.createElement("div", { key: d.key, style: card },
+    React.createElement("button", { type: "button", onClick: () => setOpenDef((v) => !v), "aria-expanded": openDef, style: { width: "100%", minHeight: "44px", textAlign: "left", border: "none", background: "none", padding: 0, margin: "14px 0 8px", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontFamily: "inherit" } }, (openDef ? "▾ " : "▸ ") + "সাধারণ তালিকা (সবার জন্য)"),
+    openDef && mode !== "allopathy" && React.createElement("div", { style: { background: "#FFF8E6", border: "1px solid #F0DDA8", borderRadius: "12px", padding: "10px 12px", marginBottom: "8px", fontSize: "13px", lineHeight: 1.55, color: "#4A3B10" } },
+      React.createElement("div", null, mode === "homeopathy" ? HOMEO_DISCLAIMER : HERBAL_DISCLAIMER),
+      React.createElement("div", { style: { marginTop: "6px" } }, "👶 শিশু (বিশেষ করে ২ বছরের নিচে), গর্ভবতী ও দীর্ঘদিনের রোগীর ক্ষেত্রে নিজে নয়, আগে ডাক্তার। শিশুর জ্বর, দ্রুত শ্বাস, খেতে না পারা বা নেতিয়ে পড়লে সরাসরি ডাক্তার/হাসপাতাল।")),
+    openDef && mode === "allopathy" && COMMON_CARE_DEFAULTS.map((d) => React.createElement("div", { key: d.key, style: card },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 800 } }, d.disease),
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px" } }, d.generic + " — " + d.brands.join(", ")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
-      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] }), style: { marginTop: "6px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ আমার তালিকায় নিন"))),
-    mode === "allopathy" && openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, "সাধারণ তথ্য মাত্র; ডোজ নেই। ফার্মাসিস্ট রিভিউ হয়নি।"),
+      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] }), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
+    openDef && mode !== "allopathy" && (mode === "homeopathy" ? COMMON_HOMEO_DEFAULTS : COMMON_HERBAL_DEFAULTS).map((d) => React.createElement("div", { key: d.key, style: card },
+      React.createElement("div", { style: { fontSize: "14px", fontWeight: 800 } }, (d.kid ? "👶 " : "") + d.disease),
+      React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px", overflowWrap: "anywhere" } }, "ঐতিহ্যগতভাবে ব্যবহৃত: " + d.items.join(", ")),
+      React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
+      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, d.items.slice(0, MAX_MEDS).map((n) => ({ ...emptyMed(), brand: n }))), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
+    openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, (mode === "allopathy" ? "সাধারণ তথ্য মাত্র; ডোজ নেই। ফার্মাসিস্ট রিভিউ হয়নি।" : "উৎস: " + (mode === "homeopathy" ? HOMEO_SOURCE : HERBAL_SOURCE) + "। ডোজ নেই; রিভিউ হয়নি (draft)।")),
 
     form && React.createElement(SheetFrame, { title: form.id ? "সম্পাদনা" : "নতুন যোগ", onClose: () => setForm(null), accent: "medicationStatement",
       footer: PrimaryButton(!form.id && filledMeds(form.meds).length > 1 ? "সংরক্ষণ (" + toBn(filledMeds(form.meds).length) + "টি " + noun + ")" : "সংরক্ষণ", save, busy) },
