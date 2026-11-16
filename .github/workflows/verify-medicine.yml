@@ -1,0 +1,63 @@
+name: Verify Medicine DB
+
+on:
+  workflow_dispatch:
+    inputs:
+      role:
+        description: "Reviewer role"
+        type: choice
+        options: [pharmacist, physician]
+        default: pharmacist
+      date:
+        description: "Verify date (YYYY-MM-DD)"
+        type: string
+        required: true
+      names:
+        description: "Medicine names, comma-separated (ফাঁকা রাখলে 'all' টিক দিতে হবে)"
+        type: string
+        required: false
+      all:
+        description: "সব draft verify করুন (reviewer ৪৭টিই দেখলে তবেই)"
+        type: boolean
+        default: false
+      confirm:
+        description: "আসল write (বন্ধ থাকলে ড্রাই-রান)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run verifyMedicineDb
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          IN_ROLE: ${{ inputs.role }}
+          IN_DATE: ${{ inputs.date }}
+          IN_NAMES: ${{ inputs.names }}
+          IN_ALL: ${{ inputs.all }}
+          IN_CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          [ -n "$SA_JSON" ] || { echo "❌ FIREBASE_SERVICE_ACCOUNT secret নেই"; exit 1; }
+          KEY="$RUNNER_TEMP/sa.json"
+          printf '%s' "$SA_JSON" > "$KEY"
+          export GOOGLE_APPLICATION_CREDENTIALS="$KEY"
+          args=(--role "$IN_ROLE" --date "$IN_DATE")
+          if [ "$IN_ALL" = "true" ]; then args+=(--all)
+          else
+            [ -n "$IN_NAMES" ] || { echo "❌ names দিন বা all টিক দিন"; exit 1; }
+            args+=(--names "$IN_NAMES")
+          fi
+          [ "$IN_CONFIRM" = "true" ] && args+=(--confirm)
+          node scripts/verifyMedicineDb.js "${args[@]}"
+          rm -f "$KEY"
