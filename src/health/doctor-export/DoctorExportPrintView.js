@@ -79,7 +79,7 @@ export function DoctorExportPrintView({ data, onBack }) {
 
       React.createElement("h4", null, "৩. সক্রিয় স্বাস্থ্য সমস্যা"),
       data.activeConditions.length === 0
-        ? React.createElement("p", { style: { fontSize: "12px", color: "#888" } }, "কোনো সক্রিয় condition নেই।")
+        ? React.createElement("p", { style: { fontSize: "12px", color: "#888" } }, "কোনো চলমান অসুস্থতা নেই।")
         : React.createElement("table", null, React.createElement("tbody", null,
             data.activeConditions.map((c) => React.createElement("tr", { key: c.id },
               React.createElement("td", null, c.name), React.createElement("td", null, describeHealthRecord(c)))))),

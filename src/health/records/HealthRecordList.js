@@ -92,7 +92,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   if (err) return ErrorBox(err);
   if (!records) return Skeleton(3, 64);
-  if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো record নেই।");
+  if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো রেকর্ড নেই।");
 
   const toggle = (k) => { setOpenKey((cur) => (cur === k ? null : k)); setConfirmId(null); };
   const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid transparent", background: bg, color, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });

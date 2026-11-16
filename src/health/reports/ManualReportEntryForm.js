@@ -108,6 +108,6 @@ export function ManualReportEntryForm({ familyId, targetMemberId, callerMemberId
     SecondaryButton("+ আরেকটা টেস্ট যোগ করুন", addRow, false),
     err ? ErrorBox(err) : null,
     savedCount > 0 ? SuccessBox(savedCount + "টা মান সংরক্ষণ করা হয়েছে।") : null,
-    PrimaryButton("Save করুন", submit, busy)
+    PrimaryButton("সংরক্ষণ করুন", submit, busy)
   );
 }

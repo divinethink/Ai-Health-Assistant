@@ -72,7 +72,7 @@ export function DoctorDocumentPicker({ familyId, targetMemberId, memberName, onG
     setErr(null);
     try {
       await navigator.clipboard.writeText(buildShareText(memberName, chosen));
-      setMsg("তালিকা ও লিংক কপি হয়েছে — যেকোনো মেসেজ/ইমেইলে paste করুন।");
+      setMsg("তালিকা ও লিংক কপি হয়েছে — যেকোনো মেসেজ বা ইমেইলে পেস্ট করুন।");
     } catch (e) {
       setErr("কপি করা যায়নি — ব্রাউজারের অনুমতি দিন বা “শেয়ার” ব্যবহার করুন।");
     }

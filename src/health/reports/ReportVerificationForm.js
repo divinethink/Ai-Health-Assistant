@@ -37,7 +37,7 @@ const FLAG_LABELS = {
   "unit-converted-cumm": "রিপোর্টে একক /cumm ছিল — অ্যাপের এককে (×10³/µL) ১০০০ দিয়ে ভাগ করে বসানো হয়েছে; রিপোর্টের সাথে মিলিয়ে নিন",
   "unit-mismatch": "একক প্রত্যাশিত এককের সাথে মিলছে না — যাচাই করুন",
   "qualitative-test-numeric-value-unexpected": "এই টেস্টের ফলাফল সাধারণত Positive/Negative — এখানে সংখ্যা পাওয়া গেছে, নিজে বসান",
-  "dictionary-entry-not-found": "এই টেস্ট আমাদের ডেটাবেসে নেই — নিজে confirm করুন",
+  "dictionary-entry-not-found": "এই টেস্ট অ্যাপের তালিকায় নেই — নিজে যাচাই করে নিশ্চিত করুন",
 };
 
 // needs-review candidate ডিফল্টভাবে un-checked রাখা হয় (safe-default: ambiguity

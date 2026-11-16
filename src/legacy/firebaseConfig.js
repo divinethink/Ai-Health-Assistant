@@ -26,7 +26,7 @@ try {
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     throw new Error(
       "Firebase env-vars missing/empty — Cloudflare Pages → Settings → " +
-      "Environment variables চেক করুন, এবং যোগ করার পর redeploy করেছেন কিনা নিশ্চিত করুন।"
+      "Environment variable ঠিক আছে কিনা দেখুন; যোগ করার পর আবার deploy করেছেন কিনা নিশ্চিত করুন।"
     );
   }
 

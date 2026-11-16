@@ -19,7 +19,7 @@ export const PAGE_DEFS = {
         cards: [
           d("hero", "আজকের টার্গেট ও ক্যালরি", "fixed"),
           d("macros", "আজকের পুষ্টির হিসাব", "fixed"),
-          d("alert", "এলার্জি/রোগ সতর্কতা", "fixed"),
+          d("alert", "অ্যালার্জি/রোগ সতর্কতা", "fixed"),
           d("rings", "ব্যায়াম · ঘুম · স্টেপ", "fixed"),
           d("waterFood", "পানি ও খাবার-যোগ", "fixed"),
           d("week", "এই সপ্তাহ", "fixed"),

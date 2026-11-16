@@ -75,7 +75,7 @@ function requestDriveAccessToken(promptMode) {
 }
 async function getDriveAccessToken(allowConsentPopup = true) {
   if (!isGoogleDriveConfigured()) {
-    throw new Error("Google Drive ব্যাকআপ এখনো সেটআপ করা হয়নি (owner-side OAuth Client ID setup বাকি)।");
+    throw new Error("Google Drive ব্যাকআপ এখনো চালু করা হয়নি (OAuth Client ID বসানো বাকি; এটি Owner-এর কাজ)।");
   }
   if (driveAccessToken && Date.now() < driveTokenExpiresAt - 60000) return driveAccessToken;
   if (driveTokenRequestInFlight) return driveTokenRequestInFlight;

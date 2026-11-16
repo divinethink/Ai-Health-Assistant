@@ -105,7 +105,7 @@ export function MemberList({ familyId, isAdmin, myMemberId }) {
       const relLabel = m.relationshipLabel ? RELATIONSHIP_LABEL_MAP[m.relationshipLabel] : null;
       const share = myShares[m.id] || { read: false, write: false };
       const roleText = m.role === "admin" ? "Admin" : (m.role === "guardian-managed" ? "অভিভাবক-পরিচালিত" : "সাধারণ সদস্য");
-      const statusText = m.googleUid ? "✅ claim হয়েছে" : (m.email ? "⏳ claim বাকি (ইমেইল দেওয়া আছে)" : "👤 no-account (অভিভাবক-পরিচালিত)");
+      const statusText = m.googleUid ? "✅ অ্যাকাউন্টে যুক্ত হয়েছে" : (m.email ? "⏳ যুক্ত হওয়া বাকি (ইমেইল দেওয়া আছে)" : "👤 অ্যাকাউন্ট নেই (অভিভাবক-পরিচালিত)");
       const initial = ((m.name || "?").trim()[0] || "?").toUpperCase();
 
       return React.createElement(

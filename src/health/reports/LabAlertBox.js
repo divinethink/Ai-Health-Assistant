@@ -29,5 +29,5 @@ export function LabAlertBox({ alerts, max, docsById, onEdit, onAck, ackBusy }) {
     s.more > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "6px" } }, "আরও " + bnCount(s.more) + " টি — নিচের তালিকায় দেখুন"),
     React.createElement("div", { style: { fontSize: "13px", color: "#5F716C", marginTop: "8px", lineHeight: 1.5 } },
       "এটি রোগনির্ণয় নয়। রেঞ্জের বাইরের মান মানেই অসুখ নয়, ডাক্তার ব্যাখ্যা করবেন। শুধু অ্যাপের পরিচিত টেস্টে এই সতর্কতা কাজ করে।",
-      onAck && " সতর্কতা সরালেও নিচের \"পরিমাপে\" মানটি লাল থাকবে; মান বদলালে সতর্কতা আবার আসবে."));
+      onAck && " সতর্কতা সরালেও নিচের \"পরিমাপে\" মানটি লাল থাকবে; মান বদলালে সতর্কতা আবার আসবে।"));
 }

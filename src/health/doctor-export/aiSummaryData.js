@@ -40,7 +40,7 @@ async function fetchAiGuidanceText(familyId, episodeId) {
 export async function buildAiHealthSummary(familyId, targetMemberId, memberName) {
   const episode = await fetchMostRecentEpisode(familyId, targetMemberId);
   if (!episode) {
-    throw new Error("এই সদস্যের জন্য এখনো কোনো Symptom Check / AI Guidance session নেই।");
+    throw new Error("এই সদস্যের জন্য এখনো কোনো Symptom Check / AI Guidance সেশন নেই।");
   }
   const [triage, guidanceText] = await Promise.all([
     fetchLatestTriageResult(familyId, episode.id),

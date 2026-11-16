@@ -66,7 +66,7 @@ export function AddMemberForm({ familyId, onAdded }) {
         React.createElement("option", { value: "female" }, "মহিলা")
       )
     ),
-    TextField("ইমেইল (ঐচ্ছিক)", email, setEmail, "সদস্য নিজে পরে claim করতে চাইলে"),
+    TextField("ইমেইল (ঐচ্ছিক)", email, setEmail, "সদস্য নিজে পরে অ্যাকাউন্টে যুক্ত হতে চাইলে"),
     React.createElement(
       "div", { style: { fontSize: "14px", color: "#777", marginTop: "4px" } },
       "এই সদস্যের নিজস্ব, স্বতন্ত্র email হতে হবে (আপনার email দেওয়া যাবে না)। খালি রাখলে এই সদস্য শুধু Admin/অভিভাবক দিয়েই পরিচালিত হবেন।"
@@ -78,7 +78,7 @@ export function AddMemberForm({ familyId, onAdded }) {
         React.createElement("div", null, React.createElement("b", null, result.name), " যোগ হয়েছে।"),
         result.email
           ? React.createElement("div", { style: { fontSize: "14px", marginTop: "4px" } }, `এই সদস্য "${result.email}" দিয়ে Google Sign-in করলে স্বয়ংক্রিয়ভাবে এই প্রোফাইল claim হয়ে যাবে।`)
-          : React.createElement("div", { style: { fontSize: "14px", marginTop: "4px" } }, "এই সদস্যের কোনো account নেই — Admin/অভিভাবক এই প্রোফাইল পরিচালনা করবেন।")
+          : React.createElement("div", { style: { fontSize: "14px", marginTop: "4px" } }, "এই সদস্যের কোনো অ্যাকাউন্ট নেই — Admin/অভিভাবক এই প্রোফাইল পরিচালনা করবেন।")
       )
     ),
     PrimaryButton("সদস্য তৈরি করুন", submit, busy),

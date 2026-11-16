@@ -82,10 +82,10 @@ export function DoctorDetailsForm({ familyId, callerMemberId, editingDoctor, onS
     ),
     isEdit && React.createElement(
       "p", { style: { fontSize: "14px", color: "#5F716C", marginTop: "8px" } },
-      "ভিজিটিং কার্ডের ছবি বদলাতে চাইলে এই এন্ট্রি ডিলিট করে নতুন করে যোগ করুন।"
+      "ভিজিটিং কার্ডের ছবি বদলাতে চাইলে এই এন্ট্রি মুছে নতুন করে যোগ করুন।"
     ),
     err && ErrorBox(err),
-    PrimaryButton(isEdit ? "Update করুন" : "যোগ করুন", submit, busy),
+    PrimaryButton(isEdit ? "হালনাগাদ করুন" : "যোগ করুন", submit, busy),
     isEdit && SecondaryButton("বাতিল", onCancel, busy)
   );
 }

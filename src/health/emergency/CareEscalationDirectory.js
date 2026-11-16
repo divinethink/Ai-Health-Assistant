@@ -83,7 +83,7 @@ export function CareEscalationDirectory() {
     return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "তালিকা লোড হচ্ছে...");
   }
   if (entries.length === 0) {
-    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো entry নেই।");
+    return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "এখনো কোনো তথ্য যোগ হয়নি।");
   }
 
   const order = Object.keys(CARE_ESCALATION_TYPE_LABELS);

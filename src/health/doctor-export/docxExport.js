@@ -73,7 +73,7 @@ export async function exportHealthProfileDocx(data) {
   }
 
   children.push(heading("৩. সক্রিয় স্বাস্থ্য সমস্যা"));
-  children.push(...(data.activeConditions.length === 0 ? [para("কোনো সক্রিয় condition নেই।")] : [simpleTable(data.activeConditions.map((c) => [c.name, describeHealthRecord(c)]))]));
+  children.push(...(data.activeConditions.length === 0 ? [para("কোনো চলমান অসুস্থতা নেই।")] : [simpleTable(data.activeConditions.map((c) => [c.name, describeHealthRecord(c)]))]));
 
   children.push(heading("৪. বর্তমান ওষুধ"));
   children.push(...(data.currentMedications.length === 0 ? [para("কোনো বর্তমান ওষুধ নেই।")] : [simpleTable(data.currentMedications.map((med) => [med.genericName, describeHealthRecord(med)]))]));

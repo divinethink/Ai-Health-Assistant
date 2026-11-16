@@ -79,7 +79,7 @@ export function MedicalScienceChat({ familyId, selectedMemberId }) {
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, "Medical Science / এলোপ্যাথি — জিজ্ঞাসা করুন"),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
-      "সাধারণ মেডিকেল সায়েন্স/এলোপ্যাথি আলোচনা — এটা symptom-triage/emergency-checklist না, এবং কোনো ওষুধের dose/মাত্রা এখানে বলা হবে না (dose-প্রয়োজনে উপরের \"Symptom Check\" ব্যবহার করুন)। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে \"Symptom Check\" ব্যবহার করুন।"
+      "সাধারণ মেডিকেল সায়েন্স/এলোপ্যাথি আলোচনা — এটা লক্ষণ যাচাই বা জরুরি অবস্থার চেকলিস্ট নয়, এবং এখানে কোনো ওষুধের dose বা মাত্রা বলা হবে না (dose জানার প্রয়োজন হলে উপরের \"Symptom Check\" ব্যবহার করুন)। গুরুতর বা জরুরি উপসর্গ থাকলে \"Symptom Check\" ব্যবহার করুন।"
     ),
     TextField("আপনার প্রশ্ন (যেমন: উচ্চ রক্তচাপ কীভাবে নিয়ন্ত্রণ করা যায়?)", question, setQuestion, "এখানে লিখুন..."),
 

@@ -456,7 +456,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
       medicalScienceNode: React.createElement(
         "div", { style: { background: "#EAF6F0", padding: "12px", borderRadius: "14px", border: "1px solid #A9D8C4" } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#7A5B00", marginBottom: "4px", letterSpacing: "0.2px" } }, "AI Health Guidance — Not a Medical Prescription"),
-        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (dev-preview — episode save হয়নি)")),
+        React.createElement("div", { style: { fontSize: "14px", fontWeight: 600, color: "var(--hs-primary, #0E4B43)", marginBottom: "6px" } }, "AI Guidance" + (episodeId ? "" : " (পরীক্ষামূলক — Episode সংরক্ষণ হয়নি)")),
         React.createElement("div", { style: { fontSize: "14px", whiteSpace: "pre-wrap", color: "#1F2D2A" } }, renderRichText(aiResponse))
       ),
       herbalNode: React.createElement(

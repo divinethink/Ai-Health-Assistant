@@ -107,7 +107,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
           actionButton(profileBusy === "docx" ? "তৈরি হচ্ছে..." : "⬇ DOCX", () => handleHealthProfile("docx"), !!profileBusy || !targetMemberId)),
         profileErr && ErrorBox(profileErr))),
 
-    exportCard("🤖", "AI স্বাস্থ্য সারাংশ", "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance session থেকে।", "AI Health Guidance — Not a Medical Prescription",
+    exportCard("🤖", "AI স্বাস্থ্য সারাংশ", "সদস্যের সবচেয়ে সাম্প্রতিক Symptom Check/AI Guidance সেশন থেকে।", "AI Health Guidance — Not a Medical Prescription",
       React.createElement(React.Fragment, null,
         buttonRow(
           actionButton(summaryBusy === "pdf" ? "তৈরি হচ্ছে..." : "📄 PDF দেখুন/প্রিন্ট", () => handleAiSummary("pdf"), !!summaryBusy || !targetMemberId, true),

@@ -165,7 +165,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
   }, []);
 
   const stageLabels = {
-    extracting: "PDF থেকে text পড়া হচ্ছে...",
+    extracting: "PDF থেকে লেখা পড়া হচ্ছে...",
     ocr: "OCR চলছে... (" + Math.round(progress * 100) + "%)",
     parsing: "টেস্ট-মান শনাক্ত করা হচ্ছে...",
   };
@@ -192,7 +192,7 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
               React.createElement("div", { style: { fontSize: "16px", fontWeight: 700, color: "#1F2D2A", overflowWrap: "anywhere" } }, presetFile.name),
               React.createElement("div", { style: { fontSize: "13px", color: "#5F716C" } }, busy ? busyLabel : (candidates ? "বিশ্লেষণ শেষ" : "ল্যাব রিপোর্ট"))))
         : React.createElement(React.Fragment, null,
-            React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px", lineHeight: 1.5 } }, "ল্যাব-রিপোর্টের ছবি বা PDF দিন — টেস্টের মান শনাক্ত করে আপনাকে যাচাই করতে দেওয়া হবে।"),
+            React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "8px", lineHeight: 1.5 } }, "ল্যাব রিপোর্টের ছবি বা PDF দিন। টেস্টের মান শনাক্ত হলে আপনি নিজে যাচাই করে নেবেন।"),
             React.createElement("input", { ref: fileInputRef, type: "file", accept: "image/*,application/pdf", onChange: onFileChange, style: { fontSize: "14px", maxWidth: "100%" } })),
       React.createElement("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px", marginTop: "10px" } },
         React.createElement("button", { type: "button", onClick: analyze, disabled: busy, style: { minHeight: "44px", padding: "0 16px", borderRadius: "12px", border: "1.5px solid var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "14px", fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: "inherit" } }, busy ? busyLabel : (presetFile ? "↻ আবার বিশ্লেষণ" : "বিশ্লেষণ করুন")),

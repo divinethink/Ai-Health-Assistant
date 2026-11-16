@@ -48,7 +48,7 @@ export function NotificationsPanel({ familyId, uid }) {
         React.createElement("span", null, n.message),
         React.createElement("button", {
           onClick: (e) => onDelete(n.id, e),
-          title: "ডিলিট করুন",
+          title: "মুছুন",
           style: { fontSize: "14px", color: "#5F716C", background: "none", border: "none", cursor: "pointer" },
         }, "✕")
       )

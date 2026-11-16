@@ -105,7 +105,7 @@ export function WellnessGuideForm({ familyId, myMemberId, editingPost, onSaved, 
     TextField("ট্যাগ (কমা দিয়ে আলাদা, ঐচ্ছিক)", tagsText, setTagsText, "যেমন: diabetes, prevention"),
     TextField("সোর্স/রেফারেন্স নোট (ঐচ্ছিক)", sourceNote, setSourceNote, "যেমন: WHO, NHS ইত্যাদি"),
     err && ErrorBox(err),
-    PrimaryButton(isEdit ? "Update করুন" : "প্রকাশ করুন", submit, busy),
+    PrimaryButton(isEdit ? "হালনাগাদ করুন" : "প্রকাশ করুন", submit, busy),
     isEdit && SecondaryButton("বাতিল", onCancel, busy)
   );
 }

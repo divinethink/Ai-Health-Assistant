@@ -117,7 +117,7 @@ export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
     "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, ft.title),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
-      ft.note + " — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন।"
+      ft.note + " — এটা লক্ষণ যাচাই বা জরুরি অবস্থার চেকলিস্ট নয়। গুরুতর বা জরুরি উপসর্গ থাকলে উপরের \"Symptom Check\" ব্যবহার করুন।"
     ),
     TextField("আপনার প্রশ্ন (" + ft.sample + ")", question, setQuestion, "এখানে লিখুন..."),
 

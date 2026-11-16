@@ -18,7 +18,7 @@ export function BystanderAspirinCard({ check }) {
     ),
     React.createElement(
       "div", { style: { fontSize: "14px", color: "#5F716C", marginTop: "6px" } },
-      "স্ট্রোকের ক্ষেত্রে কোনো bystander-medicine নেই — এই suggestion শুধু cardiac-pattern chest-pain-এর জন্য প্রযোজ্য।"
+      "স্ট্রোকের ক্ষেত্রে পাশে থাকা কেউ দিতে পারেন এমন কোনো ওষুধ নেই — এই পরামর্শ শুধু হৃদরোগজনিত (cardiac) বুকে ব্যথার ক্ষেত্রে প্রযোজ্য।"
     )
   );
 }

@@ -72,7 +72,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
           d.hospital && line("🏥", d.hospital),
           d.chamberAddress && line("🚪", d.chamberAddress, "#5F716C"),
           d.phone && line("📞", d.phone),
-          d.status === "pending" && React.createElement("div", { style: { fontSize: "14px", color: "#B8860B" } }, "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে ডিলিট করে আবার যোগ করুন।")),
+          d.status === "pending" && React.createElement("div", { style: { fontSize: "14px", color: "#B8860B" } }, "ছবি আপলোড অসম্পূর্ণ ছিল — চাইলে মুছে আবার যোগ করুন।")),
         (telHref || canEdit || canDelete) && React.createElement(
           "div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginTop: "10px" } },
           telHref && React.createElement("a", { href: telHref, style: pill("#fff", "var(--hs-primary, #0E4B43)") }, "📞 কল করুন"),

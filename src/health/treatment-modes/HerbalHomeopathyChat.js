@@ -83,7 +83,7 @@ export function HerbalHomeopathyChat({ familyId, selectedMemberId, mode }) {
     "div", { style: { marginTop: "14px", background: "#fff", padding: "14px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, mt.title + " — জিজ্ঞাসা করুন"),
     React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
-      "সাধারণ ভেষজ/হোমিওপ্যাথি তথ্য — এটা symptom-triage/emergency-checklist না। কোনো severe/জরুরি উপসর্গ থাকলে দয়া করে উপরের \"Symptom Check\" ব্যবহার করুন। কোনো dose/মাত্রা এখানে বলা হবে না, শুধু evidence-level-সচেতন সাধারণ তথ্য।"
+      "সাধারণ ভেষজ/হোমিওপ্যাথি তথ্য — এটা লক্ষণ যাচাই বা জরুরি অবস্থার চেকলিস্ট নয়। গুরুতর বা জরুরি উপসর্গ থাকলে উপরের \"Symptom Check\" ব্যবহার করুন। এখানে কোনো dose বা মাত্রা বলা হবে না; শুধু evidence level অনুযায়ী সাধারণ তথ্য দেওয়া হবে।"
     ),
     TextField("আপনার প্রশ্ন (" + mt.sample + ")", question, setQuestion, "এখানে লিখুন..."),
 

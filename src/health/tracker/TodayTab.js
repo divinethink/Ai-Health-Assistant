@@ -400,7 +400,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
         React.createElement("div", null, "• ব্যায়াম: কমপক্ষে " + bnNum(exTarget) + " মিনিট"),
         waterTarget && React.createElement("div", null, "• পানি: কমপক্ষে " + bnNum(waterTarget) + " গ্লাস"),
         React.createElement("div", null, "• ঘুম: কমপক্ষে " + bnNum(sMin) + " ঘণ্টা"),
-        React.createElement("div", { style: { marginTop: "4px" } }, "✓ = ২টি বা বেশি লক্ষ্য পূরণ। স্টেপ এই গণনায় নেই। সিয়ামের দিনে ক্যালরি ধরা হয় না."))),
+        React.createElement("div", { style: { marginTop: "4px" } }, "✓ = ২টি বা বেশি লক্ষ্য পূরণ। স্টেপ এই গণনায় নেই। সিয়ামের দিনে ক্যালরি ধরা হয় না।"))),
     ],
     meds: () => [
     // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)

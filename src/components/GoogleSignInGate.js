@@ -52,7 +52,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
           onSuccess(res.familyId, res.memberId, res.memberData);
         } else {
           if (res && res.reason === "already-claimed") {
-            setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google account দিয়ে claim হয়ে গেছে।");
+            setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google অ্যাকাউন্টের সাথে যুক্ত হয়ে গেছে।");
           }
           setStage("new-user-form");
         }
@@ -80,7 +80,7 @@ export function GoogleSignInGate({ uid, inviteFamilyId, inviteToken, onSuccess }
           onSuccess(res.familyId, res.memberId, res.memberData);
         } else {
           if (res && res.reason === "already-claimed") {
-            setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google account দিয়ে claim হয়ে গেছে।");
+            setErrorMsg("এই ইমেইল ইতিমধ্যে অন্য একটা Google অ্যাকাউন্টের সাথে যুক্ত হয়ে গেছে।");
           }
           setStage("new-user-form");
         }
