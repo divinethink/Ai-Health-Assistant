@@ -6,7 +6,7 @@ import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
 import { COMMON_HOMEO_DEFAULTS, HOMEO_SOURCE } from "./commonCareHomeoList.js";
 import { COMMON_HERBAL_DEFAULTS, HERBAL_SOURCE } from "./commonCareHerbalList.js";
 import { addCareBatch, loadCareDose, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
-import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, togglePattern4, composeFrequency, patternFromString, hasPattern } from "./careMeds.js";
+import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, composeFrequency, patternFromString, hasPattern } from "./careMeds.js";
 import { chip, lblEl, mealChips, DAY_OPTIONS } from "../records/MedicationReminders.js";
 import { SubPills } from "../../shared/SubPills.js";
 import { HOMEO_DOSE, HERBAL_DOSE, HERBAL_DOSE_GENERAL, DOSE_DISCLAIMER } from "./commonCareDose.js";
@@ -53,7 +53,6 @@ function DoseBlock(m, setPattern, setMeal, setDays, setAsNeeded) {
   return React.createElement(React.Fragment, null,
     lblEl("সেবনের মাত্রা (অটো)"),
     React.createElement("div", { style: row }, [chip(!m.asNeeded, "🕘 নিয়মিত", () => setAsNeeded(false), "reg", true), chip(m.asNeeded, "🆘 প্রয়োজনে", () => setAsNeeded(true), "prn", true)]),
-    !m.asNeeded && React.createElement("div", { style: { marginTop: "8px" } }, chip(m.pattern.length === 4, "৪ বেলা (১+১+১+১)", () => setPattern(togglePattern4(m.pattern)), "p4")),
     !m.asNeeded && PATTERN_LABELS[m.pattern.length].map((lab, i) => React.createElement("div", { key: lab, style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" } },
       React.createElement("span", { style: { minWidth: "52px", fontSize: "14px", fontWeight: 600 } }, lab),
       PATTERN_COUNTS.map((n) => chip(m.pattern[i] === n, toBn(n), () => setPattern(m.pattern.map((x, j) => (j === i ? n : x))), lab + n, true)))),

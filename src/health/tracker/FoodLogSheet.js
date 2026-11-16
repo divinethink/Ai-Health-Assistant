@@ -175,16 +175,14 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   const hasMacro = !!entry && entry.p !== undefined;
 
   return h(Sheet, { title: f.n, subtitle: foodEnglish(key, f) + " · " + slotLabel, onClose, soft: true },
-    h("div", { style: { position: "relative", display: "flex", alignItems: "center", minHeight: "44px", marginBottom: "4px" } },
-      h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto" } }, "← অন্য খাবার"),
-      // "কতটুকু খাবেন?" — "অন্য খাবার"-এর একই লাইনে, মাঝ-বরাবর, বড় ফন্টে
-      h("div", { style: { position: "absolute", left: 0, right: 0, textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A", pointerEvents: "none" } }, "কতটুকু খাবেন/খেয়েছেন?")),
+    h("button", { onClick: back, style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto", minHeight: "44px" } }, "← অন্য খাবার"),
+    h("div", { style: { textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A", margin: "2px 0 10px" } }, "কতটুকু খাবেন/খেয়েছেন?"),
     // স্ট্যাটাস: সবুজ হলে কিছু দেখানো হয় না (শব্দ কমে); হলুদ/লাল হলে কারণসহ
     st.level !== "green" && h("div", { style: { padding: "8px 12px", borderRadius: "12px", border: "1px solid " + sc.border, background: sc.bg, color: sc.text, fontSize: "13px", marginBottom: "8px" } },
       h("b", null, st.icon + " " + st.label), st.reasons.length > 0 && " — " + st.reasons.join("; ")),
     notes.map((n, i) => h("div", { key: "n" + i, style: { padding: "8px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13px", lineHeight: 1.5, marginBottom: "8px" } }, "💊 " + n.text)),
 
-    // ১) কতটুকু খাবেন — শিরোনাম উপরের "অন্য খাবার" লাইনে
+    // ১) কতটুকু খাবেন — শিরোনাম "অন্য খাবার"-এর নিচের লাইনে
     !unitMode && h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "12px" } },
       ms.map((m) => h("button", { key: m.id, type: "button", onClick: () => { setMeasureId(m.id); setQty(1); }, "aria-pressed": measureId === m.id, style: { ...chip(measureId === m.id), flex: "0 0 auto", minHeight: "48px", lineHeight: 1.25, textAlign: "center" } },
         h("span", { style: { display: "block", fontSize: "15px" } }, m.label),
