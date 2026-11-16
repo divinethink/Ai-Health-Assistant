@@ -30,3 +30,13 @@ test("মাত্রা অটো-টেক্সট: ১+০+১, আগে/�
   assert.deepEqual(togglePattern4([1, 0, 0, 1]), [1, 0, 1]);
   assert.equal(hasPattern([0, 0, 0]), false);
 });
+
+import { COMMON_CARE_DEFAULTS } from "../../src/health/commonCare/commonCareList.js";
+test("এলোপ্যাথি: ২৭টি, ইউনিক key, ডোজ-সংখ্যা নেই, প্রতিটিতে নোট", () => {
+  assert.ok(COMMON_CARE_DEFAULTS.length >= 27);
+  assert.equal(new Set(COMMON_CARE_DEFAULTS.map((d) => d.key)).size, COMMON_CARE_DEFAULTS.length);
+  for (const d of COMMON_CARE_DEFAULTS) {
+    assert.ok(d.disease && d.generic && Array.isArray(d.brands) && d.note, d.key);
+    assert.ok(!/\d\s*(mg|ml|মিগ্রা|মিলি)/i.test(d.note), "ডোজ: " + d.key);
+  }
+});
