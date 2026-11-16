@@ -53,7 +53,7 @@ function bnTime(hhmm) {
 }
 const MEAL_LABELS = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
 const SLOT_DEFAULTS = { 1: ["08:00"], 2: ["08:00", "20:00"], 3: ["08:00", "14:00", "20:00"], 4: ["08:00", "13:00", "18:00", "22:00"] };
-const DAY_OPTIONS = [3, 5, 7, 10, 14, 30];
+export const DAY_OPTIONS = [3, 5, 7, 10, 14, 30];
 const BIGB = { minHeight: "64px", borderRadius: "16px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#fff", color: "var(--hs-primary)", padding: "0 12px" };
 
 // endDate না থাকলে শুরুর তারিখ + কতদিন থেকে হিসাব।
@@ -80,7 +80,7 @@ function markLegacyMigrated() {
   try { localStorage.setItem(MIGRATED_KEY, todayStr()); } catch (e) { /* ignore */ }
 }
 
-function chip(active, label, onClick, key, grow) {
+export function chip(active, label, onClick, key, grow) {
   return h("button", {
     key: key || label, type: "button", onClick, "aria-pressed": active,
     style: { padding: grow ? "8px 4px" : "7px 14px", minHeight: "38px", borderRadius: "999px", fontSize: grow ? "13.5px" : F, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", textAlign: "center",
@@ -89,9 +89,9 @@ function chip(active, label, onClick, key, grow) {
       boxShadow: active ? "0 2px 6px rgba(0,0,0,0.18)" : "none" },
   }, label);
 }
-function lblEl(text) { return h("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", fontWeight: 700, letterSpacing: "0.2px", margin: "14px 0 6px" } }, text); }
+export function lblEl(text) { return h("div", { style: { fontSize: "13px", color: "var(--hs-muted, #5F716C)", fontWeight: 700, letterSpacing: "0.2px", margin: "14px 0 6px" } }, text); }
 // খাবারের আগে/পরে/যেকোনো সময় — সবসময় এক লাইনে (সমান প্রস্থের তিন পিল)
-function mealChips(active, onPick) {
+export function mealChips(active, onPick) {
   return h("div", { style: { display: "flex", gap: "6px", flexWrap: "nowrap" } }, ["before", "after", "any"].map((k) => chip(active === k, MEAL_LABELS[k], () => onPick(k), k, true)));
 }
 function timeInputs(slots, onChange) {

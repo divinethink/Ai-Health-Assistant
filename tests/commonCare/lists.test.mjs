@@ -15,3 +15,18 @@ for (const [name, list] of [["homeo", COMMON_HOMEO_DEFAULTS], ["herbal", COMMON_
     }
   });
 }
+
+import { composeFrequency, patternFromString, hasPattern, togglePattern4 } from "../../src/health/commonCare/careMeds.js";
+test("মাত্রা অটো-টেক্সট: ১+০+১, আগে/পরে, দিন", () => {
+  assert.equal(composeFrequency({ pattern: [1, 0, 1], meal: "after", days: 5, asNeeded: false }), "১+০+১ · খাবারের পরে · ৫ দিন");
+  assert.equal(composeFrequency({ pattern: [1, 1, 1], meal: "", days: 0 }), "১+১+১ · চলবে (নিয়মিত)");
+  assert.equal(composeFrequency({ pattern: [0, 0, 0], meal: "before", days: null }), "");
+  assert.equal(composeFrequency({ pattern: [0, 0, 0], meal: "after", asNeeded: true, days: 3 }), "প্রয়োজনে · খাবারের পরে");
+  assert.deepEqual(patternFromString("1+0+1"), [1, 0, 1]);
+  assert.deepEqual(patternFromString("abc"), [0, 0, 0]);
+  assert.deepEqual(patternFromString("1+1+1+1"), [1, 1, 1, 1]);
+  assert.equal(composeFrequency({ pattern: [1, 1, 1, 1], meal: "after", days: 7 }), "১+১+১+১ · খাবারের পরে · ৭ দিন");
+  assert.deepEqual(togglePattern4([1, 0, 1]), [1, 0, 0, 1]);
+  assert.deepEqual(togglePattern4([1, 0, 0, 1]), [1, 0, 1]);
+  assert.equal(hasPattern([0, 0, 0]), false);
+});

@@ -7,15 +7,15 @@ export const CARE_MODES = [["allopathy", "Allopathy"], ["homeopathy", "Homeopath
 export const MODE_NOUN = { allopathy: "ওষুধ", homeopathy: "ওষুধ", herbal: "ভেষজ" };
 // ফর্মের ঘর: [ফিল্ড, লেবেল, উদাহরণ]
 export const MODE_FIELDS = {
-  allopathy: [["brand", "ওষুধের ব্র্যান্ড নাম", "যেমন: Napa"], ["generic", "জেনেরিক নাম", "যেমন: Paracetamol"], ["dose", "ডোজ (ডাক্তারের লেখা)", "যেমন: 500 mg"], ["frequency", "সেবনের মাত্রা", "যেমন: দিনে ৪ বার"], ["note", "নোট (ঐচ্ছিক)", "যেমন: শিশুর জন্য, ১০ কেজি"]],
-  homeopathy: [["brand", "ওষুধের নাম", "যেমন: Arnica montana"], ["potency", "পটেন্সি", "যেমন: 30C, 200C, 6X"], ["dose", "মাত্রা (ডাক্তারের লেখা)", "যেমন: ৪ ফোঁটা বা ৫টি বড়ি"], ["frequency", "সেবনের নিয়ম", "যেমন: দিনে ২ বার, ৩ দিন"], ["note", "নোট (ঐচ্ছিক)", "যেমন: খাবারের আধা ঘণ্টা আগে"]],
-  herbal: [["brand", "ভেষজের নাম", "যেমন: তুলসী পাতা"], ["prep", "ব্যবহারের ধরন", "যেমন: রস, কাথ, চা বা গুঁড়া"], ["dose", "পরিমাণ", "যেমন: ১ চা-চামচ"], ["frequency", "কতবার, কতদিন", "যেমন: দিনে ২ বার, ৫ দিন"], ["note", "নোট (ঐচ্ছিক)", "যেমন: মধু মিশিয়ে"]],
+  allopathy: [["brand", "ওষুধের ব্র্যান্ড নাম", "যেমন: Napa"], ["generic", "জেনেরিক নাম", "যেমন: Paracetamol"], ["dose", "ডোজ (ডাক্তারের লেখা)", "যেমন: 500 mg"], ["note", "নোট (ঐচ্ছিক)", "যেমন: শিশুর জন্য, ১০ কেজি"]],
+  homeopathy: [["brand", "ওষুধের নাম", "যেমন: Arnica montana"], ["potency", "পটেন্সি", "যেমন: 30C, 200C, 6X"], ["dose", "মাত্রা (ডাক্তারের লেখা)", "যেমন: ৪ ফোঁটা বা ৫টি বড়ি"], ["note", "নোট (ঐচ্ছিক)", "যেমন: খাবারের আধা ঘণ্টা আগে"]],
+  herbal: [["brand", "ভেষজের নাম", "যেমন: তুলসী পাতা"], ["prep", "ব্যবহারের ধরন", "যেমন: রস, কাথ, চা বা গুঁড়া"], ["dose", "পরিমাণ", "যেমন: ১ চা-চামচ"], ["note", "নোট (ঐচ্ছিক)", "যেমন: মধু মিশিয়ে"]],
 };
-const FIELDS = ["brand", "generic", "dose", "frequency", "note", "potency", "prep"];
+const FIELDS = ["brand", "generic", "dose", "frequency", "note", "potency", "prep"]; // "blank কার্ড" চেনার জন্য শুধু লেখা-ঘর; চিপ নয়
 let seq = 0;
 
 export function emptyMed() {
-  return { key: "m" + Date.now().toString(36) + (seq++), brand: "", generic: "", dose: "", frequency: "", note: "", potency: "", prep: "" };
+  return { key: "m" + Date.now().toString(36) + (seq++), brand: "", generic: "", dose: "", frequency: "", note: "", potency: "", prep: "", pattern: [0, 0, 0], meal: "", days: null, asNeeded: false };
 }
 const t = (v) => (v || "").trim();
 export const isMedBlank = (m) => !FIELDS.some((k) => t(m[k]));
@@ -48,3 +48,22 @@ export function validateCareMeds(disease, meds, mode) {
 export function diseaseNames(groups) { return groups.map(([d]) => d).filter((d) => d !== "অন্যান্য"); }
 
 export const toBn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+
+// ── মানসম্মত মাত্রা (সকাল+দুপুর+রাত, খাবারের আগে/পরে, কতদিন) — pure; রেকর্ডে ঐচ্ছিক ফিল্ড pattern/meal/days, আর `frequency` এখান থেকে অটো-তৈরি ──
+export const PATTERN_LABELS = { 3: ["সকাল", "দুপুর", "রাত"], 4: ["সকাল", "দুপুর", "বিকাল", "রাত"] }; // ৩ বেলা (ডিফল্ট) বা ৪ বেলা (১+১+১+১)
+// ৩↔৪ বেলা বদলে "রাত" শেষেই থাকে; ৪-এ বিকাল (index 2) নতুন, ০ দিয়ে শুরু
+export const togglePattern4 = (p) => (p.length === 4 ? [p[0], p[1], p[3]] : [p[0], p[1], 0, p[2]]);
+export const PATTERN_COUNTS = [0, 1, 2, 3];
+export const MEAL_TEXT = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
+export const patternText = (p) => (Array.isArray(p) ? p : [0, 0, 0]).map((n) => toBn(n)).join("+");
+export const patternFromString = (s) => (/^\d(\+\d){2,3}$/.test(s || "") ? s.split("+").map(Number) : [0, 0, 0]);
+export const hasPattern = (p) => Array.isArray(p) && p.some((n) => n > 0);
+// → "১+০+১ · খাবারের পরে · ৫ দিন" | "প্রয়োজনে · খাবারের পরে" | ""
+export function composeFrequency(m) {
+  const parts = [];
+  if (m.asNeeded) parts.push("প্রয়োজনে");
+  else if (hasPattern(m.pattern)) parts.push(patternText(m.pattern));
+  if (m.meal && MEAL_TEXT[m.meal] && (m.asNeeded || hasPattern(m.pattern))) parts.push(MEAL_TEXT[m.meal]);
+  if (!m.asNeeded && Number.isInteger(m.days)) parts.push(m.days === 0 ? "চলবে (নিয়মিত)" : toBn(m.days) + " দিন");
+  return parts.join(" · ");
+}
