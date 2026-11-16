@@ -60,6 +60,8 @@ const P = {
   check: [["path", { d: "M20 6 9 17l-5-5" }]],
   chevronLeft: [["path", { d: "m15 18-6-6 6-6" }]],
   chevronRight: [["path", { d: "m9 18 6-6-6-6" }]],
+  // পেট ডায়েরি — নোটবুক লাইন-আইকন (Lucide "notebook")।
+  notebook: [["path", { d: "M2 6h4" }], ["path", { d: "M2 10h4" }], ["path", { d: "M2 14h4" }], ["path", { d: "M2 18h4" }], ["rect", { x: 4, y: 2, width: 16, height: 20, rx: 2 }], ["path", { d: "M16 2v20" }]],
   search: [["circle", { cx: 11, cy: 11, r: 8 }], ["path", { d: "m21 21-4.3-4.3" }]],
 };
 

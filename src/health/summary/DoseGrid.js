@@ -12,15 +12,15 @@ const dayIcon = (hhmm) => { const hh = Number(hhmm.slice(0, 2)); return hh < 12 
 function Tile({ d, busy, onToggle, compact }) {
   const { main, sub } = shortMedName(d.name);
   const second = [sub, d.meal, d.memberName].filter(Boolean).join(" · ");
-  const late = !d.taken && d.due;
-  const border = d.taken ? T.green : late ? T.amber : T.border;
-  const bg = d.taken ? "#E2F3E9" : late ? "#FFF6E0" : T.surface;
+  // বাকি ওষুধ (সময় পার হোক বা ভবিষ্যতের) — নিরপেক্ষ ধূসর; শুধু খাওয়া হলে সবুজ (owner-request ২০২৬-১১-১৬)।
+  const border = d.taken ? T.green : T.border;
+  const bg = d.taken ? "#E2F3E9" : T.surface;
   return h("button", {
     type: "button", onClick: onToggle, disabled: busy, "aria-pressed": !!d.taken,
     "aria-label": d.name + " " + bnClock(d.time) + (d.taken ? " — খাওয়া হয়েছে, বাতিল করতে চাপুন" : " — খেয়েছি চিহ্নিত করুন"),
     style: { display: "flex", alignItems: "center", gap: compact ? "6px" : "8px", minHeight: compact ? "44px" : "56px", padding: compact ? "5px 8px" : "8px 10px", borderRadius: compact ? "12px" : "14px", border: "1.5px solid " + border, background: bg, color: T.ink, textAlign: "left", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit", minWidth: 0 },
   },
-    h("span", { "aria-hidden": "true", style: { width: compact ? "20px" : "24px", height: compact ? "20px" : "24px", flexShrink: 0, borderRadius: "50%", border: "2px solid " + (d.taken ? T.green : late ? T.amber : T.inputBorder), background: d.taken ? T.green : "transparent", color: "#fff", fontSize: compact ? "12px" : "14px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" } }, d.taken ? "✓" : ""),
+    h("span", { "aria-hidden": "true", style: { width: compact ? "20px" : "24px", height: compact ? "20px" : "24px", flexShrink: 0, borderRadius: "50%", border: "2px solid " + (d.taken ? T.green : T.inputBorder), background: d.taken ? T.green : "transparent", color: "#fff", fontSize: compact ? "12px" : "14px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" } }, d.taken ? "✓" : ""),
     h("span", { style: { minWidth: 0, flex: 1 } },
       h("span", { style: { display: "block", fontSize: compact ? "13px" : "15px", fontWeight: 700, lineHeight: 1.2, overflowWrap: "anywhere", color: d.taken ? T.green : T.ink } }, main),
       second && h("span", { style: { display: "block", fontSize: compact ? "11.5px" : "13px", color: T.muted, lineHeight: 1.25, overflowWrap: "anywhere" } }, second)));

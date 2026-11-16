@@ -364,7 +364,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       // পেট ডায়েরি (১/৪) — আজ লগ থাকলে হালকা সবুজ। ওজন-বাটন বাদ: ওজন যোগ হয় ＋ থেকে (নিয়ম অপরিবর্তিত)।
       React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
         style: { ...HOME_CARD, flex: waterTarget ? 1 : "1 1 auto", minWidth: 0, marginBottom: 0, padding: "4px 3px", minHeight: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 800, color: T.green, textAlign: "center", lineHeight: 1.2,
-          background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("health", { key: "i", size: 22 }), "পেট ডায়েরি"])),
+          background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("notebook", { key: "i", size: 22 }), "পেট ডায়েরি"])),
     // ওজনের দিন (আগের সন্ধ্যা ৭টা থেকে) ইনপুট বাকি থাকলে হোমে স্মরণ-লাইন — ট্যাপে ওজন-শিট (আগের কার্ডের মতোই)
     calc && weighCard.pending && React.createElement("button", { type: "button", onClick: openWeigh, className: weighCard.className, "aria-label": "ওজন যোগ/বদলান — " + weighCard.label,
       style: { ...HOME_CARD, width: "100%", marginBottom: "8px", minHeight: "44px", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: weighCard.color } }, "⚖️ " + weighCard.label),
