@@ -24,7 +24,7 @@ import { takeQuickIntent } from "../../shared/quickIntent.js";
 // `selectedMemberId` parent (HealthRecordsPageSection)-এর কাছ থেকে prop
 // হিসেবে আসে — পেজের সব sub-tab একই সদস্য শেয়ার করে, ট্যাব পাল্টালে আর
 // নতুন করে বাছতে হয় না। কোনো schema/permission পরিবর্তন নেই।
-export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary, onUpload, onMedChoice, onRecordAdded }) {
+export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberId, section = "all", belowSummary, onUpload, onMedChoice, onRecordAdded, middleSlot, recOpen, onToggleRec }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const [editingRecord, setEditingRecord] = useState(null);
   const [adding, setAdding] = useState(false); // "+ নতুন যোগ করুন" চাপলে ফর্ম খোলে
@@ -38,7 +38,7 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
   // ইনলাইন ছিল, এখন selectedMemberId parent থেকে আসায় effect দিয়ে)।
   useEffect(() => { setEditingRecord(null); setAdding(false); }, [targetMemberId]);
   useEffect(() => {
-    if (section !== "records" && section !== "all") return;
+    if (section !== "records" && section !== "all" && section !== "page") return;
     const k = takeQuickIntent(["bp", "sugar", "condition", "allergy", "observation"]);
     if (k === "bp" || k === "sugar") { setPresetObs(k); setAdding(true); }
     else if (k) { setPresetType(k === "observation" ? "observation" : k); setAdding(true); }
@@ -51,14 +51,14 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
 
   return React.createElement(
     "div", { style: { marginTop: "0" } },
-    (section === "all" || section === "profile") && React.createElement(HealthSummaryCard, {
+    (section === "all" || section === "profile" || section === "page") && React.createElement(HealthSummaryCard, {
       key: "summary-" + targetMemberId,
       familyId, selectedMemberId: targetMemberId, callerMemberId, refreshTick,
       onVitalsSaved: () => setRefreshTick((t) => t + 1),
     }),
     // গর্ভাবস্থা-টগল সরানো (owner ২০২৬-১১-১৪): নারী হলেই দেখায় না — অসুখ-তালিকায় "গর্ভাবস্থা" যোগ করলেই ট্র্যাকার/খাবার/AI নিজে ধরে (effectivePregnant)।
     belowSummary || null, // স্বাস্থ্য-প্রোফাইল ট্যাব: কার্ডের ঠিক নিচে ফিল্টার-পিল (প্রোফাইল ও তালিকা এক instance → ✎ সেভে কার্ড সাথে সাথে রিফ্রেশ)
-    (section === "all" || section === "records" || !!onUpload) && React.createElement("div", { ref: formRef },
+    (section === "all" || section === "records" || section === "page" || !!onUpload) && React.createElement("div", { ref: formRef },
       // ＋ এখন app.js-এর একটাই সাধারণ পপআপ (হোমের সাথে এক); বাছা ধরন intent হয়ে এখানে ফর্ম খোলে
       (() => {
         const form = (adding || editingRecord) && React.createElement(HealthRecordForm, {
@@ -74,10 +74,12 @@ export function HealthRecordsSection({ familyId, callerMemberId, selectedMemberI
         return React.createElement(BottomSheet, { title: null, hideHeader: true, lockBackdrop: true, onClose: () => { setEditingRecord(null); setAdding(false); setPresetObs(null); setPresetType(null); } }, form);
       })(),
       ),
-    (section === "all" || section === "records") && React.createElement(HealthRecordList, {
+    (section === "all" || section === "records" || section === "page") && React.createElement(HealthRecordList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
       onEdit: setEditingRecord,
       onDeleted: () => setRefreshTick((t) => t + 1),
+      layout: section === "page" ? "page" : "list", middleSlot, recOpen, onToggleRec,
+      trendSlot: section === "page" ? React.createElement(TrendChartSection, { key: "trend-" + targetMemberId, familyId, targetMemberId, refreshTick }) : null,
     }),
     (section === "all" || section === "records") && React.createElement(TrendChartSection, {
       key: "trend-" + targetMemberId, familyId, targetMemberId, refreshTick,

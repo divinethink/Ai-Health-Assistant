@@ -150,7 +150,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   if (err) return ErrorBox(err);
   if (loading || !data) return Skeleton(2, 90);
 
-  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts, docs } = data;
+  const { member, heightCm, weightKg, bmi, bmiCategory, allergies, vaccination, labAlerts, docs } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
@@ -160,12 +160,12 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   // হোমের সতর্ক-সারির মতো চিপ: অ্যালার্জি (লাল) + চলমান অসুখ (এক-শব্দ নাম)। কিছু না থাকলে সারিই নেই
   // ("নেই" দেখালে "নিরাপদ" মনে হতে পারে — হোমের "তথ্য না থাকলে কিছু নয়" নীতির সাথে মিল)।
   const mkChip = (key, text, bg, fg) => h("span", { key, style: { display: "inline-flex", alignItems: "center", gap: "5px", padding: "3px 10px", borderRadius: "999px", background: bg, color: fg, fontSize: "13px", fontWeight: 700, maxWidth: "100%", overflowWrap: "anywhere" } }, text);
-  const condShown = conds.slice(0, 3), allergyShown = allergies.slice(0, 2);
-  const chipRow = (allergies.length || conds.length) ? h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px", alignItems: "center" } },
+  const allergyShown = allergies.slice(0, 2);
+  // অসুখ-চিপ (যেমন IBS) হিরো থেকে সরানো — অসুস্থতা কার্ড এখন হিরোর ঠিক নিচে (owner-request ২০২৬-১১-১৭); অ্যালার্জি-চিপ থাকে
+  const chipRow = allergies.length ? h("div", { style: { display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "6px", alignItems: "center" } },
     allergyShown.map((a, i) => mkChip("a" + i, [Icon("alert", { key: "i", size: 14 }), shortCondName(a.substance)], "#FDECEA", "#A32018")),
     allergies.length > allergyShown.length && h("span", { key: "am", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(allergies.length - allergyShown.length)),
-    condShown.map((c, i) => mkChip("c" + i, [Icon("health", { key: "i", size: 14 }), shortCondName(c.name)], "#fff", "var(--hs-primary, #0E4B43)")),
-    conds.length > condShown.length && h("span", { key: "cm", style: { fontSize: "12.5px", color: "#5F716C" } }, "+" + bn(conds.length - condShown.length) + "টি")) : null;
+    null) : null;
   const glanceRows = [
     labAlerts.length > 0 && h("div", { key: "lab" },
       h("button", { type: "button", onClick: () => setLabOpen((v) => !v), "aria-expanded": labOpen, style: { all: "unset", display: "block", width: "100%", boxSizing: "border-box", cursor: "pointer", minHeight: "44px" } },

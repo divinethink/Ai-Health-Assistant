@@ -48,13 +48,6 @@ const { useState, useEffect } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
 import { peekQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 
-// স্বাস্থ্য তথ্য-ট্যাব (ধাপ ৪): তিন সাব-পিলের বদলে একটা "আমার স্বাস্থ্য" তালিকা + ফিল্টার-চিপ।
-// id আগের মতোই (records/meds/docs) + "all"; ভেতরের কম্পোনেন্ট অপরিবর্তিত, ডেটা-লেয়ার অক্ষত।
-const RECORD_SUBS = [
-  { id: "meds", label: "মেডিসিন", hint: "ওষুধ, খাওয়ার সময় ও রিমাইন্ডার" },
-  { id: "records", label: "রেকর্ড", hint: "অসুখ, অ্যালার্জি ও পরিমাপ (প্রেসার, সুগার ইত্যাদি)" },
-  { id: "docs", label: "রিপোর্ট", hint: "ল্যাব রিপোর্ট, ইমেজিং, ডিসচার্জ ও অন্যান্য নথি" }, // জমা নথি (ধাপ ৩-এ প্রেসক্রিপশন ওষুধ-পিলে যাবে)
-];
 const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
 const bnNum = (n) => String(n).replace(/\d/g, (d) => BN_DIGITS[d]);
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -84,7 +77,8 @@ function usePillCounts(familyId, memberId, tick) {
 
 // mode "home" = শুধু "আজ" (হোম ট্যাব); mode "health" = স্বাস্থ্য প্রোফাইল (প্রোফাইল+স্বাস্থ্য তথ্য) · খাদ্যাভ্যাস ও টাইমলাইন · নথিপত্র (শেষ পিল)
 const HEALTH_TABS = [
-  { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + স্বাস্থ্য তথ্য একসাথে (owner-approved ২০২৬-১১-১১)
+  { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + অসুস্থতা + ওষুধ + ভাঁজ-করা রেকর্ড (owner-approved ২০২৬-১১-১৭)
+  { id: "reports", label: "tab.reports" }, // রিপোর্ট ওপরের পিলে (owner-request ২০২৬-১১-১৭)
   { id: "care", label: "tab.commonCare" }, // সাধারণ চিকিৎসা (টাইমলাইন মেনুতে সরানো — owner-request ২০২৬-১১-১৩)
   // ডাক্তার-পিল মেনুর "ডাক্তারের তথ্য" টাইলে সরানো হয়েছে (owner-request ২০২৬-১১-১৭)
 ];
@@ -96,15 +90,15 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   // "+ দ্রুত যোগ" থেকে এলে সংশ্লিষ্ট ট্যাবে শুরু (ধাপ ৯): প্রেসার/সুগার/ওষুধ → স্বাস্থ্য তথ্য; রিপোর্ট → নথিপত্র; ওষুধ-বার্তা এখানেই শেষ, বাকিটা ফর্ম নিজে নেয়
   const [activeTab, setActiveTab] = useState(() => {
     if (!isHealth) return "today";
-    return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
+    return peekQuickIntent(["report"]) ? "reports" : "profile"; // "+ দ্রুত যোগ → রিপোর্ট" সরাসরি Reports পিলে; বাকিরা প্রোফাইলে (ফর্ম নিজে ইনটেন্ট নেয়)
   });
   const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
-  const [recordSub, setRecordSub] = useState(() => (peekQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["bp", "sugar", "observation", "condition", "allergy"]) ? "records" : peekQuickIntent(["report"]) ? "docs" : "meds")); // শুধু peek: ইনটেন্ট নেয় গন্তব্য-ফর্ম নিজে (ওষুধ→MedicationReminders, প্রেসার/সুগার→HealthRecordsSection, রিপোর্ট→DocumentsSection)
+  const [recOpen, setRecOpen] = useState(() => !!peekQuickIntent(["bp", "sugar", "observation"])); // প্রেসার/সুগার/পরিমাপ-যোগ থেকে এলে রেকর্ড ভাঁজ খোলা
   const counts = usePillCounts(familyId, isHealth ? selectedMemberId : null, addTick);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
-  histBind(hk + "rec", recordSub, setRecordSub);
+  histBind(hk + "rec", recOpen, setRecOpen);
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
@@ -122,36 +116,25 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             color: activeTab === tb.id ? "#fff" : "#2B3A36",
             boxShadow: activeTab === tb.id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
-        }, t(tb.label))
+        }, t(tb.label) + (tb.id === "reports" && counts.docs != null ? " (" + bnNum(counts.docs) + ")" : ""))
       )),
     !selectedMemberId
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
       : React.createElement(
       "div", { style: { flex: 1, overflowY: "auto", padding: "8px 12px 84px" } },
       !isHealth && React.createElement(TodaySummary, { familyId, callerMemberId, selectedMemberId }),
-      // স্বাস্থ্য প্রোফাইল = হিরো-কার্ড (নাম/বয়স/উচ্চতা/ওজন/BMI/অ্যালার্জি) + ফিল্টার-পিল (সব | অসুখ | ওষুধ | রিপোর্ট) + সংশ্লিষ্ট তালিকা।
-      // "সব"/"অসুখ" = section "all" (কার্ড + ফর্ম + তালিকা + ট্রেন্ড একই instance); "ওষুধ"/"রিপোর্ট" = section "profile" (শুধু কার্ড)।
-      isHealth && activeTab === "profile" && React.createElement(React.Fragment, null,
-        React.createElement(HealthRecordsSection, {
-          familyId, callerMemberId, selectedMemberId, section: recordSub === "records" ? "all" : "profile",
-          onRecordAdded: () => setAddTick((n) => n + 1),
-          onUpload: () => { setQuickIntent("report"); histChange(hk + "rec", recordSub, "docs", setRecordSub); setAddTick((n) => n + 1); },
-          onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); histChange(hk + "rec", recordSub, "meds", setRecordSub); setMedTick((n) => n + 1); },
-          belowSummary: React.createElement("div", { key: "subs", style: { marginTop: "16px", marginBottom: "0" } },
-            React.createElement("div", { role: "tablist", "aria-label": "ফিল্টার", style: { display: "flex", gap: "6px", padding: "8px", borderRadius: "16px", background: "var(--hs-pill-tray, #EFE4D2)", boxShadow: "inset 0 1px 3px rgba(90,60,10,0.12)", marginBottom: "6px" } },
-              RECORD_SUBS.map((sb) => { const on = recordSub === sb.id; return React.createElement("button", {
-                key: sb.id, type: "button", role: "tab", onClick: () => histChange(hk + "rec", recordSub, sb.id, setRecordSub), "aria-selected": on, "aria-pressed": on,
-                style: {
-          flex: "1 1 0", minWidth: 0, minHeight: "40px", padding: "4px 6px", position: "relative", borderRadius: "10px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", textAlign: "center",
-          border: on ? "1.5px solid var(--hs-pill, #8B5A2B)" : "1px solid var(--hs-pill-border, #D6C3A5)", boxShadow: on ? "0 4px 10px rgba(90,60,10,0.34), inset 0 -3px 0 rgba(255,255,255,0.30)" : "0 2px 5px rgba(90,60,10,0.16), inset 0 -2px 0 rgba(90,60,10,0.06)",
-          background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "linear-gradient(180deg, var(--hs-pill-top, #FFFFFF), var(--hs-pill-tint, #F6EEE0))", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4F3414)",
-                },
-              }, sb.label + (counts[sb.id] == null ? "" : " (" + bnNum(counts[sb.id]) + ")")); })),
-            null),
-        }),
-        recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
-        recordSub === "meds" && React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) }),
-        recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" })),
+      // স্বাস্থ্য প্রোফাইল = হিরো-কার্ড → অসুস্থতা/অ্যালার্জি (সবসময় খোলা) → ওষুধ → ভাঁজ-করা "রেকর্ড" (পরিমাপ + ট্রেন্ড)।
+      isHealth && activeTab === "profile" && React.createElement(HealthRecordsSection, {
+        familyId, callerMemberId, selectedMemberId, section: "page",
+        recOpen, onToggleRec: () => setRecOpen((v) => !v),
+        onRecordAdded: () => setAddTick((n) => n + 1),
+        onUpload: () => { setQuickIntent("report"); histChange(hk + "main", activeTab, "reports", setActiveTab); setAddTick((n) => n + 1); },
+        onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); setMedTick((n) => n + 1); },
+        middleSlot: React.createElement(React.Fragment, null,
+          React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
+          React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) })),
+      }),
+      isHealth && activeTab === "reports" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" }),
       isHealth && activeTab === "care" && React.createElement(CommonCareSection, { familyId, callerMemberId, selectedMemberId })
     )
   );

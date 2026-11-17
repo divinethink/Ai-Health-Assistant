@@ -8,6 +8,7 @@
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { t } from "../../shared/i18n.js";
+import { Icon } from "../../shared/icons.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { BottomSheet } from "../../shared/BottomSheet.js";
 import { bnDate } from "../../shared/dates.js";
@@ -41,7 +42,9 @@ function Spark({ items }) {
     React.createElement("polyline", { points: pts, fill: "none", stroke: "var(--hs-primary-2, #17705F)", strokeWidth: 2, strokeLinejoin: "round", strokeLinecap: "round", vectorEffect: "non-scaling-stroke" }));
 }
 
-export function HealthRecordList({ familyId, targetMemberId, callerMemberId, refreshTick, onEdit, onDeleted }) {
+// layout "page" (স্বাস্থ্য প্রোফাইল): অসুস্থতা+অ্যালার্জি সবসময় খোলা → middleSlot (ওষুধ) → ভাঁজ-করা "রেকর্ড" (ল্যাব-সতর্কতা + পরিমাপ + trendSlot)।
+// layout "list" (ডিফল্ট): আগের মতোই একটানা তালিকা।
+export function HealthRecordList({ familyId, targetMemberId, callerMemberId, refreshTick, onEdit, onDeleted, layout, middleSlot, trendSlot, recOpen, onToggleRec }) {
   const [records, setRecords] = useState(null);
   const [err, setErr] = useState(null);
   const [openKey, setOpenKey] = useState(null);   // খোলা কার্ড (record id বা "obs:<key>")
@@ -90,9 +93,11 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     }
   }, [familyId, targetMemberId, callerMemberId, onDeleted]);
 
-  if (err) return ErrorBox(err);
-  if (!records) return Skeleton(3, 64);
-  if (records.filter((r) => r.resourceType !== "medicationStatement").length === 0) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো রেকর্ড নেই।");
+  const isPage = layout === "page";
+  if (err) return React.createElement(React.Fragment, null, ErrorBox(err), isPage ? middleSlot : null);
+  if (!records) return isPage ? React.createElement(React.Fragment, null, Skeleton(2, 64), middleSlot) : Skeleton(3, 64);
+  const noRecords = records.filter((r) => r.resourceType !== "medicationStatement").length === 0;
+  if (noRecords && !isPage) return React.createElement("p", { style: { color: MUTED, fontSize: "14px" } }, "কোনো রেকর্ড নেই।");
 
   const toggle = (k) => { setOpenKey((cur) => (cur === k ? null : k)); setConfirmId(null); };
   const btn = (color, bg) => ({ flex: 1, minHeight: "44px", borderRadius: "12px", border: "1px solid transparent", background: bg, color, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
@@ -224,6 +229,26 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   // সংরক্ষিত সর্বশেষ মান থেকে হিসাব (নতুন ডেটা নয়) — প্রতি টেস্টের সর্বশেষ মানই
   const labAlerts = buildLabAlerts(obsGroups.map((g) => g.items[0]), dict, sex);
+
+  if (isPage) {
+    const cnt = obsGroups.length;
+    return React.createElement("div", { style: { marginTop: "4px" } },
+      conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
+      allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
+      middleSlot || null,
+      React.createElement("div", { style: { marginTop: "14px" } },
+        React.createElement("button", { type: "button", onClick: onToggleRec, "aria-expanded": !!recOpen,
+          style: { width: "100%", minHeight: "48px", padding: "10px 14px", borderRadius: "14px", border: "1px solid #D3E0D9", background: "#fff", color: G, fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" } },
+          React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("activity", { size: 17 }), "রেকর্ড" + (cnt ? " (" + cnt + "টি পরিমাপ)" : "")),
+          React.createElement("span", { "aria-hidden": "true", style: { display: "flex" } }, Icon(recOpen ? "up" : "down", { size: 18 }))),
+        recOpen && React.createElement("div", null,
+          React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onAck: doAck, ackBusy, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
+          cnt > 0
+            ? React.createElement(React.Fragment, null, title("📈", "পরিমাপ", cnt + "টি"), React.createElement("div", { style: grid3 }, orderObsCards(obsGroups, (g) => !!alertForGroup(g.items, dict, sex)).map(obsCard)))
+            : React.createElement("p", { style: { color: MUTED, fontSize: "14px", margin: "12px 2px 0" } }, "এখনো কোনো পরিমাপ নেই — ＋ চেপে প্রেসার, সুগার বা অন্য পরিমাপ যোগ করুন।"),
+          trendSlot || null)),
+      detailSheet());
+  }
 
   return React.createElement("div", { style: { marginTop: "4px" } },
     React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onAck: doAck, ackBusy, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
