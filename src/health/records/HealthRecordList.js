@@ -232,8 +232,13 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   if (isPage) {
     const cnt = obsGroups.length;
+    // অসুখ = ছোট চিপ (নাম + স্ট্যাটাস-ডট); লম্বা-ছোট নাম অনুযায়ী এক লাইনে ২–৩টি, ট্যাপে আগের বিস্তারিত-শিট (ডাক্তার/নোট/গাইড/✎/🗑)।
+    const condChip = (r) => { const on = r.status === "active" || r.status === "chronic"; return React.createElement("button", { key: r.id, type: "button", onClick: () => toggle(r.id), "aria-haspopup": "dialog", "aria-label": r.name + " — " + t("st." + (r.status || "active")),
+      style: { display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", maxWidth: "100%", padding: "8px 14px", borderRadius: "999px", border: "1px solid " + LINE, background: "#fff", color: "#1F2D2A", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+      React.createElement("span", { "aria-hidden": "true", style: { width: "9px", height: "9px", flexShrink: 0, borderRadius: "50%", background: on ? "#2FAE6B" : "#B7C3BD" } }),
+      React.createElement("span", { style: { overflowWrap: "anywhere", lineHeight: 1.25 } }, r.name)); };
     return React.createElement("div", { style: { marginTop: "4px" } },
-      conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { ...cardBase, padding: 0, overflow: "hidden" } }, conditions.map(conditionRow))),
+      conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(condChip))),
       allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
       middleSlot || null,
       React.createElement("div", { style: { marginTop: "14px" } },
