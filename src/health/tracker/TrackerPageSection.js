@@ -28,7 +28,7 @@ import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
-import { FocusSheet, focusLabels } from "./FocusSheet.js";
+import { FocusSheet } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { weighDayOf, countedWeighPoints, DEFAULT_WEIGH_DAY } from "./weighDay.js";
@@ -187,11 +187,6 @@ function MealTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   );
 }
 
-// লক্ষ্য (যেমন ওজন কমানো) + শরীরের টার্গেট — কমা দিয়ে একসাথে (লক্ষ্য-কার্ড ও ব্যায়াম-কার্ড একই)
-function goalTargetText(goalType, areas) {
-  return [GOAL_LABELS[goalType], ...focusLabels(areas)].filter(Boolean).join(", ");
-}
-
 function bnTimeHM(hhmm) {
   const [h, m] = hhmm.split(":").map(Number);
   return bnNum(h > 12 ? h - 12 : h) + ":" + bnNum(String(m).padStart(2, "0"));
@@ -211,7 +206,6 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const sex = info.member && info.member.sex;
   const focusCtx = focusCtxOf({ goal, sex, age, flags, condKeys: info.condKeys });
   const base = exercisePlan(age, goal ? goal.goalType : null, focusCtx);
-  const canFocus = age !== null && age >= 18 && !flags.pregnant;
 
   if (!base) return React.createElement(Notice, { tone: "info" }, "ব্যায়াম-প্ল্যানের জন্য প্রোফাইলে জন্মতারিখ দিন।");
 
@@ -286,21 +280,15 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const editBtn = (idx) => React.createElement(EditIcon, { onClick: () => { setErr(null); setSheet({ kind: "day", idx }); }, disabled: busy, label: DAY_LABELS[idx] + " বদলান" });
 
   return React.createElement("div", null,
-    React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
+    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px" } }, // আলাদা আলাদা লাইনে (owner-request ২০২৬-১১-১৭)
       FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel),
-      guideTypes.length > 0 && FoldChip("guide", "📋 নির্দেশনা", null, panel, setPanel)),
+      guideTypes.length > 0 && FoldChip("guide", "📋 ব্যায়াম নির্দেশনা", null, panel, setPanel)),
     panel === "why" && React.createElement(PlanWhyCard, { bare: true, lines: explainExercise({ plan: base, age, goalType: goal ? goal.goalType : null }) }),
     panel === "guide" && React.createElement("div", { style: CARD },
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "প্রতিদিন শুরুতে গা-গরম, শেষে স্ট্রেচিং। সহজ লাগলে ধীরে কঠিন করুন; ব্যথা হলে থামুন।"),
       guideTypes.map((t) => React.createElement("div", { key: t, style: { padding: "6px 0", borderBottom: "1px solid " + T.track } },
         React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, (EX_ICON[t] || "") + " " + EXERCISE_TYPES[t].label + " · " + exerciseDetail(t).sets),
         React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, exerciseDetail(t).tip)))),
-    canFocus && React.createElement("div", { style: { ...CARD, display: "flex", alignItems: "center", gap: "8px" } },
-      React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-        React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "🎯 আমার টার্গেট"),
-        React.createElement("div", { style: { fontSize: "13px", color: T.muted, lineHeight: 1.5 } }, focusCtx ? goalTargetText(goal && goal.goalType, focusCtx.areas) : "এখনো বাছা হয়নি — সাধারণ প্ল্যান চলছে")),
-      React.createElement("button", { type: "button", onClick: () => { setErr(null); setSheet({ kind: "focus" }); }, disabled: busy,
-        style: { flexShrink: 0, minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, focusCtx ? "বদলান" : "বাছুন")),
     needsDoctor && React.createElement(Notice, null, "ব্যায়াম শুরুর আগে ডাক্তারের সাথে কথা বলে নিন (গর্ভাবস্থা, ডায়াবেটিস, কিডনি রোগ বা ৬৫+ বয়সে)।"),
     gate.blocked && plan.routine && React.createElement(Notice, { tone: "info" }, "আপনার ক্ষেত্রে রুটিন নিজে বদলানো বন্ধ — ডাক্তারের পরামর্শ অনুযায়ী করুন। নিচে ‘আজ আসলে’ লগ করা যাবে।"),
     warnings.map((w, i) => React.createElement(Notice, { key: "w" + i }, w)),
@@ -469,11 +457,11 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
 // ভাঁজযোগ্য চিপ (মিল ও ব্যায়ামে একই) — panel/setPanel বাইরে থেকে
 function FoldChip(id, text, badge, panel, setPanel) {
   return React.createElement("button", { key: id, onClick: () => setPanel(panel === id ? null : id), "aria-expanded": panel === id,
-    // হেডলাইন-রূপ: মাঝে-সাজানো, ক্রিম গ্রেডিয়েন্ট + নরম ছায়া (খোলা কার্ডের ক্রিমের সাথে মেলে); ▼/▲ ডানে আলাদা
-    style: { flex: 1, minWidth: 0, minHeight: "48px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "0 28px", borderRadius: "14px", border: "1px solid #E3CC9A", background: "linear-gradient(135deg, #FBF1DF, #F3DFB2)", boxShadow: "0 4px 10px rgba(90,60,10,0.18)", color: "#4A3410", fontSize: "16px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", textAlign: "center" } },
+    // হেডলাইন-রূপ: মাঝে-সাজানো, ডিফল্ট কার্ড-ব্যাকগ্রাউন্ড (owner-request ২০২৬-১১-১৭); ▼/▲ ডানে আলাদা
+    style: { flex: 1, minWidth: 0, minHeight: "48px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "0 28px", borderRadius: "14px", border: "1px solid " + T.border, background: T.surface, boxShadow: "0 1px 3px rgba(14,75,67,0.06)", color: T.ink, fontSize: "16px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit", textAlign: "center" } },
     React.createElement("span", { style: { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, text),
     badge && React.createElement("span", { style: { flexShrink: 0, minWidth: "20px", padding: "0 6px", borderRadius: "999px", background: "#E4F0E9", color: T.green, fontSize: "12px", textAlign: "center" } }, badge),
-    React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "12px", fontSize: "12px", color: "#7A5A1C" } }, panel === id ? "▲" : "▼"));
+    React.createElement("span", { "aria-hidden": "true", style: { position: "absolute", right: "12px", fontSize: "12px", color: T.muted } }, panel === id ? "▲" : "▼"));
 }
 
 // ---------- মিল প্ল্যান — ধাপ A১/A২/A৩ ----------
@@ -486,7 +474,7 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   // ক্রম (owner-request ২০২৬-১১-১৪): সমস্যা → এড়িয়ে চলুন → খাবেন → [কেন এই ডায়েট প্ল্যান? + ডায়েট প্ল্যান] → অভ্যাস ও জীবনযাত্রা → খাদ্য গাইড
   const plan = React.createElement(React.Fragment, null,
     React.createElement("div", { style: { display: "flex", gap: "8px", marginBottom: "8px" } },
-      !gate.blocked && foldChip("why", "💡 ডায়েট")),
+      !gate.blocked && foldChip("why", "💡 ডায়েট প্ল্যান")),
     panel === "why" && !gate.blocked && React.createElement(PlanWhyCard, { bare: true, title: "কেন এই ডায়েট প্ল্যান?", lines: explainMeal({ goal, age, weightKg, heightCm, allergyTags }) }),
     React.createElement(MealTab, common));
   return React.createElement("div", null,

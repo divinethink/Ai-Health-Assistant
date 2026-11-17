@@ -7,12 +7,12 @@ export function PlanWhyCard({ lines, bare, title }) {
   if (!lines || !lines.length) return null;
   // bare: হেডার ছাড়া শুধু ভেতরের লাইন (ভাঁজ-চিপ বাইরে থেকে নিয়ন্ত্রিত)
   if (bare) {
-    return React.createElement("div", { style: { background: "#FBF1DF", border: "1px solid #EBD9B4", borderRadius: "14px", padding: "10px 14px", marginBottom: "8px", fontSize: "13px", color: "#4A5A55", lineHeight: 1.65 } },
+    return React.createElement("div", { style: { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "10px 14px", marginBottom: "8px", fontSize: "13px", color: "#4A5A55", lineHeight: 1.65 } },
       title && React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: "#1F2D2A", marginBottom: "6px" } }, title),
       lines.map((l, i) => React.createElement("div", { key: i, style: { marginTop: i ? "4px" : 0 } }, "• " + l)));
   }
   return React.createElement("div", {
-    style: { background: "#FBF1DF", border: "1px solid #EBD9B4", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px" },
+    style: { background: "var(--hs-surface, #fff)", border: "1px solid var(--hs-border, #D9E5DE)", borderRadius: "14px", padding: "12px 14px", marginBottom: "12px" },
   },
     React.createElement("button", {
       onClick: () => setOpen(!open), "aria-expanded": open,
