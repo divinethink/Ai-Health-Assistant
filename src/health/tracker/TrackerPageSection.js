@@ -96,7 +96,7 @@ const kindDot = (k, size) => React.createElement("span", { key: k, "aria-hidden"
 const dayKinds = (items) => ["cardio", "strength", "flex"].filter((k) => items.some((x) => exerciseKind(x) === k));
 
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
-const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}.hs-trk-pills button{padding:8px 12px!important;font-size:13.5px!important}"; // ৪টি পিল ৩৬০dp-তে আঁটাতে
+const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}.hs-trk-pills>div{justify-content:center}.hs-trk-pills button{flex:1 0 auto!important;padding:10px 10px!important;font-size:15.5px!important;min-height:48px!important;display:inline-flex!important;align-items:center;justify-content:center;text-align:center}"; // ৪টি পিল পুরো প্রস্থে সমান ভাগে, লেখা মাঝ-বরাবর
 function Pills(tabs, active, onChange, leading) {
   return React.createElement("div", { className: "hs-trk-pills" }, TabPills(tabs, active, onChange, leading, "trk:" + tabs.map((x) => x[0]).join("|")));
 }
