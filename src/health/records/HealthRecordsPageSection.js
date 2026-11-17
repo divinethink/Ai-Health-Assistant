@@ -1,4 +1,4 @@
-import { t, L } from "../../shared/i18n.js";
+import { t, L, digits } from "../../shared/i18n.js";
 // হেলথ রেকর্ড (হোম) — Full-page wrapper, P11 mockup §৩ অনুযায়ী ৫টা sub-tab
 // pill দিয়ে reorganized (ধাপ ২)। প্রতিটা sub-tab-এর ভেতরের existing
 // component অপরিবর্তিত (HealthRecordsSection-এ শুধু নতুন `section` prop
@@ -47,8 +47,7 @@ const { useState, useEffect } = React;
 import { histBind, histChange } from "../../shared/navHistory.js";
 import { peekQuickIntent, setQuickIntent } from "../../shared/quickIntent.js";
 
-const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
-const bnNum = (n) => String(n).replace(/\d/g, (d) => BN_DIGITS[d]);
+const bnNum = digits; // ভাষা-অনুযায়ী অঙ্ক (English-এ ৪ দেখতে ৮-এর মতো লাগত)
 const pad2 = (n) => String(n).padStart(2, "0");
 function localTodayStr() { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
 
