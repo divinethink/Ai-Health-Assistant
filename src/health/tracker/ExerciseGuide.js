@@ -6,6 +6,7 @@ import { GUIDE_GROUPS, EXERCISE_GUIDE, guideStatus, riskLists } from "./exercise
 import { STATUS_COLORS } from "./foodStatus.js";
 import { EX_ICON } from "./PlanEditSheets.js";
 import { T } from "./trackerTheme.js";
+import { digits } from "../../shared/i18n.js";
 
 const { useState } = React;
 const h = React.createElement;
@@ -59,7 +60,7 @@ export function ExerciseGuide({ age, flags, condKeys }) {
       const warn = sts.filter((s) => s.level !== "green").length;
       return h("details", { key: g.id, style: { background: T.surface, border: "1.5px solid " + T.border, borderRadius: "14px", padding: "4px 10px", marginTop: "8px" } },
         h("summary", { style: { fontSize: "14px", fontWeight: 700, color: T.green, cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", gap: "6px" } },
-          g.icon + " " + g.label + " (" + rows.length + ")", warn > 0 && h("span", { style: { fontSize: "12px", color: STATUS_COLORS.yellow.text, fontWeight: 600 } }, "· " + warn + "টিতে সতর্কতা")),
+          g.icon + " " + g.label + " (" + digits(rows.length) + ")", warn > 0 && h("span", { style: { fontSize: "12px", color: STATUS_COLORS.yellow.text, fontWeight: 600 } }, "· " + digits(warn) + "টিতে সতর্কতা")),
         rows.map((t, i) => h("button", { key: t, type: "button", onClick: () => setOpen(t), style: { display: "block", width: "100%", textAlign: "left", background: "transparent", border: "none", borderTop: "1px solid " + T.border, padding: "8px 2px", minHeight: "44px", cursor: "pointer", color: T.ink, fontFamily: "inherit" } },
           h("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" } },
             h("span", { style: { fontSize: "14px", fontWeight: 700 } }, (EX_ICON[t] || "") + " " + EXERCISE_TYPES[t].label),
