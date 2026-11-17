@@ -6,18 +6,38 @@
 // hasAccess()-গেটেড)। Delete বোতাম এখন ⋮ মেনুর ভেতরে (ভুল-ট্যাপ কমাতে)।
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
-import { ErrorBox, ConfirmDialog } from "../../shared/ui.js";
+import { ErrorBox, ConfirmDialog, Skeleton } from "../../shared/ui.js";
+import { Icon } from "../../shared/icons.js";
+import { getLang } from "../../shared/i18n.js";
+import { bnDate } from "../../shared/dates.js";
 import { listDocuments, deleteDocument, renameDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
 
 const { useState, useEffect, useCallback } = React;
 
+// নথির ধরন → লাইন-আইকন (নাম) ও নরম টালির রং; বাকি অ্যাপের আইকন-ধাঁচের সাথে মেলানো
 const TYPE_ICONS = {
-  prescription: "💊",
-  "lab-report": "🧪",
-  imaging: "🩻",
-  "discharge-summary": "🏥",
-  other: "📄",
+  prescription: ["pill", "#E6E4F5"],
+  "lab-report": ["flask", "#E4F2EA"],
+  imaging: ["scan", "#E3EEF8"],
+  "discharge-summary": ["cross", "#FDE8E4"],
+  other: ["file", "#F3ECD9"],
 };
+
+// "2026-11-14" → বাংলায় "১৪ নভেম্বর ২০২৬", English-এ "14 Nov 2026"; ISO না হলে যেমন আছে
+function fmtDate(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const d = new Date(iso + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return iso;
+  if (getLang() === "bn") return bnDate(iso);
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// শুধু-আইকন বাটন (≥44px টাচ-এলাকা; aria-label/title-এ নাম)
+function iconLink(icon, label, href, primary) {
+  return React.createElement("a", { href, target: "_blank", rel: "noopener noreferrer", "aria-label": label, title: label,
+    style: { width: "44px", height: "44px", flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", textDecoration: "none", color: "var(--hs-primary, #0E4B43)", background: primary ? "#E2F3E9" : "transparent" } },
+    Icon(icon, { size: 22 }));
+}
 
 function formatSize(bytes) {
   if (!bytes) return "";
@@ -96,7 +116,7 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   };
 
   if (err) return ErrorBox(err);
-  if (!docs) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (!docs) return Skeleton(3, 64);
   if (docs.length === 0) {
     return React.createElement("div", { style: { textAlign: "center", padding: "28px 16px", border: "1px dashed #B9CFC4", borderRadius: "16px", background: "#fff", color: "#5F716C", fontSize: "14px" } },
       React.createElement("div", { style: { fontSize: "40px" } }, "🗂️"),
@@ -128,13 +148,13 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
 
   const renderCard = (d) => {
       const isRx = d.docType === "prescription";
-      const meta = (isRx ? [d.date, d.source ? "ডাক্তার: " + d.source : null] : [d.date, d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
+      const meta = (isRx ? [fmtDate(d.date), d.source ? "ডাক্তার: " + d.source : null] : [fmtDate(d.date), d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
       const isPdf = d.originalContentType === "application/pdf";
       return React.createElement(
-        "div", { key: d.id, style: { padding: "12px", marginBottom: "10px", ...PREMIUM_CARD, position: "relative" } },
+        "div", { key: d.id, style: { padding: "8px 8px 8px 12px", marginBottom: "8px", ...PREMIUM_CARD, position: "relative" } },
         React.createElement(
-          "div", { style: { display: "flex", alignItems: "flex-start", gap: "10px" } },
-          React.createElement("div", { style: { fontSize: "26px", lineHeight: 1 } }, TYPE_ICONS[d.docType] || "📄"),
+          "div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+          React.createElement("div", { "aria-hidden": "true", style: { width: "36px", height: "36px", flexShrink: 0, borderRadius: "10px", background: (TYPE_ICONS[d.docType] || TYPE_ICONS.other)[1], color: "var(--hs-primary, #0E4B43)", display: "flex", alignItems: "center", justifyContent: "center" } }, Icon((TYPE_ICONS[d.docType] || TYPE_ICONS.other)[0], { size: 20 })),
           React.createElement(
             "div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } },
@@ -143,23 +163,20 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
             meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta),
             isRx && medsByDoc && medsByDoc[d.id] && medsByDoc[d.id].length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, "এই প্রেসক্রিপশনের ওষুধ: " + medsByDoc[d.id].join(", "))
           ),
+          d.status === "ready" && iconLink("eye", "দেখুন", d.cloudinaryUrl, true),
+          d.status === "ready" && iconLink("download", "ডাউনলোড", getDownloadUrl(d.cloudinaryUrl), false),
           React.createElement("button", {
             onClick: () => { setMenuId(menuId === d.id ? null : d.id); setRenameId(null); setMenuErr(null); },
             "aria-label": "More options", "aria-haspopup": "menu", "aria-expanded": menuId === d.id,
-            style: { border: "none", background: "none", fontSize: "20px", cursor: "pointer", padding: "0 6px", color: "#5F716C" },
+            style: { border: "none", background: "none", fontSize: "20px", cursor: "pointer", width: "32px", minHeight: "44px", padding: 0, color: "#5F716C" },
           }, "⋮")
         ),
         d.status === "pending" && React.createElement("div", { style: { color: "#B8860B", fontSize: "14px", marginTop: "6px" } },
           "আপলোড অসম্পূর্ণ (হয়তো নেটওয়ার্ক-সমস্যায় থেমে গেছে) — মুছে আবার চেষ্টা করুন।"),
-        d.status === "ready" && React.createElement(
-          "div", { style: { display: "flex", gap: "8px", marginTop: "10px" } },
-          React.createElement("a", { href: d.cloudinaryUrl, target: "_blank", rel: "noopener noreferrer", style: linkStyle(true) }, "👁 দেখুন"),
-          React.createElement("a", { href: getDownloadUrl(d.cloudinaryUrl), target: "_blank", rel: "noopener noreferrer", style: linkStyle(false) }, "⬇ ডাউনলোড")
-        ),
         // ⋮ ড্রপডাউন (বোতামের পাশেই): Rename · Re-analyze (শুধু ল্যাব রিপোর্ট) · Delete
         menuId === d.id && React.createElement(React.Fragment, null,
           React.createElement("div", { "aria-hidden": "true", onClick: () => setMenuId(null), style: { position: "fixed", inset: 0, zIndex: 4 } }),
-          React.createElement("div", { role: "menu", style: { position: "absolute", top: "44px", right: "10px", zIndex: 5, minWidth: "180px", background: "#fff", border: "1px solid #D3E0D9", borderRadius: "12px", boxShadow: "0 6px 18px rgba(14,75,67,0.18)", overflow: "hidden" } },
+          React.createElement("div", { role: "menu", style: { position: "absolute", top: "52px", right: "8px", zIndex: 5, minWidth: "180px", background: "#fff", border: "1px solid #D3E0D9", borderRadius: "12px", boxShadow: "0 6px 18px rgba(14,75,67,0.18)", overflow: "hidden" } },
             menuItem("✏️", "Rename", () => { setRenameId(d.id); setRenameVal(d.fileName || ""); setMenuErr(null); setMenuId(null); }),
             onReanalyze && d.docType === "lab-report" && d.status === "ready" && menuItem("🔬", menuBusy ? "Loading..." : "Re-analyze", () => doReanalyze(d), "#1F2D2A", menuBusy),
             menuItem("🗑", "Delete", () => { setConfirmId(d.id); setMenuId(null); }, "#C0392B"))),

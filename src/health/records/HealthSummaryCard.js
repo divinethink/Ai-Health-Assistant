@@ -7,8 +7,9 @@
 // dietGuidanceData.js-এর matching-logic, healthRecordsData.js-এর records) —
 // কোনো নতুন schema/collection/permission-rule লাগেনি।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, Skeleton } from "../../shared/ui.js";
 import { Icon } from "../../shared/icons.js";
+import { getLang } from "../../shared/i18n.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords } from "./healthRecordsData.js";
 import { subscribeMemberHealth } from "./memberHealthStore.js";
@@ -50,7 +51,8 @@ function vaccinationSummaryOf(member, ageYears, events, today) {
   return { done, total: schedule.length, overdue };
 }
 
-const bn = (n) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+// অঙ্ক ভাষা-অনুযায়ী: বাংলা মোডে বাংলা অঙ্ক, English মোডে ইংরেজি অঙ্ক (owner-request ২০২৬-১১-১৭)
+const bn = (n) => (getLang() === "bn" ? String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[d]) : String(n));
 
 const h = React.createElement;
 const BMI_CHIP = {
@@ -143,7 +145,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
 
   if (!selectedMemberId) return null;
   if (err) return ErrorBox(err);
-  if (loading || !data) return React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে...");
+  if (loading || !data) return Skeleton(2, 90);
 
   const { member, heightCm, weightKg, bmi, bmiCategory, allergies, conds, vaccination, labAlerts, docs } = data;
   const ageYears = member ? getAgeInYears(member.dob) : null;

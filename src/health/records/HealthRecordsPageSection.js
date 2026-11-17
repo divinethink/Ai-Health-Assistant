@@ -114,20 +114,20 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
     isHealth && React.createElement(
-      "div", { className: "hs-noscroll", style: { display: "flex", overflowX: "auto", gap: "6px", padding: "6px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
+      "div", { className: "hs-noscroll", style: { display: "flex", justifyContent: "safe center", overflowX: "auto", gap: "8px", padding: "8px 12px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
       chip || null,
       TABS.map((tb) => React.createElement(
         "button", {
           key: tb.id,
           onClick: () => histChange(hk + "main", activeTab, tb.id, setActiveTab),
           style: {
-            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: "5px", padding: "6px 14px", minHeight: "32px", borderRadius: "999px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+            flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px 18px", minHeight: "40px", borderRadius: "999px", fontSize: "14px", fontWeight: 600, cursor: "pointer", lineHeight: 1.2,
             border: activeTab === tb.id ? "1px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA",
             background: activeTab === tb.id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "#fff",
             color: activeTab === tb.id ? "#fff" : "#2B3A36",
             boxShadow: activeTab === tb.id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
-        }, tb.id === "docs" ? [Icon("health", { key: "i", size: 15 }), t(tb.label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")] : t(tb.label))
+        }, tb.id === "docs" ? [Icon("health", { key: "i", size: 18 }), t(tb.label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")] : t(tb.label))
       )),
     !selectedMemberId
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))

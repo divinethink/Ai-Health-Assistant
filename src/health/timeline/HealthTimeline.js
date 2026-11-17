@@ -9,7 +9,7 @@
 // "আরও দেখুন"। শুধু presentation-layer — কোনো নতুন query/schema/rules নেই।
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, Skeleton } from "../../shared/ui.js";
 import { bnDateFromMillis, bnMonthYear, bnTime, bnNum } from "../../shared/dates.js";
 import { buildTimeline } from "./timelineData.js";
 import { useMemberHealth } from "../records/useMemberHealth.js";
@@ -166,7 +166,7 @@ export function HealthTimeline({ familyId, selectedMemberId, vaccineSlot }) {
 
     filter === "vaccine" && vaccineSlot ? React.createElement("div", { style: { marginBottom: "14px" } }, vaccineSlot) : null,
     (entriesErr || recErr) && ErrorBox(entriesErr || (recErr.code === "permission-denied" ? "এই সদস্যের টাইমলাইন দেখার অনুমতি আপনার নেই।" : (recErr.message || String(recErr)))),
-    !entriesErr && !recErr && !entries && React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, "লোড হচ্ছে..."),
+    !entriesErr && !recErr && !entries && Skeleton(3, 56),
     !entriesErr && entries && rows.length === 0 &&
       React.createElement("p", { style: { color: "#5F716C", fontSize: "14px" } }, entries.length === 0 ? "এখনো কোনো রেকর্ড/নথি নেই।" : "এই ফিল্টারে কোনো এন্ট্রি নেই।"),
 

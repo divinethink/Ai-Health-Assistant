@@ -9,7 +9,7 @@
 // অবস্থায় (বা background tab, ব্রাউজার বন্ধ না থাকলে) reminder কাজ করবে। App সম্পূর্ণ
 // বন্ধ থাকলে notification আসবে না। এটাই honest সীমা, UI-তে স্পষ্ট করে বলা আছে।
 
-import { ErrorBox, SheetFrame, ConfirmDialog } from "../../shared/ui.js";
+import { ErrorBox, SheetFrame, ConfirmDialog, Skeleton } from "../../shared/ui.js";
 import { Icon } from "../../shared/icons.js";
 import { suggestMedicines } from "../../shared/searchAliases.js";
 import { DocumentUploadForm } from "../documents/DocumentUploadForm.js";
@@ -321,7 +321,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   }
 
   if (loadErr) return h("div", { style: { marginTop: "6px" } }, ErrorBox(loadErr));
-  if (!meds) return h("p", { style: { color: "#5F716C", fontSize: F } }, "লোড হচ্ছে...");
+  if (!meds) return Skeleton(3, 64);
 
   const today = todayStr();
   const nowHHMM = new Date().toTimeString().slice(0, 5);
@@ -365,7 +365,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     // আজকের ওষুধ
     doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
       h("button", { onClick: () => setTodayOpen((o) => !o), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer" } },
-        h("span", null, "📋 আজকের ওষুধ — " + bn(takenCount) + "/" + bn(doses.length) + " খাওয়া হয়েছে"), h("span", null, todayOpen ? "▲" : "▼")),
+        h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("pill", { size: 18 }), "আজকের ওষুধ — " + bn(takenCount) + "/" + bn(doses.length) + " খাওয়া হয়েছে"), h("span", null, todayOpen ? "▲" : "▼")),
       takenErr && h("div", { style: { marginTop: "8px", padding: "8px 10px", borderRadius: "10px", background: "#FBE3E1", color: "#B3261E", fontSize: "13px" } }, takenErr),
       todayOpen && h("div", { style: { marginTop: "10px" } },
         h(DoseGrid, { doses: doses.map((d) => ({ key: d.key, time: d.time, name: d.m.genericName, meal: d.m.mealTiming && d.m.mealTiming !== "any" ? MEAL_LABELS[d.m.mealTiming] : "", taken: !!taken[d.key], due: d.time < nowHHMM, memberName: members.length > 1 ? d.m.memberName : "", memberId: d.m.memberId })),
