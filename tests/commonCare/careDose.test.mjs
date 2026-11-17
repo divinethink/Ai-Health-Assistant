@@ -29,3 +29,14 @@ test("গুরুতর interaction → block; এলার্জি → সত
 test("dbName থাকলে সেটি unique ও খালি নয়", () => {
   COMMON_CARE_DEFAULTS.filter((d) => d.dbName).forEach((d) => assert.ok(d.dbName.length > 3));
 });
+
+import { careDosePrefill } from "../../src/health/commonCare/careDose.js";
+test("অটো-ফিল: প্রাপ্তবয়স্কের ডোজ বসে; শিশুর mg/kg বসে না; DB-তে না থাকলে বসে না", () => {
+  const a = careDosePrefill({ entry: para, ageYears: 30 });
+  assert.equal(a.fill.dose, "500-1000mg");
+  assert.ok(a.fill.note.includes("4000mg"));
+  const k = careDosePrefill({ entry: para, ageYears: 5 });
+  assert.equal(k.fill, null);
+  assert.ok(k.message.includes("ওজন"));
+  assert.equal(careDosePrefill({ entry: null, ageYears: 30 }).fill, null);
+});

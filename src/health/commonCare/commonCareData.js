@@ -6,7 +6,9 @@ import { invalidateMemberHealth } from "../records/memberHealthStore.js";
 import { db } from "../../legacy/firebaseConfig.js";
 import { lookupMedicineEntry } from "../../legacy/medicineDb.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
-import { careDoseView } from "./careDose.js";
+import { careDoseView, careDosePrefill } from "./careDose.js";
+import { listMembers } from "../../legacy/familyIdentity.js";
+import { getAgeInYears } from "../triage/triageEngine.js";
 
 export const COMMON_CARE_TYPE = "commonCare";
 
@@ -54,6 +56,18 @@ export async function loadCareDose(familyId, memberId, generic) {
   const [entry, { context, ageYears }] = await Promise.all([lookupMedicineEntry(generic), assembleHealthContext(familyId, memberId, null, {})]);
   const c = context.relevantClinicalContext;
   return careDoseView({ entry, ageYears, allergySubstances: c.relevantAllergies, activeMedicationNames: c.relevantMedications });
+}
+
+// "আমার তালিকায় নিন"-এর অটো-ফিল (শুধু পড়া; কিছু লেখে না) — লোডারের মতোই verified DB + বয়স/এলার্জি/চলমান ওষুধ
+export async function loadCarePrefill(familyId, memberId, generic) {
+  const [entry, { context, ageYears }] = await Promise.all([lookupMedicineEntry(generic), assembleHealthContext(familyId, memberId, null, {})]);
+  const c = context.relevantClinicalContext;
+  return careDosePrefill({ entry, ageYears, allergySubstances: c.relevantAllergies, activeMedicationNames: c.relevantMedications });
+}
+// সদস্যের বয়স (বছর) — ভেষজের বড়ো/শিশু মাত্রা বাছতে; জানা না গেলে null
+export async function loadCareAge(familyId, memberId) {
+  const m = (await listMembers(familyId)).find((x) => x.id === memberId);
+  return m ? getAgeInYears(m.dob) : null;
 }
 
 export { useMemberHealth };

@@ -5,7 +5,7 @@ import { MED_ALIAS } from "../../shared/searchAliases.js";
 import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
 import { COMMON_HOMEO_DEFAULTS, HOMEO_SOURCE } from "./commonCareHomeoList.js";
 import { COMMON_HERBAL_DEFAULTS, HERBAL_SOURCE } from "./commonCareHerbalList.js";
-import { addCareBatch, loadCareDose, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
+import { addCareBatch, loadCareDose, loadCarePrefill, loadCareAge, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
 import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, composeFrequency, patternFromString, hasPattern } from "./careMeds.js";
 import { chip, lblEl, mealChips, DAY_OPTIONS } from "../records/MedicationReminders.js";
 import { SubPills } from "../../shared/SubPills.js";
@@ -105,6 +105,19 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
   const noun = MODE_NOUN[mode];
 
   const openNew = (disease, med) => { const ms = Array.isArray(med) ? med : [med || emptyMed()]; setErr(null); setForm({ id: null, disease: disease || "", meds: ms, openKey: ms[0].key }); };
+  // "আমার তালিকায় নিন": ফর্ম সাথে সাথে খোলে; ডোজ এলে শুধু ফাঁকা ঘরে বসে (সদস্য আগে কিছু লিখলে মোছে না)। সেভ সদস্যের নিজের চাপে।
+  const takeWithDose = async (disease, med, getFill) => {
+    openNew(disease, med);
+    const key = med.key;
+    const patch = (fn) => setForm((s) => (s && s.meds.some((m) => m.key === key) ? fn(s) : s));
+    patch((s) => ({ ...s, notice: { text: "ডোজ দেখা হচ্ছে…" } }));
+    try {
+      const r = await withTimeout(getFill(), 10000);
+      patch((s) => ({ ...s,
+        meds: r.fill ? s.meds.map((m) => (m.key === key ? { ...m, dose: m.dose || r.fill.dose || "", frequency: m.frequency || r.fill.frequency || "", note: m.note || r.fill.note || "" } : m)) : s.meds,
+        notice: { text: r.fill ? "✓ ডোজ বসানো হয়েছে (" + r.source + ") — ডাক্তারের লেখার সাথে মিলিয়ে নিন; দরকারে বদলে সংরক্ষণ চাপুন।" : (r.message || ""), warnings: r.warnings || [] } }));
+    } catch (e) { patch((s) => ({ ...s, notice: { text: "ডোজ আনা যায়নি — নিজে লিখে সংরক্ষণ করতে পারেন।" } })); }
+  };
   const setDisease = (v) => setForm((s) => ({ ...s, disease: v }));
   const setMed = (key, k) => (v) => setForm((s) => ({ ...s, meds: s.meds.map((m) => {
     if (m.key !== key) return m;
@@ -174,7 +187,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px" } }, d.generic + (d.brands.length ? " — " + d.brands.join(", ") : "")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
       React.createElement(DoseLookup, { key: selectedMemberId, familyId, memberId: selectedMemberId, generic: d.dbName || d.generic }),
-      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] || "" }), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
+      React.createElement("button", { type: "button", onClick: () => takeWithDose(d.disease, { ...emptyMed(), generic: d.generic, brand: d.brands[0] || "" }, async () => { const r = await loadCarePrefill(familyId, selectedMemberId, d.dbName || d.generic); return { ...r, source: "Medicine DB" }; }), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
     openDef && mode === "homeopathy" && TradDose(HOMEO_DOSE.title, HOMEO_DOSE.lines),
     openDef && mode === "herbal" && TradDose(HERBAL_DOSE_GENERAL.title, HERBAL_DOSE_GENERAL.lines),
     openDef && mode !== "allopathy" && (mode === "homeopathy" ? COMMON_HOMEO_DEFAULTS : COMMON_HERBAL_DEFAULTS).map((d) => React.createElement("div", { key: d.key, style: card },
@@ -182,12 +195,24 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
       React.createElement("div", { style: { fontSize: "13.5px", marginTop: "2px", overflowWrap: "anywhere" } }, "ঐতিহ্যগতভাবে ব্যবহৃত: " + d.items.join(", ")),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66", marginTop: "2px" } }, d.note),
       mode === "herbal" && HERBAL_DOSE[d.key] && TradDose("ঐতিহ্যগত মাত্রা", [HERBAL_DOSE[d.key].adult && "👤 বড়ো: " + HERBAL_DOSE[d.key].adult, HERBAL_DOSE[d.key].child && "🧒 শিশু: " + HERBAL_DOSE[d.key].child].filter(Boolean)),
-      React.createElement("button", { type: "button", onClick: () => openNew(d.disease, d.items.slice(0, MAX_MEDS).map((n) => ({ ...emptyMed(), brand: n }))), style: pickBtn }, "＋ আমার তালিকায় নিন"))),
+      React.createElement("button", { type: "button", onClick: () => {
+        const meds = d.items.slice(0, MAX_MEDS).map((n) => ({ ...emptyMed(), brand: n }));
+        const hd = mode === "herbal" ? HERBAL_DOSE[d.key] : null;
+        if (!hd) { openNew(d.disease, meds); return; }
+        // ভেষজ: বয়স অনুযায়ী ঐতিহ্যগত মাত্রা বসে (২ বছরের নিচে বা বয়স অজানা হলে বসে না)
+        takeWithDose(d.disease, meds, async () => {
+          const age = await loadCareAge(familyId, selectedMemberId);
+          const txt = age == null || age < 2 ? "" : age < 12 ? hd.child : hd.adult;
+          return { fill: txt ? { dose: txt, frequency: "", note: "" } : null, message: "বয়স অনুযায়ী মাত্রা বসানো যায়নি — উপরের ঐতিহ্যগত মাত্রা দেখে নিজে লিখুন।", warnings: [], source: "ঐতিহ্যগত মাত্রা" };
+        });
+      }, style: pickBtn }, "＋ আমার তালিকায় নিন"))),
     openDef && React.createElement("div", { style: { fontSize: "12px", color: "#5B6B66" } }, (mode === "allopathy" ? "উৎস: WHO-EML · BNFC (প্রকল্পের Medicine DB, Tier ১)।" : "উৎস: " + (mode === "homeopathy" ? HOMEO_SOURCE : HERBAL_SOURCE) + "। মাত্রা শুধু ঐতিহ্যগত সাধারণ জ্ঞান; রিভিউ হয়নি (draft)। " + DOSE_DISCLAIMER)),
 
     form && React.createElement(SheetFrame, { title: form.id ? "সম্পাদনা" : "নতুন যোগ", onClose: () => setForm(null), accent: "medicationStatement",
       footer: PrimaryButton(!form.id && filledMeds(form.meds).length > 1 ? "সংরক্ষণ (" + toBn(filledMeds(form.meds).length) + "টি " + noun + ")" : "সংরক্ষণ", save, busy) },
       err && ErrorBox(err),
+      form.notice && form.notice.text && React.createElement("div", { style: { marginTop: "10px", padding: "10px 12px", background: "#F2F7F4", border: "1px solid #D9E5DE", borderRadius: "12px", fontSize: "13px", lineHeight: 1.5, color: "#2B3A36" } },
+        form.notice.text, (form.notice.warnings || []).map((w) => React.createElement("div", { key: w, style: { marginTop: "4px", color: "#B3261E" } }, w))),
       React.createElement("div", { style: { marginTop: "14px" } },
         React.createElement("label", { htmlFor: "cc-disease", style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", display: "block", marginBottom: "6px" } }, "অসুখের নাম"),
         React.createElement("input", { id: "cc-disease", type: "text", list: "cc-diseases", value: form.disease, placeholder: "যেমন: সাধারণ জ্বর", onChange: (e) => setDisease(e.target.value), style: inputStyle }),
