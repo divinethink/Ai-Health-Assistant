@@ -41,7 +41,6 @@ import { TodaySummary } from "../summary/TodaySummary.js";
 import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
 import { useMemberHealth } from "./useMemberHealth.js";
-import { PrescriptionFold } from "./PrescriptionFold.js";
 import { listDocuments } from "../documents/documentsData.js";
 
 const { useState, useEffect } = React;
@@ -63,15 +62,13 @@ function usePillCounts(familyId, memberId, tick) {
     listDocuments(familyId, memberId).then((d) => { if (alive) setDocs(d); }).catch(() => { if (alive) setDocs(null); });
     return () => { alive = false; };
   }, [familyId, memberId, tick]);
-  const lab = docs ? docs.filter((d) => d.docType !== "prescription").length : null; // ল্যাব রিপোর্ট-পিলে প্রেসক্রিপশন নয় (ওষুধ-পিলে ভাঁজ)
-  const rx = docs ? docs.length - lab : null;
-  if (!records) return { meds: null, records: null, docs: lab, rx };
+  const lab = docs ? docs.length : null; // Reports-পিলে সব নথি (ল্যাব রিপোর্ট + প্রেসক্রিপশন + ইমেজিং…) — owner-approved ২০২৬-১১-১৭
+  if (!records) return { meds: null, records: null, docs: lab };
   const today = localTodayStr();
   return {
     meds: records.filter((r) => r.resourceType === "medicationStatement" && !(r.endDate && today > r.endDate)).length,
     records: records.filter((r) => r.resourceType === "condition" || r.resourceType === "allergy").length,
     docs: lab,
-    rx,
   };
 }
 
@@ -130,11 +127,9 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         onRecordAdded: () => setAddTick((n) => n + 1),
         onUpload: () => { setQuickIntent("report"); histChange(hk + "main", activeTab, "reports", setActiveTab); setAddTick((n) => n + 1); },
         onMedChoice: (k) => { setQuickIntent(k === "rx" ? "rx" : "medmanual"); setMedTick((n) => n + 1); },
-        middleSlot: React.createElement(React.Fragment, null,
-          React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
-          React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) })),
+        middleSlot: React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
       }),
-      isHealth && activeTab === "reports" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" }),
+      isHealth && activeTab === "reports" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, hideAdd: true, emptyText: "এখনো কোনো রিপোর্ট বা প্রেসক্রিপশন নেই — ＋ যোগ করুন" }),
       isHealth && activeTab === "care" && React.createElement(CommonCareSection, { familyId, callerMemberId, selectedMemberId })
     )
   );

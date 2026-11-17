@@ -16,6 +16,7 @@ import { fetchDocumentFile } from "./documentsData.js";
 import { ReportAnalysisPanel } from "../reports/ReportAnalysisPanel.js";
 import { PrescriptionPanel } from "../prescriptions/PrescriptionPanel.js";
 import { DoctorCardPanel } from "../doctor-details/DoctorCardPanel.js";
+import { useMemberHealth } from "../records/useMemberHealth.js";
 
 const { useState, useCallback, useEffect } = React;
 import { takeQuickIntent, takeQuickOrigin, quickReturn } from "../../shared/quickIntent.js";
@@ -25,6 +26,10 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
   // panel: null | { mode: "add" } | { mode: "analyze", file } | { mode: "manual" }
   const [panel, setPanel] = useState(null);
   const targetMemberId = selectedMemberId;
+  // প্রেসক্রিপশন-কার্ডে "এই প্রেসক্রিপশনের ওষুধ: …" লাইনের জন্য (শুধু পড়া; শেয়ার্ড cache)
+  const { records: memberRecords } = useMemberHealth(familyId, targetMemberId);
+  const medsByDoc = {};
+  (memberRecords || []).forEach((r) => { if (r.resourceType === "medicationStatement" && r.prescriptionDocId && r.genericName) (medsByDoc[r.prescriptionDocId] = medsByDoc[r.prescriptionDocId] || []).push(r.genericName); });
   const fromRef = React.useRef(null); // "+" যে ট্যাব থেকে চাপা (✕ দিলে সেখানে ফেরা)
   useEffect(() => { if (takeQuickIntent(["report"])) { fromRef.current = takeQuickOrigin(); setPanel({ mode: "add" }); } }, []); // "+ দ্রুত যোগ" → রিপোর্ট (ধাপ ৯)
 
@@ -82,7 +87,7 @@ export function DocumentsSection({ familyId, callerMemberId, selectedMemberId, e
     ),
     React.createElement(DocumentList, {
       key: "list-" + targetMemberId, familyId, targetMemberId, callerMemberId, refreshTick,
-      onReanalyze: reanalyze, onDeleted: refresh, onAdd: hideAdd ? undefined : () => setPanel({ mode: "add" }), excludeType, emptyText,
+      onReanalyze: reanalyze, onDeleted: refresh, onAdd: hideAdd ? undefined : () => setPanel({ mode: "add" }), excludeType, emptyText, medsByDoc,
     })
   );
 }
