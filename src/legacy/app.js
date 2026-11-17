@@ -36,6 +36,7 @@ import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
+import { ReminderPage } from "../health/tracker/ReminderPage.js";
 import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
@@ -388,7 +389,7 @@ function menuBubble(id, size) {
     Icon(icon, { size: Math.round(sz * 0.52), stroke: 1.9 }));
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, onOpenUpload, chip, selectedMemberId }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenUpload, chip, selectedMemberId }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
@@ -403,7 +404,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   }
 
   if (sub) {
-    const titles = { family: ["family", t("menu.familyTitle")], data: ["data", t("menu.dataTitle")], timeline: ["timeline", "টাইমলাইন"], lock: ["lock", t("menu.lockTitle")], theme: ["theme", "থিম"], lang: ["lang", "ভাষা"], design: ["design", "কাস্টমাইজ"], aimodel: ["aimodel", "AI মডেল"], doctor: ["doctor", t("menu.doctorShort")] };
+    const titles = { family: ["family", t("menu.familyTitle")], data: ["data", t("menu.dataTitle")], timeline: ["timeline", "টাইমলাইন"], lock: ["lock", t("menu.lockTitle")], theme: ["theme", "থিম"], lang: ["lang", "ভাষা"], design: ["design", "কাস্টমাইজ"], aimodel: ["aimodel", "AI মডেল"], doctor: ["doctor", t("menu.doctorShort")], reminder: ["notif", t("menu.notifShort")] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -422,6 +423,9 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       // টাইমলাইন + টিকা — হেলথ-পিল থেকে মেনুতে সরানো (owner-request ২০২৬-১১-১৩); কম্পোনেন্ট অপরিবর্তিত
       body = React.createElement(HealthTimeline, { familyId, callerMemberId: memberId, selectedMemberId,
         vaccineSlot: React.createElement(VaccinationScheduler, { familyId, callerMemberId: memberId, selectedMemberId, inline: true }) });
+    } else if (sub === "reminder") {
+      // রিমাইন্ডার-সেটিং + স্বাস্থ্য ক্যালেন্ডার (আগে ট্র্যাকারের পিলে ছিল)
+      body = React.createElement(ReminderPage, { key: "rp" + selectedMemberId, familyId, callerMemberId: memberId, selectedMemberId });
     } else if (sub === "doctor") {
       body = React.createElement(DoctorInfoPage, { familyId, callerMemberId: memberId, isAdmin, selectedMemberId, onGoUpload: onOpenUpload });
     } else if (sub === "data") {
@@ -490,7 +494,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(
       "div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px", marginBottom: "12px" } },
       tile("aichat", t("nav.aichat"), onOpenAIChat, false),
-      tile("notif", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
+      tile("notif", t("menu.notifShort"), () => setSub("reminder"), false), // রিমাইন্ডার ও ক্যালেন্ডার এখন মেনুর ভেতরেই
       tile("doctor", t("menu.doctorShort"), () => setSub("doctor"), false),
       tile("emergency", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
     ),
@@ -595,7 +599,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, onOpenUpload: () => { setQuickIntent("report"); setActiveTab("health"); }, chip, selectedMemberId,
+      onOpenAIChat: () => setActiveTab("aichat"), onOpenUpload: () => { setQuickIntent("report"); setActiveTab("health"); }, chip, selectedMemberId,
     });
   }
 

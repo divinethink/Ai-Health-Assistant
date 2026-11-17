@@ -23,7 +23,6 @@ import {
   setSlotPref, clearSlotPref, setFoodOverride, setDayPref, clearDayPref, reconcileExerciseDone, checkExerciseLog, sanitizePlanPrefs,
 } from "./planPrefs.js";
 import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
-import { ReminderSettings } from "./ReminderSettings.js";
 import { TrendChart } from "../reports/TrendChart.js";
 import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
@@ -97,21 +96,7 @@ const kindDot = (k, size) => React.createElement("span", { key: k, "aria-hidden"
 const dayKinds = (items) => ["cardio", "strength", "flex"].filter((k) => items.some((x) => exerciseKind(x) === k));
 
 // পিল-সারির নিচের স্ক্রলবার-দাগ লুকাতে (শুধু ট্র্যাকারের ভেতরে; শেয়ার্ড TabPills বদলায়নি)
-const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}";
-// নিচের (দ্বিতীয় স্তরের) পিল: উপরের গাঢ় গোল পিল থেকে আলাদা — ছোট-কোণ আয়তাকার, বাছাইটায় ✓ (খাবার-যোগ তালিকার ধরন-ট্যাগের মতো)।
-function SubPills(tabs, active, onChange) {
-  const hk = "trk:" + tabs.map((x) => x[0]).join("|"); // আগের Pills-এর একই কী — Back বাটনে আগের উপ-ট্যাবে ফেরা
-  histBind(hk, active, onChange);
-  // স্বাস্থ্য ▸ মেডিসিন|অসুখ|রিপোর্ট-এর মতো এক লাইনের সেগমেন্ট: ধূসর-সবুজ ট্রে, সমান চওড়া ৩ ঘর, বাছাইটা সবুজ ভরাট
-  return React.createElement("div", { role: "tablist", "aria-label": "লক্ষ্য ও প্ল্যান", style: { display: "flex", gap: "6px", padding: "8px", borderRadius: "16px", background: "var(--hs-pill-tray, #EFE4D2)", boxShadow: "inset 0 1px 3px rgba(90,60,10,0.12)", margin: "0 0 10px" } },
-    tabs.map(([id, label]) => {
-      const on = id === active;
-      return React.createElement("button", { key: id, type: "button", role: "tab", onClick: () => histChange(hk, active, id, onChange), "aria-selected": on, "aria-pressed": on,
-        style: { flex: "1 1 0", minWidth: 0, minHeight: "40px", padding: "4px 6px", position: "relative", borderRadius: "10px", fontSize: "13.5px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", textAlign: "center",
-          border: on ? "1.5px solid var(--hs-pill, #8B5A2B)" : "1px solid var(--hs-pill-border, #D6C3A5)", boxShadow: on ? "0 4px 10px rgba(90,60,10,0.34), inset 0 -3px 0 rgba(255,255,255,0.30)" : "0 2px 5px rgba(90,60,10,0.16), inset 0 -2px 0 rgba(90,60,10,0.06)",
-          background: on ? "linear-gradient(135deg, var(--hs-pill, #8B5A2B), var(--hs-pill-2, #A5703A))" : "linear-gradient(180deg, var(--hs-pill-top, #FFFFFF), var(--hs-pill-tint, #F6EEE0))", color: on ? "var(--hs-pill-text, #fff)" : "var(--hs-pill-ink, #4F3414)" } }, label);
-    }));
-}
+const PILL_CSS = ".hs-trk-pills>div{scrollbar-width:none;-ms-overflow-style:none;margin-bottom:8px!important}.hs-trk-pills>div::-webkit-scrollbar{display:none}.hs-trk-pills button{padding:8px 12px!important;font-size:13.5px!important}"; // ৪টি পিল ৩৬০dp-তে আঁটাতে
 function Pills(tabs, active, onChange, leading) {
   return React.createElement("div", { className: "hs-trk-pills" }, TabPills(tabs, active, onChange, leading, "trk:" + tabs.map((x) => x[0]).join("|")));
 }
@@ -511,17 +496,6 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 }
 
 
-// ---------- লক্ষ্য ও প্ল্যান (লক্ষ্য সেট করুন | মিল প্ল্যান | ব্যায়াম প্ল্যান) ----------
-// লক্ষ্য না থাকলে প্রথমে "আমার লক্ষ্য", থাকলে "মিল প্ল্যান"।
-function GoalPlanTab(props) {
-  const [sub, setSub] = useState("goal"); // ট্র্যাকার নেভে ঢুকলে সবসময় "আমার লক্ষ্য"
-  return React.createElement("div", null,
-    SubPills([["goal", "আমার লক্ষ্য"], ["meal", "ডায়েট প্ল্যান"], ["exercise", "ব্যায়াম প্ল্যান"]], sub, setSub),
-    sub === "goal" && React.createElement(GoalTab, { ...props }),
-    sub === "meal" && React.createElement(MealPlanTab, props),
-    sub === "exercise" && React.createElement(ExerciseTab, props));
-}
-
 // ---------- উপবাস-দিবস মোড + ব্যক্তিগত পানির লক্ষ্য (পার্ট ১০) ----------
 // fastModeGate: ব্লক নয়, শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — বয়স/রোগ-গ্রুপে ⚠ বার্তা, দিন-বাছাই সবার জন্য খোলা।
 function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved }) {
@@ -751,7 +725,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান | ট্রেন্ড | রিমাইন্ডার)
   const isToday = mode === "today";
   // হোমের "এই সপ্তাহ" কার্ডের "ট্রেন্ড ›" থেকে এলে (quickIntent "trend") ট্র্যাকার সরাসরি ট্রেন্ড ট্যাবে খোলে; নইলে আগের মতো "লক্ষ্য ও প্ল্যান"।
-  const [tab, setTab] = useState(() => { if (isToday) return "today"; const k = takeQuickIntent(["trend", "reminder"]); return k === "trend" ? "trend" : k === "reminder" ? "reminder" : "plan"; }); // "reminder" = মেনুর 🔔 নোটিফিকেশন বাটন
+  const [tab, setTab] = useState(() => { if (isToday) return "today"; return takeQuickIntent(["trend"]) === "trend" ? "trend" : "goal"; });
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
@@ -792,7 +766,9 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
 
   useEffect(() => { setData(null); load(); }, [load]);
 
-  const tabs = [["plan", "লক্ষ্য ও প্ল্যান"], ["trend", "অ্যাক্টিভিটি রিভিউ"], ["reminder", "রিমাইন্ডার"]];
+  // একটাই স্তরের পিল: লক্ষ্য ঠিক করুন → ডায়েট → ব্যায়াম → রিভিউ (রিমাইন্ডার ও ক্যালেন্ডার মেনু ▸ নোটিফিকেশনে; owner-approved ২০২৬-১১-১৭)
+  const tabs = [["goal", "লক্ষ্য"], ["meal", "ডায়েট"], ["exercise", "ব্যায়াম"], ["trend", "রিভিউ"]];
+  const tabProps = { info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load };
   return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
     !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
@@ -802,9 +778,10 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onOpenTrend,
         homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
-      data && !isToday && tab === "plan" && React.createElement(GoalPlanTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load }),
-      data && !isToday && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, onGoInput: onGoHome }),
-      data && !isToday && tab === "reminder" && React.createElement(ReminderSettings, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, callerMemberId, onSaved: load })
+      data && !isToday && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, ...tabProps }),
+      data && !isToday && tab === "meal" && React.createElement(MealPlanTab, { key: selectedMemberId, ...tabProps }),
+      data && !isToday && tab === "exercise" && React.createElement(ExerciseTab, { key: selectedMemberId, ...tabProps }),
+      data && !isToday && tab === "trend" && React.createElement(TrendTab, { key: selectedMemberId, info: data, familyId, memberId: selectedMemberId, onGoInput: onGoHome })
     )
   );
 }

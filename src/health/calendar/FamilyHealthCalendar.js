@@ -1,5 +1,5 @@
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
-import { t } from "../../shared/i18n.js";
+import { t, digits } from "../../shared/i18n.js";
 // Family Health Calendar (owner-request, ২০২৬-০৯-১২, item ৫) — shared
 // healthCalendarEvents collection (family-wide open-read, firestore.rules দ্রষ্টব্য),
 // vaccination entry (item ৪) থেকেও autopopulate হয় (eventType filter দিয়ে merged view)।
@@ -224,7 +224,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
               color: isSelected ? "#fff" : "#1F2D2A", fontSize: "14px", fontWeight: isToday || isSelected ? 700 : 500, cursor: "pointer", position: "relative",
             },
           },
-          d,
+          digits(d),
           hasEvent && h("span", { style: { position: "absolute", bottom: "3px", left: "50%", transform: "translateX(-50%)", width: "5px", height: "5px", borderRadius: "50%", background: isSelected ? "#fff" : "var(--hs-primary, #0E4B43)" } })
         );
       })
