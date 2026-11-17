@@ -15,15 +15,15 @@ const FIELDS = ["brand", "generic", "dose", "frequency", "note", "potency", "pre
 let seq = 0;
 
 export function emptyMed() {
-  return { key: "m" + Date.now().toString(36) + (seq++), brand: "", generic: "", dose: "", frequency: "", note: "", potency: "", prep: "", pattern: [0, 0, 0], meal: "", days: null, asNeeded: false };
+  return { key: "m" + Date.now().toString(36) + (seq++), brand: "", generic: "", dose: "", frequency: "", note: "", potency: "", prep: "", pattern: [0, 0, 0], meal: "", days: null, asNeeded: false, ageGroup: "" };
 }
 const t = (v) => (v || "").trim();
 export const isMedBlank = (m) => !FIELDS.some((k) => t(m[k]));
 export const filledMeds = (meds) => meds.filter((m) => !isMedBlank(m));
 export const medTitle = (m) => [t(m.brand), t(m.generic) && (t(m.brand) ? "(" + t(m.generic) + ")" : t(m.generic))].filter(Boolean).join(" ");
-export const medSummary = (m) => [medTitle(m), t(m.potency), t(m.prep), t(m.dose), t(m.frequency)].filter(Boolean).join(" · ");
+export const medSummary = (m) => [medTitle(m), m.ageGroup === "adult" ? "এডাল্ট" : m.ageGroup === "child" ? "শিশু" : "", t(m.potency), t(m.prep), t(m.dose), t(m.frequency)].filter(Boolean).join(" · ");
 // একই নামে ভিন্ন পটেন্সি (হোমিও) আলাদা ধরা হয়; অন্য ক্ষেত্রে potency ফাঁকা থাকায় আচরণ আগের মতোই
-const sameKey = (m) => (t(m.brand) || t(m.generic)).toLowerCase() + "|" + t(m.potency).toLowerCase();
+const sameKey = (m) => (t(m.brand) || t(m.generic)).toLowerCase() + "|" + t(m.potency).toLowerCase() + "|" + (m.ageGroup || ""); // একই ওষুধ এডাল্ট ও শিশুর জন্য আলাদা ডোজে থাকতে পারে
 
 // → null (ঠিক আছে) | { msg, key } — key = যে ওষুধ-কার্ডে সমস্যা (কার্ড খুলে দেখানোর জন্য)
 export function validateCareMeds(disease, meds, mode) {
@@ -66,4 +66,13 @@ export function composeFrequency(m) {
   if (m.meal && MEAL_TEXT[m.meal] && (m.asNeeded || hasPattern(m.pattern))) parts.push(MEAL_TEXT[m.meal]);
   if (!m.asNeeded && Number.isInteger(m.days)) parts.push(m.days === 0 ? "চলবে (নিয়মিত)" : toBn(m.days) + " দিন");
   return parts.join(" · ");
+}
+
+// বয়সগ্রুপ: একই অসুখে এডাল্ট ও শিশুর ডোজ আলাদা রাখতে। ""= সবার/অনির্দিষ্ট (পুরনো রেকর্ডও এটাই)
+export const AGE_GROUPS = [["", "সবার"], ["adult", "👤 এডাল্ট"], ["child", "🧒 শিশু"]];
+export const AGE_LABEL = { adult: "👤 এডাল্ট", child: "🧒 শিশু", "": "সবার" };
+// অসুখের সারিগুলো বয়সগ্রুপ-অনুযায়ী: [[group, rows]] (এডাল্ট → শিশু → সবার); কোনো সারিতে বয়সগ্রুপ না থাকলে একটাই গ্রুপ (আগের মতো)
+export function splitByAge(rows) {
+  if (!rows.some((r) => r.ageGroup === "adult" || r.ageGroup === "child")) return [["", rows]];
+  return ["adult", "child", ""].map((g) => [g, rows.filter((r) => (r.ageGroup === "adult" || r.ageGroup === "child" ? r.ageGroup : "") === g)]).filter(([, rs]) => rs.length);
 }

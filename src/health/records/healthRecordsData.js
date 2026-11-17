@@ -92,7 +92,9 @@ export function buildHealthRecordFields(resourceType, fields) {
     const c = (v) => (v || "").trim();
     const base = { disease: c(fields.disease), brand: c(fields.brand), generic: c(fields.generic), dose: c(fields.dose), frequency: c(fields.frequency), note: c(fields.note),
       // মানসম্মত মাত্রা (ঐচ্ছিক, additive): pattern "1+0+1" বা "1+1+1+1" (সকাল+দুপুর[+বিকাল]+রাত), meal before|after|any|"", days সংখ্যা|0(চলবে)|null
-      pattern: /^\d(\+\d){2,3}$/.test(c(fields.pattern)) ? c(fields.pattern) : "", meal: ["before", "after", "any"].includes(fields.meal) ? fields.meal : "", days: Number.isInteger(fields.days) && fields.days >= 0 && fields.days <= 365 ? fields.days : null };
+      pattern: /^\d(\+\d){2,3}$/.test(c(fields.pattern)) ? c(fields.pattern) : "", meal: ["before", "after", "any"].includes(fields.meal) ? fields.meal : "", days: Number.isInteger(fields.days) && fields.days >= 0 && fields.days <= 365 ? fields.days : null,
+      // বয়সগ্রুপ (ঐচ্ছিক, additive): "adult" | "child" | "" (সবার/অনির্দিষ্ট) — পুরনো রেকর্ডে না থাকলে "সবার"
+      ageGroup: fields.ageGroup === "adult" || fields.ageGroup === "child" ? fields.ageGroup : "" };
     // Homeopathy/Herbal: ঐচ্ছিক নতুন ফিল্ড (additive); `mode` না থাকলে allopathy — পুরনো রেকর্ড অপরিবর্তিত
     if (fields.mode === "homeopathy" || fields.mode === "herbal") return { ...base, mode: fields.mode, potency: c(fields.potency), prep: c(fields.prep) };
     return base;

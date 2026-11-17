@@ -49,3 +49,15 @@ test("সারাংশে পটেন্সি/ব্যবহারের �
   assert.equal(medSummary(med({ brand: "Arnica", potency: "30C", dose: "৪ ফোঁটা" })), "Arnica · 30C · ৪ ফোঁটা");
   assert.equal(medSummary(med({ brand: "তুলসী", prep: "রস", frequency: "দিনে ২ বার" })), "তুলসী · রস · দিনে ২ বার");
 });
+
+import { splitByAge } from "../../src/health/commonCare/careMeds.js";
+test("বয়সগ্রুপ: একই ওষুধ এডাল্ট ও শিশুর জন্য আলাদা থাকতে পারে; একই গ্রুপে দুইবার আটকায়", () => {
+  const m = (o) => ({ key: Math.random().toString(), brand: "Napa", generic: "", dose: "", frequency: "", note: "", potency: "", prep: "", ...o });
+  assert.equal(validateCareMeds("জ্বর", [m({ ageGroup: "adult" }), m({ ageGroup: "child" })], "allopathy"), null);
+  assert.match(validateCareMeds("জ্বর", [m({ ageGroup: "adult" }), m({ ageGroup: "adult" })], "allopathy").msg, /দুইবার/);
+});
+test("splitByAge: বয়সগ্রুপ না থাকলে একটাই গ্রুপ; থাকলে এডাল্ট → শিশু → সবার", () => {
+  const a = { id: 1, ageGroup: "child" }, b = { id: 2, ageGroup: "adult" }, c = { id: 3 };
+  assert.equal(splitByAge([c]).length, 1);
+  assert.deepEqual(splitByAge([a, b, c]).map(([g]) => g), ["adult", "child", ""]);
+});

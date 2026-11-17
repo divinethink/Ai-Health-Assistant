@@ -6,7 +6,7 @@ import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
 import { COMMON_HOMEO_DEFAULTS, HOMEO_SOURCE } from "./commonCareHomeoList.js";
 import { COMMON_HERBAL_DEFAULTS, HERBAL_SOURCE } from "./commonCareHerbalList.js";
 import { addCareBatch, loadCareDose, loadCarePrefill, loadCareAge, newCareDocId, editCare, removeCare, groupByDisease, useMemberHealth } from "./commonCareData.js";
-import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, composeFrequency, patternFromString, hasPattern } from "./careMeds.js";
+import { emptyMed, filledMeds, validateCareMeds, medSummary, diseaseNames, toBn, MAX_MEDS, CARE_MODES, MODE_NOUN, MODE_FIELDS, PATTERN_LABELS, PATTERN_COUNTS, composeFrequency, patternFromString, hasPattern, AGE_GROUPS, AGE_LABEL, splitByAge } from "./careMeds.js";
 import { chip, lblEl, mealChips, DAY_OPTIONS } from "../records/MedicationReminders.js";
 import { SubPills } from "../../shared/SubPills.js";
 import { HOMEO_DOSE, HERBAL_DOSE, HERBAL_DOSE_GENERAL, DOSE_DISCLAIMER } from "./commonCareDose.js";
@@ -138,7 +138,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
     const v = validateCareMeds(form.disease, form.meds, mode);
     if (v) { setErr(v.msg); if (v.key) setForm((s) => ({ ...s, openKey: v.key })); return; }
     const disease = form.disease.trim();
-    const fieldsOf = (m) => ({ disease, brand: m.brand, generic: m.generic, dose: m.dose, frequency: composeFrequency(m) || m.frequency, pattern: hasPattern(m.pattern) ? m.pattern.join("+") : "", meal: m.meal, days: m.days, note: m.note, mode, potency: m.potency, prep: m.prep });
+    const fieldsOf = (m) => ({ disease, brand: m.brand, generic: m.generic, dose: m.dose, frequency: composeFrequency(m) || m.frequency, pattern: hasPattern(m.pattern) ? m.pattern.join("+") : "", meal: m.meal, days: m.days, note: m.note, mode, potency: m.potency, prep: m.prep, ageGroup: m.ageGroup || "" });
     setBusy(true); setErr(null);
     try {
       if (form.id) await withTimeout(editCare(familyId, form.id, callerMemberId, fieldsOf(filledMeds(form.meds)[0])));
@@ -172,13 +172,15 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
       : groups.length === 0 ? React.createElement("div", { style: { ...card, color: "#5B6B66", fontSize: "14px", textAlign: "center" } }, "এখনো কিছু নেই — নিচের সাধারণ তালিকা থেকে নিন, বা নতুন যোগ করুন।")
       : groups.map(([disease, rows]) => React.createElement("div", { key: disease, style: card },
           React.createElement("div", { style: { fontSize: "14px", fontWeight: 800, color: "#1F2D2A", marginBottom: "4px" } }, disease),
-          rows.map((r) => React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", gap: "4px", borderTop: "1px solid #EEF3F0", padding: "6px 0" } },
+          splitByAge(rows).map(([ag, rs]) => React.createElement(React.Fragment, { key: "g" + ag },
+          (ag || splitByAge(rows).length > 1) && React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "8px 0 2px" } }, AGE_LABEL[ag]),
+          rs.map((r) => React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", gap: "4px", borderTop: "1px solid #EEF3F0", padding: "6px 0" } },
             React.createElement("div", { style: { flex: 1, minWidth: 0 } },
               React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, overflowWrap: "anywhere" } }, [r.brand, r.generic && (r.brand ? "(" + r.generic + ")" : r.generic)].filter(Boolean).join(" ")),
               line(r) && React.createElement("div", { style: { fontSize: "13px", color: "#2B3A36" } }, line(r)),
               r.note && React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66" } }, r.note)),
-            React.createElement("button", { type: "button", "aria-label": "সম্পাদনা", title: "সম্পাদনা", style: iconBtn, onClick: () => { const m = { ...emptyMed(), brand: r.brand || "", generic: r.generic || "", dose: r.dose || "", frequency: r.frequency || "", note: r.note || "", potency: r.potency || "", prep: r.prep || "", pattern: patternFromString(r.pattern), meal: r.meal || "", days: Number.isInteger(r.days) ? r.days : null, asNeeded: /^প্রয়োজনে/.test(r.frequency || "") }; setErr(null); setForm({ id: r.id, disease: r.disease || "", meds: [m], openKey: m.key }); } }, "✎"),
-            React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))),
+            React.createElement("button", { type: "button", "aria-label": "সম্পাদনা", title: "সম্পাদনা", style: iconBtn, onClick: () => { const m = { ...emptyMed(), brand: r.brand || "", generic: r.generic || "", dose: r.dose || "", frequency: r.frequency || "", note: r.note || "", potency: r.potency || "", prep: r.prep || "", pattern: patternFromString(r.pattern), meal: r.meal || "", days: Number.isInteger(r.days) ? r.days : null, asNeeded: /^প্রয়োজনে/.test(r.frequency || ""), ageGroup: r.ageGroup || "" }; setErr(null); setForm({ id: r.id, disease: r.disease || "", meds: [m], openKey: m.key }); } }, "✎"),
+            React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))))),
           React.createElement("button", { type: "button", onClick: () => openNew(disease === "অন্যান্য" ? "" : disease), style: { marginTop: "4px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1.5px dashed var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ এই অসুখে আরেকটি " + noun))),
 
     React.createElement("button", { type: "button", onClick: () => setOpenDef((v) => !v), "aria-expanded": openDef, style: { width: "100%", minHeight: "44px", textAlign: "left", border: "none", background: "none", padding: 0, margin: "14px 0 8px", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontFamily: "inherit" } }, (openDef ? "▾ " : "▸ ") + "সাধারণ তালিকা (সবার জন্য)"),
@@ -229,6 +231,8 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
             canRemove && React.createElement("button", { type: "button", "aria-label": "এই " + noun + " বাদ দিন", title: "বাদ দিন", style: { ...iconBtn, color: "#B3261E" }, onClick: () => removeMed(m.key) }, "✕")),
           open && React.createElement("div", { style: { padding: "0 12px 14px" } },
             MODE_FIELDS[mode].filter(([k]) => k !== "note").map(([k, label, ph]) => React.createElement(React.Fragment, { key: k }, k === "potency" ? PotencyField(label, m[k], setMed(m.key, k), ph, potencyInfo, () => setPotencyInfo((v) => !v)) : TextField(label, m[k], setMed(m.key, k), ph))),
+            lblEl("কার জন্য"),
+            React.createElement("div", { style: { display: "flex", gap: "6px" } }, AGE_GROUPS.map(([k, lab]) => chip((m.ageGroup || "") === k, lab, () => setMed(m.key, "ageGroup")(k), "ag" + k, true))),
             DoseBlock(m, setMed(m.key, "pattern"), setMed(m.key, "meal"), setMed(m.key, "days"), setMed(m.key, "asNeeded")),
             MODE_FIELDS[mode].filter(([k]) => k === "note").map(([k, label, ph]) => React.createElement(React.Fragment, { key: k }, TextField(label, m[k], setMed(m.key, k), ph)))));
       }),
