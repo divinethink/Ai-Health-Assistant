@@ -282,15 +282,17 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     // হিরো-কার্ড: নাম/বয়স/BMI + ক্যালরি রিং + আজকের হিসাব (গ্রাম, শুধু যোগফল — টার্গেট/শতাংশ নেই)। AlertStrip নিচে।
     calc && React.createElement("div", { style: { ...HOME_CARD, background: "radial-gradient(circle at 92% -10%, rgba(255,200,107,0.28), transparent 52%), " + GRADIENT_HERO, border: "none", borderRadius: "20px", color: T.onDark, padding: "11px 14px 10px", boxShadow: "0 8px 20px rgba(14,75,67,0.26)", marginBottom: "8px" } },
-      React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "nowrap", gap: "10px", marginBottom: "6px" } },
-        React.createElement("span", { style: { fontSize: "21px", fontWeight: 700, letterSpacing: "0.2px", color: T.onDark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" } }, info.member && info.member.name ? info.member.name : "আমার"),
-        // বয়স + BMI: দুই লাইনের ছোট স্তম্ভ (ইংরেজি সংখ্যা); BMI-তে ট্যাপে আজকের ওজন যোগ/বদলের শিট
-        React.createElement("span", { style: { display: "inline-flex", flexDirection: "column", alignItems: "flex-start", flexShrink: 0, lineHeight: 1.15 } },
-          info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "11.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, String(info.age) + (info.age === 1 ? " year" : " years")),
-          React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "16px", padding: 0, border: "none", background: "transparent", color: T.onDark, fontSize: "11.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px", lineHeight: 1.15 } },
+      // নাম + তারিখ-বাটন একই লাইনে (নাম লম্বা হলে ২ লাইন পর্যন্ত নামে); বয়স/BMI নামের নিচের ছোট লাইনে (owner-approved ২০২৬-১১-১৭)
+      React.createElement("div", { style: { marginBottom: "6px" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+          React.createElement("span", { style: { fontSize: "21px", fontWeight: 700, letterSpacing: "0.2px", color: T.onDark, minWidth: 0, flex: "1 1 auto", lineHeight: 1.2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", overflowWrap: "anywhere" } }, info.member && info.member.name ? info.member.name : "আমার"),
+          dateChip),
+        // বয়স + BMI (ইংরেজি সংখ্যা); BMI-তে ট্যাপে আজকের ওজন যোগ/বদলের শিট
+        React.createElement("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px", marginTop: "1px", lineHeight: 1.2 } },
+          info.age !== null && info.age !== undefined && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: T.onDarkSoft, whiteSpace: "nowrap" } }, String(info.age) + (info.age === 1 ? " year" : " years") + " ·"),
+          React.createElement("button", { type: "button", onClick: () => openIn("weight"), "aria-label": "আজকের ওজন যোগ/বদলান", style: { minHeight: "18px", padding: 0, border: "none", background: "transparent", color: T.onDark, fontSize: "12.5px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "4px", lineHeight: 1.2 } },
             bmiVal ? "BMI " + (Math.round(bmiVal * 10) / 10).toFixed(1) : "ওজন দিন",
-            React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎"))),
-        dateChip),
+            React.createElement("span", { "aria-hidden": "true", style: { fontSize: "11px", opacity: 0.75 } }, "✎")))),
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px" } },
         React.createElement(Ring, { pct: onFast ? 0 : (eaten > calc.calorieTarget ? 100 : pctOf(eaten, calc.calorieTarget)), redFrom: !onFast && eaten > calc.calorieTarget ? (calc.calorieTarget / eaten) * 100 : undefined, size: 96, stroke: 9, color: T.amberSoft, track: T.ringTrackOnDark, label: "ক্যালরি " + bnNum(eaten) + " / " + bnNum(calc.calorieTarget) },
           // রিংয়ের ভেতরের ব্যাস ≈ ৭৮px: সংখ্যা ১৬px + লেবেল ১০.৫px (nowrap) এর ভেতরেই ধরে
