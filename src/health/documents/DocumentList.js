@@ -8,11 +8,15 @@
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
 import { ErrorBox, ConfirmDialog, Skeleton } from "../../shared/ui.js";
 import { Icon } from "../../shared/icons.js";
-import { getLang } from "../../shared/i18n.js";
+import { getLang, L, digits } from "../../shared/i18n.js";
 import { bnDate } from "../../shared/dates.js";
 import { listDocuments, deleteDocument, renameDocument, getDownloadUrl, DOC_TYPE_LABELS } from "./documentsData.js";
 
 const { useState, useEffect, useCallback } = React;
+
+// নথির ধরনের নাম ভাষা-অনুযায়ী (DOC_TYPE_LABELS বাকি জায়গার জন্য অপরিবর্তিত)
+const TYPE_BN = { prescription: "প্রেসক্রিপশন", "lab-report": "ল্যাব রিপোর্ট", imaging: "ইমেজিং রিপোর্ট", "discharge-summary": "ডিসচার্জ সামারি", other: "অন্যান্য" };
+const typeLabel = (k) => (getLang() === "bn" ? TYPE_BN[k] : DOC_TYPE_LABELS[k]) || DOC_TYPE_LABELS[k] || k;
 
 // নথির ধরন → লাইন-আইকন (নাম) ও নরম টালির রং; বাকি অ্যাপের আইকন-ধাঁচের সাথে মেলানো
 const TYPE_ICONS = {
@@ -130,8 +134,8 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
 
   const counts = {};
   docs.forEach((d) => { counts[d.docType] = (counts[d.docType] || 0) + 1; });
-  const chips = [["all", "সব (" + docs.length + ")"]].concat(
-    Object.keys(DOC_TYPE_LABELS).filter((k) => counts[k]).map((k) => [k, DOC_TYPE_LABELS[k] + " (" + counts[k] + ")"])
+  const chips = [["all", L("সব", "All") + " (" + digits(docs.length) + ")"]].concat(
+    Object.keys(DOC_TYPE_LABELS).filter((k) => counts[k]).map((k) => [k, typeLabel(k) + " (" + digits(counts[k]) + ")"])
   );
   const activeFilter = filter === "all" || counts[filter] ? filter : "all";
   const shown = activeFilter === "all" ? docs : docs.filter((d) => d.docType === activeFilter);
@@ -140,15 +144,15 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
   const yearOf = (d) => {
     if (d.date && /^\d{4}/.test(d.date)) return d.date.slice(0, 4);
     const ms = d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
-    return ms ? String(new Date(ms).getFullYear()) : "তারিখ অজানা";
+    return ms ? String(new Date(ms).getFullYear()) : L("তারিখ অজানা", "Unknown date");
   };
   const byYear = {};
   shown.forEach((d) => { const y = yearOf(d); (byYear[y] = byYear[y] || []).push(d); });
-  const yearGroups = Object.entries(byYear).sort((a, b) => (a[0] === "তারিখ অজানা") - (b[0] === "তারিখ অজানা") || b[0].localeCompare(a[0]));
+  const yearGroups = Object.entries(byYear).sort((a, b) => (a[0] === L("তারিখ অজানা", "Unknown date")) - (b[0] === L("তারিখ অজানা", "Unknown date")) || b[0].localeCompare(a[0]));
 
   const renderCard = (d) => {
       const isRx = d.docType === "prescription";
-      const meta = (isRx ? [fmtDate(d.date), d.source ? "ডাক্তার: " + d.source : null] : [fmtDate(d.date), d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
+      const meta = (isRx ? [fmtDate(d.date), d.source ? L("ডাক্তার: ", "Doctor: ") + d.source : null] : [fmtDate(d.date), d.source, formatSize(d.sizeBytes)]).filter(Boolean).join(" • ");
       const isPdf = d.originalContentType === "application/pdf";
       return React.createElement(
         "div", { key: d.id, style: { padding: "8px 8px 8px 12px", marginBottom: "8px", ...PREMIUM_CARD, position: "relative" } },
@@ -158,13 +162,13 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
           React.createElement(
             "div", { style: { flex: 1, minWidth: 0 } },
             React.createElement("div", { style: { fontWeight: 700, fontSize: "15px", color: "var(--hs-primary, #0E4B43)" } },
-              (isRx ? "প্রেসক্রিপশন" : (DOC_TYPE_LABELS[d.docType] || d.docType)) + (isPdf ? " · PDF" : "")),
+              typeLabel(d.docType) + (isPdf ? " · PDF" : "")),
             React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", wordBreak: "break-all" } }, d.fileName),
             meta && React.createElement("div", { style: { fontSize: "14px", color: "#5F716C" } }, meta),
-            isRx && medsByDoc && medsByDoc[d.id] && medsByDoc[d.id].length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, "এই প্রেসক্রিপশনের ওষুধ: " + medsByDoc[d.id].join(", "))
+            isRx && medsByDoc && medsByDoc[d.id] && medsByDoc[d.id].length > 0 && React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "2px" } }, L("এই প্রেসক্রিপশনের ওষুধ: ", "Medicines in this prescription: ") + medsByDoc[d.id].join(", "))
           ),
-          d.status === "ready" && iconLink("eye", "দেখুন", d.cloudinaryUrl, true),
-          d.status === "ready" && iconLink("download", "ডাউনলোড", getDownloadUrl(d.cloudinaryUrl), false),
+          d.status === "ready" && iconLink("eye", L("দেখুন", "View"), d.cloudinaryUrl, true),
+          d.status === "ready" && iconLink("download", L("ডাউনলোড", "Download"), getDownloadUrl(d.cloudinaryUrl), false),
           React.createElement("button", {
             onClick: () => { setMenuId(menuId === d.id ? null : d.id); setRenameId(null); setMenuErr(null); },
             "aria-label": "More options", "aria-haspopup": "menu", "aria-expanded": menuId === d.id,
@@ -201,8 +205,8 @@ export function DocumentList({ familyId, targetMemberId, callerMemberId, refresh
       return React.createElement("div", { key: year, style: { marginBottom: "8px" } },
         React.createElement("button", { type: "button", onClick: () => setYearOpen((o) => ({ ...o, [year]: !open })), "aria-expanded": open,
           style: { width: "100%", minHeight: "48px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", marginBottom: "8px", borderRadius: "14px", border: "1px solid #C3D2CA", background: open ? "var(--hs-chip-bg, #E4F0E9)" : "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "16px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" } },
-          React.createElement("span", null, (open ? "▾ " : "▸ ") + year),
-          React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color: "#5F716C" } }, list.length + "টি")),
+          React.createElement("span", null, (open ? "▾ " : "▸ ") + (/^\d+$/.test(year) ? digits(year) : year)),
+          React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color: "#5F716C" } }, digits(list.length) + L("টি", ""))),
         open && list.map(renderCard));
     })
   );

@@ -4,9 +4,11 @@
 // ইতিমধ্যে "খেয়েছি" চিহ্নিত — তার নোটিফিকেশন বাদ (চালক সেটা Firestore থেকে যাচাই করে)।
 
 import { doseKey } from "./medTaken.js";
+import { L, digits } from "../../shared/i18n.js";
 
-export const MEAL_LABELS = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
-const bn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+// getter: ভাষা বদলালে লেবেলও বদলায়
+export const MEAL_LABELS = { get before() { return L("খাবারের আগে", "Before meal"); }, get after() { return L("খাবারের পরে", "After meal"); }, get any() { return L("যেকোনো সময়", "Any time"); } };
+const bn = digits;
 
 // একজন সদস্যের রেকর্ড থেকে সক্রিয় ওষুধ [{recordId, memberId, memberName, genericName, startDate, endDate, mealTiming, reminderTimes}]।
 export function buildActiveMeds(member, records) {

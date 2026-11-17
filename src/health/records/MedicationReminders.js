@@ -19,6 +19,8 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { listHealthRecords, createHealthRecord, deleteHealthRecord, setMedicationReminderTimes, setMedicationCalendarEvents } from "./healthRecordsData.js";
 import { getMedTaken, setMedDoseTaken } from "../tracker/trackerData.js";
 import { doseKey, legacyTakenToKeys, recordIdOfDoseKey } from "./medTaken.js";
+import { MEAL_LABELS } from "./medReminderCalc.js";
+import { L, digits } from "../../shared/i18n.js";
 import { DoseGrid } from "../summary/DoseGrid.js";
 import { authorizeGoogleCalendar, createMedicationCalendarEvents, deleteCalendarEventsByIds } from "../../legacy/googleCalendar.js";
 
@@ -35,7 +37,7 @@ const F = "14px";
 const medIcon = (name) => (/^\s*(syp|syr|susp|সিরাপ)/i.test(name || "") ? "flask" : /^\s*(tab|টি)/i.test(name || "") ? "tablet" : "pill");
 const TAKEN_KEY = "hs-med-taken";
 
-function bn(n) { return String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]); }
+const bn = digits;
 function dateStr(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 function todayStr() { return dateStr(new Date()); }
 function addDays(ymd, n) { const d = new Date(ymd + "T00:00:00"); d.setDate(d.getDate() + n); return dateStr(d); }
@@ -47,11 +49,11 @@ function daysLeft(endDate) {
 // "08:00" → "সকাল ৮:০০" (বয়স্কদের জন্য বাংলায় পড়া সহজ)
 function bnTime(hhmm) {
   const [hh, mm] = hhmm.split(":").map(Number);
-  const per = hh < 4 ? "রাত" : hh < 12 ? "সকাল" : hh < 16 ? "দুপুর" : hh < 18 ? "বিকাল" : hh < 20 ? "সন্ধ্যা" : "রাত";
   const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  if (L("bn", "en") === "en") return h12 + ":" + String(mm).padStart(2, "0") + (hh < 12 ? " AM" : " PM");
+  const per = hh < 4 ? "রাত" : hh < 12 ? "সকাল" : hh < 16 ? "দুপুর" : hh < 18 ? "বিকাল" : hh < 20 ? "সন্ধ্যা" : "রাত";
   return per + " " + bn(h12) + ":" + bn(String(mm).padStart(2, "0"));
 }
-const MEAL_LABELS = { before: "খাবারের আগে", after: "খাবারের পরে", any: "যেকোনো সময়" };
 const SLOT_DEFAULTS = { 1: ["08:00"], 2: ["08:00", "20:00"], 3: ["08:00", "14:00", "20:00"], 4: ["08:00", "13:00", "18:00", "22:00"] };
 export const DAY_OPTIONS = [3, 5, 7, 10, 14, 30];
 const BIGB = { minHeight: "64px", borderRadius: "16px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#fff", color: "var(--hs-primary)", padding: "0 12px" };
@@ -365,7 +367,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
     // আজকের ওষুধ
     doses.length > 0 && h("div", { style: { ...card, background: "#F3FAF6" } },
       h("button", { onClick: () => setTodayOpen((o) => !o), style: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", padding: 0, fontSize: "15px", fontWeight: 700, color: GREEN, cursor: "pointer" } },
-        h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("pill", { size: 18 }), "আজকের ওষুধ — " + bn(takenCount) + "/" + bn(doses.length) + " খাওয়া হয়েছে"), h("span", null, todayOpen ? "▲" : "▼")),
+        h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("pill", { size: 18 }), L("আজকের ওষুধ — ", "Today's medicines — ") + bn(takenCount) + "/" + bn(doses.length) + L(" খাওয়া হয়েছে", " taken")), h("span", null, todayOpen ? "▲" : "▼")),
       takenErr && h("div", { style: { marginTop: "8px", padding: "8px 10px", borderRadius: "10px", background: "#FBE3E1", color: "#B3261E", fontSize: "13px" } }, takenErr),
       todayOpen && h("div", { style: { marginTop: "10px" } },
         h(DoseGrid, { doses: doses.map((d) => ({ key: d.key, time: d.time, name: d.m.genericName, meal: d.m.mealTiming && d.m.mealTiming !== "any" ? MEAL_LABELS[d.m.mealTiming] : "", taken: !!taken[d.key], due: d.time < nowHHMM, memberName: members.length > 1 ? d.m.memberName : "", memberId: d.m.memberId })),

@@ -34,6 +34,12 @@ function bmiCategoryOf(bmi) {
 
 // owner-request-এর exact ভাষা অনুসরণ করে (BMI কম/বেশি/সঠিক + পরামর্শ)।
 function bmiAdviceLine(category) {
+  if (getLang() !== "bn") {
+    if (category === "underweight") return "Your weight is low for your age and height (by BMI) — eat a balanced diet rich in calories and protein, and consult a doctor or nutritionist if needed.";
+    if (category === "overweight" || category === "obese") return "Your weight is high for your age and height (by BMI) — exercise regularly, eat a balanced diet and try to lose weight.";
+    if (category === "normal") return "Your weight is healthy for your age and height (by BMI) — keep up your balanced diet.";
+    return null;
+  }
   if (category === "underweight") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন কম (বিএমআই অনুসারে) — বেশি ক্যালরি ও প্রোটিন-সমৃদ্ধ সুষম খাবার খান, প্রয়োজনে ডাক্তার/পুষ্টিবিদের পরামর্শ নিন।";
   if (category === "overweight" || category === "obese") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন বেশি (বিএমআই অনুসারে) — নিয়মিত ব্যায়াম করুন, সুষম খাবার খান ও ওজন কমানোর চেষ্টা করুন।";
   if (category === "normal") return "আপনার বয়স ও উচ্চতার তুলনায় ওজন সঠিক (বিএমআই অনুসারে) — বর্তমান সুষম খাদ্যাভ্যাস বজায় রাখুন।";
@@ -188,12 +194,12 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       h("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "50%", background: "#CBE4D5", color: INK, border: "1px solid #B2D2BF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800 } }, initial),
       h("div", { style: { flex: 1, minWidth: 0 } },
         h("h3", { style: { fontSize: "18px", fontWeight: 800, margin: 0, lineHeight: 1.2, overflowWrap: "anywhere" } }, member ? member.name : "সদস্য"),
-        h("div", { style: { fontSize: "12.5px", color: SOFT, marginTop: "1px" } },
+        h("div", { style: { fontSize: "14.5px", color: SOFT, marginTop: "2px" } },
           birthYear ? (ageYears != null ? L("বয়স ", "Age ") + bn(Math.floor(ageYears)) + L(" বছর · ", " years · ") : "") + L("জন্ম ", "Born ") + bn(birthYear) : L("জন্মতারিখ যোগ করা হয়নি", "Date of birth not added"))),
       h("button", {
-        onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
-        style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", margin: "-4px 0", border: "none", boxShadow: "0 1px 2px rgba(14,75,67,0.08), 0 3px 8px rgba(14,75,67,0.10)", background: editing ? "#CBE4D5" : "#fff", color: INK, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
-      }, Icon(editing ? "x" : "pencil", { size: 18 }))),
+        onClick: () => setEditing((v) => !v), "aria-label": L("উচ্চতা ও ওজন বদলান", "Edit height and weight"), "aria-expanded": editing,
+        style: { width: "44px", height: "44px", flexShrink: 0, margin: "-6px -6px -6px 0", padding: 0, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, // টাচ-এলাকা ৪৪px, দৃশ্যমান বৃত্ত ৩০px
+      }, h("span", { style: { width: "30px", height: "30px", borderRadius: "50%", boxShadow: "0 1px 2px rgba(14,75,67,0.08), 0 2px 5px rgba(14,75,67,0.10)", background: editing ? "#CBE4D5" : "#fff", color: INK, display: "flex", alignItems: "center", justifyContent: "center" } }, Icon(editing ? "x" : "pencil", { size: 15 })))),
 
     // ফর্মটি হালকা রঙের জন্য বানানো — তাই সাদা প্যানেলের ভেতরে
     editing && h("div", { style: { marginTop: "10px", background: "#fff", color: "#1F2D2A", borderRadius: "14px", padding: "8px 10px" } },
@@ -206,7 +212,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       stat(L("উচ্চতা", "Height"), heightCm ? bn(Math.round(heightCm * 10) / 10) : "—", heightCm ? L("সেমি", "cm") : ""),
       stat(L("ওজন", "Weight"), weightKg ? bn(weightKg) : "—", weightKg ? L("কেজি", "kg") : ""),
       stat(L("বিএমআই", "BMI"), bmi ? bn(bmi.toFixed(1)) : "—", "", chip)),
-    adviceLine && h("div", { style: { fontSize: "11.5px", lineHeight: 1.35, color: SOFT, opacity: 0.9, marginTop: "5px", padding: "0 2px" } }, adviceLine),
+    adviceLine && h("div", { style: { fontSize: "13.5px", lineHeight: 1.45, color: SOFT, marginTop: "6px", padding: "0 2px" } }, adviceLine),
     (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে বিএমআই ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
     chipRow,

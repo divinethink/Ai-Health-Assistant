@@ -7,7 +7,7 @@
 // শুধু presentation — কোনো schema/rules বদল নেই।
 
 import { PREMIUM_CARD } from "../../shared/cardStyle.js";
-import { t } from "../../shared/i18n.js";
+import { t, L, digits } from "../../shared/i18n.js";
 import { Icon } from "../../shared/icons.js";
 import { ErrorBox, Skeleton, ConfirmDialog } from "../../shared/ui.js";
 import { BottomSheet } from "../../shared/BottomSheet.js";
@@ -238,19 +238,19 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
       React.createElement("span", { "aria-hidden": "true", style: { width: "9px", height: "9px", flexShrink: 0, borderRadius: "50%", background: on ? "#2FAE6B" : "#B7C3BD" } }),
       React.createElement("span", { style: { overflowWrap: "anywhere", lineHeight: 1.25 } }, r.name)); };
     return React.createElement("div", { style: { marginTop: "4px" } },
-      conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", "অসুস্থতা", conditions.length + "টি"), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(condChip))),
-      allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", "অ্যালার্জি", allergies.length + "টি"), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
-      middleSlot || null,
+      conditions.length > 0 && React.createElement(React.Fragment, null, title("🩺", L("অসুস্থতা", "Conditions"), digits(conditions.length) + L("টি", "")), React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(condChip))),
+      allergies.length > 0 && React.createElement(React.Fragment, null, title("⚠️", L("অ্যালার্জি", "Allergies"), digits(allergies.length) + L("টি", "")), React.createElement("div", { style: grid2 }, allergies.map(allergyCard))),
+      middleSlot && React.createElement("div", { style: { marginTop: "20px" } }, middleSlot), // অসুস্থতা-চিপ ও ওষুধ-কার্ডের মাঝে স্ট্যান্ডার্ড ফাঁক (owner-request ২০২৬-১১-১৭)
       React.createElement("div", { style: { marginTop: "14px" } },
         React.createElement("button", { type: "button", onClick: onToggleRec, "aria-expanded": !!recOpen,
           style: { width: "100%", minHeight: "48px", padding: "10px 14px", borderRadius: "14px", border: "1px solid #D3E0D9", background: "#fff", color: G, fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "space-between" } },
-          React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("activity", { size: 17 }), "রেকর্ড" + (cnt ? " (" + cnt + "টি পরিমাপ)" : "")),
+          React.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("activity", { size: 17 }), L("রেকর্ড", "Records") + (cnt ? " (" + digits(cnt) + L("টি পরিমাপ)", " measurements)") : "")),
           React.createElement("span", { "aria-hidden": "true", style: { display: "flex" } }, Icon(recOpen ? "up" : "down", { size: 18 }))),
         recOpen && React.createElement("div", null,
           React.createElement(LabAlertBox, { alerts: labAlerts, docsById, onAck: doAck, ackBusy, onEdit: (id) => { const r = records.find((x) => x.id === id); if (r && onEdit) onEdit(r); } }),
           cnt > 0
-            ? React.createElement(React.Fragment, null, title("📈", "পরিমাপ", cnt + "টি"), React.createElement("div", { style: grid3 }, orderObsCards(obsGroups, (g) => !!alertForGroup(g.items, dict, sex)).map(obsCard)))
-            : React.createElement("p", { style: { color: MUTED, fontSize: "14px", margin: "12px 2px 0" } }, "এখনো কোনো পরিমাপ নেই — ＋ চেপে প্রেসার, সুগার বা অন্য পরিমাপ যোগ করুন।"),
+            ? React.createElement(React.Fragment, null, title("📈", L("পরিমাপ", "Measurements"), digits(cnt) + L("টি", "")), React.createElement("div", { style: grid3 }, orderObsCards(obsGroups, (g) => !!alertForGroup(g.items, dict, sex)).map(obsCard)))
+            : React.createElement("p", { style: { color: MUTED, fontSize: "14px", margin: "12px 2px 0" } }, L("এখনো কোনো পরিমাপ নেই — ＋ চেপে প্রেসার, সুগার বা অন্য পরিমাপ যোগ করুন।", "No measurements yet — tap ＋ to add blood pressure, sugar or other readings.")),
           trendSlot || null)),
       detailSheet());
   }

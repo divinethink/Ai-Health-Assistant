@@ -1,3 +1,4 @@
+import { getLang } from "./i18n.js";
 // বাংলা তারিখ-ফরম্যাট helper (টাইমলাইন/ক্যালেন্ডার/টিকা — সব জায়গায় একই ফরম্যাট)।
 // শুধু display; stored data (ISO "YYYY-MM-DD") অপরিবর্তিত।
 
@@ -21,7 +22,7 @@ export function bnTime(ms) {
 }
 
 export function bnNum(n) {
-  return Number(n).toLocaleString("bn-BD");
+  return Number(n).toLocaleString(getLang() === "bn" ? "bn-BD" : "en-US"); // ভাষা-অনুযায়ী অঙ্ক
 }
 
 // লোকাল তারিখ "YYYY-MM-DD" (UTC না)। toISOString() UTC দেয় — বাংলাদেশে ভোর ০০:০০–০৬:০০

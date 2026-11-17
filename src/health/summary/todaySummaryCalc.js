@@ -5,16 +5,19 @@
 
 import { buildActiveMeds, daysLeft, MEAL_LABELS } from "../records/medReminderCalc.js";
 import { doseKey } from "../records/medTaken.js";
+import { L, digits } from "../../shared/i18n.js";
 
-const bn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+const bn = digits;
 
 // "08:00" → "সকাল ৮:০০"
 export function bnClock(hhmm) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ""));
   if (!m) return "";
   const hh = Number(m[1]);
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  if (L("bn", "en") === "en") return h12 + ":" + m[2] + (hh < 12 ? " AM" : " PM");
   const per = hh < 4 ? "রাত" : hh < 12 ? "সকাল" : hh < 16 ? "দুপুর" : hh < 18 ? "বিকাল" : hh < 20 ? "সন্ধ্যা" : "রাত";
-  return per + " " + bn(hh % 12 === 0 ? 12 : hh % 12) + ":" + bn(m[2]);
+  return per + " " + bn(h12) + ":" + bn(m[2]);
 }
 
 // আজকের ডোজ-তালিকা (সময় অনুযায়ী)। taken = { doseKey: true }; nowHHMM = "14:05"।

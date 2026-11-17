@@ -17,6 +17,9 @@ let current = readStored();
 const listeners = new Set();
 
 export function getLang() { return current; }
+// দুই-ভাষার ছোট টেক্সট/অঙ্ক: বাংলা মোডে বাংলা, English মোডে English (owner-request ২০২৬-১১-১৭)
+export const L = (bnText, enText) => (current === "bn" ? bnText : enText);
+export const digits = (n) => (current === "bn" ? String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]) : String(n));
 
 export function setLang(lang) {
   if (!LANGS.includes(lang) || lang === current) return;
