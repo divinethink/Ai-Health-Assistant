@@ -28,6 +28,7 @@ import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
 import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
+import { DoctorInfoPage } from "../health/doctor-export/DoctorInfoPage.js";
 import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
@@ -378,7 +379,7 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 const MENU_ICONS = {
   family: ["users", "#1F7A5C"], timeline: ["clock", "#3B82B6"], data: ["save", "#D08A2E"], lock: ["lock", "#7A5BB0"],
   design: ["sliders", "#5F7A8A"], aimodel: ["bot", "#3E6BC4"], theme: ["palette", "#C25B8A"], lang: ["globe", "#2A9AA8"],
-  aichat: ["health", "#1F7A5C"], notif: ["bell", "#D08A2E"], emergency: ["phone", "#C0392B"],
+  aichat: ["health", "#1F7A5C"], notif: ["bell", "#D08A2E"], doctor: ["cross", "#3B82B6"], emergency: ["phone", "#C0392B"],
 };
 function menuBubble(id, size) {
   const [icon, color] = MENU_ICONS[id] || ["home", "#1F7A5C"];
@@ -387,7 +388,7 @@ function menuBubble(id, size) {
     Icon(icon, { size: Math.round(sz * 0.52), stroke: 1.9 }));
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, chip, selectedMemberId }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenReminders, onOpenUpload, chip, selectedMemberId }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
@@ -402,7 +403,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   }
 
   if (sub) {
-    const titles = { family: ["family", t("menu.familyTitle")], data: ["data", t("menu.dataTitle")], timeline: ["timeline", "টাইমলাইন"], lock: ["lock", t("menu.lockTitle")], theme: ["theme", "থিম"], lang: ["lang", "ভাষা"], design: ["design", "কাস্টমাইজ"], aimodel: ["aimodel", "AI মডেল"] };
+    const titles = { family: ["family", t("menu.familyTitle")], data: ["data", t("menu.dataTitle")], timeline: ["timeline", "টাইমলাইন"], lock: ["lock", t("menu.lockTitle")], theme: ["theme", "থিম"], lang: ["lang", "ভাষা"], design: ["design", "কাস্টমাইজ"], aimodel: ["aimodel", "AI মডেল"], doctor: ["doctor", t("menu.doctorShort")] };
     let body = null;
     if (sub === "family") {
       body = React.createElement(
@@ -421,6 +422,8 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       // টাইমলাইন + টিকা — হেলথ-পিল থেকে মেনুতে সরানো (owner-request ২০২৬-১১-১৩); কম্পোনেন্ট অপরিবর্তিত
       body = React.createElement(HealthTimeline, { familyId, callerMemberId: memberId, selectedMemberId,
         vaccineSlot: React.createElement(VaccinationScheduler, { familyId, callerMemberId: memberId, selectedMemberId, inline: true }) });
+    } else if (sub === "doctor") {
+      body = React.createElement(DoctorInfoPage, { familyId, callerMemberId: memberId, isAdmin, selectedMemberId, onGoUpload: onOpenUpload });
     } else if (sub === "data") {
       body = React.createElement(BackupRestoreSection, { key: "backup" + refreshTick, familyId, callerMemberId: memberId, isAdmin });
     } else if (sub === "lock") {
@@ -458,14 +461,14 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
   const tile = (id, label, onClick, urgent) => React.createElement("button", {
     key: label, type: "button", onClick,
     style: {
-      flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", minHeight: "88px", padding: "12px 4px",
-      borderRadius: "20px", cursor: "pointer", fontSize: "13px", fontWeight: 700, lineHeight: 1.2, textAlign: "center", fontFamily: "inherit",
+      minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", gap: "8px", minHeight: "98px", padding: "12px 2px 8px",
+      borderRadius: "18px", cursor: "pointer", fontSize: "12px", fontWeight: 700, lineHeight: 1.2, textAlign: "center", fontFamily: "inherit",
       border: "1px solid " + (urgent ? "#EBB5AE" : "var(--hs-border)"),
       background: urgent ? "linear-gradient(180deg, #FFF8F6, #FFECE8)" : "linear-gradient(180deg, var(--hs-surface), var(--hs-chip-bg))",
       color: urgent ? "#C0392B" : "var(--hs-primary)",
       boxShadow: "0 4px 14px rgba(14,75,67,0.10)",
     },
-  }, menuBubble(id, 40), React.createElement("span", { style: { maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, label));
+  }, menuBubble(id, 38), React.createElement("span", { style: { maxWidth: "100%", overflowWrap: "break-word", wordBreak: "normal" } }, label));
 
   const row = (id, title, subtitle, onClick, last) => React.createElement("button", {
     key: title, type: "button", onClick,
@@ -485,9 +488,10 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(ProfileMiniCard, { memberDoc, familyDoc, isAdmin, nameSlot: React.cloneElement(chip, { variant: "name", key: "profile-name" }) }),
     React.createElement(NotificationsPanel, { key: "nt" + refreshTick, familyId, uid }),
     React.createElement(
-      "div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+      "div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px", marginBottom: "12px" } },
       tile("aichat", t("nav.aichat"), onOpenAIChat, false),
       tile("notif", t("menu.notifShort"), onOpenReminders, false), // ট্যাপে সরাসরি ট্র্যাকার ▸ রিমাইন্ডার
+      tile("doctor", t("menu.doctorShort"), () => setSub("doctor"), false),
       tile("emergency", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
     ),
     showCare && React.createElement(
@@ -591,7 +595,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, chip, selectedMemberId,
+      onOpenAIChat: () => setActiveTab("aichat"), onOpenReminders: () => { setQuickIntent("reminder"); setActiveTab("tracker"); }, onOpenUpload: () => { setQuickIntent("report"); setActiveTab("health"); }, chip, selectedMemberId,
     });
   }
 

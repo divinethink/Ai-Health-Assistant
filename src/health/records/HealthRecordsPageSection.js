@@ -1,4 +1,3 @@
-import { Icon } from "../../shared/icons.js";
 import { t } from "../../shared/i18n.js";
 // হেলথ রেকর্ড (হোম) — Full-page wrapper, P11 mockup §৩ অনুযায়ী ৫টা sub-tab
 // pill দিয়ে reorganized (ধাপ ২)। প্রতিটা sub-tab-এর ভেতরের existing
@@ -41,8 +40,6 @@ import { CommonCareSection } from "../commonCare/CommonCareSection.js";
 import { TodaySummary } from "../summary/TodaySummary.js";
 import { Skeleton } from "../../shared/ui.js";
 import { DocumentsSection } from "../documents/DocumentsSection.js";
-import { DoctorExportSection } from "../doctor-export/DoctorExportSection.js";
-import { DoctorDetailsSection } from "../doctor-details/DoctorDetailsSection.js";
 import { useMemberHealth } from "./useMemberHealth.js";
 import { PrescriptionFold } from "./PrescriptionFold.js";
 import { listDocuments } from "../documents/documentsData.js";
@@ -89,7 +86,7 @@ function usePillCounts(familyId, memberId, tick) {
 const HEALTH_TABS = [
   { id: "profile", label: "tab.healthProfile" }, // প্রোফাইল + স্বাস্থ্য তথ্য একসাথে (owner-approved ২০২৬-১১-১১)
   { id: "care", label: "tab.commonCare" }, // সাধারণ চিকিৎসা (টাইমলাইন মেনুতে সরানো — owner-request ২০২৬-১১-১৩)
-  { id: "docs", label: "tab.export" }, // "🩺 ডাক্তারের জন্য" — ডাক্তারকে দেখানোর সারাংশ/এক্সপোর্ট
+  // ডাক্তার-পিল মেনুর "ডাক্তারের তথ্য" টাইলে সরানো হয়েছে (owner-request ২০২৬-১১-১৭)
 ];
 
 export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, selectedMemberId, topOffsetPx, chip, onExit, mode = "home" }) {
@@ -101,7 +98,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
     if (!isHealth) return "today";
     return "profile"; // দ্রুত-যোগ (প্রেসার/সুগার/ওষুধ/রিপোর্ট) এখন একই ট্যাবের সাব-পিলে (recordSub) নামে
   });
-  const [docSub, setDocSub] = useState("summary"); // ডাক্তার-ট্যাব: সারাংশ | আমার ডাক্তার
   const [medTick, setMedTick] = useState(0); // "যোগ করুন → ওষুধ" থেকে এলে ওষুধ-পাতা নতুন করে খুলে সংশ্লিষ্ট ফর্ম দেখায়
   const [addTick, setAddTick] = useState(0); // নতুন রেকর্ড যোগের পর ওষুধ/রিপোর্ট-তালিকা রিফ্রেশ
   const [recordSub, setRecordSub] = useState(() => (peekQuickIntent(["medicine"]) ? "meds" : peekQuickIntent(["bp", "sugar", "observation", "condition", "allergy"]) ? "records" : peekQuickIntent(["report"]) ? "docs" : "meds")); // শুধু peek: ইনটেন্ট নেয় গন্তব্য-ফর্ম নিজে (ওষুধ→MedicationReminders, প্রেসার/সুগার→HealthRecordsSection, রিপোর্ট→DocumentsSection)
@@ -109,7 +105,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
   histBind(hk + "main", activeTab, setActiveTab);
   histBind(hk + "rec", recordSub, setRecordSub);
-  histBind(hk + "doc", docSub, setDocSub);
 
   return React.createElement(
     "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif" } },
@@ -127,7 +122,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
             color: activeTab === tb.id ? "#fff" : "#2B3A36",
             boxShadow: activeTab === tb.id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
           },
-        }, tb.id === "docs" ? [Icon("health", { key: "i", size: 18 }), t(tb.label).replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "")] : t(tb.label))
+        }, t(tb.label))
       )),
     !selectedMemberId
       ? React.createElement("div", { style: { padding: "12px" } }, Skeleton(3, 64))
@@ -157,19 +152,6 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
         recordSub === "meds" && React.createElement(MedicationReminders, { key: "med-" + addTick + "-" + medTick, familyId, callerMemberId, selectedMemberId }),
         recordSub === "meds" && React.createElement(PrescriptionFold, { key: "rxf-" + selectedMemberId + "-" + addTick, familyId, callerMemberId, selectedMemberId, count: counts.rx, refreshTick: addTick, onDeleted: () => setAddTick((n) => n + 1) }),
         recordSub === "docs" && React.createElement(DocumentsSection, { key: "doc-" + addTick, familyId, callerMemberId, selectedMemberId, excludeType: "prescription", hideAdd: true, emptyText: "এখনো ল্যাব রিপোর্ট নেই — ＋ যোগ করুন" })),
-      isHealth && activeTab === "docs" && React.createElement(React.Fragment, null,
-        React.createElement("div", { role: "group", "aria-label": "ডাক্তার", style: { display: "flex", gap: "4px", padding: "4px", margin: "4px 0 16px", borderRadius: "999px", background: "#E3ECE7" } },
-          [["summary", "📋 সারাংশ"], ["doctors", "🩺 আমার ডাক্তার"]].map(([id, label]) => React.createElement("button", {
-            key: id, onClick: () => histChange(hk + "doc", docSub, id, setDocSub), "aria-pressed": docSub === id,
-            style: {
-              flex: 1, minHeight: "44px", padding: "6px 10px", borderRadius: "999px", fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "none",
-              background: docSub === id ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "transparent", color: docSub === id ? "#fff" : "#2B3A36",
-              boxShadow: docSub === id ? "0 3px 8px rgba(14,75,67,0.25)" : "none",
-            },
-          }, label))),
-        docSub === "summary" && React.createElement(DoctorExportSection, { familyId, callerMemberId, selectedMemberId, onGoUpload: () => { histChange(hk + "main", activeTab, "profile", setActiveTab); setRecordSub("docs"); } }),
-        // ডাক্তারের তথ্য ও ভিজিটিং কার্ড — মেনু থেকে এখানে সরানো (owner-request ২০২৬-১১-১১); inline mode
-        docSub === "doctors" && React.createElement(DoctorDetailsSection, { familyId, callerMemberId, isAdmin })),
       isHealth && activeTab === "care" && React.createElement(CommonCareSection, { familyId, callerMemberId, selectedMemberId })
     )
   );
