@@ -6,7 +6,6 @@
 // ধাপ ৩: রিমাইন্ডার-সেটিং (ReminderSettings.js); চালক TrackerReminderRunner.js Dashboard-এ বসানো। Health Connect (ধাপ ৪), ট্রেন্ড (ধাপ ৫) এখনো নেই।
 
 import { ErrorBox, PrimaryButton, SecondaryButton, TabPills, Skeleton } from "../../shared/ui.js";
-import { histBind, histChange } from "../../shared/navHistory.js";
 import { takeQuickIntent } from "../../shared/quickIntent.js";
 import { bnNum } from "../../shared/dates.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
@@ -28,7 +27,7 @@ import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
-import { FocusSheet } from "./FocusSheet.js";
+import { FocusSheet, focusLabels } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
 import { weighDayOf, countedWeighPoints, DEFAULT_WEIGH_DAY } from "./weighDay.js";

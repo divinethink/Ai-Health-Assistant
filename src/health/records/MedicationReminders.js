@@ -122,7 +122,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [permission, setPermission] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
   const [taken, setTaken] = useState({});
   const [takenErr, setTakenErr] = useState(null);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const [todayOpen, setTodayOpen] = useState(true);
   const [menuId, setMenuId] = useState(null); // "⋯" মেনু খোলা ওষুধের recordId
   const [listOpen, setListOpen] = useState(null); // null = অটো (আজকের ডোজ না থাকলে বা সদ্য-যোগ থাকলে খোলা)

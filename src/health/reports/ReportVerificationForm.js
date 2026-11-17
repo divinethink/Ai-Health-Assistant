@@ -22,7 +22,7 @@ import { fetchTestNameDictionary } from "./testDictionaryData.js";
 import { buildLabAlerts, summarizeSaved, describeRangeBn, parseLabNumber } from "./labAlerts.js";
 import { fetchMemberSex } from "../records/memberSex.js";
 import { listHealthRecords } from "../records/healthRecordsData.js";
-import { AiBadge, AI_COLORS } from "../doc-ai/AiAssistBar.js";
+import { AI_COLORS } from "../doc-ai/AiAssistBar.js";
 
 const { useState, useCallback, useEffect } = React;
 const bnN = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
