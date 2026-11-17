@@ -61,6 +61,9 @@ const BMI_CHIP = {
   overweight: { text: "ওজন বেশি", bg: "#FFE3A8", fg: "#7A4B00" },
   obese: { text: "স্থূলতা", bg: "#FFD3CD", fg: "#8A1C12" },
 };
+// প্রোফাইল-কার্ডের লেবেল ভাষা-অনুযায়ী (English মোডে Age/Years/Height/Weight/BMI/cm/kg)
+const EN_BMI = { underweight: "Underweight", normal: "Normal", overweight: "Overweight", obese: "Obese" };
+const L = (bnText, enText) => (getLang() === "bn" ? bnText : enText);
 const SOFT = "#4A6159";
 const INK = "var(--hs-primary, #0E4B43)";
 const GLASS = { background: "#FFFFFF", border: "none", boxShadow: "0 1px 2px rgba(14,75,67,0.06), 0 4px 12px rgba(14,75,67,0.08)", borderRadius: "12px", padding: "4px 9px", minWidth: 0, boxSizing: "border-box" };
@@ -152,7 +155,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   const birthYear = member && member.dob ? member.dob.slice(0, 4) : null;
   const adviceLine = bmiAdviceLine(bmiCategory);
 
-  const chip = bmiCategory ? BMI_CHIP[bmiCategory] : null;
+  const chip = bmiCategory ? (getLang() === "bn" ? BMI_CHIP[bmiCategory] : { ...BMI_CHIP[bmiCategory], text: EN_BMI[bmiCategory] }) : null;
   const initial = member && member.name ? Array.from(member.name.trim())[0] || "?" : "?";
   // হোমের সতর্ক-সারির মতো চিপ: অ্যালার্জি (লাল) + চলমান অসুখ (এক-শব্দ নাম)। কিছু না থাকলে সারিই নেই
   // ("নেই" দেখালে "নিরাপদ" মনে হতে পারে — হোমের "তথ্য না থাকলে কিছু নয়" নীতির সাথে মিল)।
@@ -186,7 +189,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       h("div", { style: { flex: 1, minWidth: 0 } },
         h("h3", { style: { fontSize: "18px", fontWeight: 800, margin: 0, lineHeight: 1.2, overflowWrap: "anywhere" } }, member ? member.name : "সদস্য"),
         h("div", { style: { fontSize: "12.5px", color: SOFT, marginTop: "1px" } },
-          birthYear ? (ageYears != null ? "বয়স " + bn(Math.floor(ageYears)) + " বছর · " : "") + "জন্ম " + bn(birthYear) : "জন্মতারিখ যোগ করা হয়নি")),
+          birthYear ? (ageYears != null ? L("বয়স ", "Age ") + bn(Math.floor(ageYears)) + L(" বছর · ", " years · ") : "") + L("জন্ম ", "Born ") + bn(birthYear) : L("জন্মতারিখ যোগ করা হয়নি", "Date of birth not added"))),
       h("button", {
         onClick: () => setEditing((v) => !v), "aria-label": "উচ্চতা ও ওজন বদলান", "aria-expanded": editing,
         style: { width: "44px", height: "44px", flexShrink: 0, borderRadius: "50%", margin: "-4px 0", border: "none", boxShadow: "0 1px 2px rgba(14,75,67,0.08), 0 3px 8px rgba(14,75,67,0.10)", background: editing ? "#CBE4D5" : "#fff", color: INK, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
@@ -200,9 +203,9 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
       })),
 
     h("div", { style: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)", gap: "6px", marginTop: "6px", alignItems: "start" } },
-      stat("উচ্চতা", heightCm ? bn(Math.round(heightCm * 10) / 10) : "—", heightCm ? "সেমি" : ""),
-      stat("ওজন", weightKg ? bn(weightKg) : "—", weightKg ? "কেজি" : ""),
-      stat("বিএমআই", bmi ? bn(bmi.toFixed(1)) : "—", "", chip)),
+      stat(L("উচ্চতা", "Height"), heightCm ? bn(Math.round(heightCm * 10) / 10) : "—", heightCm ? L("সেমি", "cm") : ""),
+      stat(L("ওজন", "Weight"), weightKg ? bn(weightKg) : "—", weightKg ? L("কেজি", "kg") : ""),
+      stat(L("বিএমআই", "BMI"), bmi ? bn(bmi.toFixed(1)) : "—", "", chip)),
     adviceLine && h("div", { style: { fontSize: "11.5px", lineHeight: 1.35, color: SOFT, opacity: 0.9, marginTop: "5px", padding: "0 2px" } }, adviceLine),
     (!heightCm || !weightKg) && h("div", { style: { fontSize: "13px", color: SOFT, marginTop: "8px", padding: "0 2px" } }, "উচ্চতা/ওজন যোগ করলে বিএমআই ও পরামর্শ এখানে দেখা যাবে (উপরের ✎ চাপুন)।"),
 
