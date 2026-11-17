@@ -189,7 +189,7 @@ export function HealthSummaryCard({ familyId, selectedMemberId, callerMemberId, 
   ].filter(Boolean);
 
   // হিরো-কার্ড: হোম-পেজের মতোই সবুজ গ্রেডিয়েন্ট। অসুখ/ওষুধ এখানে নয় — নিচের তালিকায় (ডুপ্লিকেট এড়াতে)।
-  return h("div", { style: { background: "#E4F1E9", color: INK, border: "1px solid rgba(127,150,140,0.16)", borderRadius: "20px", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 8px 22px rgba(14,75,67,0.08)", padding: "8px 10px", marginBottom: "8px" } },
+  return h("div", { style: { background: "#E4F1E9", color: INK, border: "1px solid rgba(127,150,140,0.16)", borderRadius: "20px", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 8px 22px rgba(14,75,67,0.08)", padding: "8px 10px", marginBottom: "10px" } },
     h("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
       h("div", { "aria-hidden": "true", style: { width: "34px", height: "34px", flexShrink: 0, borderRadius: "50%", background: "#CBE4D5", color: INK, border: "1px solid #B2D2BF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", fontWeight: 800 } }, initial),
       h("div", { style: { flex: 1, minWidth: 0 } },
