@@ -204,7 +204,7 @@ export function InfoDialog({ title, children, onClose, closeLabel }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", fontFamily: "'Hind Siliguri', sans-serif" } },
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", fontFamily: "'Hind Siliguri', sans-serif" } },
     React.createElement("div", { onClick: onClose, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
     React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "420px", maxHeight: "86vh", overflowY: "auto", background: "var(--hs-surface, #fff)", color: "#1F2D2A", borderRadius: "22px", padding: "18px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
