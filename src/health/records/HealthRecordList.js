@@ -111,8 +111,8 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
 
   const line = (label, v) => v ? React.createElement("div", { style: { fontSize: "14px", color: "#3E4E49", marginTop: "3px" } }, label + ": " + v) : null;
   const title = (icon, text, n) => React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "22px 2px 10px" } },
-    React.createElement("h4", { style: { margin: 0, fontSize: "16px", fontWeight: 800, color: "#1F2D2A" } }, text),
-    React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
+    React.createElement("h4", { style: { margin: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A" } }, text),
+    React.createElement("span", { style: { fontSize: "11.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
   const badge = (text, color, bg) => React.createElement("span", { style: { fontSize: "13px", fontWeight: 600, color, background: bg, borderRadius: "999px", padding: "2px 10px", whiteSpace: "nowrap" } }, text);
   const shortDate = (iso) => { if (!iso) return ""; const d = new Date(iso + "T00:00:00"); return Number.isNaN(d.getTime()) || d.getFullYear() !== new Date().getFullYear() ? bnDate(iso) : d.toLocaleDateString("bn-BD", { day: "numeric", month: "long" }); };
   const grid3 = { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "8px", alignItems: "stretch" };
@@ -234,7 +234,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     const cnt = obsGroups.length;
     // অসুখ = ছোট চিপ (নাম + স্ট্যাটাস-ডট); লম্বা-ছোট নাম অনুযায়ী এক লাইনে ২–৩টি, ট্যাপে আগের বিস্তারিত-শিট (ডাক্তার/নোট/গাইড/✎/🗑)।
     const condChip = (r) => { const on = r.status === "active" || r.status === "chronic"; return React.createElement("button", { key: r.id, type: "button", onClick: () => toggle(r.id), "aria-haspopup": "dialog", "aria-label": r.name + " — " + t("st." + (r.status || "active")),
-      style: { display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", maxWidth: "100%", padding: "8px 14px", borderRadius: "999px", border: "1px solid " + LINE, background: "#fff", color: "#1F2D2A", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+      style: { display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", maxWidth: "100%", padding: "8px 14px", borderRadius: "999px", border: "1px solid " + LINE, background: "#fff", color: "#1F2D2A", fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
       React.createElement("span", { "aria-hidden": "true", style: { width: "9px", height: "9px", flexShrink: 0, borderRadius: "50%", background: on ? "#2FAE6B" : "#B7C3BD" } }),
       React.createElement("span", { style: { overflowWrap: "anywhere", lineHeight: 1.25 } }, r.name)); };
     return React.createElement("div", { style: { marginTop: "4px" } },
