@@ -32,6 +32,7 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
   const [err, setErr] = useState(null);
   const [expanded, setExpanded] = useState(false); // ডিফল্টে ভাঁজ করা
   const [confirmId, setConfirmId] = useState(null);
+  const [linkOn, setLinkOn] = useState(false); // ঐচ্ছিক: বাটন চাপলে ৩০ দিনের খাবার-মিল (চাপার আগে কোনো read নেই)
 
   const run = async (fn) => {
     setErr(null); setBusy(true);
@@ -58,14 +59,29 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
 
   // খাবারের মিল শুধু সতর্কতা চালু ও কার্ড খোলা থাকলেই আনি (অকারণ read নয়); ব্যর্থ হলে চুপচাপ বার্তা, কার্ড ভাঙে না
   const alertOn = !!alert;
+  const fetchDays = linkOn ? 30 : 15;
   useEffect(() => {
-    if (!alertOn || !isOpen) return undefined;
+    if ((!alertOn && !linkOn) || !isOpen) return undefined;
     let alive = true;
     setDocs(null);
-    getWeekDaily(familyId, memberId, windowDates(today, 15)).then((d) => alive && setDocs(d)).catch(() => alive && setDocs("err"));
+    getWeekDaily(familyId, memberId, windowDates(today, fetchDays)).then((d) => alive && setDocs(d)).catch(() => alive && setDocs("err"));
     return () => { alive = false; };
-  }, [alertOn, isOpen, familyId, memberId, today]);
-  const trg = Array.isArray(docs) ? triggerSearch({ docs, gutEntries: entries, endISO: today, days: 15, max: 5, badHigh: 5 }) : null;
+  }, [alertOn, linkOn, isOpen, familyId, memberId, today, fetchDays]);
+  const trg = Array.isArray(docs) ? triggerSearch({ docs, gutEntries: entries, endISO: today, days: fetchDays, max: 5, badHigh: 5 }) : null;
+  const okDays = week.filter((w) => w.state === "ok").length;
+  const loggedDays = week.filter((w) => w.state !== "none").length;
+
+  // খাবার-মিল ব্লক (সতর্কতা-বক্সে ও ঐচ্ছিক বাটনে একই)
+  const linkBlock = () => [
+    docs === null && R("div", { key: "l", style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবার-লগের সাথে মিল দেখা হচ্ছে…"),
+    docs === "err" && R("div", { key: "e", style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবার-লগ আনা যায়নি — পরে আবার খুলে দেখুন।"),
+    trg && !trg.enough && R("div", { key: "n", style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবারের সাথে মিল খুঁজতে আরও লগ লাগবে — পেট ডায়েরি ও ‘আজকের খাবার-লগ’ কয়েক দিন একসাথে রাখুন।"),
+    trg && trg.enough && !trg.items.length && R("div", { key: "z", style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "গত " + bnNum(fetchDays) + " দিনে নির্দিষ্ট কোনো খাবারের সাথে স্পষ্ট মিল পাওয়া যায়নি।"),
+    trg && trg.items.length > 0 && R("div", { key: "i", style: { marginTop: "6px" } },
+      R("div", { style: { fontWeight: 700 } }, "গত " + bnNum(fetchDays) + " দিনে অস্বস্তির দিনের সাথে এই খাবারগুলো বেশি মিলেছে:"),
+      trg.items.map((x) => R("div", { key: x.name, style: { paddingLeft: "10px", overflowWrap: "anywhere" } }, "• " + x.name + " — অস্বস্তির " + bnNum(x.bad) + "টি দিনে (মোট " + bnNum(x.total) + " দিনের মধ্যে)")),
+      R("div", { style: { marginTop: "4px", fontSize: "13px", color: T.muted } }, "এগুলো কিছুদিন বাদ দিয়ে দেখুন; লক্ষণ থাকলে ডাক্তারকে দেখান। এটি শুধু আপনার লগের মিল — কারণ প্রমাণ নয়।")),
+  ];
 
   return R("div", { style: { ...CARD_STYLE, padding: bare ? "10px 12px 0" : "2px 12px" } },
     // ভাঁজযোগ্য হেডার: এক লাইনে নাম + আজকের স্কোর-সারাংশ + তীর
@@ -97,14 +113,8 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
         R("div", { style: { fontWeight: 800, color: "#7A5200" } }, "⚠ পেটের লক্ষণ লক্ষ্য করুন"),
         R("div", null, ALERT_TEXT[alert.kind]),
         loose3 && R("div", { style: { marginTop: "4px" } }, "টানা ৩ দিন তরল ধরনের (৬–৭) — পানিশূন্যতা এড়াতে পর্যাপ্ত পানি ও তরল (যেমন খাবার স্যালাইন) নিন; না কমলে ডাক্তার দেখান।"),
-        docs === null && R("div", { style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবার-লগের সাথে মিল দেখা হচ্ছে…"),
-        docs === "err" && R("div", { style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবার-লগ আনা যায়নি — পরে আবার খুলে দেখুন।"),
-        trg && !trg.enough && R("div", { style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "খাবারের সাথে মিল খুঁজতে আরও লগ লাগবে — পেট ডায়েরি ও ‘আজকের খাবার-লগ’ কয়েক দিন একসাথে রাখুন।"),
-        trg && trg.enough && !trg.items.length && R("div", { style: { marginTop: "6px", fontSize: "13px", color: T.muted } }, "গত ১৫ দিনে নির্দিষ্ট কোনো খাবারের সাথে স্পষ্ট মিল পাওয়া যায়নি।"),
-        trg && trg.items.length > 0 && R("div", { style: { marginTop: "6px" } },
-          R("div", { style: { fontWeight: 700 } }, "গত ১৫ দিনে অস্বস্তির দিনের সাথে এই খাবারগুলো বেশি মিলেছে:"),
-          trg.items.map((x) => R("div", { key: x.name, style: { paddingLeft: "10px", overflowWrap: "anywhere" } }, "• " + x.name + " — অস্বস্তির " + bnNum(x.bad) + "টি দিনে (মোট " + bnNum(x.total) + " দিনের মধ্যে)")),
-          R("div", { style: { marginTop: "4px", fontSize: "13px", color: T.muted } }, "এগুলো কিছুদিন বাদ দিয়ে দেখুন; লক্ষণ থাকলে ডাক্তারকে দেখান। এটি শুধু আপনার লগের মিল — কারণ প্রমাণ নয়।"))),
+        linkBlock()),
+
 
       R("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 10px", marginTop: "8px", fontSize: "12px", color: T.muted, lineHeight: 1.4 } },
         BRISTOL.map(([n, text]) => R("div", { key: n, style: n === sel ? { background: "#E4F0E9", borderRadius: "6px", padding: "0 4px", color: T.ink, fontWeight: 700 } : undefined }, R("b", { style: { color: T.green } }, bnNum(n) + " "), text))),
@@ -121,7 +131,14 @@ export function GutLogCard({ info, familyId, callerMemberId, memberId, gutFoods,
             R("div", { "aria-label": WD[i] + (w.score ? ": স্কোর " + bnNum(w.score) : ": এন্ট্রি নেই"), style: { margin: "2px auto 0", width: "30px", height: "30px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, boxSizing: "border-box",
               background: w.state === "ok" ? "#E4F0E9" : w.state === "off" ? "#FFE7B8" : T.track, color: w.state === "ok" ? T.green : w.state === "off" ? "#7A5200" : T.muted,
               border: w.date === today ? "2px solid " + T.green : "2px solid transparent" } }, w.score ? bnNum(w.score) : "–")))),
-        R("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "4px" } }, "সবুজ = ৩–৪ · হলুদ = ১–২ বা ৫–৭")),
+        R("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "4px" } }, "সবুজ = ৩–৪ · হলুদ = ১–২ বা ৫–৭"),
+        loggedDays > 0 && R("div", { style: { fontSize: "13px", color: T.ink, marginTop: "6px" } }, "এই সপ্তাহে " + bnNum(loggedDays) + " দিনের মধ্যে " + bnNum(okDays) + " দিন স্বাভাবিক (৩–৪)।")),
+
+      // ঐচ্ছিক: ৩০ দিনের খাবার-মিল (সতর্কতা না থাকলেও); সতর্কতা থাকলে উপরের বক্সেই আছে
+      !alertOn && R("div", { style: { marginTop: "10px" } },
+        !linkOn
+          ? R("button", { onClick: () => setLinkOn(true), style: { minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1px solid " + T.track, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "🍽 খাবারের সাথে মিল দেখুন (৩০ দিন)")
+          : R("div", { style: { padding: "10px 12px", borderRadius: "12px", background: "#F4F7F5", border: "1px solid " + T.track, color: T.ink, fontSize: "14px", lineHeight: 1.6 } }, linkBlock())),
 
       R("div", { style: { marginTop: "10px", fontSize: "12.5px", color: T.muted, lineHeight: 1.5 } }, "জরুরি লক্ষণ: পায়খানায় রক্ত, কালো মল, তীব্র পেটব্যথা, জ্বর, বারবার বমি বা পানিশূন্যতার লক্ষণ হলে দেরি না করে ডাক্তারের কাছে যান।"),
 
