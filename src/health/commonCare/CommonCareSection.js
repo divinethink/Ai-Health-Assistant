@@ -1,6 +1,6 @@
 // "সাধারণ চিকিৎসা" পিল: সবার জন্য স্থির শুরুর তালিকা + সদস্যের নিজের তালিকা (যোগ/সম্পাদনা/মোছা)।
 // সদস্যের নিজের তালিকার ডোজ সদস্যের নিজের লেখা। সাধারণ তালিকার ডোজ শুধু verified Medicine DB থেকে (doseEnforcement); অ্যাপ/AI বানায় না।
-import { TextField, PrimaryButton, SheetFrame, ConfirmDialog, ErrorBox, Skeleton } from "../../shared/ui.js";
+import { TextField, PrimaryButton, SheetFrame, ConfirmDialog, InfoDialog, ErrorBox, Skeleton } from "../../shared/ui.js";
 import { MED_ALIAS } from "../../shared/searchAliases.js";
 import { COMMON_CARE_DEFAULTS } from "./commonCareList.js";
 import { COMMON_HOMEO_DEFAULTS, HOMEO_SOURCE } from "./commonCareHomeoList.js";
@@ -32,17 +32,16 @@ function genericFromBrand(brand) {
 
 // পটেন্সি: লেবেলের পাশে ⓘ; চাপলে সহজ ব্যাখ্যা খোলে/বন্ধ হয় (শুধু তথ্য, কিছু সংরক্ষণ হয় না)
 function PotencyField(label, value, onChange, ph, open, toggle) {
-  const line = { marginTop: "4px" };
   return React.createElement("div", { style: { marginTop: "14px" } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", marginBottom: "6px" } },
       React.createElement("label", { htmlFor: "cc-potency", style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A" } }, label),
       React.createElement("button", { type: "button", onClick: toggle, "aria-label": "পটেন্সি কী, জানুন", "aria-expanded": open, style: { minWidth: "44px", minHeight: "44px", margin: "-12px 0 -12px 0", border: "none", background: "none", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "ⓘ")),
-    open && React.createElement("div", { style: { background: "#F2F7F4", border: "1px solid #D9E5DE", borderRadius: "12px", padding: "10px 12px", marginBottom: "8px", fontSize: "13.5px", lineHeight: 1.55, color: "#2B3A36" } },
+    open && React.createElement(InfoDialog, { title: "পটেন্সি কী?", onClose: toggle },
       React.createElement("div", null, "পটেন্সি হলো হোমিওপ্যাথি ওষুধের শক্তিমাত্রা, অর্থাৎ ওষুধ কতবার তরল (dilute) করা হয়েছে তার হিসাব। বোতলের গায়ে ওষুধের নামের পাশে লেখা থাকে, যেমন 6X, 30C, 200C।"),
-      React.createElement("div", { style: line }, "• X মানে প্রতি ধাপে ১ ভাগ ওষুধ ও ৯ ভাগ তরল।"),
+      React.createElement("div", null, "• X মানে প্রতি ধাপে ১ ভাগ ওষুধ ও ৯ ভাগ তরল।"),
       React.createElement("div", null, "• C মানে প্রতি ধাপে ১ ভাগ ওষুধ ও ৯৯ ভাগ তরল।"),
       React.createElement("div", null, "• সংখ্যা যত বড়, তত বেশি ধাপে তরল করা হয়েছে।"),
-      React.createElement("div", { style: line }, "চিকিৎসক যেটা লিখে দিয়েছেন, বোতল দেখে সেটাই লিখুন। না জানলে ঘরটি ফাঁকা রাখতে পারেন।")),
+      React.createElement("div", null, "চিকিৎসক যেটা লিখে দিয়েছেন, বোতল দেখে সেটাই লিখুন। না জানলে ঘরটি ফাঁকা রাখতে পারেন।")),
     React.createElement("input", { id: "cc-potency", type: "text", value, placeholder: ph, onChange: (e) => onChange(e.target.value), style: inputStyle }));
 }
 

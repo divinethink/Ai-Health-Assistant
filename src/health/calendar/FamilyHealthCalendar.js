@@ -52,7 +52,6 @@ function googleCalendarLink(e) {
 
 const inputStyle = { width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid #D3E0D9", borderRadius: "10px", fontSize: "14px", minHeight: "42px", background: "#fff" };
 const labelStyle = { display: "block", fontSize: "13px", fontWeight: 600, color: "#1F2D2A", margin: "10px 0 4px" };
-const menuBtn = { padding: "8px 10px", minHeight: "40px", border: "1px solid #D3E0D9", borderRadius: "10px", background: "#fff", color: "#1F2D2A", fontSize: "13px", cursor: "pointer", textAlign: "left", textDecoration: "none", display: "block", width: "100%", boxSizing: "border-box" };
 
 export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   const h = React.createElement;
@@ -86,6 +85,7 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   function isSynced(id) { try { return localStorage.getItem(syncedKey(id)) === "1"; } catch (e) { return false; } }
 
   async function handleAutoAdd(e) {
+    setMenuFor(null);
     setCalMsg(null);
     setCalBusy(e.id);
     try {
@@ -153,37 +153,39 @@ export function FamilyHealthCalendar({ familyId, callerMemberId }) {
   const shown = selectedDate ? events.filter((e) => e.date === selectedDate) : [];
   const listTitle = selectedDate ? bnDate(selectedDate) + "-এর ইভেন্ট" : "";
 
+  // ⋮ মেনু-আইটেম — রিপোর্ট-কার্ডের (DocumentList) একই ধাঁচ
+  const itemStyle = (color, disabled) => ({ display: "flex", alignItems: "center", gap: "10px", width: "100%", boxSizing: "border-box", minHeight: "48px", padding: "8px 16px", border: "none", borderBottom: "1px solid #EEF1EF", background: "none", color: color || "#1F2D2A", fontSize: "15px", fontWeight: 600, textAlign: "left", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.6 : 1, fontFamily: "inherit", textDecoration: "none", lineHeight: 1.35 });
+  const menuItem = (icon, label, onClick, color, disabled) => h("button", { type: "button", role: "menuitem", onClick, disabled, style: itemStyle(color, disabled) }, h("span", { "aria-hidden": "true" }, icon), label);
+
   function renderCard(e) {
     const done = e.status === "done";
     return h(
       "div", {
         key: e.id,
-        style: { marginTop: "8px", padding: "12px", ...PREMIUM_CARD, ...(done ? { background: "#EAF6F0" } : {}) },
+        style: { marginTop: "8px", padding: "12px", position: "relative", ...PREMIUM_CARD, ...(done ? { background: "#EAF6F0" } : {}) },
       },
-      h("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", wordBreak: "break-word" } },
-        e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : "")),
-      h("div", { style: { fontSize: "13px", color: "#4B5C57" } },
-        (TYPE_LABELS[e.eventType] || e.eventType) + " — " + bnDate(e.date) + (done ? " — ✓ সম্পন্ন" : "")),
-      h(
-        "div", { style: { display: "flex", gap: "8px", marginTop: "8px", alignItems: "center" } },
-        !done && h("button", {
+      h("div", { style: { display: "flex", alignItems: "flex-start", gap: "6px" } },
+        h("div", { style: { flex: 1, minWidth: 0 } },
+          h("div", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", wordBreak: "break-word" } },
+            e.title + (e.memberId ? " (" + memberName(e.memberId) + ")" : "")),
+          h("div", { style: { fontSize: "13px", color: "#4B5C57" } },
+            (TYPE_LABELS[e.eventType] || e.eventType) + " — " + bnDate(e.date) + (done ? " — ✓ সম্পন্ন" : ""))),
+        h("button", {
+          type: "button", onClick: () => setMenuFor((m) => (m === e.id ? null : e.id)), "aria-label": "আরও অপশন", "aria-haspopup": "menu", "aria-expanded": menuFor === e.id,
+          style: { border: "none", background: "none", fontSize: "20px", cursor: "pointer", padding: "0 6px", minHeight: "40px", color: "#5F716C", flexShrink: 0 },
+        }, "⋮")),
+      !done && h("div", { style: { display: "flex", marginTop: "8px" } },
+        h("button", {
           onClick: () => handleDone(e.id),
           style: { padding: "6px 14px", minHeight: "40px", border: "none", borderRadius: "10px", background: "var(--hs-primary, #0E4B43)", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
-        }, "✔ সম্পন্ন"),
-        h("button", {
-          onClick: () => setMenuFor((m) => (m === e.id ? null : e.id)), "aria-label": "আরও অপশন", "aria-expanded": menuFor === e.id,
-          style: { padding: "6px 12px", minHeight: "40px", minWidth: "44px", border: "1px solid #C3D2CA", borderRadius: "10px", background: "#fff", color: "#2B3A36", fontSize: "16px", cursor: "pointer" },
-        }, "⋯")
-      ),
-      menuFor === e.id && h(
-        "div", { style: { marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" } },
-        h("a", { href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer", style: menuBtn }, "📅 Google ক্যালেন্ডারে যোগ (নিজে নিশ্চিত করবেন)"),
-        !done && h("button", {
-          onClick: () => handleAutoAdd(e), disabled: calBusy === e.id || isSynced(e.id),
-          style: { ...menuBtn, opacity: isSynced(e.id) ? 0.6 : 1 },
-        }, calBusy === e.id ? "..." : (isSynced(e.id) ? "📅 ক্যালেন্ডারে যুক্ত ✓" : "📅 সরাসরি ক্যালেন্ডারে যুক্ত করুন (আগের দিন ৯টায় রিমাইন্ডার)")),
-        h("button", { onClick: () => handleDelete(e.id), style: { ...menuBtn, color: "#C0392B", border: "1px solid #E5A29A" } }, "🗑 মুছুন")
-      ),
+        }, "✔ সম্পন্ন")),
+      // ⋮ ড্রপডাউন (বোতামের পাশেই): Google ক্যালেন্ডার · সরাসরি যুক্ত · মুছুন
+      menuFor === e.id && h(React.Fragment, null,
+        h("div", { "aria-hidden": "true", onClick: () => setMenuFor(null), style: { position: "fixed", inset: 0, zIndex: 4 } }),
+        h("div", { role: "menu", style: { position: "absolute", top: "44px", right: "10px", zIndex: 5, width: "250px", maxWidth: "calc(100% - 20px)", background: "#fff", border: "1px solid #D3E0D9", borderRadius: "12px", boxShadow: "0 6px 18px rgba(14,75,67,0.18)", overflow: "hidden" } },
+          h("a", { role: "menuitem", href: googleCalendarLink(e), target: "_blank", rel: "noopener noreferrer", onClick: () => setMenuFor(null), style: itemStyle() }, h("span", { "aria-hidden": "true" }, "📅"), "Google ক্যালেন্ডারে যোগ (নিজে নিশ্চিত করবেন)"),
+          !done && menuItem("📅", calBusy === e.id ? "..." : (isSynced(e.id) ? "ক্যালেন্ডারে যুক্ত ✓" : "সরাসরি ক্যালেন্ডারে যুক্ত করুন (আগের দিন ৯টায় রিমাইন্ডার)"), () => handleAutoAdd(e), "#1F2D2A", calBusy === e.id || isSynced(e.id)),
+          menuItem("🗑", "মুছুন", () => handleDelete(e.id), "#C0392B"))),
       calMsg && calMsg.id === e.id && h("div", { style: { fontSize: "13px", marginTop: "6px", color: calMsg.ok ? "var(--hs-primary, #0E4B43)" : "#B3261E" } }, calMsg.text)
     );
   }

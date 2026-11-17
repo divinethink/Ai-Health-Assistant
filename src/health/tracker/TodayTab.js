@@ -2,7 +2,7 @@
 // হিসাব todaySummary.js/trackerCalc.js-এ, লেখা saveDaily দিয়ে (নির্দিষ্ট ডক-ID, set+merge)।
 // তারিখ-নেভিগেশন: হিরোর "📅" বাটন / সপ্তাহের বৃত্ত / সোয়াইপ — যেকোনো পুরনো দিন (dateNav.js); গত ৩০ দিনের বাইরের দিনের ডক আলাদা লোড (শেষ না হওয়া পর্যন্ত লেখা বন্ধ); আজ ছাড়া অন্য দিনেও একই সেভ-পথ।
 
-import { ErrorBox } from "../../shared/ui.js";
+import { ErrorBox, InfoDialog } from "../../shared/ui.js";
 import { bnNum } from "../../shared/dates.js";
 import { saveDaily, todayISO, getDaily, getMonthDaily } from "./trackerData.js";
 import { macroTargets } from "./macroTargets.js";
@@ -323,8 +323,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
             React.createElement("div", { "aria-hidden": "true", style: { height: "3px", borderRadius: "3px", background: tg ? T.border : col, marginTop: "2px" } },
               tg ? React.createElement("div", { style: { height: "3px", borderRadius: "3px", width: Math.min(100, (v / tg) * 100) + "%", background: over ? "#B3261E" : col } }) : null));
         })),
-      macroInfo && React.createElement("div", { role: "note", style: { marginTop: "8px", padding: "8px 10px", borderRadius: "12px", background: "var(--hs-chip-bg, #E4F0E9)", fontSize: "12.5px", lineHeight: 1.6, color: T.ink } },
-        React.createElement("div", { style: { fontWeight: 700 } }, "রঙ ও বার কী বোঝায়"),
+      macroInfo && React.createElement(InfoDialog, { title: "রঙ ও বার কী বোঝায়", onClose: () => setMacroInfo(false) },
         React.createElement("div", null, "• প্রতিটি পুষ্টির নিজস্ব চেনা-রঙ: প্রোটিন সবুজ · কার্ব কমলা · ফ্যাট বেগুনি · ফাইবার নীল"),
         React.createElement("div", null, "• বার = আজ যা খেয়েছেন ÷ টার্গেট; বার পূর্ণ হলে টার্গেট ছোঁয়া"),
         React.createElement("div", null, "• লাল = প্রোটিন/কার্ব/ফ্যাট টার্গেট ছাড়িয়েছে (ফাইবার বেশি হলে লাল হয় না)"),
@@ -394,13 +393,12 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
               border: partial ? "2px solid " + (isToday ? T.orange : T.green) : hit || isToday ? "none" : "1.5px " + (x.state === "future" ? "dashed" : "solid") + " " + (isFast ? T.sandBorder : "#C9C3D6") } }, hit ? "✓" : partial ? bnNum(x.metCount) : isToday ? "আজ" : isFast ? "🌙" : ""));
         })),
       React.createElement("div", { style: { fontSize: "11.5px", color: T.muted, marginTop: "6px" } }, "✓ = টার্গেট (২+ লক্ষ্য) · সংখ্যা = পূরণ হওয়া লক্ষ্য"),
-      weekInfo && React.createElement("div", { role: "note", style: { marginTop: "8px", padding: "8px 10px", borderRadius: "12px", background: "var(--hs-chip-bg, #E4F0E9)", fontSize: "12.5px", lineHeight: 1.6, color: T.ink } },
-        React.createElement("div", { style: { fontWeight: 700 } }, "বৃত্তের সংখ্যা = ওই দিন কয়টি লক্ষ্য পূরণ হয়েছে"),
+      weekInfo && React.createElement(InfoDialog, { title: "বৃত্তের সংখ্যা = ওই দিন কয়টি লক্ষ্য পূরণ হয়েছে", onClose: () => setWeekInfo(false) },
         calc && React.createElement("div", null, "• ক্যালরি: টার্গেটের ৮০%–১১০% (" + bnNum(Math.round(calc.calorieTarget * 0.8)) + "–" + bnNum(Math.round(calc.calorieTarget * 1.1)) + ")"),
         React.createElement("div", null, "• ব্যায়াম: কমপক্ষে " + bnNum(exTarget) + " মিনিট"),
         waterTarget && React.createElement("div", null, "• পানি: কমপক্ষে " + bnNum(waterTarget) + " গ্লাস"),
         React.createElement("div", null, "• ঘুম: কমপক্ষে " + bnNum(sMin) + " ঘণ্টা"),
-        React.createElement("div", { style: { marginTop: "4px" } }, "✓ = ২টি বা বেশি লক্ষ্য পূরণ। স্টেপ এই গণনায় নেই। সিয়ামের দিনে ক্যালরি ধরা হয় না।"))),
+        React.createElement("div", null, "✓ = ২টি বা বেশি লক্ষ্য পূরণ। স্টেপ এই গণনায় নেই। সিয়ামের দিনে ক্যালরি ধরা হয় না।"))),
     ],
     meds: () => [
     // হোম: আজকের ওষুধ + আসন্ন (TodaySummary onlyMeds)

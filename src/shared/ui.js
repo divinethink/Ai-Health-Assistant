@@ -197,6 +197,25 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy,
   return createPortal(dlg, document.body);
 }
 
+// ---- InfoDialog: ⓘ-এর স্ট্যান্ডার্ড ব্যাখ্যা-পেজ (মাঝখানে পপআপ; শিরোনাম+✕, লেখা, "বুঝেছি") — ইনলাইনে পাতা ঠেলে নয় ----
+export function InfoDialog({ title, children, onClose, closeLabel }) {
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", fontFamily: "'Hind Siliguri', sans-serif" } },
+    React.createElement("div", { onClick: onClose, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
+    React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "420px", maxHeight: "86vh", overflowY: "auto", background: "var(--hs-surface, #fff)", color: "#1F2D2A", borderRadius: "22px", padding: "18px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+        React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", borderRadius: "50%", border: "2px solid var(--hs-primary, #0E4B43)", color: "var(--hs-primary, #0E4B43)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: 800, flexShrink: 0 } }, "i"),
+        React.createElement("div", { style: { flex: 1, minWidth: 0, fontSize: "18px", fontWeight: 800, lineHeight: 1.35 } }, title),
+        React.createElement("button", { type: "button", onClick: onClose, "aria-label": "বন্ধ করুন", style: { width: "44px", minHeight: "44px", margin: "-8px -8px -8px 0", border: "none", background: "none", color: "#5F716C", fontSize: "24px", cursor: "pointer", fontFamily: "inherit" } }, "✕")),
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px", fontSize: "14.5px", lineHeight: 1.7, color: "#2B3A36" } }, children),
+      React.createElement("button", { type: "button", autoFocus: true, onClick: onClose, style: { width: "100%", minHeight: "48px", marginTop: "16px", borderRadius: "14px", border: "none", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)", fontSize: "15px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" } }, closeLabel || "বুঝেছি")));
+  return createPortal(dlg, document.body);
+}
+
 // বুট/লোডিং স্ক্রিন — index.html-এর স্ট্যাটিক স্প্ল্যাশের হুবহু একই (লগইন ফ্ল্যাশ/ফাঁকা পর্দা এড়াতে)।
 export function BootSplash() {
   return React.createElement("div", { className: "hc-splash" },
