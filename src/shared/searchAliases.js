@@ -1,7 +1,8 @@
 // দুই-ভাষার সার্চ (বাংলা/ইংলিশ/ব্র্যান্ড) — ফল সবসময় ইংলিশ নামে। pure data + ছোট helper; কোনো schema/rules বদল নেই।
 // ⚠ ব্র্যান্ড→জেনেরিক তালিকা শুরুর সংস্করণ; সংরক্ষিত নাম সবসময় জেনেরিক (ডোজ-সেফটি জেনেরিকের ওপর চলে)।
 
-const norm = (s) => String(s || "").trim().toLowerCase();
+// NFC: ফোন-কিবোর্ডের এক-কোডের "ড়/ঢ়/য়" (U+09DC/09DD/09DF) ও ডেটার দুই-অংশের রূপ (ড+়) এক হয়ে যায় — নইলে "মুড়ি" মেলে না
+const norm = (s) => String(s || "").normalize("NFC").trim().toLowerCase();
 
 // ---------- খাবার ----------
 // খাবারের key → ইংলিশ নাম
@@ -91,6 +92,12 @@ export const FOOD_EN = {
   tengra: "Tengra (small catfish) curry",
   guraMach: "Tiny fish (Gura mach)",
   haansMansho: "Duck meat curry",
+  nanRuti: "Naan", tandooriRuti: "Tandoori roti", badamBhorta: "Peanut bhorta", mangoAchar: "Mango pickle (Achar)",
+  jolpaiAchar: "Indian olive pickle (Jolpai achar)", mixAchar: "Mixed pickle (Achar)",
+  shutkiBhorta: "Dried fish bhorta (Shutki)", shutkiTorkari: "Dried fish curry (Shutki)", machBhorta: "Fish bhorta (Mach bhorta)",
+  chickenChaap: "Chicken chaap", eggPoach: "Poached egg", jolpai: "Indian olive (Jolpai)", narikel: "Coconut (fresh)",
+  narikelLaddu: "Coconut laddu", rasmalai: "Rasmalai", kalojam: "Kalojam (Gulab jamun)", misti: "Mixed sweets (Misti)",
+  jellyMix: "Mixed fruit jelly", matha: "Buttermilk (Matha / Ghol)", labang: "Labang (Laban, yogurt drink)",
 };
 
 // খাবারের key → বাড়তি সার্চ-শব্দ (বাংলিশ/সমার্থক); বাংলা নাম ও ইংলিশ নাম আলাদাভাবেই মেলে
@@ -148,6 +155,35 @@ const FOOD_ALIAS_MORE = {
   sujiLadduHome: ["suji laddu", "suji ladoo", "rava laddu", "rava ladoo", "semolina laddu", "সুজি লাড্ডু", "সুজির লাড্ডু"], besanLadduHome: ["besan laddu", "besan ladoo", "gram flour laddu", "বেসন লাড্ডু", "বেসনের লাড্ডু"],
 };
 for (const [k, v] of Object.entries(FOOD_ALIAS_MORE)) FOOD_ALIAS[k] = [...(FOOD_ALIAS[k] || []), ...v];
+
+// নতুন ২০ খাবার (২০২৬-১১-১৭) + বিদ্যমান খাবারের বাড়তি বানান (পরাটা, মিক্স সবজি, পাকা পেপে, লাচ্চি)
+const FOOD_ALIAS_MORE2 = {
+  porota: ["পরাটা", "parata", "paratha", "parota", "porata"],
+  veg: ["মিক্স সবজি", "মিক্সড সবজি", "mix veg", "mixed veg", "mixed vegetable"],
+  papaya: ["পেপে", "পাকা পেপে", "পাকা পেঁপে", "pepe paka", "ripe papaya"],
+  lassi: ["লাচ্চি", "লস্যি", "lacchi", "lachhi"],
+  nanRuti: ["নান", "naan", "nan", "nun ruti"],
+  tandooriRuti: ["তন্দুরি", "তন্দুরি রুটি", "তান্দুরি", "tandoori", "tandur", "tandoor roti"],
+  badamBhorta: ["বাদামের ভর্তা", "চীনাবাদাম", "peanut", "badam bharta"],
+  mangoAchar: ["আচার", "আম আচার", "achar", "achaar", "pickle", "aam achar"],
+  jolpaiAchar: ["আচার", "জলপাইয়ের আচার", "achar", "pickle", "jolpai achar", "olive pickle"],
+  mixAchar: ["আচার", "মিক্স আচার", "মিক্সড আচার", "achar", "pickle", "mixed pickle"],
+  shutkiBhorta: ["শুটকি", "শুঁটকি", "শুটকী", "shutki", "shutki bharta", "dry fish"],
+  shutkiTorkari: ["শুটকি", "শুঁটকি", "শুটকী", "শুটকির তরকারি", "shutki", "shutki torkari", "dry fish curry"],
+  machBhorta: ["মাছের ভর্তা", "mach bharta", "fish bharta", "fish bhorta"],
+  chickenChaap: ["চাপ", "মুরগির চাপ", "chaap", "chap", "chicken chap", "chanp"],
+  eggPoach: ["পোচ", "ডিম পোচড", "poach", "poached", "poached egg"],
+  jolpai: ["olive", "jalpai", "jolpoi", "জলপাই ফল"],
+  narikel: ["নারকেল", "narkel", "narikel", "coconut", "coconut meat"],
+  narikelLaddu: ["নারকেল লাড্ডু", "নারকেলের লাড্ডু", "narkel laddu", "coconut ladoo", "nariyal laddu"],
+  rasmalai: ["রসমালাই", "ros malai", "rosomalai", "rasmalai"],
+  kalojam: ["কালো জাম", "kalo jam", "gulab jamun", "gulabjamun", "গোলাপজাম", "গুলাব জামুন"],
+  misti: ["মিষ্টান্ন", "মিস্টি", "মিষ্টি", "misti", "mishti", "sweet", "sweets", "mithai"],
+  jellyMix: ["জেলি", "jelly", "ফ্রুট জেলি", "mixed jelly"],
+  matha: ["ঘোল", "ghol", "matha", "mattha", "buttermilk"],
+  labang: ["লাবান", "লাবঙ", "labang", "laban"],
+};
+for (const [k, v] of Object.entries(FOOD_ALIAS_MORE2)) FOOD_ALIAS[k] = [...(FOOD_ALIAS[k] || []), ...v];
 
 // ---------- ওষুধ ----------
 // জেনেরিক (COMMON_MEDS-এর হুবহু নাম) → [ব্র্যান্ড/বাংলা/বাংলিশ সার্চ-শব্দ]

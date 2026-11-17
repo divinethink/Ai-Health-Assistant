@@ -198,10 +198,11 @@ export function exerciseOptions(all) {
 }
 // সার্চ: বাংলা বা English; খালি হলে সব। pure — টেস্টযোগ্য।
 export function searchExercises(q) {
-  const t = String(q || "").trim().toLowerCase();
+  const nf = (x) => String(x || "").normalize("NFC").toLowerCase();
+  const t = nf(q).trim();
   const all = exerciseOptions(true);
   if (!t) return all;
-  return all.filter((o) => o.label.toLowerCase().includes(t) || o.en.toLowerCase().includes(t));
+  return all.filter((o) => nf(o.label).includes(t) || nf(o.en).includes(t));
 }
 
 // ---------- মিল ----------

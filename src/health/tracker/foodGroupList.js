@@ -4,7 +4,7 @@ import { FOOD_GROUPS } from "./foodCatalog.js";
 import { FOOD_INFO, AVOID_INFO, infoOf, avoidHarmOf } from "./foodInfo.js";
 import { foodMatches } from "../../shared/searchAliases.js";
 
-const norm = (s) => String(s || "").trim().toLowerCase();
+const norm = (s) => String(s || "").normalize("NFC").trim().toLowerCase(); // NFC: ফোনের "ড়" ও ডেটার "ড়" এক করে
 
 function matches(key, f, q) {
   if (!q) return true;
