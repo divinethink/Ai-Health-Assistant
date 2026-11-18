@@ -14,7 +14,8 @@ export function sanitizeWeighDay(v) {
   const n = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
   return Number.isInteger(n) && n >= 0 && n <= 6 ? n : DEFAULT_WEIGH_DAY;
 }
-export const weighDayOf = (goal) => sanitizeWeighDay(goal ? goal.weighDay : undefined);
+// Owner সিদ্ধান্ত (১৮ নভেম্বর ২০২৬): ওজনের দিন সবার জন্য শুক্রবার; goal-ডকের পুরনো `weighDay` মোছা হয় না, শুধু আর ব্যবহার হয় না।
+export const weighDayOf = (_goal) => DEFAULT_WEIGH_DAY;
 export const isWeighDate = (dateISO, weighDay) => weekdayIndexOf(dateISO) === sanitizeWeighDay(weighDay);
 
 const toUTC = (iso) => { const [y, m, d] = String(iso).split("-").map(Number); return Date.UTC(y, (m || 1) - 1, d || 1); };

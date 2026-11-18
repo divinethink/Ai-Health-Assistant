@@ -126,15 +126,22 @@ export function checkWaterTargetInput(raw) {
   if (raw === null || raw === undefined || String(raw).trim() === "") return null; // খালি = ডিফল্ট
   return sanitizeWaterTarget(raw) === null ? "পানির লক্ষ্য " + WATER_TARGET_MIN + "–" + WATER_TARGET_MAX + " এর মধ্যে পূর্ণসংখ্যা দিন।" : null;
 }
-export function waterTargetFor(age, flags, override) {
-  if (flags && flags.kidney) return null;
+// কিডনি/ডায়ালাইসিস/হার্ট ফেইলিউর/লিভার সিরোসিস/শরীরে পানি জমা (flags.fluid): সাধারণ ডিফল্ট নেই — ডাক্তারের সীমা মানতে হয়।
+// তখন সবসময় null (পুরনো সেভ-করা সংখ্যাও উপেক্ষা — নিরাপত্তা)।
+// weightKg ঐচ্ছিক: প্রাপ্তবয়স্কে ডিফল্ট = ওজন × ৩০ মিলি ÷ ২৫০ মিলি গ্লাস, ৬–১২ গ্লাসের মধ্যে; ৬৫+ সর্বোচ্চ ৮। ওজন না থাকলে ৮।
+export function waterTargetFor(age, flags, override, weightKg) {
   const hasAge = !(age === null || age === undefined || Number.isNaN(age));
   if (hasAge && age < 2) return null;
   const o = sanitizeWaterTarget(override);
+  if (flags && (flags.kidney || flags.fluid)) return null;
   if (o !== null) return o;
   if (!hasAge) return 8;
   if (age < 5) return 4;
   if (age < 13) return 6;
+  if (age >= 18 && Number.isFinite(weightKg) && weightKg >= 20 && weightKg <= 300) {
+    const g = Math.min(12, Math.max(6, Math.round((weightKg * 30) / 250)));
+    return age >= 65 ? Math.min(g, 8) : g;
+  }
   return 8;
 }
 
@@ -214,12 +221,13 @@ export function effectivePregnant(goal, records) {
 
 // প্রোফাইলের রোগ-তালিকা থেকে ডায়াবেটিস/কিডনি আগে-থেকে-টিক (ব্যবহারকারী বদলাতে পারবেন)
 export function detectFlagsFromConditions(records) {
-  const flags = { diabetes: false, kidney: false };
+  const flags = { diabetes: false, kidney: false, fluid: false }; // fluid = পানি-সীমা লাগতে পারে (সংরক্ষণ হয় না, শুধু পানির লক্ষ্যে)
   (records || []).forEach((r) => {
     if (r.resourceType !== "condition" || r.status === "resolved") return;
     const n = (r.name || "").toLowerCase();
     if (/diabet|ডায়াবেটিস|বহুমূত্র|sugar/.test(n)) flags.diabetes = true;
     if (/kidney|renal|ckd|কিডনি|বৃক্ক/.test(n)) flags.kidney = true;
+    if (/dialysis|ডায়ালাইসিস|ডায়ালাইসিস|heart failure|হার্ট ফেইলিউর|হার্ট ফেলিউর|হৃদযন্ত্র বিকল|cirrhosis|সিরোসিস|edema|oedema|ascites|শোথ|ইডিমা|পানি জমা/.test(n)) flags.fluid = true;
   });
   return flags;
 }

@@ -7,7 +7,7 @@ import { countedWeighPoints, wouldCountOnChart, sanitizeWeighDay, weighDayOf, is
 test("ডিফল্ট শুক্রবার (৬); অবৈধ মান ডিফল্টে; বৈধ ০–৬ থাকে", () => {
   assert.equal(weighDayOf(null), 6); assert.equal(weighDayOf({}), 6);
   [null, undefined, "x", 7, -1, 2.5, NaN, ""].forEach((v) => assert.equal(sanitizeWeighDay(v), 6));
-  assert.equal(sanitizeWeighDay(0), 0); assert.equal(sanitizeWeighDay("3"), 3); assert.equal(weighDayOf({ weighDay: 2 }), 2);
+  assert.equal(sanitizeWeighDay(0), 0); assert.equal(sanitizeWeighDay("3"), 3); assert.equal(weighDayOf({ weighDay: 2 }), 6); // সবার জন্য শুক্রবার (১৮ নভেম্বর ২০২৬ সিদ্ধান্ত)
 });
 test("isWeighDate / lastWeighDate", () => {
   assert.equal(isWeighDate("2026-11-13", 6), true);

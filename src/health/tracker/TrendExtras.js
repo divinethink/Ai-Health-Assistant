@@ -255,7 +255,7 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const need = [...three];
   [ym, prevYm].forEach((x) => { if (x && !need.some((y) => y.y === x.y && y.m === x.m)) need.push(x); });
   const { cache, err } = useMonths(familyId, memberId, need);
-  const rateCtx = targetCtxFor({ age: info.age, flags: info.flags, goal: info.goal }); // পানিসহ (রিভিউ-কার্ড)
+  const rateCtx = targetCtxFor({ age: info.age, flags: info.flags, goal: info.goal, weightKg: info.weightKg }); // পানিসহ (রিভিউ-কার্ড)
   const ctx = { ...rateCtx, waterTarget: null };
   const loaded3 = three.every((x) => cache[monthKey(x.y, x.m)]);
   const move = (n) => { const next = shiftMonth(ym, n); if (next !== ym) { setYm(next); setSel(null); } };

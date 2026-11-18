@@ -77,10 +77,10 @@ export function reviewComment(t, bn) {
 
 // ---------- পার্ট ৮: সাপ্তাহিক সারাংশ (ডাক্তার-এক্সপোর্টের জন্য) ----------
 // লক্ষ্য-ctx (todaySummary.dayHit-এর মতো) — TodayTab-এর হিসাবের সাথে একই নিয়ম। goal ঐচ্ছিক।
-export function targetCtxFor({ age, flags, goal }) {
+export function targetCtxFor({ age, flags, goal, weightKg }) {
   const gate = safetyGate({ age, flags });
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
-  return { calorieTarget: calc ? calc.calorieTarget : null, exTarget: exerciseTargetMinPerDay(age), waterTarget: waterTargetFor(age, flags, goal && goal.waterTarget), sleepMinH: sleepTargetHours(age)[0], fastDays: activeFastDays(goal, { age, flags }), weighDay: weighDayOf(goal) };
+  return { calorieTarget: calc ? calc.calorieTarget : null, exTarget: exerciseTargetMinPerDay(age), waterTarget: waterTargetFor(age, flags, goal && goal.waterTarget, weightKg), sleepMinH: sleepTargetHours(age)[0], fastDays: activeFastDays(goal, { age, flags }), weighDay: weighDayOf(goal) };
 }
 
 // docs: দৈনিক ডক; dates: সাতটি ISO তারিখ; ctx: targetCtxFor()। কোনো দিনের ডক না থাকলে null (সেকশন লুকাবে)।

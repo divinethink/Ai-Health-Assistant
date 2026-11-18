@@ -103,13 +103,13 @@ export function TodaySummary({ familyId, callerMemberId, selectedMemberId, onlyM
   const age = member ? ageYears(member.dob) : null;
   const detected = detectFlagsFromConditions(records);
   const gf = (goal && goal.flags) || {};
-  const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
+  const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney, fluid: detected.fluid };
   const gate = safetyGate({ age, flags });
   const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
-  const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget);
   const water = d.waterGlasses || 0;
   const weightKg = d.weightKg || numOf(records.find((r) => isType(r, ["weight", "ওজন"])));
   const heightCm = numOf(records.find((r) => isType(r, ["height", "উচ্চতা"])));
+  const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget, weightKg);
   const bmi = bmiOf(weightKg, heightCm);
 
   const { doses, noTimeCount } = buildTodayDoses(member || { id: selectedMemberId, name: "" }, records, today, now, sanitizeTaken(d.medTaken));

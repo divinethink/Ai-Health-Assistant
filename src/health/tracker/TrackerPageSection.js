@@ -30,7 +30,7 @@ import { renderLayoutCards } from "../../shared/LayoutCards.js";
 import { FocusSheet, focusLabels } from "./FocusSheet.js";
 import { focusCtxOf, exerciseDetail, focusOptions, sanitizeFocusAreas, MAX_FOCUS } from "./homeWorkout.js";
 import { last7DatesISO, buildTrend, reviewPoints, reviewComment } from "./weeklyTrend.js";
-import { weighDayOf, countedWeighPoints, DEFAULT_WEIGH_DAY } from "./weighDay.js";
+import { weighDayOf, countedWeighPoints } from "./weighDay.js";
 import { activeMedNames } from "./medFoodNotes.js";
 import { gutEntries } from "./gutLog.js";
 import { PlanWhyCard } from "./PlanWhyCard.js";
@@ -485,17 +485,18 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- উপবাস-দিবস মোড + ব্যক্তিগত পানির লক্ষ্য (পার্ট ১০) ----------
 // fastModeGate: ব্লক নয়, শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — বয়স/রোগ-গ্রুপে ⚠ বার্তা, দিন-বাছাই সবার জন্য খোলা।
-function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved }) {
+function FastWaterCard({ goal, age, flags, weightKg, familyId, memberId, callerMemberId, onSaved }) {
   const g = goal || {};
   const gate = fastModeGate({ age, flags });
   const [days, setDays] = useState(() => sanitizeFastDays(g.fastDays));
   const [water, setWater] = useState(g.waterTarget ? String(g.waterTarget) : "");
-  const [wDay, setWDay] = useState(() => weighDayOf(g));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [ok, setOk] = useState(false);
-  const defaultWater = waterTargetFor(age, flags);
-  const waterLocked = defaultWater === null; // কিডনি/<২ বছর: ওভাররাইড চলে না
+  const defaultWater = waterTargetFor(age, flags, undefined, weightKg);
+  const tooYoung = age !== null && age !== undefined && age < 2;
+  const restricted = !tooYoung && !!(flags && (flags.kidney || flags.fluid)); // কিডনি/ডায়ালাইসিস/হার্ট/লিভার/পানি জমা: ডিফল্ট নেই, ডাক্তারের সীমা ঐচ্ছিক
+  const waterLocked = tooYoung || restricted; // <২ বছর বা পানি-সীমার রোগ: লক্ষ্য/সংখ্যা চলে না
   const toggle = (i) => { setOk(false); setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : d.length >= MAX_FAST_DAYS ? d : [...d, i].sort((a, b) => a - b))); };
 
   const submit = async () => {
@@ -505,7 +506,7 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
     if (e) { setErr(e); return; }
     setBusy(true);
     try {
-      await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: fd, waterTarget: waterLocked ? null : water, weighDay: wDay }, goal);
+      await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: fd, waterTarget: waterLocked ? null : water }, goal);
       setOk(true);
       await onSaved();
     } catch (x) {
@@ -514,29 +515,23 @@ function FastWaterCard({ goal, age, flags, familyId, memberId, callerMemberId, o
   };
 
   return React.createElement("div", { style: CARD },
-    React.createElement("b", null, "সিয়াম/ফাস্টিং, পানির লক্ষ্য ও ওজনের দিন (ঐচ্ছিক)"),
-    React.createElement("div", null,
-      gate.warn && React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, gate.reason)),
+    React.createElement("b", null, "দৈনিক পানি পানের লক্ষ্য"),
+    !waterLocked && React.createElement("div", null,
+      React.createElement("label", { style: LABEL }, "পানির লক্ষ্য (গ্লাস/দিন) — খালি রাখলে আপনার বয়স/ওজন অনুযায়ী গাইড: " + bnNum(defaultWater)),
+      React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => { setWater(e.target.value); setOk(false); }, style: INPUT }),
+      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।")),
+    waterLocked && React.createElement(Notice, null, restricted ? "⚠ আপনার ক্ষেত্রে (কিডনি/ডায়ালাইসিস/হার্ট/লিভার/শরীরে পানি জমা) পানির সীমা ডাক্তার ঠিক করেন — ডাক্তারের দেওয়া সীমা মানুন। তাই সাধারণ লক্ষ্য দেওয়া হয়নি।" : "এই বয়সে পানির পরিমাণ ডাক্তার ঠিক করেন — তাই লক্ষ্য দেওয়া যায় না।"),
+    React.createElement("details", { style: { marginTop: "10px" } },
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ ঐচ্ছিক লক্ষ্য (সিয়াম/ফাস্টিং)"),
+      React.createElement("div", null,
+        gate.warn && React.createElement("div", { style: { marginTop: "8px" } }, React.createElement(Notice, null, gate.reason)),
         React.createElement("label", { style: LABEL }, "সিয়াম/ফাস্টিং-এর দিন (সর্বোচ্চ " + bnNum(MAX_FAST_DAYS) + "টি)"),
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
           DAY_LABELS.map((lbl, i) => React.createElement("button", {
             key: i, onClick: () => toggle(i), "aria-pressed": days.includes(i), disabled: busy,
             style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid " + T.green, background: days.includes(i) ? T.green : "#fff", color: days.includes(i) ? "#fff" : T.green },
           }, lbl))),
-        React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "সিয়াম/ফাস্টিং-এর দিনে ক্যালরি-টার্গেট স্থগিত থাকে। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।")),
-    !waterLocked && React.createElement("div", null,
-      React.createElement("label", { style: LABEL }, "পানির লক্ষ্য (গ্লাস/দিন) — খালি রাখলে সাধারণ গাইড: " + bnNum(defaultWater)),
-      React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => { setWater(e.target.value); setOk(false); }, style: INPUT }),
-      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।")),
-    waterLocked && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "8px" } }, "এই ক্ষেত্রে পানির পরিমাণ ডাক্তার ঠিক করেন — তাই লক্ষ্য দেওয়া যায় না।"),
-    React.createElement("div", { style: { marginTop: "10px" } },
-      React.createElement("label", { style: LABEL }, "সাপ্তাহিক ওজনের দিন (ডিফল্ট " + DAY_LABELS[DEFAULT_WEIGH_DAY] + ")"),
-      React.createElement("div", { role: "radiogroup", "aria-label": "সাপ্তাহিক ওজনের দিন", style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-        DAY_LABELS.map((lbl, i) => React.createElement("button", {
-          key: i, type: "button", role: "radio", "aria-checked": wDay === i, onClick: () => { setWDay(i); setOk(false); }, disabled: busy,
-          style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid " + T.green, background: wDay === i ? T.green : "#fff", color: wDay === i ? "#fff" : T.green },
-        }, lbl))),
-      React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "প্রতি সপ্তাহে একদিন ওজন মাপলেই যথেষ্ট। অন্য দিনেও ওজন দেওয়া যাবে, কিন্তু ট্রেন্ডে শুধু এই দিনের ওজন ধরা হবে।")),
+        React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "সিয়াম/ফাস্টিং-এর দিনে ক্যালরি-টার্গেট স্থগিত থাকে। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।"))),
     err && ErrorBox(err),
     ok && React.createElement(Notice, { tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
     PrimaryButton("সংরক্ষণ", submit, busy));
@@ -565,7 +560,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const hasGoal = !!(g.goalType && g.calc && g.calc.calorieTarget && !safetyGate({ age, flags: { pregnant, diabetes: !!(g.flags && g.flags.diabetes) || detected.diabetes, kidney: !!(g.flags && g.flags.kidney) || detected.kidney } }).blocked);
   const [editing, setEditing] = useState(false); // সেট-করা লক্ষ্য থাকলে ফর্ম ভাঁজ; "প্ল্যান পরিবর্তন করুন" চাপলে খোলে
 
-  const flags = { pregnant, diabetes: diabetes || detected.diabetes, kidney: kidney || detected.kidney };
+  const flags = { pregnant, diabetes: diabetes || detected.diabetes, kidney: kidney || detected.kidney, fluid: detected.fluid };
   const gate = safetyGate({ age, flags });
   const needsTarget = goalType === "lose" || goalType === "gain";
   const bmi = bmiOf(weightKg, heightCm);
@@ -645,9 +640,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         line("p", "✓ মিল প্ল্যান ও ব্যায়াম প্ল্যান ট্যাবে আপনার খাবার ও ব্যায়ামের প্ল্যান তৈরি হয়েছে।"),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
-      React.createElement("details", { style: { marginTop: "8px", marginBottom: "8px" } },
-        React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানি, ওজনের দিন"),
-        React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));
+      React.createElement("div", { style: { marginTop: "8px", marginBottom: "8px" } },
+        React.createElement(FastWaterCard, { goal, age, flags, weightKg, familyId, memberId, callerMemberId, onSaved })));
   }
 
   return React.createElement("div", null,
@@ -692,9 +686,8 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
       otherConds.length > 0 && React.createElement("div", { style: HINT }, "প্রোফাইলে যে অসুখগুলো আছে সেগুলো নিজে থেকে টিক। বদলাতে: Health ▸ অসুখ।")),
     pregnant && React.createElement(Notice, { tone: "info" }, "🤰 গর্ভাবস্থা — অসুখ-তালিকা থেকে নিজে ধরা হয়েছে; মিল ও ব্যায়াম প্ল্যান সেই অনুযায়ী। বদলাতে: Health ▸ অসুখ।"),
     
-    React.createElement("details", { style: { marginBottom: "8px" } },
-      React.createElement("summary", { style: { cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center", fontSize: "14px", fontWeight: 700, color: T.green } }, "⚙ আরও সেটিং (ঐচ্ছিক) — সিয়াম/ফাস্টিং, পানি, ওজনের দিন"),
-      React.createElement(FastWaterCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })),
+    React.createElement("div", { style: { marginBottom: "8px" } },
+      React.createElement(FastWaterCard, { goal, age, flags, weightKg, familyId, memberId, callerMemberId, onSaved })),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
     result && !result.blocked && React.createElement(Notice, { tone: "info" },
@@ -742,6 +735,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         pregnant: effectivePregnant(goal, recs),
         diabetes: !!(goal && goal.flags && goal.flags.diabetes) || detected.diabetes,
         kidney: !!(goal && goal.flags && goal.flags.kidney) || detected.kidney,
+        fluid: detected.fluid,
       };
       const weightKg = (daily && daily.weightKg) || num(w);
       setData({ allergies, conds, condKeys: conditionKeysOf(recs), weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });

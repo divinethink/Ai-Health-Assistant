@@ -45,9 +45,11 @@ async function fetchTrackerWeek(familyId, memberId, member, records) {
     const [docs, goal] = await Promise.all([getWeekDaily(familyId, memberId, dates), getGoal(familyId, memberId)]);
     const detected = detectFlagsFromConditions(records);
     const gf = (goal && goal.flags) || {};
-    const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney };
+    const flags = { pregnant: effectivePregnant(goal, records), diabetes: !!gf.diabetes || detected.diabetes, kidney: !!gf.kidney || detected.kidney, fluid: detected.fluid };
+    const wr = (records || []).find((r) => r.resourceType === "observation" && ["weight", "ওজন"].includes((r.type || "").trim().toLowerCase()));
+    const wk = wr ? parseFloat(wr.value) : NaN;
     const ay = getAgeInYears(member.dob);
-    return weeklySummary(docs, dates, targetCtxFor({ age: ay === null ? null : Math.floor(ay), flags, goal })); // ট্র্যাকারের ageYears-এর মতো পূর্ণ বছর
+    return weeklySummary(docs, dates, targetCtxFor({ age: ay === null ? null : Math.floor(ay), flags, goal, weightKg: Number.isNaN(wk) ? null : wk })); // ট্র্যাকারের ageYears-এর মতো পূর্ণ বছর
   } catch (_e) {
     return null;
   }
