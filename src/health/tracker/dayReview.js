@@ -111,13 +111,15 @@ export function exerciseWeek({ weekDates, by, todayISO, target }) {
 }
 
 // গত ৭ দিন (endISO সহ): ঘুম/ক্যালরির বার-ডেটা ও আজকের রায়
-// → { dates, sleepH:[n|null], cal:[n|null], todaySleepH, todayCal, sleepAvg, sleepV, calV }
+// → { dates, sleepH:[n|null], cal:[n|null], todaySleepH, todayCal, sleepAvg, calAvg, sleepV, calV }
 export function restView({ by, endISO, calorieTarget, sleepMinH }) {
   const dates = Array.from({ length: 7 }, (_, i) => shiftISO(endISO, i - 6));
   const sleepH = dates.map((d) => { const m = by[d] && by[d].sleepMinutes; return m > 0 ? r1(m / 60) : null; });
   const cal = dates.map((d) => { const c = by[d] && by[d].caloriesIn; return c > 0 ? c : null; });
   const sl = sleepH.filter((x) => x !== null);
   const sleepAvg = sl.length ? r1(sl.reduce((a, b) => a + b, 0) / sl.length) : null;
+  const cl = cal.filter((x) => x !== null);
+  const calAvg = cl.length ? Math.round(cl.reduce((a, b) => a + b, 0) / cl.length) : null;
   const todaySleepH = sleepH[6], todayCal = cal[6];
-  return { dates, sleepH, cal, todaySleepH, todayCal, sleepAvg, sleepV: sleepVerdict(todaySleepH, sleepMinH), calV: calVerdict(todayCal, calorieTarget), hasSleep: sl.length > 0, hasCal: cal.some((x) => x !== null) };
+  return { dates, sleepH, cal, todaySleepH, todayCal, sleepAvg, calAvg, sleepV: sleepVerdict(todaySleepH, sleepMinH), calV: calVerdict(todayCal, calorieTarget), hasSleep: sl.length > 0, hasCal: cal.some((x) => x !== null) };
 }

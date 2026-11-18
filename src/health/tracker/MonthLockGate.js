@@ -1,6 +1,6 @@
 // মাসিক রিভিউ লক: মাসের শেষ দিন রাত ৯টা → পরের মাসের ৩ তারিখ রাত ১১টা খোলা; বাকি সময় চলতি মাসের গ্রাফ + ১ লাইন + লক্ষ্য।
 // শুধু দেখানোর নিয়ম — কিছু সংরক্ষণ হয় না, নতুন schema/rules নেই। হিসাব monthLock.js ও monthAdvice.js-এ (pure)।
-import { T, HOME_CARD, GRADIENT_HERO } from "./trackerTheme.js";
+import { T, HOME_CARD } from "./trackerTheme.js";
 import { bnNum } from "../../shared/dates.js";
 import { remainParts } from "./weekLock.js";
 import { monthWindow, lockLine, monthGoal, goalProgress } from "./monthLock.js";
@@ -45,17 +45,11 @@ function DayBars({ docs, y, m, ctx, today }) {
   const dates = monthDatesISO(y, m);
   const rows = monthScores(docs, y, m, ctx, today);
   const avg = rows.length ? Math.round(rows.reduce((t, r) => t + r.score, 0) / rows.length) : null;
-  const elapsed = dates.filter((d) => d <= today).length;
   const counts = levelCounts(rows);
   const BAR_H = 76;
   const label = monthName(y, m) + " মাসের দৈনিক স্কোর: " + rows.length + " দিন রেকর্ড" + (avg !== null ? ", গড় " + avg + "%" : "");
-  const chip = (l, v, extra) => h("div", { style: { flex: 1, minWidth: 0, borderRadius: "12px", padding: "8px 10px", ...extra } },
-    h("div", { style: { fontSize: "12px", opacity: 0.85 } }, l), h("div", { style: { fontSize: "18px", fontWeight: 800 } }, v));
   return h("div", null,
-    h("div", { style: { display: "flex", gap: "8px" } },
-      chip("গড় স্কোর", avg === null ? "—" : bnNum(avg) + "%", { background: GRADIENT_HERO, color: T.onDark }),
-      chip("রেকর্ড করা দিন", bnNum(rows.length) + "/" + bnNum(elapsed), { background: T.sand, color: T.ink, border: "1px solid " + T.sandBorder })),
-    h("div", { role: "img", "aria-label": label, style: { display: "flex", alignItems: "flex-end", gap: "2px", height: BAR_H + "px", marginTop: "12px" } },
+    h("div", { role: "img", "aria-label": label, style: { display: "flex", alignItems: "flex-end", gap: "2px", height: BAR_H + "px" } },
       dates.map((iso) => {
         const future = iso > today;
         const sc = future ? null : dayScore(by[iso], ctx, iso);
@@ -91,11 +85,10 @@ export function MonthLockedView({ docs, prevDocs, y, m, today, ctx, rateCtx, rem
         h("div", { style: { fontSize: "20px", fontWeight: 800, color: T.green, lineHeight: 1.3, marginTop: "2px" } },
           goal ? goal.label + (goal.pct !== null ? " — গত মাসে " + bnNum(goal.pct) + "%" : "") : "সব ঠিক আছে — এভাবেই চালিয়ে যান"),
         goal && h("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6, marginTop: "4px" } }, bnDigits(goal.action))),
-      h("div", { key: "k", style: { display: "flex", alignItems: "center", gap: "12px", background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "18px", padding: "12px 14px", marginTop: "10px" } },
-        h("span", { "aria-hidden": "true", style: { fontSize: "30px", flexShrink: 0 } }, "🔒"),
-        h("div", { style: { minWidth: 0 } },
-          h("div", { style: { fontSize: "16px", fontWeight: 800, color: T.ink } }, bnNum(lastDay) + " " + monthName(y, m) + " রাত ৯টায় খুলবে"),
-          h("div", { style: { fontSize: "13.5px", color: T.muted, lineHeight: 1.5, marginTop: "2px" } }, "আর " + remainText(remainMs) + " বাকি · পুরো মাসের রিভিউ, মনোযোগের জায়গা ও প্রতিকার তখন দেখা যাবে"))),
+      h("div", { key: "k", style: { display: "flex", alignItems: "center", gap: "10px", background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "14px", padding: "8px 12px", marginTop: "10px" } },
+        h("span", { "aria-hidden": "true", style: { fontSize: "20px", flexShrink: 0 } }, "🔒"),
+        h("div", { style: { minWidth: 0, fontSize: "14px", fontWeight: 800, color: T.ink, lineHeight: 1.4 } }, bnNum(lastDay) + " " + monthName(y, m) + " রাত ৯টায় খুলবে",
+          h("span", { style: { fontSize: "12.5px", fontWeight: 400, color: T.muted } }, " · আর " + remainText(remainMs)))),
       h("div", { key: "f", style: { fontSize: "12px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, "শুধু আপনার দেওয়া তথ্য থেকে। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"),
     ]));
 }

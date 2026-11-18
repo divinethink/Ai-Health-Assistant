@@ -20,19 +20,19 @@ const para = (txt, extra) => h("div", { style: { fontSize: "14px", color: T.ink,
 const note = (txt) => h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5, marginTop: "8px" } }, txt);
 
 // ১) দিনের রিভিউ: আজ কমপক্ষে ৩টি বিষয়ে তথ্য থাকলে আজকের; নইলে সর্বশেষ যোগ্য দিনের (গতকাল ইত্যাদি)
-// props: review (dayReview ফল | null), label ("আজকের রিভিউ" ইত্যাদি), pending (আজের জন্য বাকি-বার্তা | null), onGoInput
-export function DayReviewCard({ review, label, pending, onGoInput }) {
-  const goBtn = onGoInput && h("button", { key: "b", type: "button", onClick: onGoInput, style: { minHeight: "48px", padding: "0 18px", borderRadius: "14px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: "10px" } }, "আজকের তথ্য দিন");
+// props: review (dayReview ফল | null), label ("আজকের রিভিউ" ইত্যাদি), dateText (শিরোনামের নিচের তারিখ-লাইন), pending (আজের জন্য বাকি-বার্তা | null)
+// embedded = true হলে আলাদা কার্ড নয়; হিটম্যাপ-কার্ডের ভেতরে ভাগ হয়ে বসে।
+export function DayReviewCard({ review, label, dateText, pending, embedded }) {
+  const wrap = (kids) => embedded ? h("div", { style: { borderTop: "1px solid " + T.border, marginTop: "14px", paddingTop: "14px" } }, kids) : card(kids);
   if (!review || !review.hasData) {
-    return card([
+    return wrap([
       h("div", { key: "t" }, title("রিভিউ", "কমপক্ষে " + bnNum(MIN_INPUTS) + "টি বিষয়ে তথ্য দিলে রিভিউ আসবে — খাবার, ব্যায়াম, ঘুম, পানি", "🌙")),
-      goBtn,
     ]);
   }
   const row = (it, good) => h("div", { key: it.key, style: { display: "flex", gap: "8px", fontSize: "14.5px", color: T.ink, lineHeight: 1.6, marginTop: "4px" } },
     h("span", { "aria-hidden": "true", style: { color: good ? T.green : WARN, flexShrink: 0 } }, good ? "✓" : "▼"), h("span", null, it.text));
-  return card([
-    h("div", { key: "t" }, title(review.final ? label : label + " (সাময়িক)", review.final ? "ওই দিনের দেওয়া তথ্য থেকে" : "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে", "🌙")),
+  return wrap([
+    h("div", { key: "t" }, title(review.final ? label : label + " (সাময়িক)", review.final ? dateText : "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে", "🌙")),
     review.good.length > 0 && h("div", { key: "g", style: { marginTop: "2px" } },
       h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: T.green } }, "ভালো হয়েছে"), review.good.map((x) => row(x, true))),
     review.improve.length > 0 && h("div", { key: "i", style: { marginTop: "10px" } },
@@ -40,8 +40,6 @@ export function DayReviewCard({ review, label, pending, onGoInput }) {
     !review.good.length && !review.improve.length && h("div", { key: "e" }, para("এই দিনের তথ্য থেকে বিচার করার মতো লক্ষ্য নেই।")),
     review.tomorrow && h("div", { key: "tm", style: { background: T.track, borderRadius: "14px", padding: "10px 12px", marginTop: "10px", fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, "💡 " + review.tomorrow),
     pending && h("div", { key: "p", style: { fontSize: "13.5px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, pending),
-    pending && goBtn,
-    h("div", { key: "n" }, note("শুধু আপনার দেওয়া তথ্য থেকে। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।")),
   ]);
 }
 
@@ -95,6 +93,7 @@ export function SleepCalCard({ rv, calorieTarget, sleepRange }) {
       chart: rv.hasSleep ? h(TrendBars, { labels, values: rv.sleepH, target: sMin, color: "#6B5BD2", width: 320 }) : null }),
     showCal && h("div", { key: "d", style: { height: "1px", background: T.border, margin: "8px 0" } }),
     showCal && h(Block, { key: "c", head: "ক্যালরি", big: rv.todayCal !== null ? bnNum(rv.todayCal) : "—", unit: "/ " + bnNum(calorieTarget) + " kcal (আজ)", verdict: rv.calV,
+      sub: rv.calAvg !== null ? "৭ দিনের গড় " + bnNum(rv.calAvg) + " kcal" : null,
       chart: rv.hasCal ? h(TrendBars, { labels, values: rv.cal, target: calorieTarget, color: "#E0A100", width: 320 }) : null }),
   ]);
 }

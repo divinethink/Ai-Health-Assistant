@@ -68,26 +68,6 @@ function monthGridCells(y, m) {
   return Array.from({ length: total }, (_, i) => { const d = i - lead + 1; return d >= 1 && d <= n ? { day: d, iso: y + "-" + p2(m + 1) + "-" + p2(d) } : null; });
 }
 
-function DayDetail({ date, doc, score }) {
-  const lines = [];
-  if (score !== null && score !== undefined) lines.push("স্কোর: " + bnNum(score) + "% (" + LEVEL_LABELS[scoreLevel(score)] + ")");
-  if (doc) {
-    if (doc.weightKg > 0) lines.push("ওজন: " + bnNum(doc.weightKg) + " কেজি");
-    if (doc.caloriesIn > 0) lines.push("ক্যালরি: " + bnNum(Math.round(doc.caloriesIn)) + " kcal");
-    if ((doc.exerciseMin || 0) > 0) lines.push("ব্যায়াম: " + bnNum(doc.exerciseMin) + " মিনিট");
-    if (doc.sleepMinutes > 0) lines.push("ঘুম: " + bnNum(Math.round((doc.sleepMinutes / 60) * 10) / 10) + " ঘণ্টা");
-    if ((doc.waterGlasses || 0) > 0) lines.push("পানি: " + bnNum(doc.waterGlasses) + " গ্লাস");
-    if ((doc.steps || 0) > 0) lines.push("স্টেপ: " + bnNum(doc.steps));
-  }
-  const d = new Date(date + "T00:00:00");
-  const head = d.toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" });
-  return React.createElement("div", { "aria-live": "polite", style: { marginTop: "10px", padding: "10px 12px", borderRadius: "12px", background: T.canvas, border: "1px solid " + T.border } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: T.ink } }, head),
-    lines.length ? lines.map((l, i) => React.createElement("div", { key: i, style: { fontSize: "14px", color: T.ink, marginTop: "3px" } }, l))
-      : React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "3px" } }, "এই দিনে কোনো রেকর্ড নেই।"),
-    React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "এটি শুধু দেখার জন্য। পুরনো দিনের তথ্য বদলাতে Home-এর তারিখ-বাছাই ব্যবহার করুন।"));
-}
-
 // ⓘ — স্কোর কীভাবে হয় ও রঙের মানে (Daily Task-এর মতো)
 function ScoreInfo({ onClose }) {
   const rowsL = [[4, "৮০% থেকে ১০০%", "চমৎকার"], [3, "৬০% থেকে ৭৯%", "ভালো"], [2, "৪০% থেকে ৫৯%", "মাঝারি"], [1, "১% থেকে ৩৯%", "কম"], [0, "কোনো এন্ট্রি নেই", "খালি"]];
@@ -102,7 +82,7 @@ function ScoreInfo({ onClose }) {
       React.createElement("button", { type: "button", onClick: onClose, style: { width: "100%", minHeight: "46px", borderRadius: "14px", border: "none", background: T.track, color: T.green, fontSize: "15px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" } }, "বুঝেছি")));
 }
 
-function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove }) {
+function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove, below }) {
   const by = {};
   (docs || []).forEach((d) => { if (d && d.date) by[d.date] = d; });
   const [t0, setT0] = useState(null);
@@ -161,7 +141,7 @@ function HeatCalendar({ ym, docs, ctx, today, sel, onSel, onMove }) {
     rows.length < MIN_FILLED && React.createElement("div", { key: "m", style: { marginTop: "8px", fontSize: "13px", color: T.ink, background: T.canvas, border: "1px solid " + T.border, borderRadius: "10px", padding: "8px 10px" } },
       "আরও " + bnNum(MIN_FILLED - rows.length) + " দিন লিখলে তুলনা আসবে। ছোট ছোট এন্ট্রিই যথেষ্ট।"),
     React.createElement("div", { key: "n", style: { fontSize: "12px", color: T.muted, marginTop: "6px", textAlign: "center" } }, "ডানে-বাঁয়ে টেনে মাস বদলান · রং = ওই দিনের স্কোর"),
-    selInMonth && React.createElement(DayDetail, { key: "d", date: selInMonth, doc: by[selInMonth], score: dayScore(by[selInMonth], ctx, selInMonth) }),
+    below && React.createElement(React.Fragment, { key: "rv" }, below),
   ]);
 }
 
@@ -313,12 +293,17 @@ export function TrendRanges({ info, familyId, memberId, weekView, dayExtras }) {
       const tc = countInputs(dayBy[today], rateCtx, today);
       const left = Math.max(1, (tc.need || 3) - tc.count);
       const pending = pick && nm !== "today" ? "আজ আরও " + bnNum(left) + "টি বিষয়ে তথ্য দিলে আজকের রিভিউ দেখাবে।" : null;
-      return [React.createElement(DayReviewCard, { review: pick ? dayReview({ doc: pick.doc, ctx: rateCtx, date: pick.date, now: new Date(), bn: bnNum, isToday: nm === "today" }) : null, label, pending, onGoInput: dx.onGoInput })];
+      const dateText = pick ? (nm === "today" ? "আজকের চিত্র: " : nm === "yesterday" ? "গতকালের চিত্র: " : "চিত্র: ") + new Date(pick.date + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" }) : null;
+      return [React.createElement(DayReviewCard, { embedded: true, review: pick ? dayReview({ doc: pick.doc, ctx: rateCtx, date: pick.date, now: new Date(), bn: bnNum, isToday: nm === "today" }) : null, label, dateText, pending })];
     },
     exBox: () => [React.createElement(ExerciseBoxCard, { wk: exerciseWeek({ weekDates: weekDatesISO(), by: dayBy, todayISO: today, target: dx.weeklyTarget }) })],
     sleepCal: () => [React.createElement(SleepCalCard, { rv: restView({ by: dayBy, endISO: today, calorieTarget: dx.calorieTarget, sleepMinH: rateCtx.sleepMinH }), calorieTarget: dx.calorieTarget, sleepRange: dx.sleepRange })],
   };
-  const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)], ...dayNodes };
+  // দিনের রিভিউ এখন হিটম্যাপ-কার্ডেরই অংশ (ডিজাইনে "দিনের রিভিউ" দৃশ্যমান থাকলে)
+  const reviewOn = (topLayout.find((c) => c.id === "dayReview") || {}).visible;
+  const { dayReview: dayReviewNode, ...otherDayNodes } = dayNodes;
+  const below = reviewOn && dayReviewNode ? dayReviewNode()[0] : null;
+  const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move, below }) : Skeleton(1, 260)], ...otherDayNodes };
   return React.createElement("div", null,
     err && ErrorBox(err),
     ...renderLayoutCards("trend", "top", topLayout, heatNodes),
