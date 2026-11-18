@@ -10,6 +10,8 @@ import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { ReviewCards } from "./ReviewCards.js";
 import { WeekLockGate } from "./WeekLockGate.js";
+import { MonthLockGate, MonthLockedView, MonthOpenNote, MonthAttentionCard } from "./MonthLockGate.js";
+import { monthWindow } from "./monthLock.js";
 import { swipeDelta } from "./dateNav.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
@@ -248,7 +250,8 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const today = todayISO();
   const three = lastNMonths(new Date(), 3);
   const topLayout = useAppDesign("trend").top;
-  const [ym, setYm] = useState(three[2]);
+  // মাসিক রিভিউ খোলা থাকলে (১–৩ তারিখ) শুরুতে আগের মাস; নইলে চলতি মাস
+  const [ym, setYm] = useState(() => { const w = monthWindow(new Date()); return (w.open && three.find((x) => x.y === w.y && x.m === w.m)) || three[2]; });
   const [sel, setSel] = useState(today);
   const prevYm = shiftMonth(ym, -1) !== ym ? shiftMonth(ym, -1) : null; // আগের মাসের তুলনার জন্য
   const need = [...three];
@@ -271,14 +274,24 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const title = (t) => React.createElement("div", { style: { textAlign: "center", fontSize: "19px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "22px 0 10px" } }, t);
   // সাপ্তাহিক রিভিউ: বৃহস্পতি রাত ৯টা–শনি রাত ১১টা খোলা, বাকি সময় লক-সারাংশ (WeekLockGate)
   const weekBody = React.createElement(WeekLockGate, { docs: allDocs, scoreCtx: ctx, rateCtx, ready: reviewReady, weekView, skeleton: Skeleton(1, 120), gutEntries: info.gutEntries || [], showGut: false });
-  const monthBody = !ready ? Skeleton(2, 120) : (() => {
+  // মাসিক রিভিউ: মাসের শেষ দিন রাত ৯টা–পরের মাসের ৩ তারিখ রাত ১১টা খোলা (MonthLockGate); বাকি সময় চলতি মাসের গ্রাফ + লক্ষ্য
+  const renderMonthOpen = (w) => !ready ? Skeleton(2, 120) : (() => {
     const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
+    const endISO = monthEnd < today ? monthEnd : today;
+    const st = monthStats(ymDocs, ym.y, ym.m, rateCtx, today);
+    const prevSt = prevDocs && prevYm ? monthStats(prevDocs, prevYm.y, prevYm.m, rateCtx, today) : null;
     return React.createElement("div", null,
-      review(true, monthEnd < today ? monthEnd : today),
+      React.createElement(MonthOpenNote, { w }),
+      review(true, endISO),
       React.createElement(InsightCard, { ins }),
+      React.createElement(MonthAttentionCard, { st, prevSt, monthDocs: ymDocs, docs: allDocs, endISO, rateCtx }),
       React.createElement(MetricCompareCard, { metrics: ins.metrics, ym }),
       React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
   })();
+  const renderMonthLocked = (w) => !reviewReady ? Skeleton(1, 160) : React.createElement(MonthLockedView, {
+    docs: cache[monthKey(three[2].y, three[2].m)], prevDocs: cache[monthKey(three[1].y, three[1].m)], y: three[2].y, m: three[2].m,
+    today, ctx, rateCtx, remainMs: w.remainMs, lastDay: w.lastDay });
+  const monthBody = React.createElement(MonthLockGate, { renderOpen: renderMonthOpen, renderLocked: renderMonthLocked });
   const quarterBody = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, {
     list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, rateCtx, today)),
     avgs: monthlyAverages(three, (y, m) => cache[monthKey(y, m)], ctx, today) });
