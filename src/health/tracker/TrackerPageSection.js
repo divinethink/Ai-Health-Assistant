@@ -486,11 +486,15 @@ function MealPlanTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 // ---------- ঐচ্ছিক লক্ষ্য: সিয়াম/ফাস্টিং (ভাঁজযোগ্য) ----------
 // fastModeGate: ব্লক নয়, শুধু সতর্কতা (Approved Deviation ১০ নভেম্বর ২০২৬) — বয়স/রোগ-গ্রুপে ⚠ বার্তা, দিন-বাছাই সবার জন্য খোলা।
 // পানির লক্ষ্য এখন লক্ষ্য-ফর্মের ধাপ (GoalTab); এখানে সেভের সময় আগের waterTarget অক্ষত রাখা হয়।
-function FastCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved }) {
+// value/onChange দিলে (লক্ষ্য-ফর্মের ভেতরে) দিনগুলো ফর্মের অংশ — 'প্ল্যান বানান'-এর সাথে সেভ; না দিলে নিজের সেভ-বাটন।
+function FastCard({ goal, age, flags, familyId, memberId, callerMemberId, onSaved, value, onChange }) {
   const g = goal || {};
   const gate = fastModeGate({ age, flags });
   const [open, setOpen] = useState(false);
-  const [days, setDays] = useState(() => sanitizeFastDays(g.fastDays));
+  const controlled = typeof onChange === "function";
+  const [localDays, setLocalDays] = useState(() => sanitizeFastDays(g.fastDays));
+  const days = controlled ? value : localDays;
+  const setDays = controlled ? onChange : setLocalDays;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [ok, setOk] = useState(false);
@@ -523,9 +527,11 @@ function FastCard({ goal, age, flags, familyId, memberId, callerMemberId, onSave
             style: { minHeight: "44px", padding: "8px 12px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, border: "1px solid " + T.green, background: days.includes(i) ? T.green : "#fff", color: days.includes(i) ? "#fff" : T.green },
           }, lbl))),
         React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px", lineHeight: 1.5 } }, "সিয়াম/ফাস্টিং-এর দিনে ক্যালরি-টার্গেট স্থগিত থাকে। শরীর খারাপ লাগলে সিয়াম/ফাস্টিং ভাঙুন ও ডাক্তারের পরামর্শ নিন।"),
-      err && ErrorBox(err),
-      ok && React.createElement(Notice, { tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
-      PrimaryButton("সংরক্ষণ", submit, busy)));
+      controlled
+        ? React.createElement("div", { style: { fontSize: "12px", color: T.muted, marginTop: "6px" } }, "‘প্ল্যান বানান’ চাপলে এটিও প্ল্যানের সাথে সংরক্ষিত হবে।")
+        : [err && ErrorBox(err),
+          ok && React.createElement(Notice, { key: "ok", tone: "info" }, "সংরক্ষিত হয়েছে ✓"),
+          PrimaryButton("সংরক্ষণ", submit, busy)]));
 }
 
 const WEEK_CHOICES = [4, 8, 12, 20];
@@ -545,6 +551,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [diabetes, setDiabetes] = useState(!!(g.flags && g.flags.diabetes) || detected.diabetes);
   const [kidney, setKidney] = useState(!!(g.flags && g.flags.kidney) || detected.kidney);
   const [water, setWater] = useState(g.waterTarget ? String(g.waterTarget) : ""); // দৈনিক পানির লক্ষ্য (ঐচ্ছিক; খালি = ডিফল্ট)
+  const [fastDays, setFastDays] = useState(() => sanitizeFastDays(g.fastDays)); // ঐচ্ছিক সিয়াম/ফাস্টিং দিন — প্ল্যানের অংশ
   const [focus, setFocus] = useState(() => sanitizeFocusAreas(g.focusAreas, member && member.sex).filter((x) => x !== "muscle")); // শরীরের টার্গেট (ঐচ্ছিক, ≤৩) — ব্যায়াম-প্ল্যানে যায়
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -566,7 +573,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const submit = useCallback(async () => {
     setErr(null); setResult(null);
     const base = { goalType: goalType || null, activity: goalType ? activity : null, targetWeightKg: target, weeks, flags };
-    const wErr = waterLocked ? null : checkWaterTargetInput(water);
+    const wErr = (waterLocked ? null : checkWaterTargetInput(water)) || checkFastDaysInput(fastDays, { age, flags });
     if (wErr) { setErr(wErr); return; }
     setBusy(true);
     try {
@@ -585,7 +592,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           const canFocusNow = age !== null && age >= 18 && !pregnant;
           const nextFocus = canFocusNow ? sanitizeFocusAreas(focus, member && member.sex).filter((x) => x !== "muscle") : cur;
           if (nextFocus.length !== cur.length || nextFocus.some((x) => !cur.includes(x))) await saveFocusAreas(familyId, memberId, callerMemberId, nextFocus, goal || {}); // আমার-এডিট-করা ব্যায়াম অক্ষত
-          await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays: sanitizeFastDays(g.fastDays), waterTarget: waterLocked ? null : water }, goal || {}); // আগের সিয়াম-দিন অক্ষত
+          await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget: waterLocked ? null : water }, goal || {});
           setResult(calc); setEditing(false);
         }
       }
@@ -593,7 +600,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     } catch (x) {
       setErr(x.code === "permission-denied" ? "এই সদস্যের লক্ষ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x)));
     } finally { setBusy(false); }
-  }, [goalType, activity, target, weeks, water, waterLocked, focus, pregnant, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
+  }, [goalType, activity, target, weeks, water, waterLocked, fastDays, focus, pregnant, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
 
   // টিক-কার্ড: পুরো কার্ড ট্যাপযোগ্য; প্রোফাইল থেকে ধরা পড়লে লক
   const tile = (label, val, setter, locked) => React.createElement("button", { role: "checkbox", "aria-checked": !!val, disabled: locked, onClick: () => setter(!val),
@@ -636,10 +643,12 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
         line("k", ["দৈনিক টার্গেট: ", React.createElement("b", { key: "b", style: { fontSize: "16px" } }, bnNum(gc.calorieTarget) + " কিলোক্যালরি")]),
         gc.tdee && line("t", "ওজন ঠিক রাখতে প্রায় " + bnNum(gc.tdee) + " কিলোক্যালরি (কার্যকলাপ: " + (ACTIVITY_LABELS[g.activity] || "—") + ")"),
         gc.weeklyRateKg ? line("r", "প্রতি সপ্তাহে প্রায় " + bnNum(gc.weeklyRateKg) + " কেজি") : null,
+        sanitizeFastDays(g.fastDays).length > 0 && line("f", "সিয়াম/ফাস্টিং: " + sanitizeFastDays(g.fastDays).map((i) => DAY_LABELS[i]).join(", ")),
         line("p", "✓ মিল প্ল্যান ও ব্যায়াম প্ল্যান ট্যাবে আপনার খাবার ও ব্যায়ামের প্ল্যান তৈরি হয়েছে।"),
         notes.map((n, i) => React.createElement("div", { key: "n" + i, style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, n))),
       SecondaryButton("✎ প্ল্যান পরিবর্তন করুন", () => { setEditing(true); setResult(null); }, false),
-      React.createElement("div", { style: { marginTop: "8px", marginBottom: "8px" } },
+      // সিয়াম/ফাস্টিং প্ল্যানে দেওয়া থাকলে নিচে আর দেখানো হয় না; না থাকলে ঐচ্ছিক ভাঁজযোগ্য কার্ড
+      sanitizeFastDays(g.fastDays).length === 0 && React.createElement("div", { style: { marginTop: "8px", marginBottom: "8px" } },
         React.createElement(FastCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved })));
   }
 
@@ -692,7 +701,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           React.createElement("label", { style: LABEL }, "গ্লাস/দিন — খালি রাখলে আপনার বয়স/ওজন অনুযায়ী গাইড: " + bnNum(defaultWater)),
           React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => setWater(e.target.value), style: INPUT }),
           React.createElement("div", { style: HINT }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।"))),
-    React.createElement(FastCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved }),
+    React.createElement(FastCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved, value: fastDays, onChange: setFastDays }),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
     result && !result.blocked && React.createElement(Notice, { tone: "info" },
