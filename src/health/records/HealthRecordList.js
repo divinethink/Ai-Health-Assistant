@@ -114,7 +114,7 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     React.createElement("h4", { style: { margin: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A" } }, text),
     React.createElement("span", { style: { fontSize: "11.5px", fontWeight: 600, color: MUTED, background: "#E9F0EC", borderRadius: "999px", padding: "2px 10px" } }, n));
   // স্বাস্থ্য প্রোফাইল পাতার কার্ড: অসুস্থতা/অ্যালার্জি একেকটি কার্ডে (শিরোনাম + চিপ), ওষুধ-কার্ডের সাথে মেলানো; কার্ডের মাঝে সমান ১০px ফাঁক
-  const pageCard = (children) => React.createElement("div", { style: { background: "#F3FAF6", border: "1px solid #D9E5DE", borderRadius: "16px", padding: "10px 12px 12px", marginBottom: "10px", boxShadow: "0 1px 3px rgba(14,75,67,0.05)" } }, children);
+  const pageCard = (children, compact) => React.createElement("div", { style: { background: "#F3FAF6", border: "1px solid #D9E5DE", borderRadius: "16px", padding: compact ? "7px 10px 8px" : "10px 12px 12px", marginBottom: "10px", boxShadow: "0 1px 3px rgba(14,75,67,0.05)" } }, children);
   const cardTitle = (text, n) => React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 0 8px" } },
     React.createElement("h4", { style: { margin: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A" } }, text),
     React.createElement("span", { style: { fontSize: "11.5px", fontWeight: 600, color: MUTED, background: "#E4EEE8", borderRadius: "999px", padding: "2px 10px" } }, n));
@@ -239,11 +239,11 @@ export function HealthRecordList({ familyId, targetMemberId, callerMemberId, ref
     const cnt = obsGroups.length;
     // অসুখ = ছোট চিপ (নাম + স্ট্যাটাস-ডট); লম্বা-ছোট নাম অনুযায়ী এক লাইনে ২–৩টি, ট্যাপে আগের বিস্তারিত-শিট (ডাক্তার/নোট/গাইড/✎/🗑)।
     const condChip = (r) => { const on = r.status === "active" || r.status === "chronic"; return React.createElement("button", { key: r.id, type: "button", onClick: () => toggle(r.id), "aria-haspopup": "dialog", "aria-label": r.name + " — " + t("st." + (r.status || "active")),
-      style: { display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", maxWidth: "100%", padding: "8px 14px", borderRadius: "999px", border: "1px solid " + LINE, background: "#fff", color: "#1F2D2A", fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
-      React.createElement("span", { "aria-hidden": "true", style: { width: "9px", height: "9px", flexShrink: 0, borderRadius: "50%", background: on ? "#2FAE6B" : "#B7C3BD" } }),
-      React.createElement("span", { style: { overflowWrap: "anywhere", lineHeight: 1.25 } }, r.name)); };
+      style: { display: "inline-flex", alignItems: "center", gap: "6px", minHeight: "40px", maxWidth: "100%", padding: "4px 12px", borderRadius: "999px", border: "1px solid " + LINE, background: "#fff", color: "#1F2D2A", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" } },
+      React.createElement("span", { "aria-hidden": "true", style: { width: "8px", height: "8px", flexShrink: 0, borderRadius: "50%", background: on ? "#2FAE6B" : "#B7C3BD" } }),
+      React.createElement("span", { style: { overflowWrap: "anywhere", lineHeight: 1.2 } }, r.name)); };
     return React.createElement("div", { style: { marginTop: "2px" } },
-      conditions.length > 0 && pageCard([cardTitle(L("অসুস্থতা", "Conditions"), digits(conditions.length) + L("টি", "")), React.createElement("div", { key: "c", style: { display: "flex", flexWrap: "wrap", gap: "8px" } }, conditions.map(condChip))]),
+      conditions.length > 0 && pageCard([cardTitle(L("অসুস্থতা", "Conditions"), digits(conditions.length) + L("টি", "")), React.createElement("div", { key: "c", style: { display: "flex", flexWrap: "wrap", gap: "6px" } }, conditions.map(condChip))], true),
       allergies.length > 0 && pageCard([cardTitle(L("অ্যালার্জি", "Allergies"), digits(allergies.length) + L("টি", "")), React.createElement("div", { key: "a", style: grid2 }, allergies.map(allergyCard))]),
       middleSlot || null, // অসুস্থতা-চিপ ও ওষুধ-কার্ডের মাঝে স্ট্যান্ডার্ড ফাঁক (owner-request ২০২৬-১১-১৭)
       React.createElement("div", { style: { marginTop: "14px" } },

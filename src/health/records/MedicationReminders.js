@@ -370,7 +370,7 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
         h("span", { style: { display: "inline-flex", alignItems: "center", gap: "6px" } }, Icon("pill", { size: 18 }), L("আজকের ওষুধ — ", "Today's medicines — ") + bn(takenCount) + "/" + bn(doses.length) + L(" খাওয়া হয়েছে", " taken")), h("span", null, todayOpen ? "▲" : "▼")),
       takenErr && h("div", { style: { marginTop: "8px", padding: "8px 10px", borderRadius: "10px", background: "#FBE3E1", color: "#B3261E", fontSize: "13px" } }, takenErr),
       todayOpen && h("div", { style: { marginTop: "10px" } },
-        h(DoseGrid, { doses: doses.map((d) => ({ key: d.key, time: d.time, name: d.m.genericName, meal: d.m.mealTiming && d.m.mealTiming !== "any" ? MEAL_LABELS[d.m.mealTiming] : "", taken: !!taken[d.key], due: d.time < nowHHMM, memberName: members.length > 1 ? d.m.memberName : "", memberId: d.m.memberId })),
+        h(DoseGrid, { doses: doses.map((d) => ({ key: d.key, time: d.time, name: d.m.genericName, meal: d.m.mealTiming && d.m.mealTiming !== "any" ? MEAL_LABELS[d.m.mealTiming] : "", taken: !!taken[d.key], due: d.time < nowHHMM, memberId: d.m.memberId })),
           onToggle: (d) => toggleTaken(d.key, d.memberId) }))),
 
     // নতুন ওষুধ যোগ

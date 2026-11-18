@@ -89,10 +89,10 @@ const ghostBtn = (label, onClick, busy, disabled) => React.createElement("button
 }, label);
 
 // খাবার খোঁজা: নাম-সার্চ + গ্রুপ-পিল; এলার্জির খাবারও আসে, লাল কার্ড+⚠ সতর্কতা (ব্লক নয়)। শুধু দেখানো ও ট্যাপ — হিসাব foodCatalog/planPrefs-এ।
-// props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক)
+// props: allergyTags, onPick(key), blockedNote (ঐচ্ছিক), selected (ঐচ্ছিক: বাছা খাবারের key-তালিকা — list-বিন্যাসে ✓ ও সবুজ ধার দেখায়)
 // খাবার-পেজের স্কোপড CSS: পিল-সারির স্ক্রলবার-রেখা লুকানো + সার্চ-ঘরে আইকনের জায়গা (index.html-এর !important padding ছাপিয়ে)
 export const FOOD_CSS = ".hs-fp-pills>div{scrollbar-width:none;-ms-overflow-style:none}.hs-fp-pills>div::-webkit-scrollbar{display:none}input.hs-fp-search{padding-left:46px!important;border-radius:18px!important;min-height:52px;border:1px solid rgba(127,150,140,.30)!important;box-shadow:0 4px 14px rgba(14,75,67,.08)}input.hs-fp-search:focus{border-color:var(--hs-primary,#0E4B43)!important;box-shadow:0 0 0 3px rgba(14,75,67,.14)}";
-export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between }) {
+export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, between, selected }) {
   const [q, setQ] = useState("");
   const [grp, setGrp] = useState("");
   const LV = { green: 0, yellow: 1, red: 2 }; // সবুজ → হলুদ → লাল (স্টেবল সর্ট; দলের ভেতরে আগের ক্রম)
@@ -118,10 +118,11 @@ export function FoodPicker({ allergyTags, avoidCtx, onPick, onEdit, layout, betw
       found.map(({ key, f, allergy }) => {
         const st = foodStatus(key, f, { allergyTags, ctx: avoidCtx }); const sc = STATUS_COLORS[st.level];
         const n = hasFoodOverride(key) ? null : per100Of(key);
+        const sel = !!(selected && selected.indexOf(key) >= 0);
         const ok = st.level === "green"; // ঠিক খাবার: সাদা কার্ড + খালি হালকা বৃত্ত ("বেছে নিন" ভাব); হলুদ/লাল সতর্কতা আগের মতো স্পষ্ট
         return React.createElement("button", { key, onClick: () => onPick(key), title: st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : ""),
-          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "60px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "18px", border: "1px solid " + (ok ? "rgba(127,150,140,0.16)" : sc.border), background: ok ? "#fff" : sc.bg, color: "#1F2D2A", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 6px 16px rgba(14,75,67,0.07)" } },
-          React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", flexShrink: 0, boxSizing: "border-box", borderRadius: "50%", border: ok ? "2px solid #D3DFD8" : "none", background: ok ? "#fff" : sc.border, color: sc.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 } }, ok ? "" : st.icon),
+          style: { display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "60px", padding: "8px 12px", boxSizing: "border-box", textAlign: "left", cursor: "pointer", fontFamily: "inherit", borderRadius: "18px", border: sel ? "1.5px solid " + GREEN : "1px solid " + (ok ? "rgba(127,150,140,0.16)" : sc.border), background: sel ? "#E4F1E9" : ok ? "#fff" : sc.bg, color: "#1F2D2A", boxShadow: "0 1px 2px rgba(14,75,67,0.05), 0 6px 16px rgba(14,75,67,0.07)" } },
+          React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", flexShrink: 0, boxSizing: "border-box", borderRadius: "50%", border: sel ? "none" : ok ? "2px solid #D3DFD8" : "none", background: sel ? GREEN : ok ? "#fff" : sc.border, color: sel ? "#fff" : sc.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", fontWeight: 800 } }, sel ? "✓" : ok ? "" : st.icon),
           React.createElement("span", { style: { flex: 1, minWidth: 0 } },
             React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 700 } }, f.n, React.createElement("span", { style: { fontWeight: 500, fontSize: "12.5px", color: MUTED } }, " · " + foodEnglish(key, f)),
               hasFoodOverride(key) && React.createElement("span", { style: POS_CHIP }, "আমার"), allergy && React.createElement("span", { style: ALLERGY_CHIP }, "⚠ অ্যালার্জি"),

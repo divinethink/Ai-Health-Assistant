@@ -463,7 +463,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
 
     foodOpen && canLog && React.createElement(FoodLogSheet, {
       dateText, slots: slotsForDay(plannedFast, dayDoc), initialSlot: foodSlot || fastDefaultSlot(plannedFast), pickFirst: foodSlot === null, allergyTags: info.allergyTags, avoidCtx: { age: info.age, flags: info.flags, condKeys: info.condKeys }, activeMeds: info.activeMeds,
-      count: editIdx !== null ? extras.length - 1 : extras.length, editEntry: editIdx !== null ? extras[editIdx] : null, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras(editIdx !== null ? extras.map((x, i) => (i === editIdx ? entry : x)) : [...extras, entry]), onClose: closeFood,
+      count: editIdx !== null ? extras.length - 1 : extras.length, editEntry: editIdx !== null ? extras[editIdx] : null, slotBudgets: slotBudgets(plan, eatenIds, extras, budgetTarget), recent: recentFoodEntries(info.recent, { days: 30, limit: 8 }), busy, err: foodErr, onAdd: (entry) => writeExtras(editIdx !== null ? extras.map((x, i) => (i === editIdx ? entry : x)) : [...extras, entry]), onAddMany: (entries) => writeExtras([...extras, ...entries]), onClose: closeFood,
     }),
 
 
