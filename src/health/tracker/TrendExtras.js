@@ -10,8 +10,8 @@ import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { ReviewCards } from "./ReviewCards.js";
 import { WeekLockGate } from "./WeekLockGate.js";
-import { DayReviewCard, ExerciseBoxCard, SleepCalCard, AlertsCard } from "./TodayReviewCards.js";
-import { dayReview, exerciseWeek, restView, alertList } from "./dayReview.js";
+import { DayReviewCard, ExerciseBoxCard, SleepCalCard } from "./TodayReviewCards.js";
+import { dayReview, exerciseWeek, restView, pickReviewDay, countInputs } from "./dayReview.js";
 import { weekDatesISO } from "./exercisePlanData.js";
 import { MonthLockGate, MonthLockedView, MonthOpenNote, MonthAttentionCard } from "./MonthLockGate.js";
 import { monthWindow } from "./monthLock.js";
@@ -305,10 +305,18 @@ export function TrendRanges({ info, familyId, memberId, weekView, dayExtras }) {
   const dayBy = {};
   allDocs.forEach((d) => { if (d && d.date) dayBy[d.date] = d; });
   const dayNodes = !reviewReady ? {} : {
-    dayReview: () => [React.createElement(DayReviewCard, { review: dayReview({ doc: dayBy[today], ctx: rateCtx, date: today, now: new Date(), bn: bnNum }), onGoInput: dx.onGoInput })],
+    dayReview: () => {
+      // আজ কমপক্ষে ৩টি বিষয়ে তথ্য না থাকলে সর্বশেষ যোগ্য দিনের (গতকাল ইত্যাদি) রিভিউ
+      const pick = pickReviewDay({ by: dayBy, todayISO: today, ctx: rateCtx });
+      const nm = pick ? pick.kind : null;
+      const label = nm === "today" ? "আজকের রিভিউ" : nm === "yesterday" ? "গতকালের রিভিউ" : pick ? new Date(pick.date + "T00:00:00").toLocaleDateString("bn-BD", { day: "numeric", month: "long" }) + "-এর রিভিউ" : "রিভিউ";
+      const tc = countInputs(dayBy[today], rateCtx, today);
+      const left = Math.max(1, (tc.need || 3) - tc.count);
+      const pending = pick && nm !== "today" ? "আজ আরও " + bnNum(left) + "টি বিষয়ে তথ্য দিলে আজকের রিভিউ দেখাবে।" : null;
+      return [React.createElement(DayReviewCard, { review: pick ? dayReview({ doc: pick.doc, ctx: rateCtx, date: pick.date, now: new Date(), bn: bnNum, isToday: nm === "today" }) : null, label, pending, onGoInput: dx.onGoInput })];
+    },
     exBox: () => [React.createElement(ExerciseBoxCard, { wk: exerciseWeek({ weekDates: weekDatesISO(), by: dayBy, todayISO: today, target: dx.weeklyTarget }) })],
     sleepCal: () => [React.createElement(SleepCalCard, { rv: restView({ by: dayBy, endISO: today, calorieTarget: dx.calorieTarget, sleepMinH: rateCtx.sleepMinH }), calorieTarget: dx.calorieTarget, sleepRange: dx.sleepRange })],
-    alerts: () => [React.createElement(AlertsCard, { list: alertList({ gate: info.gate, activeMeds: info.activeMeds, extraFoods: dayBy[today] && dayBy[today].extraFoods, age: info.age, flags: info.flags, condKeys: info.condKeys }) })],
   };
   const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)], ...dayNodes };
   return React.createElement("div", null,

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dayReview, exerciseWeek, restView, alertList, calVerdict, sleepVerdict } from "../../src/health/tracker/dayReview.js";
+import { dayReview, exerciseWeek, restView, calVerdict, sleepVerdict, countInputs, pickReviewDay } from "../../src/health/tracker/dayReview.js";
 
 const bn = (n) => String(n);
 const ctx = { calorieTarget: 2000, exTarget: 30, waterTarget: 8, sleepMinH: 7, fastDays: [] };
@@ -81,15 +81,45 @@ test("restView: ৭ দিন, আজ = শেষ; গড় ও রায়", 
   assert.equal(empty.hasSleep, false); assert.equal(empty.hasCal, false);
 });
 
-test("alertList: গেট আগে (high), রোগ-সতর্কতা পরে; কিছু না থাকলে খালি", () => {
-  const l = alertList({ gate: { blocked: false, warn: true, reason: "⚠ ৬৫+ বয়সে ক্যালরির টার্গেট ডাক্তারের সাথে ঠিক করুন।" }, activeMeds: [], extraFoods: [], age: 70, flags: { diabetes: true }, condKeys: [] });
-  assert.equal(l[0].id, "gate"); assert.equal(l[0].level, "high"); assert.ok(!l[0].lines[0].startsWith("⚠"));
-  assert.ok(l.some((x) => x.id === "food-diabetes-food"));
-  assert.deepEqual(alertList({ gate: { blocked: false, warn: false, reason: null }, activeMeds: [], extraFoods: [], age: 30, flags: {}, condKeys: [] }), []);
+test("countInputs: প্রযোজ্য বিষয়ের মধ্যে কয়টিতে তথ্য; ৩টি হলে ok", () => {
+  assert.deepEqual(countInputs({ date: D, caloriesIn: 1800, sleepMinutes: 400 }, ctx, D), { count: 2, need: 3, ok: false });
+  const c = countInputs({ date: D, caloriesIn: 1800, sleepMinutes: 400, waterGlasses: 2 }, ctx, D);
+  assert.equal(c.count, 3); assert.equal(c.ok, true);
+  assert.equal(countInputs(null, ctx, D).ok, false);
 });
 
-test("alertList: থাইরয়েডের ওষুধ + আজ খাওয়া দই/টফু-জাতীয় খাবার → ওষুধ-নোট (high), একবারই", () => {
-  const l = alertList({ gate: null, activeMeds: ["Levothyroxine"], extraFoods: [{ key: "tofu", name: "টফু", kcal: 25, slot: "lunch" }, { key: "tofu", name: "টফু", kcal: 25, slot: "dinner" }], age: 30, flags: {}, condKeys: [] });
-  const med = l.filter((x) => x.id.startsWith("med-"));
-  assert.equal(med.length, 1); assert.equal(med[0].level, "high");
+test("countInputs: লক্ষ্য কম থাকলে need = প্রযোজ্য সংখ্যা (আটকে যায় না); উপবাস-দিনে ক্যালরি গোনা হয় না", () => {
+  const two = { calorieTarget: null, exTarget: 30, waterTarget: null, sleepMinH: 7, fastDays: [] };
+  const c = countInputs({ date: D, exerciseMin: 10, sleepMinutes: 400 }, two, D);
+  assert.equal(c.need, 2); assert.equal(c.ok, true);
+  const fast = { ...ctx, fastDays: [4] }; // বুধবার সিয়াম
+  const f = countInputs({ date: D, caloriesIn: 500, exerciseMin: 10, sleepMinutes: 400 }, fast, D);
+  assert.equal(f.count, 2); assert.equal(f.ok, false);
+});
+
+const full = (date) => ({ date, caloriesIn: 1900, exerciseMin: 30, sleepMinutes: 420 });
+const part = (date) => ({ date, sleepMinutes: 420, waterGlasses: 3 });
+
+test("pickReviewDay: আজ ৩টি পূরণ হলে আজ", () => {
+  const p = pickReviewDay({ by: { [D]: full(D), "2026-11-17": full("2026-11-17") }, todayISO: D, ctx });
+  assert.equal(p.kind, "today"); assert.equal(p.date, D);
+});
+
+test("pickReviewDay: আজ ২টি হলে গতকালের; গতকালও অযোগ্য হলে আগের যোগ্য দিন", () => {
+  const a = pickReviewDay({ by: { [D]: part(D), "2026-11-17": full("2026-11-17") }, todayISO: D, ctx });
+  assert.equal(a.kind, "yesterday"); assert.equal(a.date, "2026-11-17");
+  const b = pickReviewDay({ by: { [D]: part(D), "2026-11-17": part("2026-11-17"), "2026-11-16": full("2026-11-16") }, todayISO: D, ctx });
+  assert.equal(b.kind, "earlier"); assert.equal(b.date, "2026-11-16");
+});
+
+test("pickReviewDay: ৭ দিনে যোগ্য দিন না থাকলে null; মাস পেরিয়েও খোঁজে", () => {
+  assert.equal(pickReviewDay({ by: { [D]: part(D) }, todayISO: D, ctx }), null);
+  const p = pickReviewDay({ by: { "2026-10-31": full("2026-10-31") }, todayISO: "2026-11-02", ctx });
+  assert.equal(p.date, "2026-10-31"); assert.equal(p.kind, "earlier");
+});
+
+test("dayReview: আগের দিনের রিভিউ সবসময় চূড়ান্ত (সকালেও); আজের রিভিউ ৯টার আগে সাময়িক", () => {
+  const doc = full("2026-11-17");
+  assert.equal(dayReview({ doc, ctx, date: "2026-11-17", now: at(9), bn, isToday: false }).final, true);
+  assert.equal(dayReview({ doc: full(D), ctx, date: D, now: at(9), bn, isToday: true }).final, false);
 });

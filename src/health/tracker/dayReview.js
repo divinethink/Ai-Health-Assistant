@@ -1,14 +1,13 @@
-// অ্যাক্টিভিটি রিভিউ (ক্যালেন্ডারের নিচের অংশ): আজকের রিভিউ · সাপ্তাহিক ব্যায়াম-ঘর · ঘুম/ক্যালরির রায় · সতর্কতা-তালিকা।
+// অ্যাক্টিভিটি রিভিউ (ক্যালেন্ডারের নিচের অংশ): দিনের রিভিউ · সাপ্তাহিক ব্যায়াম-ঘর · ঘুম/ক্যালরির রায়।
 // pure (React/Firestore নেই); ফিক্সড নিয়ম, AI/রোগনির্ণয় নয়; শুধু সদস্যের নিজের দেওয়া তথ্য। কিছু সংরক্ষণ হয় না।
 import { metricsOf } from "./todaySummary.js";
 import { hasDayRecord, shiftISO } from "./dateNav.js";
-import { medFoodNotes } from "./medFoodNotes.js";
-import { avoidFor } from "./avoidRules.js";
 
 export const FINAL_HOUR = 21; // এর পর "আজকের রিভিউ"; আগে "সাময়িক"
 export const MAX_GOOD = 2;
 export const MAX_IMPROVE = 2;
-export const MAX_ALERTS = 3;
+export const MIN_INPUTS = 3; // দিনের রিভিউ দেখাতে কমপক্ষে এতগুলো বিষয়ে তথ্য লাগে
+export const LOOKBACK = 7; // যোগ্য দিন খুঁজতে কত দিন পিছনে দেখা হবে
 const ORDER = ["calories", "exercise", "sleep", "water"];
 export const LABEL = { calories: "ক্যালরি", exercise: "ব্যায়াম", sleep: "ঘুম", water: "পানি" };
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -33,19 +32,39 @@ export function sleepVerdict(hours, minH) {
 }
 
 const TOMORROW = {
-  calories_low: "কাল প্রতিটি বেলার খাবার লিখে রাখুন, আর মিল-প্ল্যান ধরে খান।",
-  calories_high: "কাল বড় বেলায় ভাত বা ভাজাপোড়া একটু কম নিন।",
-  calories_missing: "কাল প্রতিটি বেলার খাবার লিখে রাখুন।",
-  exercise: "কাল ১০ মিনিট হাঁটা দিয়ে শুরু করুন।",
-  sleep: "আজ একটু আগে শুয়ে পড়ুন; মোবাইল শোয়ার আগে সরিয়ে রাখুন।",
-  sleep_missing: "কাল সকালে আগের রাতের ঘুম লিখে রাখুন।",
-  water: "কাল ঘুম থেকে উঠে ১ গ্লাস পানি দিয়ে শুরু করুন।",
+  calories_low: "পরের দিন প্রতিটি বেলার খাবার লিখে রাখুন, আর মিল-প্ল্যান ধরে খান।",
+  calories_high: "পরের দিন বড় বেলায় ভাত বা ভাজাপোড়া একটু কম নিন।",
+  calories_missing: "পরের দিন প্রতিটি বেলার খাবার লিখে রাখুন।",
+  exercise: "পরের দিন ১০ মিনিট হাঁটা দিয়ে শুরু করুন।",
+  sleep: "পরের রাতে একটু আগে শুয়ে পড়ুন; মোবাইল শোয়ার আগে সরিয়ে রাখুন।",
+  sleep_missing: "সকালে উঠে আগের রাতের ঘুম লিখে রাখুন।",
+  water: "পরের দিন ঘুম থেকে উঠে ১ গ্লাস পানি দিয়ে শুরু করুন।",
 };
 
-// আজকের রিভিউ। doc = আজকের দৈনিক ডক (বা null); ctx = targetCtxFor() (পানিসহ); bn = বাংলা সংখ্যা-ফরম্যাটার।
+// কয়টি (প্রযোজ্য) বিষয়ে তথ্য দেওয়া হয়েছে: ক্যালরি/খাবার · ব্যায়াম · ঘুম · পানি। need = min(৩, প্রযোজ্য বিষয়) — লক্ষ্য কম থাকলে আটকে যাবে না।
+export function countInputs(doc, ctx, date) {
+  if (!doc) return { count: 0, need: 0, ok: false };
+  const { applicable } = metricsOf(doc, ctx, date || doc.date);
+  const filled = { calories: doc.caloriesIn > 0, exercise: doc.exerciseMin > 0, sleep: doc.sleepMinutes > 0, water: doc.waterGlasses > 0 };
+  const count = applicable.filter((k) => filled[k]).length;
+  const need = Math.min(MIN_INPUTS, applicable.length);
+  return { count, need, ok: need > 0 && count >= need };
+}
+
+// কোন দিনের রিভিউ দেখানো হবে: আজ যোগ্য হলে আজ; নইলে সবচেয়ে সাম্প্রতিক যোগ্য দিন (গতকাল বা তার আগে, LOOKBACK-এর মধ্যে)।
+// → { date, doc, kind: "today"|"yesterday"|"earlier" } | null
+export function pickReviewDay({ by, todayISO, ctx }) {
+  for (let i = 0; i < LOOKBACK; i++) {
+    const date = shiftISO(todayISO, -i);
+    if (countInputs(by[date], ctx, date).ok) return { date, doc: by[date], kind: i === 0 ? "today" : i === 1 ? "yesterday" : "earlier" };
+  }
+  return null;
+}
+
+// দিনের রিভিউ। doc = ওই দিনের দৈনিক ডক (বা null); isToday=false হলে সবসময় চূড়ান্ত; ctx = targetCtxFor() (পানিসহ); bn = বাংলা সংখ্যা-ফরম্যাটার।
 // → { hasData, final, good:[{key,label,text}], improve:[{key,label,text,gap}], tomorrow }
-export function dayReview({ doc, ctx, date, now, bn }) {
-  const out = { hasData: hasDayRecord(doc), final: (now || new Date()).getHours() >= FINAL_HOUR, good: [], improve: [], tomorrow: null };
+export function dayReview({ doc, ctx, date, now, bn, isToday = true }) {
+  const out = { hasData: hasDayRecord(doc), final: !isToday || (now || new Date()).getHours() >= FINAL_HOUR, good: [], improve: [], tomorrow: null };
   if (!out.hasData) return out;
   const { applicable, met } = metricsOf(doc, ctx, date || doc.date);
   const ok = (k) => met.includes(k);
@@ -101,20 +120,4 @@ export function restView({ by, endISO, calorieTarget, sleepMinH }) {
   const sleepAvg = sl.length ? r1(sl.reduce((a, b) => a + b, 0) / sl.length) : null;
   const todaySleepH = sleepH[6], todayCal = cal[6];
   return { dates, sleepH, cal, todaySleepH, todayCal, sleepAvg, sleepV: sleepVerdict(todaySleepH, sleepMinH), calV: calVerdict(todayCal, calorieTarget), hasSleep: sl.length > 0, hasCal: cal.some((x) => x !== null) };
-}
-
-// সতর্কতা-তালিকা (গুরুতর আগে): গেট-বার্তা → আজকের খাবার × ওষুধ-নোট → রোগ/বয়সের খাবার ও ব্যায়াম-সতর্কতা।
-// → [{ id, level:"high"|"info", title, lines:[...] }] — সব; দেখানোর সীমা UI-তে (MAX_ALERTS)
-export function alertList({ gate, activeMeds, extraFoods, age, flags, condKeys }) {
-  const out = [];
-  if (gate && (gate.blocked || gate.warn) && gate.reason) out.push({ id: "gate", level: "high", title: "ক্যালরি-টার্গেট", lines: [gate.reason.replace(/^⚠\s*/, "")] });
-  const seen = new Set();
-  (Array.isArray(extraFoods) ? extraFoods : []).forEach((f) => {
-    if (!f || typeof f.key !== "string") return;
-    medFoodNotes(activeMeds, f.key).forEach((n) => { const k = n.rule + n.med; if (!seen.has(k)) { seen.add(k); out.push({ id: "med-" + k, level: "high", title: "খাবার ও ওষুধ", lines: [n.text] }); } });
-  });
-  [["food", "খাবারে সতর্কতা"], ["exercise", "ব্যায়ামে সতর্কতা"]].forEach(([dom, ttl]) => {
-    avoidFor(dom, { age, flags, condKeys }).forEach((g) => out.push({ id: dom + "-" + g.id, level: "info", title: ttl + " — " + g.title, lines: g.items }));
-  });
-  return out;
 }

@@ -37,10 +37,9 @@ export const PAGE_DEFS = {
         label: "উপরের অংশ",
         cards: [
           d("heatmap", "অ্যাক্টিভিটি ক্যালেন্ডার", "fixed"),
-          d("dayReview", "আজকের রিভিউ", "fixed"),
+          d("dayReview", "দিনের রিভিউ", "fixed"),
           d("exBox", "এই সপ্তাহের ব্যায়াম", "fixed"),
           d("sleepCal", "ঘুম ও ক্যালরি", "fixed"),
-          d("alerts", "সতর্কতা", "fixed"),
         ],
       },
       week: {

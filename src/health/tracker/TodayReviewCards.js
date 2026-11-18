@@ -1,11 +1,10 @@
-// অ্যাক্টিভিটি ক্যালেন্ডারের নিচের চারটি কার্ড: আজকের রিভিউ · ব্যায়াম-ঘর · ঘুম ও ক্যালরি · সতর্কতা।
+// অ্যাক্টিভিটি ক্যালেন্ডারের নিচের তিনটি কার্ড: দিনের রিভিউ · ব্যায়াম-ঘর · ঘুম ও ক্যালরি।
 // শুধু দেখানো — কিছু সংরক্ষণ হয় না। হিসাব dayReview.js-এ (pure)। বয়স্কদের জন্য: বড় অঙ্ক, সোজা শব্দ, রং ছাড়াও লেখায় বোঝা যায়।
 import { T, HOME_CARD } from "./trackerTheme.js";
 import { bnNum } from "../../shared/dates.js";
 import { TrendBars } from "./TrendBars.js";
-import { MAX_ALERTS } from "./dayReview.js";
+import { MIN_INPUTS } from "./dayReview.js";
 
-const { useState } = React;
 const h = React.createElement;
 const WEEK = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
 const WARN = "#C46A12";
@@ -20,25 +19,28 @@ const title = (t, sub, icon, right) => h("div", { style: { display: "flex", alig
 const para = (txt, extra) => h("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6, ...(extra || {}) } }, txt);
 const note = (txt) => h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5, marginTop: "8px" } }, txt);
 
-// ১) আজকের রিভিউ
-export function DayReviewCard({ review, onGoInput }) {
-  if (!review) return null;
-  if (!review.hasData) {
+// ১) দিনের রিভিউ: আজ কমপক্ষে ৩টি বিষয়ে তথ্য থাকলে আজকের; নইলে সর্বশেষ যোগ্য দিনের (গতকাল ইত্যাদি)
+// props: review (dayReview ফল | null), label ("আজকের রিভিউ" ইত্যাদি), pending (আজের জন্য বাকি-বার্তা | null), onGoInput
+export function DayReviewCard({ review, label, pending, onGoInput }) {
+  const goBtn = onGoInput && h("button", { key: "b", type: "button", onClick: onGoInput, style: { minHeight: "48px", padding: "0 18px", borderRadius: "14px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: "10px" } }, "আজকের তথ্য দিন");
+  if (!review || !review.hasData) {
     return card([
-      h("div", { key: "t" }, title("আজকের রিভিউ", "আজকের তথ্য দিলে এখানে রিভিউ আসবে", "🌙")),
-      onGoInput && h("button", { key: "b", type: "button", onClick: onGoInput, style: { minHeight: "48px", padding: "0 18px", borderRadius: "14px", border: "1px solid " + T.green, background: T.surface, color: T.green, fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "আজকের তথ্য দিন"),
+      h("div", { key: "t" }, title("রিভিউ", "কমপক্ষে " + bnNum(MIN_INPUTS) + "টি বিষয়ে তথ্য দিলে রিভিউ আসবে — খাবার, ব্যায়াম, ঘুম, পানি", "🌙")),
+      goBtn,
     ]);
   }
   const row = (it, good) => h("div", { key: it.key, style: { display: "flex", gap: "8px", fontSize: "14.5px", color: T.ink, lineHeight: 1.6, marginTop: "4px" } },
     h("span", { "aria-hidden": "true", style: { color: good ? T.green : WARN, flexShrink: 0 } }, good ? "✓" : "▼"), h("span", null, it.text));
   return card([
-    h("div", { key: "t" }, title(review.final ? "আজকের রিভিউ" : "আজকের রিভিউ (সাময়িক)", review.final ? "আজকের দেওয়া তথ্য থেকে" : "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে", "🌙")),
+    h("div", { key: "t" }, title(review.final ? label : label + " (সাময়িক)", review.final ? "ওই দিনের দেওয়া তথ্য থেকে" : "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে", "🌙")),
     review.good.length > 0 && h("div", { key: "g", style: { marginTop: "2px" } },
       h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: T.green } }, "ভালো হয়েছে"), review.good.map((x) => row(x, true))),
     review.improve.length > 0 && h("div", { key: "i", style: { marginTop: "10px" } },
       h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: WARN } }, "ভালো করা দরকার"), review.improve.map((x) => row(x, false))),
-    !review.good.length && !review.improve.length && h("div", { key: "e" }, para("আজকের তথ্য থেকে বিচার করার মতো লক্ষ্য এখনো নেই।")),
+    !review.good.length && !review.improve.length && h("div", { key: "e" }, para("এই দিনের তথ্য থেকে বিচার করার মতো লক্ষ্য নেই।")),
     review.tomorrow && h("div", { key: "tm", style: { background: T.track, borderRadius: "14px", padding: "10px 12px", marginTop: "10px", fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, "💡 " + review.tomorrow),
+    pending && h("div", { key: "p", style: { fontSize: "13.5px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, pending),
+    pending && goBtn,
     h("div", { key: "n" }, note("শুধু আপনার দেওয়া তথ্য থেকে। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।")),
   ]);
 }
@@ -94,22 +96,5 @@ export function SleepCalCard({ rv, calorieTarget, sleepRange }) {
     showCal && h("div", { key: "d", style: { height: "1px", background: T.border, margin: "8px 0" } }),
     showCal && h(Block, { key: "c", head: "ক্যালরি", big: rv.todayCal !== null ? bnNum(rv.todayCal) : "—", unit: "/ " + bnNum(calorieTarget) + " kcal (আজ)", verdict: rv.calV,
       chart: rv.hasCal ? h(TrendBars, { labels, values: rv.cal, target: calorieTarget, color: "#E0A100", width: 320 }) : null }),
-  ]);
-}
-
-// ৪) সতর্কতা: গুরুতর আগে, প্রথমে ৩টি; বাকি "আরও দেখুন"-এ
-export function AlertsCard({ list }) {
-  const [more, setMore] = useState(false);
-  if (!list || !list.length) return null;
-  const shown = more ? list : list.slice(0, MAX_ALERTS);
-  return card([
-    h("div", { key: "t" }, title("সতর্কতা", "খাবার ও অন্যান্য · শুধু জানানোর জন্য, কিছু আটকায় না", "⚠️")),
-    ...shown.map((a, i) => h("div", { key: a.id, style: { padding: "8px 0", borderTop: i ? "1px solid " + T.border : "none" } },
-      h("div", { style: { fontSize: "14.5px", fontWeight: 800, color: a.level === "high" ? "#7A5200" : T.ink } }, (a.level === "high" ? "⚠ " : "") + a.title),
-      a.lines.map((l, j) => h("div", { key: j, style: { fontSize: "14px", color: T.ink, lineHeight: 1.6, paddingLeft: "8px", marginTop: "2px" } }, "• " + l)))),
-    list.length > MAX_ALERTS && h("button", { key: "m", type: "button", onClick: () => setMore((x) => !x), "aria-expanded": more,
-      style: { width: "100%", minHeight: "44px", marginTop: "6px", borderRadius: "12px", border: "1px solid " + T.border, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } },
-    more ? "কম দেখুন ▲" : "আরও " + bnNum(list.length - MAX_ALERTS) + "টি দেখুন ▼"),
-    h("div", { key: "f" }, note("সাধারণ তথ্য; ডাক্তারের পরামর্শ প্রাধান্য পায়। এটি চিকিৎসা পরামর্শ নয়।")),
   ]);
 }
