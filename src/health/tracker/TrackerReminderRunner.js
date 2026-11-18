@@ -9,6 +9,7 @@ import { getGoal, getMedTaken, getDaily } from "./trackerData.js";
 import { weighDayOf, weighReminderDue } from "./weighDay.js";
 import { subscribeMemberHealth } from "../records/memberHealthStore.js";
 import { buildActiveMeds, dueMedDoses, endingSoonMeds } from "../records/medReminderCalc.js";
+import { reviewUnlockDue } from "./reviewUnlock.js";
 import { normalizeReminders, anyReminderOn, expandReminders, buildReminderContext, dueCalendarEvents } from "./reminderData.js";
 import { bnNum, localISO } from "../../shared/dates.js";
 
@@ -34,6 +35,15 @@ function endWarnShown(recordId, today) {
     localStorage.setItem(k, today);
   } catch (e) { /* ignore */ }
   return false;
+}
+
+// রিভিউ-আনলক: প্রতিটি সপ্তাহ/মাস শুধু একবার (দিনভিত্তিক alreadyShown নয় — জানালা কয়েক দিনের)
+function periodSeen(id) {
+  const k = "hs-rv-unlock-" + id;
+  try { return localStorage.getItem(k) === "1"; } catch (e) { return false; }
+}
+function markPeriod(id) {
+  try { localStorage.setItem("hs-rv-unlock-" + id, "1"); } catch (e) { /* localStorage না থাকলে সবচেয়ে খারাপ: আবার আসবে */ }
 }
 
 export function TrackerReminderRunner({ familyId, memberId, members }) {
@@ -80,7 +90,8 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
     const trackerOn = !!(settings && anyReminderOn(settings));
     const medOn = !settings || settings.medicine.on; // সেটিং লোড হওয়ার আগে/না থাকলে ডিফল্ট চালু
     const weighOn = !!(settings && settings.weigh.on); // সাপ্তাহিক ওজনের দিনের নোটিফিকেশন (ডিফল্ট চালু)
-    if (!trackerOn && !(medOn && medData.length) && !weighOn) return undefined;
+    const reviewOn = !!(settings && settings.review.on); // সাপ্তাহিক/মাসিক রিভিউ আনলকের নোটিফিকেশন (ডিফল্ট চালু)
+    if (!trackerOn && !(medOn && medData.length) && !weighOn && !reviewOn) return undefined;
     const member = (members || []).find((m) => m.id === memberId) || null;
 
     // ডোজের সময়ে সর্বশেষ "খেয়েছি" অবস্থা সার্ভার থেকে দেখে নেওয়া; পড়া না গেলে (অফলাইন) রিমাইন্ডার দেওয়াই নিরাপদ।
@@ -118,6 +129,13 @@ export function TrackerReminderRunner({ familyId, memberId, members }) {
       if (weighOn) {
         const w = weighReminderDue(settings.weigh, weighDayOf(data.goal), today, now);
         if (w && !alreadyShown(w.id)) fireWeigh(w, today);
+      }
+      if (reviewOn) {
+        const r = reviewUnlockDue(nowD, periodSeen);
+        if (r) {
+          r.ids.forEach(markPeriod);
+          try { new Notification(r.title, { body: r.body }); } catch (e) { /* ignore */ }
+        }
       }
       if (!medOn) return;
       dueMedDoses(medData, now, today).forEach((d) => { if (!alreadyShown(d.id)) fireDose(d, today); });

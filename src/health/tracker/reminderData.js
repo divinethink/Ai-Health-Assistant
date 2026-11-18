@@ -25,6 +25,7 @@ export const DEFAULT_REMINDERS = {
   sleep: { on: false, time: "22:30" },
   calendar: { on: false, daysBefore: 1 }, // ক্যালেন্ডারের টিকা/অ্যাপয়েন্টমেন্ট: N দিন আগে ও সেই দিন
   weigh: { on: true, time: "09:00" }, // সাপ্তাহিক ওজনের দিনের নোটিফিকেশন: ওজনের দিনে ওজন বাকি থাকলে একবার (ডিফল্ট চালু)
+  review: { on: true }, // সাপ্তাহিক/মাসিক রিভিউ আনলকের নোটিফিকেশন (খোলার সময় একবার; সময় ফিক্সড — reviewUnlock.js)
   medicine: { on: true }, // ওষুধ: সময় Health → ওষুধ থেকে; ডিফল্ট চালু (আগে সবসময় আসত — পুরনো ব্যবহারকারীর আচরণ বদলায় না)
 };
 export const CAL_DAYS_BEFORE = [1, 2, 3, 7];
@@ -46,6 +47,7 @@ export function normalizeReminders(raw) {
     exercise: { on: !!(r.exercise && r.exercise.on), time: okTime(r.exercise && r.exercise.time, D.exercise.time) },
     sleep: { on: !!(r.sleep && r.sleep.on), time: okTime(r.sleep && r.sleep.time, D.sleep.time) },
     medicine: { on: r.medicine && typeof r.medicine.on === "boolean" ? r.medicine.on : D.medicine.on },
+    review: { on: r.review && typeof r.review.on === "boolean" ? r.review.on : D.review.on },
     weigh: { on: r.weigh && typeof r.weigh.on === "boolean" ? r.weigh.on : D.weigh.on, time: okTime(r.weigh && r.weigh.time, D.weigh.time) },
     calendar: { on: !!(r.calendar && r.calendar.on), daysBefore: CAL_DAYS_BEFORE.includes(Number(r.calendar && r.calendar.daysBefore)) ? Number(r.calendar.daysBefore) : D.calendar.daysBefore },
   };
