@@ -279,10 +279,8 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const editBtn = (idx) => React.createElement(EditIcon, { onClick: () => { setErr(null); setSheet({ kind: "day", idx }); }, disabled: busy, label: DAY_LABELS[idx] + " বদলান" });
 
   return React.createElement("div", null,
-    React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px" } }, // আলাদা আলাদা লাইনে (owner-request ২০২৬-১১-১৭)
-      FoldChip("why", "💡 কেন এই প্ল্যান?", null, panel, setPanel),
-      guideTypes.length > 0 && FoldChip("guide", "📋 ব্যায়াম নির্দেশনা", null, panel, setPanel)),
-    panel === "why" && React.createElement(PlanWhyCard, { bare: true, lines: explainExercise({ plan: base, age, goalType: goal ? goal.goalType : null }) }),
+    guideTypes.length > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px" } },
+      FoldChip("guide", "📋 ব্যায়াম নির্দেশনা", null, panel, setPanel)),
     panel === "guide" && React.createElement("div", { style: CARD },
       React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "প্রতিদিন শুরুতে গা-গরম, শেষে স্ট্রেচিং। সহজ লাগলে ধীরে কঠিন করুন; ব্যথা হলে থামুন।"),
       guideTypes.map((t) => React.createElement("div", { key: t, style: { padding: "6px 0", borderBottom: "1px solid " + T.track } },
@@ -314,6 +312,10 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
                 React.createElement("div", { style: { fontSize: "13px", color: T.muted } }, bnNum(it.min) + " মিনিট" + (it.type && exerciseDetail(it.type) ? " · " + exerciseDetail(it.type).sets : "") + (it.counted ? "" : " · গণনায় নয়"))),
               kindDot(exerciseKind(it), 8));
           }))),
+    // ---- সাপ্তাহিক ব্যায়াম প্ল্যান (owner-request ২০২৬-১১-১৮): সপ্তাহের রুটিনের ঠিক ওপরে; খুললে ভেতরে শিরোনাম "কেন এই প্ল্যান?" ----
+    plan.routine && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "8px" } },
+      FoldChip("why", "💡 সাপ্তাহিক ব্যায়াম প্ল্যান", null, panel, setPanel)),
+    plan.routine && panel === "why" && React.createElement(PlanWhyCard, { bare: true, title: "কেন এই প্ল্যান?", lines: explainExercise({ plan: base, age, goalType: goal ? goal.goalType : null }) }),
     // ---- সপ্তাহ: প্রতি দিন এক লাইন (দিন · মিনিট · ধরন-ডট); ট্যাপে ওই দিনের তালিকা + বদলান ----
     plan.routine && React.createElement("div", { style: { ...CARD, padding: "14px 16px", borderRadius: "18px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" } },
