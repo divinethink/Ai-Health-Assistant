@@ -242,12 +242,10 @@ function CompareCard({ list, avgs }) {
 }
 
 // ---------- মূল ----------
-const RANGES = [["week", "সপ্তাহ"], ["month", "মাস"], ["quarter", "৩ মাস"]];
 
 export function TrendRanges({ info, familyId, memberId, weekView }) {
   const today = todayISO();
   const three = lastNMonths(new Date(), 3);
-  const [range, setRange] = useState("week");
   const topLayout = useAppDesign("trend").top;
   const [ym, setYm] = useState(three[2]);
   const [sel, setSel] = useState(today);
@@ -260,46 +258,35 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const loaded3 = three.every((x) => cache[monthKey(x.y, x.m)]);
   const move = (n) => { const next = shiftMonth(ym, n); if (next !== ym) { setYm(next); setSel(null); } };
 
-  const pills = React.createElement("div", { className: "hs-trk-pills", style: { marginBottom: "8px" } }, React.createElement("div", { style: { display: "flex", gap: "6px", padding: "2px" } },
-    RANGES.map(([id, label]) => {
-      const on = id === range;
-      return React.createElement("button", { key: id, type: "button", onClick: () => setRange(id), "aria-pressed": on,
-        style: { flex: 1, fontSize: "14px", fontWeight: 700, padding: "9px 8px", minHeight: "44px", borderRadius: "999px", cursor: "pointer", fontFamily: "inherit",
-          border: on ? "2px solid var(--hs-primary, #0E4B43)" : "1px solid var(--hs-input-border, #C3D2CA)", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)", color: on ? "var(--hs-primary, #0E4B43)" : "var(--hs-muted, #5F716C)" } }, label);
-    })));
-
   const ymDocs = cache[monthKey(ym.y, ym.m)];
   const prevDocs = prevYm ? cache[monthKey(prevYm.y, prevYm.m)] : null;
   const ready = !!ymDocs && (!prevYm || !!prevDocs);
-  // রিভিউ-কার্ড: সপ্তাহ-ভিউ = আজ পর্যন্ত শেষ ৭ দিন; মাস-ভিউ = বাছা মাসের শেষ (চলতি মাসে আজ) পর্যন্ত
+  // রিভিউ-কার্ড: সপ্তাহ-অংশ = আজ পর্যন্ত শেষ ৭ দিন; মাস-অংশ = বাছা মাসের শেষ (চলতি মাসে আজ) পর্যন্ত
   const allDocs = Object.keys(cache).flatMap((k) => cache[k] || []);
   const monthEnd = ym.y + "-" + p2(ym.m + 1) + "-" + p2(new Date(ym.y, ym.m + 1, 0).getDate());
-  const reviewEnd = range === "month" && monthEnd < today ? monthEnd : today;
-  const review = (full) => React.createElement(ReviewCards, { docs: allDocs, endISO: reviewEnd, scoreCtx: ctx, rateCtx, gutEntries: info.gutEntries || [], showGut: (info.gutEntries || []).length > 0 || (info.condKeys || []).includes("gut"), full, past: reviewEnd !== today });
+  const review = (full, endISO) => React.createElement(ReviewCards, { docs: allDocs, endISO, scoreCtx: ctx, rateCtx, gutEntries: info.gutEntries || [], showGut: (info.gutEntries || []).length > 0 || (info.condKeys || []).includes("gut"), full, past: endISO !== today });
   const reviewReady = !!cache[monthKey(three[2].y, three[2].m)] && !!cache[monthKey(three[1].y, three[1].m)];
-  let body = null;
-  if (range === "week") body = React.createElement("div", null, reviewReady ? review(false) : Skeleton(1, 120), weekView);
-  else if (err) body = ErrorBox(err);
-  else if (range === "month") {
-    body = !ready ? Skeleton(2, 120) : (() => {
-      const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
-      return React.createElement("div", null,
-        review(true),
-        React.createElement(InsightCard, { ins }),
-        React.createElement(MetricCompareCard, { metrics: ins.metrics, ym }),
-        React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
-    })();
-  } else {
-    body = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, {
-      list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, rateCtx, today)),
-      avgs: monthlyAverages(three, (y, m) => cache[monthKey(y, m)], ctx, today) });
-  }
+  // তিন অংশ একটার নিচে আরেকটা: সপ্তাহ → মাস → ৩ মাসের তুলনামূলক চিত্র (আগের সপ্তাহ|মাস|৩ মাস পিল আর নেই)
+  const title = (t) => React.createElement("div", { style: { textAlign: "center", fontSize: "19px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "22px 0 10px" } }, t);
+  const weekBody = React.createElement("div", null, reviewReady ? review(false, today) : Skeleton(1, 120), weekView);
+  const monthBody = !ready ? Skeleton(2, 120) : (() => {
+    const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
+    return React.createElement("div", null,
+      review(true, monthEnd < today ? monthEnd : today),
+      React.createElement(InsightCard, { ins }),
+      React.createElement(MetricCompareCard, { metrics: ins.metrics, ym }),
+      React.createElement(MonthReviewCard, { stats: monthStats(ymDocs, ym.y, ym.m, ctx, today) }));
+  })();
+  const quarterBody = !loaded3 ? Skeleton(2, 120) : React.createElement(CompareCard, {
+    list: three.map((x) => monthStats(cache[monthKey(x.y, x.m)], x.y, x.m, rateCtx, today)),
+    avgs: monthlyAverages(three, (y, m) => cache[monthKey(y, m)], ctx, today) });
 
   // হিটম্যাপ-ক্যালেন্ডার: App Creator-এর ডিজাইন (দৃশ্যমানতা/ভাঁজ) অনুযায়ী ("heatmap" কার্ড); ত্রুটি-বার্তা সবসময় দেখায়
-  const heatNodes = { heatmap: () => [err && range === "week" ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)] };
+  const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)] };
   return React.createElement("div", null,
-    err && range === "week" && ErrorBox(err),
+    err && ErrorBox(err),
     ...renderLayoutCards("trend", "top", topLayout, heatNodes),
-    pills,
-    body);
+    title("সপ্তাহের চিত্র"), weekBody,
+    !err && title("মাসের চিত্র"), !err && monthBody,
+    !err && title("৩ মাসের তুলনামূলক চিত্র"), !err && quarterBody);
 }
