@@ -6,8 +6,7 @@ import { remainParts } from "./weekLock.js";
 import { monthWindow, lockLine, monthGoal, goalProgress } from "./monthLock.js";
 import { attentionItems } from "./monthAdvice.js";
 import { monthStats } from "./trendRange.js";
-import { monthInsights, monthScores, dayScore, scoreLevel, levelCounts, LEVEL_LABELS } from "./trendScore.js";
-import { monthDatesISO } from "./dateNav.js";
+import { monthInsights, monthScores, weekBuckets } from "./trendScore.js";
 
 const { useState, useEffect } = React;
 const h = React.createElement;
@@ -15,9 +14,6 @@ const h = React.createElement;
 const bnDigits = (t) => String(t).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
 const monthName = (y, m) => new Date(y, m, 1).toLocaleDateString("bn-BD", { month: "long" });
 const bnPlain = (n) => Number(n).toLocaleString("bn-BD", { useGrouping: false });
-const mixWith = (c, pct) => "color-mix(in srgb, " + c + " " + pct + "%, var(--hs-surface, #fff))";
-const mixPrimary = (pct) => "color-mix(in srgb, var(--hs-primary, #0E4B43) " + pct + "%, var(--hs-surface, #fff))";
-const LV = [T.track, mixWith("#E8892B", 42), mixWith("#E0A100", 48), mixPrimary(62), mixPrimary(92)];
 const MARK = { up: ["▲", T.green], down: ["▼", "#C46A12"], flat: ["●", T.muted], more: ["●", T.muted] };
 
 const CSS = "@keyframes hs-mk-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.hs-mk-fade{animation:hs-mk-fade .35s ease}@media (prefers-reduced-motion:reduce){.hs-mk-fade{animation:none}}";
@@ -38,31 +34,30 @@ function remainText(ms) {
   return parts.join(" ");
 }
 
-// দিনভিত্তিক স্কোরের ছোট বার-গ্রাফ (চলতি মাস)। রং = ওই দিনের স্কোর-স্তর।
-function DayBars({ docs, y, m, ctx, today }) {
-  const by = {};
-  (docs || []).forEach((d) => { if (d && d.date) by[d.date] = d; });
-  const dates = monthDatesISO(y, m);
+// চলতি মাসের সারকথা (গ্রাফের বদলে সংখ্যা): সেরা/সবচেয়ে কম দিন + ৭ দিনের ভাগে গড় স্কোর (গত মাসের সাথে)
+function MonthFacts({ docs, prevDocs, y, m, ctx, today }) {
   const rows = monthScores(docs, y, m, ctx, today);
-  const avg = rows.length ? Math.round(rows.reduce((t, r) => t + r.score, 0) / rows.length) : null;
-  const counts = levelCounts(rows);
-  const BAR_H = 76;
-  const label = monthName(y, m) + " মাসের দৈনিক স্কোর: " + rows.length + " দিন রেকর্ড" + (avg !== null ? ", গড় " + avg + "%" : "");
+  if (!rows.length) return h("div", { style: { fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, "এ মাসে এখনো কোনো দিনের স্কোর নেই। ছোট ছোট এন্ট্রিই যথেষ্ট।");
+  const best = rows.reduce((a, r) => (r.score > a.score ? r : a), rows[0]);
+  const low = rows.reduce((a, r) => (r.score < a.score ? r : a), rows[0]);
+  const both = rows.length > 1 && best.iso !== low.iso;
+  const dayNo = (r) => bnNum(Number(r.iso.slice(8)));
+  const todayNo = Number(today.slice(8));
+  const weeks = weekBuckets({ curDocs: docs, prevDocs, y, m, ctx, todayISO: today }).filter((w) => w.from <= todayNo);
+  const tile = (key, label, r, bg, color) => h("div", { key, style: { flex: 1, minWidth: 0, borderRadius: "14px", padding: "9px 12px", background: bg, color } },
+    h("div", { style: { fontSize: "12.5px", opacity: 0.9 } }, label),
+    h("div", { style: { fontSize: "18px", fontWeight: 800, lineHeight: 1.3 } }, dayNo(r) + " তারিখ · " + bnNum(r.score) + "%"));
   return h("div", null,
-    h("div", { role: "img", "aria-label": label, style: { display: "flex", alignItems: "flex-end", gap: "2px", height: BAR_H + "px" } },
-      dates.map((iso) => {
-        const future = iso > today;
-        const sc = future ? null : dayScore(by[iso], ctx, iso);
-        const lv = scoreLevel(sc);
-        const ht = sc === null ? 4 : Math.max(8, Math.round((sc / 100) * BAR_H));
-        return h("div", { key: iso, style: { flex: 1, minWidth: 0, height: ht + "px", borderRadius: "4px 4px 2px 2px", background: sc === null ? T.track : LV[lv], opacity: future ? 0.45 : 1 } });
-      })),
-    h("div", { "aria-hidden": "true", style: { display: "flex", justifyContent: "space-between", fontSize: "12px", color: T.muted, marginTop: "4px" } },
-      [1, 8, 15, 22, dates.length].map((d) => h("span", { key: d }, bnNum(d)))),
-    h("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px 12px", marginTop: "8px", fontSize: "12.5px", color: T.ink } },
-      [4, 3, 2, 1].map((l) => h("span", { key: l, style: { display: "inline-flex", alignItems: "center", gap: "5px" } },
-        h("span", { "aria-hidden": "true", style: { width: "12px", height: "12px", borderRadius: "3px", background: LV[l], display: "inline-block" } }),
-        LEVEL_LABELS[l] + " (" + bnNum(counts[l]) + ")"))));
+    h("div", { style: { display: "flex", gap: "8px" } },
+      tile("b", "🌟 সেরা দিন", best, T.green, T.onDark),
+      both && tile("l", "সবচেয়ে কম", low, T.sand, T.ink)),
+    h("div", { style: { fontSize: "13px", fontWeight: 700, color: T.muted, margin: "12px 0 2px" } }, "৭ দিনের ভাগে গড় স্কোর"),
+    weeks.map((w) => h("div", { key: w.from, style: { display: "flex", alignItems: "center", gap: "8px", minHeight: "30px" } },
+      h("span", { style: { width: "78px", flexShrink: 0, fontSize: "13px", color: T.muted } }, bnNum(w.from) + "–" + bnNum(w.to) + " তারিখ"),
+      h("div", { role: "img", "aria-label": w.cur === null ? "তথ্য নেই" : "গড় " + w.cur + "%", style: { flex: 1, minWidth: 0, height: "10px", borderRadius: "999px", background: T.track, overflow: "hidden" } },
+        w.cur !== null && h("div", { style: { width: w.cur + "%", height: "100%", background: T.green2, borderRadius: "999px" } })),
+      h("span", { style: { width: "44px", flexShrink: 0, textAlign: "right", fontSize: "14px", fontWeight: 800, color: T.ink } }, w.cur === null ? "—" : bnNum(w.cur) + "%"),
+      h("span", { style: { width: "58px", flexShrink: 0, textAlign: "right", fontSize: "12px", color: T.muted } }, w.prev === null ? "" : "গত মাস " + bnNum(w.prev) + "%"))));
 }
 
 // লক-অবস্থা: চলতি মাসের গ্রাফ · ১ লাইন উন্নতি/অবনতি · এ মাসের লক্ষ্য · লক-বার্তা
@@ -75,8 +70,8 @@ export function MonthLockedView({ docs, prevDocs, y, m, today, ctx, rateCtx, rem
   return h("div", { className: "hs-mk-fade" },
     h("style", null, CSS),
     card([
-      h("div", { key: "t" }, title("চলতি মাসের চিত্র", monthName(y, m) + " " + bnPlain(y) + " · দিনের স্কোর, চলমান", "📊")),
-      h(DayBars, { key: "g", docs, y, m, ctx, today }),
+      h("div", { key: "t" }, title("চলতি মাসের চিত্র", monthName(y, m) + " " + bnPlain(y) + " · চলমান", "📊")),
+      h(MonthFacts, { key: "g", docs, prevDocs, y, m, ctx, today }),
       h("div", { key: "l", style: { display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: "12px", fontSize: "14px", lineHeight: 1.6, color: T.ink } },
         line.map((p, i) => h("span", { key: i, style: { display: "inline-flex", gap: "6px" } },
           h("span", { "aria-hidden": "true", style: { color: MARK[p.kind][1] } }, MARK[p.kind][0]), h("span", null, p.text)))),
@@ -88,7 +83,7 @@ export function MonthLockedView({ docs, prevDocs, y, m, today, ctx, rateCtx, rem
       h("div", { key: "k", style: { display: "flex", alignItems: "center", gap: "10px", background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "14px", padding: "8px 12px", marginTop: "10px" } },
         h("span", { "aria-hidden": "true", style: { fontSize: "20px", flexShrink: 0 } }, "🔒"),
         h("div", { style: { minWidth: 0, fontSize: "14px", fontWeight: 800, color: T.ink, lineHeight: 1.4 } }, bnNum(lastDay) + " " + monthName(y, m) + " রাত ৯টায় খুলবে",
-          h("span", { style: { fontSize: "12.5px", fontWeight: 400, color: T.muted } }, " · আর " + remainText(remainMs)))),
+          h("span", { style: { display: "block", fontSize: "12.5px", fontWeight: 400, color: T.muted } }, "আর " + remainText(remainMs) + " বাকি"))),
       h("div", { key: "f", style: { fontSize: "12px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, "শুধু আপনার দেওয়া তথ্য থেকে। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"),
     ]));
 }

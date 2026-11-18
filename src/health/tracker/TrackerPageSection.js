@@ -736,7 +736,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   // একটাই স্তরের পিল: লক্ষ্য ঠিক করুন → ডায়েট → ব্যায়াম → রিভিউ (রিমাইন্ডার ও ক্যালেন্ডার মেনু ▸ নোটিফিকেশনে; owner-approved ২০২৬-১১-১৭)
   const tabs = [["goal", "লক্ষ্য"], ["meal", "ডায়েট"], ["exercise", "ব্যায়াম"], ["trend", "রিভিউ"]];
   const tabProps = { info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load };
-  return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Hind Siliguri', sans-serif" } },
+  return React.createElement("div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "var(--hs-bg, #F1F6F2)", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     React.createElement("style", null, PILL_CSS),
     !isToday && React.createElement("div", { style: { padding: "8px 12px 0", flexShrink: 0 } }, Pills(tabs, tab, setTab)),
     React.createElement("div", { style: { flex: 1, overflowY: "auto", padding: isToday ? "8px 12px 88px" : "0 12px 16px" } }, // হোমে নিচে বাড়তি ফাঁকা: ভাসমান + বাটন শেষ কার্ডের উপর না পড়ে

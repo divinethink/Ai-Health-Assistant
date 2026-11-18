@@ -20,6 +20,8 @@
 <!-- Hind Siliguri — Architecture Plan §10.6-এ Doctor Export ফন্ট হিসেবে Confirmed;
      সাধারণ UI-তেও একই বাংলা ফন্ট ব্যবহার করে visual-consistency রাখা হচ্ছে -->
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- শুধু বাংলা অঙ্ক (০–৯): Hind Siliguri-র ছোট ১ ঝাপসা/কাটা দেখায়, তাই অঙ্কের গ্লিফ Noto Sans Bengali থেকে; বাকি লেখা আগের ফন্টেই -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&text=%E0%A7%A6%E0%A7%A7%E0%A7%A8%E0%A7%A9%E0%A7%AA%E0%A7%AB%E0%A7%AC%E0%A7%AD%E0%A7%AE%E0%A7%AF&display=swap" rel="stylesheet" />
 
 <script>
   // cdn.tailwindcss.com-এর "production-এ ব্যবহার করবেন না" cosmetic warning suppress —
@@ -135,7 +137,7 @@
     --hs-primary: #3E6092; --hs-primary-contrast: #FFFFFF; --hs-border: #C9D2E4; --hs-chip-bg: #E8EDF6;
     --hs-input-border: #AEBAD2; --hs-primary-2: #5078AE; --hs-hero-1: #3E6092; --hs-hero-2: #5078AE;
   }
-  html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Hind Siliguri', sans-serif; }
+  html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Noto Sans Bengali', 'Hind Siliguri', sans-serif; }
   html, body { color: var(--hs-text); -webkit-font-smoothing: antialiased; }
 
   /* ডিজাইন-পলিশ: ফর্ম-ঘর, বোতাম ও ফোকাস — বয়স্কদের জন্য বড় ছোঁয়ার জায়গা (≥44px), স্পষ্ট বর্ডার */

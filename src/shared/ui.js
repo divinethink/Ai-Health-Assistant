@@ -47,7 +47,7 @@ export function SecondaryButton(label, onClick, busy) {
 export function Card(children) {
   // লগইন/লোডিং/ত্রুটির স্ক্রিন — নরম সবুজ জমির ওপর কেন্দ্রে সাদা কার্ড
   return React.createElement(
-    "div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", boxSizing: "border-box", background: "linear-gradient(160deg, #E4F0E9 0%, #F1F6F2 55%, #FFFFFF 100%)", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px", boxSizing: "border-box", background: "linear-gradient(160deg, #E4F0E9 0%, #F1F6F2 55%, #FFFFFF 100%)", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     React.createElement("div", { className: "hs-page", style: { width: "100%", maxWidth: "400px", padding: "28px 24px", boxSizing: "border-box", background: "#fff", borderRadius: "24px", boxShadow: "0 12px 36px rgba(14,75,67,0.14)", border: "1px solid #D9E5DE" } }, children)
   );
 }
@@ -156,7 +156,7 @@ export function SheetFrame({ title, onClose, scrollKey, footer, accent, children
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   // document.body-তে আঁকা: হেলথ-পেজের (z-index ৪০) ভেতরে থাকলে নিচের নেভ-বার (৪৫) ফর্মের সংরক্ষণ বাটন ঢেকে দিত
-  return createPortal(React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: ac ? ac.tint : "#F1F6F2", fontFamily: "'Hind Siliguri', sans-serif", ...(ac ? accentVars(accent) : {}) } },
+  return createPortal(React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "fixed", inset: 0, zIndex: 70, display: "flex", flexDirection: "column", background: ac ? ac.tint : "#F1F6F2", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif", ...(ac ? accentVars(accent) : {}) } },
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", padding: "calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 14px", background: "#fff", borderBottom: ac ? "3px solid " + ac.main : "1px solid #D9E5DE", flexShrink: 0 } },
       React.createElement("div", { style: { flex: 1, minWidth: 0, fontSize: "16px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", overflowWrap: "anywhere" } }, title),
       CloseX(onClose)),
@@ -186,7 +186,7 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy,
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel, busy]);
   const btn = { flex: 1, minHeight: "48px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Hind Siliguri', sans-serif" } },
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     React.createElement("div", { onClick: busy ? undefined : onCancel, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
     React.createElement("div", { role: "alertdialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "340px", background: "#fff", borderRadius: "20px", padding: "20px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
       React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: "#1F2D2A" } }, title || "মুছে ফেলবেন?"),
@@ -204,7 +204,7 @@ export function InfoDialog({ title, children, onClose, closeLabel }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", fontFamily: "'Hind Siliguri', sans-serif" } },
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 250, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     React.createElement("div", { onClick: onClose, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
     React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "420px", maxHeight: "86vh", overflowY: "auto", background: "var(--hs-surface, #fff)", color: "#1F2D2A", borderRadius: "22px", padding: "18px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },

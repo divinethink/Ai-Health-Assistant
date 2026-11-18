@@ -56,7 +56,7 @@ function LockedWeek({ docs, endISO, scoreCtx, rateCtx, remainMs }) {
     h("div", { style: { display: "flex", alignItems: "center", gap: "10px", background: T.sand, border: "1px solid " + T.sandBorder, borderRadius: "14px", padding: "8px 12px", marginTop: "10px" } },
       h("span", { "aria-hidden": "true", style: { fontSize: "20px", flexShrink: 0 } }, "🔒"),
       h("div", { style: { minWidth: 0, fontSize: "14px", fontWeight: 800, color: T.ink, lineHeight: 1.4 } }, "বৃহস্পতি রাত ৯টায় খুলবে",
-        h("span", { style: { fontSize: "12.5px", fontWeight: 400, color: T.muted } }, " · আর " + remainText(remainMs)))),
+        h("span", { style: { display: "block", fontSize: "12.5px", fontWeight: 400, color: T.muted } }, "আর " + remainText(remainMs) + " বাকি"))),
     h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, "শুধু আপনার দেওয়া তথ্য থেকে। সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।"));
 }
 

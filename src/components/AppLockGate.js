@@ -30,7 +30,7 @@ function LockScreen() {
   }
   const linkBtn = { minHeight: "44px", border: "none", background: "none", fontFamily: "inherit", fontSize: "14px", cursor: "pointer" };
   return h("div", { role: "dialog", "aria-modal": "true", "aria-label": "অ্যাপ লক করা আছে",
-    style: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", background: "var(--hs-bg, #F1F6F2)", color: "var(--hs-text, #1F2D2A)", fontFamily: "'Hind Siliguri', sans-serif", paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" } },
+    style: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", background: "var(--hs-bg, #F1F6F2)", color: "var(--hs-text, #1F2D2A)", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif", paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" } },
     h("div", { "aria-hidden": "true", style: { fontSize: "40px", marginBottom: "6px" } }, "🔒"),
     h(PinPad, { title: "PIN দিন", subtitle: wait > 0 ? "অনেকবার ভুল হয়েছে। " + bnNum(wait) + " সেকেন্ড পরে আবার চেষ্টা করুন।" : undefined, error, disabled: wait > 0, onComplete: (pin) => submit(pin) }),
     bio && h("button", { type: "button", onClick: () => unlockWithBiometric(), style: { ...linkBtn, marginTop: "16px", padding: "0 18px", borderRadius: "999px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", color: "var(--hs-primary, #0E4B43)", fontWeight: 700 } }, "👆 ফিঙ্গারপ্রিন্ট দিয়ে খুলুন"),

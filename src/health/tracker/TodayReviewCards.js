@@ -29,17 +29,26 @@ export function DayReviewCard({ review, label, dateText, pending, embedded }) {
       h("div", { key: "t" }, title("রিভিউ", "কমপক্ষে " + bnNum(MIN_INPUTS) + "টি বিষয়ে তথ্য দিলে রিভিউ আসবে — খাবার, ব্যায়াম, ঘুম, পানি", "🌙")),
     ]);
   }
-  const row = (it, good) => h("div", { key: it.key, style: { display: "flex", gap: "8px", fontSize: "14.5px", color: T.ink, lineHeight: 1.6, marginTop: "4px" } },
-    h("span", { "aria-hidden": "true", style: { color: good ? T.green : WARN, flexShrink: 0 } }, good ? "✓" : "▼"), h("span", null, it.text));
+  const tint = (c, pct) => "color-mix(in srgb, " + c + " " + pct + "%, var(--hs-surface, #fff))";
+  const badge = (good) => h("span", { "aria-hidden": "true", style: { width: "22px", height: "22px", borderRadius: "50%", background: good ? T.green : WARN, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: good ? "13px" : "9px", fontWeight: 800, flexShrink: 0, marginTop: "2px" } }, good ? "✓" : "▼");
+  const row = (it, good) => h("div", { key: it.key, style: { display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "14.5px", color: T.ink, lineHeight: 1.5, marginTop: "8px" } }, badge(good), h("span", null, it.text));
+  const group = (key, head, items, good) => h("div", { key, style: { background: good ? tint("var(--hs-primary, #0E4B43)", 8) : tint("#E8892B", 12), borderLeft: "4px solid " + (good ? T.green : WARN), borderRadius: "14px", padding: "10px 12px 12px", marginTop: "10px" } },
+    h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: good ? T.green : WARN } }, head), items.map((x) => row(x, good)));
+  const head = h("div", { key: "t", style: { display: "flex", alignItems: "center", gap: "10px" } },
+    h("span", { "aria-hidden": "true", style: { width: "38px", height: "38px", borderRadius: "12px", background: T.track, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 } }, "🌙"),
+    h("div", { style: { minWidth: 0 } },
+      h("div", { style: { fontSize: "17px", fontWeight: 800, color: T.ink, lineHeight: 1.25 } }, review.final ? label : label + " (সাময়িক)"),
+      review.final
+        ? dateText && h("span", { style: { display: "inline-block", marginTop: "4px", fontSize: "12.5px", fontWeight: 700, color: T.green, background: T.track, borderRadius: "999px", padding: "2px 10px" } }, dateText)
+        : h("div", { style: { fontSize: "12.5px", color: T.muted, marginTop: "2px", lineHeight: 1.4 } }, "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে")));
   return wrap([
-    h("div", { key: "t" }, title(review.final ? label : label + " (সাময়িক)", review.final ? dateText : "রাত ৯টার পরে চূড়ান্ত হবে; এর মধ্যে তথ্য যোগ হলে বদলাবে", "🌙")),
-    review.good.length > 0 && h("div", { key: "g", style: { marginTop: "2px" } },
-      h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: T.green } }, "ভালো হয়েছে"), review.good.map((x) => row(x, true))),
-    review.improve.length > 0 && h("div", { key: "i", style: { marginTop: "10px" } },
-      h("div", { style: { fontSize: "13.5px", fontWeight: 800, color: WARN } }, "ভালো করা দরকার"), review.improve.map((x) => row(x, false))),
-    !review.good.length && !review.improve.length && h("div", { key: "e" }, para("এই দিনের তথ্য থেকে বিচার করার মতো লক্ষ্য নেই।")),
-    review.tomorrow && h("div", { key: "tm", style: { background: T.track, borderRadius: "14px", padding: "10px 12px", marginTop: "10px", fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, "💡 " + review.tomorrow),
-    pending && h("div", { key: "p", style: { fontSize: "13.5px", color: T.muted, lineHeight: 1.5, marginTop: "10px" } }, pending),
+    head,
+    review.good.length > 0 && group("g", "ভালো হয়েছে", review.good, true),
+    review.improve.length > 0 && group("i", "ভালো করা দরকার", review.improve, false),
+    !review.good.length && !review.improve.length && h("div", { key: "e", style: { marginTop: "10px" } }, para("এই দিনের তথ্য থেকে বিচার করার মতো লক্ষ্য নেই।")),
+    review.tomorrow && h("div", { key: "tm", style: { display: "flex", gap: "10px", alignItems: "flex-start", background: T.track, borderRadius: "14px", padding: "10px 12px", marginTop: "10px", fontSize: "14px", color: T.ink, lineHeight: 1.5 } },
+      h("span", { "aria-hidden": "true", style: { fontSize: "18px", lineHeight: 1.2 } }, "💡"), h("span", null, review.tomorrow)),
+    pending && h("div", { key: "p", style: { fontSize: "12.5px", color: T.muted, lineHeight: 1.5, marginTop: "10px", textAlign: "center" } }, pending),
   ]);
 }
 

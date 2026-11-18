@@ -293,7 +293,7 @@ export function TrendRanges({ info, familyId, memberId, weekView, dayExtras }) {
       const tc = countInputs(dayBy[today], rateCtx, today);
       const left = Math.max(1, (tc.need || 3) - tc.count);
       const pending = pick && nm !== "today" ? "আজ আরও " + bnNum(left) + "টি বিষয়ে তথ্য দিলে আজকের রিভিউ দেখাবে।" : null;
-      const dateText = pick ? (nm === "today" ? "আজকের চিত্র: " : nm === "yesterday" ? "গতকালের চিত্র: " : "চিত্র: ") + new Date(pick.date + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" }) : null;
+      const dateText = pick ? new Date(pick.date + "T00:00:00").toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long" }) : null;
       return [React.createElement(DayReviewCard, { embedded: true, review: pick ? dayReview({ doc: pick.doc, ctx: rateCtx, date: pick.date, now: new Date(), bn: bnNum, isToday: nm === "today" }) : null, label, dateText, pending })];
     },
     exBox: () => [React.createElement(ExerciseBoxCard, { wk: exerciseWeek({ weekDates: weekDatesISO(), by: dayBy, todayISO: today, target: dx.weeklyTarget }) })],

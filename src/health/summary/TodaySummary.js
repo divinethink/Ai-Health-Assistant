@@ -20,7 +20,7 @@ import { homeVisibleDoses } from "./doseGroups.js";
 const { useState, useEffect, useCallback } = React;
 const h = React.createElement;
 
-const FONT = "'Hind Siliguri', sans-serif";
+const FONT = "'Noto Sans Bengali', 'Hind Siliguri', sans-serif";
 const BOX = { background: T.surface, border: "1px solid " + T.border, borderRadius: "20px", boxShadow: "0 2px 8px rgba(14,75,67,0.06)" };
 const SEC = { fontSize: "17px", fontWeight: 700, color: T.green, margin: "16px 2px 8px" };
 
