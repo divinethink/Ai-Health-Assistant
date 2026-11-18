@@ -1,5 +1,6 @@
 // ঘরোয়া ব্যায়াম গাইড (ব্যায়াম-প্ল্যান ট্যাবের সবচেয়ে নিচে): গ্রুপ অনুযায়ী তালিকা; ট্যাপে বিস্তারিত শিট।
 // সদস্যের অবস্থার সাথে মিললে ✕/! ব্যাজ। শুধু display — কিছু ব্লক করে না, কিছু সংরক্ষণ করে না। নিয়ম exerciseGuide.js-এ।
+import { createPortal } from "react-dom";
 import { EXERCISE_TYPES } from "./planPrefs.js";
 import { exerciseDetail } from "./homeWorkout.js";
 import { GUIDE_GROUPS, EXERCISE_GUIDE, guideStatus, riskLists } from "./exerciseGuide.js";
@@ -30,8 +31,9 @@ function Sheet({ type, ctx, onClose }) {
   const det = exerciseDetail(type);
   const { avoid, careful } = riskLists(type);
   const name = (EX_ICON[type] || "") + " " + EXERCISE_TYPES[type].label;
-  return h("div", { role: "dialog", "aria-label": EXERCISE_TYPES[type].label, onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 200, background: "rgba(20,28,26,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
-    h("div", { onClick: (e) => e.stopPropagation(), style: { background: T.surface, color: T.ink, width: "100%", maxWidth: "560px", maxHeight: "85vh", overflowY: "auto", borderRadius: "22px 22px 0 0", padding: "16px 16px 20px", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" } },
+  // document.body-তে portal: ট্র্যাকার-পেজের stacking-context (z=40) নিচের নেভ-বারের (z=45) নিচে চাপা পড়ত — শিটের নিচ কাটা যেত ও স্ক্রল হতো না।
+  return createPortal(h("div", { role: "dialog", "aria-label": EXERCISE_TYPES[type].label, onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 200, background: "rgba(20,28,26,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
+    h("div", { onClick: (e) => e.stopPropagation(), style: { background: T.surface, color: T.ink, width: "100%", maxWidth: "560px", maxHeight: "88vh", overflowY: "auto", overscrollBehavior: "contain", borderRadius: "22px 22px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" } },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" } },
         h("div", { style: { fontSize: "18px", fontWeight: 700, color: T.green } }, name),
         h("button", { onClick: onClose, "aria-label": "বন্ধ করুন", style: { minWidth: "44px", minHeight: "44px", border: "none", background: "transparent", fontSize: "20px", color: T.muted, cursor: "pointer" } }, "✕")),
@@ -45,7 +47,7 @@ function Sheet({ type, ctx, onClose }) {
       avoid.length > 0 && h(Section, { title: "✕ এই অবস্থায় করবেন না", color: STATUS_COLORS.red.text, bg: STATUS_COLORS.red.bg, border: STATUS_COLORS.red.border }, avoid.join(" • ")),
       careful.length > 0 && h(Section, { title: "! এই অবস্থায় সতর্ক থাকুন (ডাক্তারের পরামর্শ নিন)", color: STATUS_COLORS.yellow.text, bg: STATUS_COLORS.yellow.bg, border: STATUS_COLORS.yellow.border }, careful.join(" • ")),
       avoid.length === 0 && careful.length === 0 && h("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "8px" } }, "সাধারণভাবে নিরাপদ; তবু ব্যথা হলে থামুন।"),
-      h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5 } }, DISCLAIMER)));
+      h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5 } }, DISCLAIMER))), document.body);
 }
 
 export function ExerciseGuide({ age, flags, condKeys }) {

@@ -1,5 +1,6 @@
 // গ্রুপ-ভিত্তিক খাদ্য-তালিকা (ধাপ ২): নাম · পুষ্টি-চিপ · এক লাইনের গুণ; ট্যাপে বিস্তারিত শিট (সদস্যের ✓/!/✕ সহ)।
 // প্রসেসড/ভাজাপোড়া আলাদা লাল সেকশনে ক্ষতিকর প্রভাবসহ। শুধু display; কোনো data/schema বদল নেই। কিছু ব্লক করে না।
+import { createPortal } from "react-dom";
 import { groupedFoodList, foodDetail } from "../tracker/foodGroupList.js";
 import { FOODS } from "../tracker/mealPlanData.js";
 import { foodStatus, STATUS_COLORS } from "../tracker/foodStatus.js";
@@ -16,8 +17,9 @@ function Sheet({ foodKey, allergyTags, ctx, onClose }) {
   if (!d) return null;
   const st = foodStatus(foodKey, FOODS[foodKey], { allergyTags, ctx });
   const c = STATUS_COLORS[st.level];
-  return h("div", { role: "dialog", "aria-label": d.name, onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 200, background: "rgba(20,28,26,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
-    h("div", { onClick: (e) => e.stopPropagation(), style: { background: T.surface, color: T.ink, width: "100%", maxWidth: "560px", maxHeight: "85vh", overflowY: "auto", borderRadius: "22px 22px 0 0", padding: "16px 16px 20px", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" } },
+  // document.body-তে portal: ট্র্যাকার-পেজের stacking-context (z=40) নিচের নেভ-বারের (z=45) নিচে চাপা পড়ত — শিটের নিচ কাটা যেত ও স্ক্রল হতো না।
+  return createPortal(h("div", { role: "dialog", "aria-label": d.name, onClick: onClose, style: { position: "fixed", inset: 0, zIndex: 200, background: "rgba(20,28,26,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" } },
+    h("div", { onClick: (e) => e.stopPropagation(), style: { background: T.surface, color: T.ink, width: "100%", maxWidth: "560px", maxHeight: "88vh", overflowY: "auto", overscrollBehavior: "contain", borderRadius: "22px 22px 0 0", padding: "16px 16px calc(20px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" } },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" } },
         h("div", { style: { fontSize: "18px", fontWeight: 700, color: T.green } }, d.name),
         h("button", { onClick: onClose, "aria-label": "বন্ধ করুন", style: { minWidth: "44px", minHeight: "44px", border: "none", background: "transparent", fontSize: "20px", color: T.muted, cursor: "pointer" } }, "✕")),
@@ -30,7 +32,7 @@ function Sheet({ foodKey, allergyTags, ctx, onClose }) {
       d.harm && h("div", { style: { fontSize: "14px", lineHeight: 1.6, marginBottom: "8px", padding: "8px 10px", borderRadius: "12px", background: STATUS_COLORS.red.bg, border: "1px solid " + STATUS_COLORS.red.border, color: STATUS_COLORS.red.text } }, "⚠ ক্ষতিকর প্রভাব: " + d.harm),
       d.note && h("div", { style: { fontSize: "13px", lineHeight: 1.5, marginBottom: "8px", padding: "8px 10px", borderRadius: "12px", background: STATUS_COLORS.yellow.bg, border: "1px solid " + STATUS_COLORS.yellow.border, color: STATUS_COLORS.yellow.text } }, "! " + d.note),
       h("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "8px" } }, d.kcalText),
-      h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5 } }, FOOD_INFO_DISCLAIMER + " উৎস: " + FOOD_INFO_SOURCES + "।")));
+      h("div", { style: { fontSize: "12px", color: T.muted, lineHeight: 1.5 } }, FOOD_INFO_DISCLAIMER + " উৎস: " + FOOD_INFO_SOURCES + "।"))), document.body);
 }
 
 export function FoodGroupGuide({ allergyTags, ctx }) {
