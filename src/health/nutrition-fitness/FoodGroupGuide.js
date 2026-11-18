@@ -52,8 +52,10 @@ export function FoodGroupGuide({ allergyTags, ctx }) {
   };
   const det = (id, title, color, bg, border, rows, k) => h("details", { key: id, style: { background: bg, border: "1.5px solid " + border, borderRadius: "14px", padding: "4px 10px", marginTop: "8px" } },
     h("summary", { style: { fontSize: "14px", fontWeight: 700, color, cursor: "pointer", minHeight: "44px", display: "flex", alignItems: "center" } }, title), rows);
-  return h("div", { style: { marginTop: "12px" } },
-    h("div", { style: { fontSize: "15px", fontWeight: 700, color: T.green, marginBottom: "6px" } }, "🥗 খাদ্য গাইড (গ্রুপ অনুযায়ী তালিকা)"),
+  return h("section", { style: { marginTop: "28px", padding: "14px 12px 12px", borderRadius: "20px", background: "#EEF6F1", border: "1.5px solid #9CC5B4" } },
+    h("div", { style: { textAlign: "center", marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px dashed #9CC5B4" } },
+      h("div", { style: { fontSize: "19px", fontWeight: 800, color: T.green } }, "🥗 খাদ্য গাইড"),
+      h("div", { style: { fontSize: "13px", color: T.muted, marginTop: "2px" } }, "গ্রুপ অনুযায়ী খাবারের তালিকা")),
     h("input", { type: "search", value: q, placeholder: "খাবার বা ভিটামিন খুঁজুন (বাংলা/English)", onChange: (e) => setQ(e.target.value), "aria-label": "খাবার খুঁজুন", style: { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "8px 12px", fontSize: "14px", borderRadius: "12px", border: "1.5px solid " + T.inputBorder, background: T.surface, color: T.ink } }),
     groups.length === 0 && avoid.length === 0 && h("div", { style: { fontSize: "14px", color: T.muted, padding: "10px 2px" } }, "কিছু পাওয়া যায়নি।"),
     groups.map((g) => det("g_" + g.id, (GROUP_ICON[g.id] || "🍽️") + " " + g.label + " (" + g.items.length + ")", T.green, T.surface, T.border,

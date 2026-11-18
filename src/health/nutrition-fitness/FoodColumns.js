@@ -14,7 +14,7 @@ const SURFACE = "var(--hs-surface, #fff)";
 const PAL = {
   avoid: { accent: "#C0392B", tint: (a) => "rgba(192,57,43," + a + ")", mark: "✕", icon: "⛔", label: "এড়িয়ে চলুন" },
   include: { accent: "#2E8B63", tint: (a) => "rgba(46,139,99," + a + ")", mark: "✓", icon: "🥗", label: "খাবেন" },
-  tips: { accent: "#B7791F", tint: (a) => "rgba(183,121,31," + a + ")", mark: "›", icon: "💡", label: "অভ্যাস ও জীবনযাত্রা" },
+  tips: { accent: "#B7791F", tint: (a) => "rgba(183,121,31," + a + ")", mark: "›", icon: "💡", label: "যে অভ্যাস মেনে চলতে হবে" },
 };
 
 const cardStyle = (p) => ({
@@ -108,7 +108,9 @@ export function habitTipsBox(tips, limit) {
     h("span", { style: { fontSize: "14px", lineHeight: 1.55, color: TEXT, overflowWrap: "anywhere", minWidth: 0 } }, x));
   const ul = { margin: 0, padding: 0, ...gridStyle(230) };
   return h("section", { style: { ...cardStyle(p), marginTop: "12px" } },
-    cardHeader(p, p.label, 0),
+    h("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "10px", textAlign: "center" } },
+      h("span", { "aria-hidden": true, style: { fontSize: "20px", lineHeight: 1 } }, p.icon),
+      h("div", { style: { fontSize: "16px", fontWeight: 800, color: TEXT, minWidth: 0 } }, p.label)),
     h("ul", { style: ul }, first.map(li)),
     rest.length > 0 && h("details", { style: { marginTop: "8px" } },
       moreSummary(p, rest.length),
