@@ -10,6 +10,9 @@ import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { ReviewCards } from "./ReviewCards.js";
 import { WeekLockGate } from "./WeekLockGate.js";
+import { DayReviewCard, ExerciseBoxCard, SleepCalCard, AlertsCard } from "./TodayReviewCards.js";
+import { dayReview, exerciseWeek, restView, alertList } from "./dayReview.js";
+import { weekDatesISO } from "./exercisePlanData.js";
 import { MonthLockGate, MonthLockedView, MonthOpenNote, MonthAttentionCard } from "./MonthLockGate.js";
 import { monthWindow } from "./monthLock.js";
 import { swipeDelta } from "./dateNav.js";
@@ -246,7 +249,7 @@ function CompareCard({ list, avgs }) {
 
 // ---------- মূল ----------
 
-export function TrendRanges({ info, familyId, memberId, weekView }) {
+export function TrendRanges({ info, familyId, memberId, weekView, dayExtras }) {
   const today = todayISO();
   const three = lastNMonths(new Date(), 3);
   const topLayout = useAppDesign("trend").top;
@@ -297,7 +300,17 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
     avgs: monthlyAverages(three, (y, m) => cache[monthKey(y, m)], ctx, today) });
 
   // হিটম্যাপ-ক্যালেন্ডার: App Creator-এর ডিজাইন (দৃশ্যমানতা/ভাঁজ) অনুযায়ী ("heatmap" কার্ড); ত্রুটি-বার্তা সবসময় দেখায়
-  const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)] };
+  // ক্যালেন্ডারের নিচের কার্ড: আজকের রিভিউ · ব্যায়াম-ঘর · ঘুম/ক্যালরি · সতর্কতা (সব ৩ মাসের লোড-করা ডেটা থেকে; নতুন লোড নেই)
+  const dx = dayExtras || {};
+  const dayBy = {};
+  allDocs.forEach((d) => { if (d && d.date) dayBy[d.date] = d; });
+  const dayNodes = !reviewReady ? {} : {
+    dayReview: () => [React.createElement(DayReviewCard, { review: dayReview({ doc: dayBy[today], ctx: rateCtx, date: today, now: new Date(), bn: bnNum }), onGoInput: dx.onGoInput })],
+    exBox: () => [React.createElement(ExerciseBoxCard, { wk: exerciseWeek({ weekDates: weekDatesISO(), by: dayBy, todayISO: today, target: dx.weeklyTarget }) })],
+    sleepCal: () => [React.createElement(SleepCalCard, { rv: restView({ by: dayBy, endISO: today, calorieTarget: dx.calorieTarget, sleepMinH: rateCtx.sleepMinH }), calorieTarget: dx.calorieTarget, sleepRange: dx.sleepRange })],
+    alerts: () => [React.createElement(AlertsCard, { list: alertList({ gate: info.gate, activeMeds: info.activeMeds, extraFoods: dayBy[today] && dayBy[today].extraFoods, age: info.age, flags: info.flags, condKeys: info.condKeys }) })],
+  };
+  const heatNodes = { heatmap: () => [err ? null : ymDocs ? React.createElement(HeatCalendar, { ym, docs: ymDocs, ctx, today, sel, onSel: setSel, onMove: move }) : Skeleton(1, 260)], ...dayNodes };
   return React.createElement("div", null,
     err && ErrorBox(err),
     ...renderLayoutCards("trend", "top", topLayout, heatNodes),

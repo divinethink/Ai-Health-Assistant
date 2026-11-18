@@ -33,13 +33,20 @@ export const PAGE_DEFS = {
   trend: {
     label: "অ্যাক্টিভিটি রিভিউ",
     zones: {
-      top: { label: "উপরের অংশ", cards: [d("heatmap", "অ্যাক্টিভিটি ক্যালেন্ডার", "fixed")] },
+      top: {
+        label: "উপরের অংশ",
+        cards: [
+          d("heatmap", "অ্যাক্টিভিটি ক্যালেন্ডার", "fixed"),
+          d("dayReview", "আজকের রিভিউ", "fixed"),
+          d("exBox", "এই সপ্তাহের ব্যায়াম", "fixed"),
+          d("sleepCal", "ঘুম ও ক্যালরি", "fixed"),
+          d("alerts", "সতর্কতা", "fixed"),
+        ],
+      },
       week: {
         label: "সপ্তাহ-ভিউয়ের কার্ড",
         cards: [
           d("weight", "ওজন", "fixed"),
-          d("calSleep", "ক্যালরি ও ঘুম", "fixed"),
-          d("weekGoal", "এই সপ্তাহের ব্যায়াম-লক্ষ্য", "fixed"),
           d("review", "সাপ্তাহিক রিভিউ", "fixed"),
         ],
       },

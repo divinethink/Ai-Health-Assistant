@@ -23,7 +23,6 @@ import {
 } from "./planPrefs.js";
 import { MealEditSheet, ExerciseEditSheet, ExerciseLogSheet, EX_ICON } from "./PlanEditSheets.js";
 import { TrendChart } from "../reports/TrendChart.js";
-import { TrendBars } from "./TrendBars.js";
 import { TrendRanges } from "./TrendExtras.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
@@ -53,23 +52,9 @@ function isType(r, names) {
   return r.resourceType === "observation" && names.includes((r.type || "").trim().toLowerCase());
 }
 
-function Bar({ pct, color }) {
-  const p = Math.max(0, Math.min(100, pct || 0));
-  return React.createElement("div", { style: { height: "10px", borderRadius: "999px", background: "#E4ECE7", overflow: "hidden", marginTop: "8px" } },
-    React.createElement("div", { style: { width: p + "%", height: "100%", background: color } }));
-}
-
 function Notice({ children, tone }) {
   const warn = tone !== "info";
   return React.createElement("div", { style: { ...CARD, background: warn ? "#FFF6DD" : "#E4F0E9", borderColor: warn ? "#E8D08A" : "#9CC5B4", color: warn ? "#7A5B00" : T.green, fontSize: "14px", lineHeight: 1.5 } }, children);
-}
-
-function Stat({ title, line, pct, color, extra }) {
-  return React.createElement("div", { style: CARD },
-    React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, title),
-    React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "4px" } }, line),
-    pct !== undefined && React.createElement(Bar, { pct, color }),
-    extra && React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "6px" } }, extra));
 }
 
 // চেকলিস্ট-টিক: দেখতে ২০px বক্স, ট্যাপ-জায়গা ৪০px (বাটনটি স্বচ্ছ)
@@ -377,7 +362,11 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- ট্রেন্ড: হিটম্যাপ + সপ্তাহ|মাস|৩ মাস (TrendExtras.js); সপ্তাহ-ভিউ = WeekTrend (গত ৭ দিন, আগের মতোই) ----------
 function TrendTab(props) {
-  return React.createElement(TrendRanges, { info: props.info, familyId: props.familyId, memberId: props.memberId, weekView: React.createElement(WeekTrend, props) });
+  // ক্যালেন্ডারের নিচের কার্ডগুলোর লক্ষ্য-মান (ব্যায়াম-ঘর, ঘুম, ক্যালরি) — WeekTrend-এর আগের হিসাবই
+  const { info } = props, { goal, gate, age } = info;
+  const plan = exercisePlan(age, goal ? goal.goalType : null, focusCtxOf({ goal, sex: info.member && info.member.sex, age, flags: info.flags, condKeys: info.condKeys }));
+  const dayExtras = { weeklyTarget: plan && plan.weeklyTargetMin ? plan.weeklyTargetMin : null, calorieTarget: !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null, sleepRange: sleepTargetHours(age), onGoInput: props.onGoInput };
+  return React.createElement(TrendRanges, { info, familyId: props.familyId, memberId: props.memberId, dayExtras, weekView: React.createElement(WeekTrend, props) });
 }
 
 function WeekTrend({ info, familyId, memberId, onGoInput }) {
@@ -393,10 +382,9 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
   if (!docs) return Skeleton(3, 96);
 
   const calorieTarget = !gate.blocked && goal && goal.calc ? goal.calc.calorieTarget : null;
-  const [sMin, sMax] = sleepTargetHours(age);
+  const [sMin] = sleepTargetHours(age);
   const plan = exercisePlan(age, goal ? goal.goalType : null, focusCtxOf({ goal, sex: info.member && info.member.sex, age, flags: info.flags, condKeys: info.condKeys }));
   const t = buildTrend(docs, dates, { calorieTarget, fastDays: info.fastDays, sleepMinH: sMin, weeklyExerciseTarget: plan ? plan.weeklyTargetMin : null });
-  const labels = dates.map((d) => bnNum(Number(d.slice(8))));
   const card = (title, sub, body) => React.createElement("div", { style: CARD },
     React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, title),
     sub && React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, sub), body);
@@ -420,28 +408,6 @@ function WeekTrend({ info, familyId, memberId, onGoInput }) {
   const nodes = {
     weight: () => [
     card("ওজন (কেজি)", "সাপ্তাহিক ওজন · " + wDayName, wPts.length === 1 ? weightValueCard : wPts.length ? React.createElement(TrendChart, { height: 110, unit: "কেজি", referenceRange: null, points: wPts, targetLine: targetKg ? { value: targetKg, label: "লক্ষ্য " + bnNum(targetKg) + " কেজি" } : null }) : none("এই সপ্তাহে " + wDayName + "ের ওজন দেওয়া হয়নি।")),
-    ],
-    calSleep: () => [
-    // ক্যালরি ও ঘুম — এক লাইনে পাশাপাশি, আলাদা কার্ড (ক্যালরি-টার্গেট না থাকলে ঘুম পুরো প্রস্থে)
-    React.createElement("div", { style: { display: "flex", gap: "8px", alignItems: "stretch" } },
-      calorieTarget && React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex" } },
-        React.createElement("div", { style: { ...CARD, flex: 1, minWidth: 0 } },
-          React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "ক্যালরি"),
-          React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, "লক্ষ্য " + bnNum(calorieTarget)),
-          t.calDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.calories), target: calorieTarget, color: "#E0A100", width: 160 }) : none("মিল টিক দেওয়া হয়নি।"))),
-      React.createElement("div", { style: { flex: 1, minWidth: 0, display: "flex" } },
-        React.createElement("div", { style: { ...CARD, flex: 1, minWidth: 0 } },
-          React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink } }, "ঘুম (ঘণ্টা)"),
-          React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "1px 0 4px" } }, "লক্ষ্য " + bnNum(sMin) + "–" + bnNum(sMax)),
-          t.sleepDays ? React.createElement(TrendBars, { labels, values: t.days.map((x) => x.sleepH), target: sMin, color: "#6B5BD2", width: 160 }) : none("ঘুমের তথ্য দেওয়া হয়নি।")))),
-    React.createElement("div", { style: { fontSize: "12px", color: T.muted, margin: "-2px 0 8px" } }, "বিন্দু-রেখা = লক্ষ্য (ঘুমে সর্বনিম্ন)"),
-    ],
-    weekGoal: () => [
-    // এই সপ্তাহের ব্যায়াম-লক্ষ্য (শনি–শুক্র) — আগে ব্যায়াম প্ল্যানে ছিল; এখন রিভিউয়ের ঠিক উপরে
-    plan && plan.weeklyTargetMin && React.createElement(Stat, {
-      title: "🏃 এই সপ্তাহের ব্যায়াম-লক্ষ্য", line: bnNum(info.weekMin || 0) + " / " + bnNum(plan.weeklyTargetMin) + " মিনিট (শনি–শুক্র, সব ধরনের ব্যায়াম মিলিয়ে)",
-      pct: ((info.weekMin || 0) / plan.weeklyTargetMin) * 100, color: T.green2,
-    }),
     ],
     review: () => [
     card("সাপ্তাহিক রিভিউ", "শুধু আপনার দেওয়া তথ্য থেকে",
