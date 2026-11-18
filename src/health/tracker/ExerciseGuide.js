@@ -53,9 +53,11 @@ function Sheet({ type, ctx, onClose }) {
 export function ExerciseGuide({ age, flags, condKeys }) {
   const [open, setOpen] = useState(null);
   const ctx = { age, flags, condKeys };
-  return h("div", { style: { marginTop: "12px" } },
-    h("div", { style: { fontSize: "15px", fontWeight: 700, color: T.green, marginBottom: "2px" } }, "🏋️ ঘরোয়া ব্যায়াম গাইড"),
-    h("div", { style: { fontSize: "13px", color: T.muted, marginBottom: "6px" } }, "ব্যায়ামে ট্যাপ করলে বিস্তারিত দেখাবে — কোন অসুখে এড়াবেন তাও লেখা আছে।"),
+  // খাদ্য গাইডের (FoodGroupGuide) মতো একই কার্ড-ডিজাইন: মাঝ-সারিতে শিরোনাম + ড্যাশ-রেখা।
+  return h("section", { style: { marginTop: "28px", padding: "14px 12px 12px", borderRadius: "20px", background: "#EEF6F1", border: "1.5px solid #9CC5B4" } },
+    h("div", { style: { textAlign: "center", marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px dashed #9CC5B4" } },
+      h("div", { style: { fontSize: "19px", fontWeight: 800, color: T.green } }, "🏋️ ঘরোয়া ব্যায়াম গাইড"),
+      h("div", { style: { fontSize: "13px", color: T.muted, marginTop: "2px" } }, "ব্যায়ামে ট্যাপ করলে বিস্তারিত দেখাবে — কোন অসুখে এড়াবেন তাও লেখা আছে।")),
     GUIDE_GROUPS.map((g) => {
       const rows = g.types.filter((t) => EXERCISE_GUIDE[t] && EXERCISE_TYPES[t]);
       const sts = rows.map((t) => guideStatus(t, ctx));

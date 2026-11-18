@@ -344,13 +344,17 @@ function ExerciseTab({ info, familyId, callerMemberId, memberId, onSaved }) {
               style: { marginTop: "6px", minHeight: "44px", padding: "0 14px", borderRadius: "12px", border: "1.5px solid " + T.green, background: T.surface, color: T.green, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "✎ " + DAY_LABELS[i] + " বদলান")));
       })),
     React.createElement("div", { style: CARD },
-      React.createElement("div", { style: { fontSize: "15px", fontWeight: 700, color: T.ink, marginBottom: "8px" } }, "আজ আসলে কী করলেন?"),
-      log.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: T.ink, lineHeight: 1.6, marginBottom: "8px" } },
-        log.map((x, i) => React.createElement("div", { key: i }, "• " + EXERCISE_TYPES[x.type].label + " " + bnNum(x.min) + " মিনিট"))),
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
-        ["walk", "cycling", "gym", "sports", "other"].map((t) => React.createElement("button", {
+      React.createElement("div", { style: { textAlign: "center", marginBottom: "10px", paddingBottom: "10px", borderBottom: "1px dashed " + T.border } },
+        React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, color: T.green } }, "📝 আজ আসলে কী করলেন?"),
+        React.createElement("div", { style: { fontSize: "13px", color: T.muted, marginTop: "2px" } }, "যা করেছেন তাতে ট্যাপ করে যোগ করুন")),
+      log.length > 0 && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" } },
+        log.map((x, i) => React.createElement("div", { key: i, style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "8px 12px", borderRadius: "12px", background: "#EEF6F1", border: "1px solid #9CC5B4", fontSize: "14px", color: T.ink } },
+          React.createElement("span", { style: { fontWeight: 600 } }, (EX_ICON[x.type] || "") + " " + EXERCISE_TYPES[x.type].label),
+          React.createElement("span", { style: { color: T.green, fontWeight: 700, flexShrink: 0 } }, bnNum(x.min) + " মিনিট")))),
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" } },
+        ["walk", "cycling", "gym", "sports", "other"].map((t, i, arr) => React.createElement("button", {
           key: t, onClick: () => { setErr(null); setSheet({ kind: "log", type: t }); }, disabled: busy,
-          style: { minHeight: "40px", padding: "4px 12px", borderRadius: "12px", border: "1px solid " + T.inputBorder, background: T.canvas, color: T.ink, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+          style: { minHeight: "44px", padding: "6px 10px", borderRadius: "12px", border: "1.5px solid " + T.inputBorder, background: T.canvas, color: T.ink, fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", gridColumn: i === arr.length - 1 && arr.length % 2 ? "1 / -1" : "auto" },
         }, (EX_ICON[t] || "") + " " + EXERCISE_TYPES[t].label)))),
     sheet && sheet.kind === "day" && React.createElement(ExerciseEditSheet, {
       key: "day" + sheet.idx, dayLabel: DAY_LABELS[sheet.idx], items: plan.routine[sheet.idx], isCustom: !!(plan.custom && plan.custom.includes(sheet.idx)), busy, err,
