@@ -2,6 +2,7 @@
 // হিসাব reviewInsights.js-এ (pure); কিছু সংরক্ষণ করে না, ব্লক করে না। সদস্যের নিজের দেওয়া তথ্য থেকে — AI/রোগনির্ণয় নয়।
 import { T, HOME_CARD } from "./trackerTheme.js";
 import { weeklyReport, pickFocus, habitPatterns, triggerSearch } from "./reviewInsights.js";
+import { weakTip } from "./weekLock.js";
 
 const h = React.createElement;
 const BN = "০১২৩৪৫৬৭৮৯";
@@ -18,12 +19,16 @@ const note = (t) => h("div", { style: { fontSize: "12px", color: T.muted, margin
 const row = (kind, text, i) => h("div", { key: i, style: { display: "flex", gap: "8px", fontSize: "14px", color: T.ink, lineHeight: 1.6, marginTop: i ? "4px" : 0 } },
   h("span", { "aria-hidden": "true", style: { color: MARK[kind][1], flexShrink: 0 } }, MARK[kind][0]), h("span", null, bn(text)));
 
-function ReportCard({ rep, past }) {
-  const kids = [title(past ? "ওই মাসের শেষ সপ্তাহের রিপোর্ট" : "এ সপ্তাহের রিপোর্ট", "শেষ ৭ দিন · আগের ৭ দিনের সাথে মিলিয়ে", "🧾")];
+function ReportCard({ rep, past, phase }) {
+  const t = past ? "ওই মাসের শেষ সপ্তাহের রিপোর্ট" : phase === "provisional" ? "চলতি সপ্তাহের রিপোর্ট" : phase === "final" ? "গত সপ্তাহের চূড়ান্ত রিপোর্ট" : "এ সপ্তাহের রিপোর্ট";
+  const sub = phase === "provisional" ? "চলতি, শুক্রবার শেষে চূড়ান্ত · আগের ৭ দিনের সাথে মিলিয়ে" : phase === "final" ? "শনি–শুক্র · আগের ৭ দিনের সাথে মিলিয়ে" : "শেষ ৭ দিন · আগের ৭ দিনের সাথে মিলিয়ে";
+  const kids = [title(t, sub, "🧾")];
   if (!rep.enough) {
     kids.push(h("div", { key: "n", style: { fontSize: "14px", color: T.ink, lineHeight: 1.6 } }, "রিপোর্ট বানাতে আরও " + bn(rep.need) + " দিনের তথ্য দরকার। ছোট ছোট এন্ট্রিই যথেষ্ট।"));
   } else {
     rep.lines.forEach((l, i) => kids.push(row(l.kind, l.text, i)));
+    const tip = weakTip(rep);
+    if (tip) kids.push(h("div", { key: "tip", style: { fontSize: "13px", color: T.muted, lineHeight: 1.6, marginTop: "6px" } }, "💡 " + bn(tip.text)));
     if (rep.focusProgress) {
       const f = rep.focusProgress;
       kids.push(h("div", { key: "fp", style: { marginTop: "10px", padding: "8px 10px", borderRadius: "12px", background: T.canvas, border: "1px solid " + T.border, fontSize: "14px", color: T.ink, lineHeight: 1.6 } },
@@ -70,11 +75,11 @@ function TriggerCard({ trg }) {
 }
 
 // props: docs (মিলিত দৈনিক ডক), endISO, scoreCtx (পানি বাদ), rateCtx (পানিসহ), gutEntries, showGut, full (অভ্যাস+ট্রিগারও)
-export function ReviewCards({ docs, endISO, scoreCtx, rateCtx, gutEntries, showGut, full, past }) {
+export function ReviewCards({ docs, endISO, scoreCtx, rateCtx, gutEntries, showGut, full, past, phase }) {
   const rep = weeklyReport({ docs, endISO, scoreCtx, rateCtx });
   const focus = pickFocus(rep, rateCtx);
   // মাস-ভিউ (full): সাপ্তাহিক রিপোর্ট ও ফোকাস সপ্তাহ-ভিউয়ে আছে — এখানে পুনরাবৃত্তি নয়
-  const nodes = full ? [] : [h(ReportCard, { key: "r", rep, past }), h(FocusCard, { key: "f", focus })];
+  const nodes = full ? [] : [h(ReportCard, { key: "r", rep, past, phase }), h(FocusCard, { key: "f", focus })];
   if (full) {
     nodes.push(h(PatternCard, { key: "p", pat: habitPatterns({ docs, endISO, rateCtx }) }));
     if (showGut) nodes.push(h(TriggerCard, { key: "t", trg: triggerSearch({ docs, gutEntries, endISO }) }));

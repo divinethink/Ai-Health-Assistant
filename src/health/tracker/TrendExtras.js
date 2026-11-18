@@ -9,6 +9,7 @@ import { T, HOME_CARD, GRADIENT_HERO } from "./trackerTheme.js";
 import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { ReviewCards } from "./ReviewCards.js";
+import { WeekLockGate } from "./WeekLockGate.js";
 import { swipeDelta } from "./dateNav.js";
 import { useAppDesign } from "../../legacy/appDesign.js";
 import { renderLayoutCards } from "../../shared/LayoutCards.js";
@@ -268,7 +269,8 @@ export function TrendRanges({ info, familyId, memberId, weekView }) {
   const reviewReady = !!cache[monthKey(three[2].y, three[2].m)] && !!cache[monthKey(three[1].y, three[1].m)];
   // তিন অংশ একটার নিচে আরেকটা: সপ্তাহ → মাস → ৩ মাসের তুলনামূলক চিত্র (আগের সপ্তাহ|মাস|৩ মাস পিল আর নেই)
   const title = (t) => React.createElement("div", { style: { textAlign: "center", fontSize: "19px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "22px 0 10px" } }, t);
-  const weekBody = React.createElement("div", null, reviewReady ? review(false, today) : Skeleton(1, 120), weekView);
+  // সাপ্তাহিক রিভিউ: বৃহস্পতি রাত ৯টা–শনি রাত ১১টা খোলা, বাকি সময় লক-সারাংশ (WeekLockGate)
+  const weekBody = React.createElement(WeekLockGate, { docs: allDocs, scoreCtx: ctx, rateCtx, ready: reviewReady, weekView, skeleton: Skeleton(1, 120), gutEntries: info.gutEntries || [], showGut: false });
   const monthBody = !ready ? Skeleton(2, 120) : (() => {
     const ins = monthInsights({ curDocs: ymDocs, prevDocs, y: ym.y, m: ym.m, ctx, todayISO: today });
     return React.createElement("div", null,
