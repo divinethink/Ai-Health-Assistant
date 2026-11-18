@@ -12,6 +12,7 @@ import { MAX_QTY, MAX_LIST } from "./planPrefs.js";
 import { nutritionOf } from "./foodNutrition.js";
 import { per100Of, measuresOf, buildFoodEntry, buildOwnFoodEntry, slotForNow, fmtMacro, entryAmountText, MAX_MEASURE_QTY } from "./foodCalc.js";
 import { Sheet, FoodPicker, Msg, BTN, INPUT, primaryBtn } from "./PlanEditSheets.js";
+import { ConfirmDialog } from "../../shared/ui.js";
 
 const { useState } = React;
 
@@ -37,7 +38,7 @@ const MUTED = "#5F716C";
 const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1.5px solid " + (on ? GREEN : "#C3D2CA"), background: on ? GREEN : "#fff", color: on ? "#fff" : "#1F2D2A" });
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
-// বাস্কেটের একটি সারি: নাম + ক্যালরি + ✕; মাপ-চিপ বা গ্রাম; ছোট ± স্টেপার। onChange(patch) = {q, mId, gt}।
+// বাস্কেটের একটি সারি (কমপ্যাক্ট, ২ লাইন): নাম + ক্যালরি + ✕ / [− সংখ্যা +] + মাপ-ড্রপডাউন (বাটি ▾ | গ্রাম)। onChange(patch) = {q, mId, gt}।
 function BasketRow({ b, slot, allergyTags, avoidCtx, activeMeds, onChange, onRemove }) {
   const h = React.createElement;
   const k = b.key, f = FOODS[k], unit = unitModeOf(k), ms = measuresOf(k), gramMode = b.mId === "g";
@@ -47,25 +48,26 @@ function BasketRow({ b, slot, allergyTags, avoidCtx, activeMeds, onChange, onRem
   const maxQty = unit ? MAX_QTY : MAX_MEASURE_QTY;
   const step = (d) => onChange({ q: Math.max(0.5, Math.round((b.q + d) * 2) / 2) });
   const incOk = !gramMode && b.q + 0.5 <= maxQty && (unit || buildFoodEntry(k, slot, { measureId: b.mId, qty: b.q + 0.5 }));
-  const sm = (label, onClick, disabled, aria) => h("button", { type: "button", onClick, disabled, "aria-label": aria, style: { width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "#E4ECE7", color: GREEN, fontSize: "22px", fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, flexShrink: 0, fontFamily: "inherit" } }, label);
-  const mchip = (on) => ({ ...chip(on), minHeight: "36px", padding: "4px 10px", fontSize: "13px", flex: "0 0 auto" });
-  return h("div", { style: { border: "1px solid " + (st.level === "green" ? "rgba(127,150,140,0.25)" : sc.border), background: "#fff", borderRadius: "16px", padding: "10px 12px", marginTop: "8px" } },
+  const sm = (label, onClick, disabled, aria) => h("button", { type: "button", onClick, disabled, "aria-label": aria, style: { width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "#E4ECE7", color: GREEN, fontSize: "20px", fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, flexShrink: 0, fontFamily: "inherit", padding: 0 } }, label);
+  const onMeasure = (e) => { const v = e.target.value; if (v === "g") onChange({ mId: "g", gt: entry && entry.grams ? String(entry.grams) : b.gt }); else onChange({ mId: v, q: 1 }); };
+  return h("div", { style: { border: "1px solid " + (st.level === "green" ? "rgba(127,150,140,0.25)" : sc.border), background: "#fff", borderRadius: "14px", padding: "8px 10px", marginTop: "6px" } },
     h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
       h("div", { style: { flex: 1, minWidth: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A", overflowWrap: "anywhere", lineHeight: 1.25 } }, f.n),
-      h("div", { style: { textAlign: "right", flexShrink: 0, color: GREEN, fontWeight: 800, fontSize: "17px", lineHeight: 1.1 } }, entry ? bnNum(entry.kcal) : "—", h("span", { style: { display: "block", fontSize: "11px", fontWeight: 500, color: "#8A9B95" } }, "কিলোক্যালরি")),
-      h("button", { type: "button", onClick: onRemove, "aria-label": f.n + " বাদ দিন", style: { width: "36px", height: "36px", flexShrink: 0, borderRadius: "50%", border: "none", background: "#EEF3F0", color: "#5F716C", fontSize: "16px", cursor: "pointer", fontFamily: "inherit" } }, "✕")),
-    st.level !== "green" && h("div", { style: { fontSize: "12.5px", color: sc.text, marginTop: "4px", lineHeight: 1.4 } }, st.icon + " " + st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : "")),
-    !unit && h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" } },
-      ms.map((m) => h("button", { key: m.id, type: "button", onClick: () => onChange({ mId: m.id, q: 1 }), "aria-pressed": b.mId === m.id, style: mchip(b.mId === m.id) }, m.label)),
-      h("button", { type: "button", onClick: () => onChange({ mId: "g", gt: entry && entry.grams ? String(entry.grams) : b.gt }), "aria-pressed": gramMode, style: mchip(gramMode) }, "গ্রাম")),
-    gramMode
-      ? h("input", { type: "number", inputMode: "decimal", min: 1, max: 2000, step: "any", value: b.gt, onChange: (e) => onChange({ gt: e.target.value }), "aria-label": f.n + " — গ্রাম", placeholder: "গ্রাম (১–২০০০)", style: { ...INPUT, marginTop: "8px", fontSize: "17px", fontWeight: 700, textAlign: "center" } })
-      : h("div", { style: { display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" } },
+      h("div", { style: { flexShrink: 0, color: GREEN, fontWeight: 800, fontSize: "16px", whiteSpace: "nowrap" } }, entry ? bnNum(entry.kcal) : "—", h("span", { style: { fontSize: "11px", fontWeight: 500, color: "#8A9B95" } }, " কিলোক্যালরি")),
+      h("button", { type: "button", onClick: onRemove, "aria-label": f.n + " বাদ দিন", style: { width: "32px", height: "32px", flexShrink: 0, borderRadius: "50%", border: "none", background: "#EEF3F0", color: "#5F716C", fontSize: "13px", cursor: "pointer", fontFamily: "inherit", padding: 0 } }, "✕")),
+    st.level !== "green" && h("div", { style: { fontSize: "12.5px", color: sc.text, marginTop: "3px", lineHeight: 1.4 } }, st.icon + " " + st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : "")),
+    h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px 8px", marginTop: "6px" } },
+      !gramMode && h("div", { style: { display: "flex", alignItems: "center", gap: "4px" } },
         sm("−", () => step(-0.5), b.q <= 0.5, f.n + " পরিমাণ কমান"),
-        h("span", { style: { minWidth: "40px", textAlign: "center", fontSize: "20px", fontWeight: 800, color: "#1F2D2A" } }, bnNum(b.q)),
-        sm("+", () => step(0.5), !incOk, f.n + " পরিমাণ বাড়ান"),
-        h("span", { style: { fontSize: "13px", color: MUTED, minWidth: 0 } }, unit ? "ইউনিট: " + f.u : (entry && entry.grams ? "≈ " + bnNum(entry.grams) + " গ্রাম" : ""))),
-    notes.map((n, i) => h("div", { key: "n" + i, style: { marginTop: "8px", padding: "6px 10px", borderRadius: "10px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "12.5px", lineHeight: 1.5 } }, "💊 " + n.text)));
+        h("span", { style: { minWidth: "38px", textAlign: "center", fontSize: "18px", fontWeight: 800, color: "#1F2D2A" } }, bnNum(b.q)),
+        sm("+", () => step(0.5), !incOk, f.n + " পরিমাণ বাড়ান")),
+      gramMode && h("input", { type: "number", inputMode: "decimal", min: 1, max: 2000, step: "any", value: b.gt, onChange: (e) => onChange({ gt: e.target.value }), "aria-label": f.n + " — গ্রাম", placeholder: "গ্রাম (১–২০০০)", style: { ...INPUT, flex: "1 1 90px", minWidth: 0, minHeight: "40px", padding: "4px 10px", fontSize: "16px", fontWeight: 700, textAlign: "center" } }),
+      unit
+        ? h("span", { style: { fontSize: "13px", color: MUTED } }, "ইউনিট: " + f.u)
+        : h("select", { value: gramMode ? "g" : b.mId, onChange: onMeasure, "aria-label": f.n + " — মাপ", style: { minHeight: "40px", padding: "0 8px", borderRadius: "12px", border: "1.5px solid #C3D2CA", background: "#fff", color: "#1F2D2A", fontSize: "14px", fontWeight: 600, fontFamily: "inherit" } },
+          ms.map((m) => h("option", { key: m.id, value: m.id }, m.label)), h("option", { key: "g", value: "g" }, "গ্রাম")),
+      !gramMode && !unit && entry && entry.grams ? h("span", { style: { fontSize: "12.5px", color: MUTED } }, "≈ " + bnNum(entry.grams) + " গ্রাম") : null),
+    notes.map((n, i) => h("div", { key: "n" + i, style: { marginTop: "6px", padding: "5px 10px", borderRadius: "10px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "12.5px", lineHeight: 1.5 } }, "💊 " + n.text)));
 }
 
 // props: allergyTags, avoidCtx, activeMeds, count (আজ নিজে-যোগ-করা মোট), slotBudgets (ঐচ্ছিক, foodCalc.slotBudgets), recent (ঐচ্ছিক, foodCalc.recentFoodEntries), busy, err, onAdd(entry) → Promise<boolean>, onAddMany(entries) → Promise<boolean> (বাস্কেট; একটাই লেখা), onClose
@@ -87,6 +89,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   const multi = !editEntry; // নতুন যোগে বাস্কেট; এডিটে আগের একক ধাপ
   const [basket, setBasket] = useState([]); // [{key, mId, q, gt}]
   const [basketOpen, setBasketOpen] = useState(false);
+  const [askClose, setAskClose] = useState(false); // বাছা খাবার থাকা অবস্থায় ✕/Back/বাইরে-চাপ → "বাদ দেবেন?"
   const slotList = slots || MEAL_SLOTS;
   const slotLabel = (slotList.find((s) => s.id === slot) || {}).label;
   const full = count >= MAX_LIST;
@@ -98,6 +101,8 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   };
   const back = () => { setKey(null); };
   const room = Math.max(0, MAX_LIST - count);
+  const guardedClose = () => { if (multi && basket.length > 0) setAskClose(true); else onClose(); };
+  const closeAsk = askClose && React.createElement(ConfirmDialog, { title: "বাছা খাবার বাদ দেবেন?", message: bnNum(basket.length) + "টি খাবার বাছা আছে, এখনো যোগ হয়নি। বন্ধ করলে বাছাই মুছে যাবে।", confirmLabel: "বাদ দিন", cancelLabel: "বাছাই রাখুন", onConfirm: () => { setAskClose(false); onClose(); }, onCancel: () => setAskClose(false) });
   // বাস্কেটে বাছা/বাদ। addOnly = সাম্প্রতিক-চিপ (দ্বিতীয়বার ট্যাপে বাদ নয়)। ✕ খাবারও বাছা যায়; সতর্কতা পরের পাতায়।
   const toggleBasket = (k, pre, addOnly) => {
     if (basket.some((x) => x.key === k)) { if (!addOnly) { setBasket((cur) => cur.filter((x) => x.key !== k)); setNotice(null); } return; }
@@ -184,21 +189,23 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
       const ok = await onAddMany(items.map((x) => x.entry));
       if (ok) { setNotice("✓ " + bnNum(items.length) + "টি খাবার যোগ হয়েছে (" + slotLabel + ")"); setBasket([]); setBasketOpen(false); }
     };
-    return React.createElement(Sheet, { title: "পরিমাণ ঠিক করুন", subtitle: slotLabel + " · " + bnNum(items.length) + "টি খাবার", onClose, soft: true },
+    return React.createElement(Sheet, { title: "পরিমাণ ঠিক করুন", subtitle: slotLabel + " · " + bnNum(items.length) + "টি খাবার", onClose: guardedClose, soft: true },
+      closeAsk,
       React.createElement("button", { onClick: () => setBasketOpen(false), style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto", minHeight: "44px" } }, "← আরও খাবার বাছুন"),
       items.map((x) => React.createElement(BasketRow, { key: x.b.key, b: x.b, slot, allergyTags, avoidCtx, activeMeds, onChange: (patch) => patchItem(x.b.key, patch), onRemove: () => removeItem(x.b.key) })),
       !allOk && Msg("কোনো খাবারের পরিমাণ সঠিক নয় — গ্রাম ১–২০০০-এর মধ্যে দিন।", "err"),
       anyRed && Msg("⚠ কিছু খাবার আপনার জন্য এড়ানোর কথা। ডাক্তারের পরামর্শ প্রাধান্য পায়; তবু খেলে যোগ করতে পারেন।", "warn"),
       tooMany && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি); আরও " + bnNum(room) + "টি যোগ করা যাবে। কিছু বাদ দিন।", "warn"),
       err && Msg(err, "err"),
-      React.createElement("div", { style: { position: "sticky", bottom: 0, marginTop: "14px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2", display: "flex", alignItems: "center", gap: "10px" } },
-        React.createElement("div", { style: { flex: "0 0 auto", lineHeight: 1.2 } }, React.createElement("div", { style: { fontSize: "11.5px", color: MUTED } }, "মোট"), React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, color: GREEN, whiteSpace: "nowrap" } }, bnNum(total) + " কিলোক্যালরি")),
+      React.createElement("div", { style: { position: "sticky", bottom: 0, marginTop: "10px", padding: "8px 0 env(safe-area-inset-bottom, 0px)", background: "#F3F7F4", boxShadow: "0 -8px 10px -2px #F3F7F4", borderTop: "1px solid #DCE6E0", display: "flex", alignItems: "center", gap: "10px" } },
+        React.createElement("div", { style: { flex: "0 0 auto", lineHeight: 1.2 } }, React.createElement("div", { style: { fontSize: "11.5px", color: MUTED } }, "মোট"), React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: GREEN, whiteSpace: "nowrap" } }, bnNum(total) + " কিলোক্যালরি")),
         primaryBtn((anyRed ? "তবু " : "") + "সবগুলো যোগ করুন (" + slotLabel + ")", submitAll, busy, !allOk || tooMany)));
   }
 
   // ---------- ধাপ ১: খোঁজা ----------
   if (!key) {
-    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose, soft: true },
+    return React.createElement(Sheet, { title: "খাবার যোগ করুন", subtitle: dateText || undefined, onClose: guardedClose, soft: true },
+      closeAsk,
       // বেলা-চিপ: ছোট, স্ক্রিনে আঁটে (সোয়াইপ/স্ক্রলবার নেই); বেশি হলে নিচের লাইনে নামে
       // বেলা-ট্যাব: একটাই সেগমেন্টেড বার (গোল পিল নয়) — নিচের খাবার-ধরন চিপ থেকে আকারে আলাদা
       React.createElement("div", { style: { fontSize: "12px", fontWeight: 700, color: MUTED, margin: "-6px 2px 6px", letterSpacing: "0.3px" } }, "কোন বেলা?"),
@@ -216,10 +223,10 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
       React.createElement("button", { onClick: () => { setNotice(null); setOwn({ name: "", kcal: "", grams: "", p: "", c: "", f: "", fib: "" }); }, disabled: full,
         style: { ...BTN, width: "100%", marginTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 14px", border: "none", background: "#E4F0E9", color: GREEN, opacity: full ? 0.5 : 1 } },
         React.createElement("span", { style: { fontWeight: 500, color: MUTED } }, "খুঁজে পাচ্ছেন না?"), React.createElement("span", null, "নিজে যোগ করুন →")),
-      multi && basket.length > 0 && React.createElement("div", { style: { position: "sticky", bottom: 0, marginTop: "12px", padding: "10px 0 env(safe-area-inset-bottom, 0px)", background: "#fff", borderTop: "1px solid #E3E0D2", display: "flex" } },
+      multi && basket.length > 0 && React.createElement("div", { style: { position: "sticky", bottom: 0, marginTop: "12px", padding: "8px 0 env(safe-area-inset-bottom, 0px)", background: "#F3F7F4", boxShadow: "0 -8px 10px -2px #F3F7F4", borderTop: "1px solid #DCE6E0", display: "flex" } },
         primaryBtn("পরিমাণ ঠিক করুন (" + bnNum(basket.length) + "টি) →", () => setBasketOpen(true), busy, false)),
       React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "14px" } },
-        React.createElement("button", { onClick: onClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));
+        React.createElement("button", { onClick: guardedClose, style: { ...BTN, flex: 1, border: "1.5px solid " + GREEN, background: "#fff", color: GREEN } }, "শেষ করুন")));
   }
 
   // ---------- ধাপ ২: পরিমাণ ----------

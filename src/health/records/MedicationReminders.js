@@ -124,6 +124,12 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
   const [takenErr, setTakenErr] = useState(null);
   const [, setTick] = useState(0);
   const [todayOpen, setTodayOpen] = useState(true);
+  // "শেষ হতে চলেছে" সতর্কতা: ✕ = শুধু আজকের মতো লুকানো (এই ফোনে); কাল আবার আসবে। কোনো ডেটা বদলায় না।
+  const [, bumpEnd] = useState(0);
+  const endKey = "hc_endsoon_hide_" + (selectedMemberId || callerMemberId || "");
+  let endHidden = false;
+  try { endHidden = localStorage.getItem(endKey) === todayStr(); } catch (_e) { /* ব্রাউজার-স্টোরেজ বন্ধ: সতর্কতা দেখাবে */ }
+  const hideEnd = () => { try { localStorage.setItem(endKey, todayStr()); } catch (_e) { /* কিছু করার নেই */ } bumpEnd((n) => n + 1); };
   const [menuId, setMenuId] = useState(null); // "⋯" মেনু খোলা ওষুধের recordId
   const [listOpen, setListOpen] = useState(null); // null = অটো (আজকের ডোজ না থাকলে বা সদ্য-যোগ থাকলে খোলা)
 
@@ -359,8 +365,10 @@ export function MedicationReminders({ familyId, callerMemberId, selectedMemberId
 
 
     // ঘ) শেষ হতে চলেছে
-    endingSoon.length > 0 && h("div", { style: { ...card, background: "#FFF6E5", border: "1px solid #F0D9A8" } },
-      h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#8A5A00", marginBottom: "6px" } }, "⚠️ ওষুধ শেষ হতে চলেছে"),
+    endingSoon.length > 0 && !endHidden && h("div", { style: { ...card, background: "#FFF6E5", border: "1px solid #F0D9A8" } },
+      h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "6px" } },
+        h("div", { style: { fontSize: "15px", fontWeight: 700, color: "#8A5A00" } }, "⚠️ ওষুধ শেষ হতে চলেছে"),
+        h("button", { type: "button", onClick: hideEnd, "aria-label": "আজকের মতো বন্ধ করুন", title: "আজকের মতো বন্ধ করুন", style: { width: "44px", height: "44px", margin: "-10px -10px -10px 0", flexShrink: 0, border: "none", background: "none", color: "#8A5A00", fontSize: "18px", cursor: "pointer", fontFamily: "inherit" } }, "✕")),
       endingSoon.map((m) => h("div", { key: m.recordId, style: { fontSize: F, color: "#5B3B00", marginBottom: "3px" } }, "• " + m.genericName + "" + " — " + (daysLeft(m.endDate) === 0 ? "আজ শেষ দিন" : "আর " + bn(daysLeft(m.endDate)) + " দিন"))),
       h("div", { style: { fontSize: "13px", color: "#8A5A00", marginTop: "4px" } }, "চালিয়ে যেতে হলে ডাক্তারের পরামর্শ নিন ও ওষুধ কিনে রাখুন।")),
 

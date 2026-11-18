@@ -52,9 +52,17 @@ function DoseBlock(m, setPattern, setMeal, setDays, setAsNeeded) {
   return React.createElement(React.Fragment, null,
     lblEl("সেবনের মাত্রা (অটো)"),
     React.createElement("div", { style: row }, [chip(!m.asNeeded, "🕘 নিয়মিত", () => setAsNeeded(false), "reg", true), chip(m.asNeeded, "🆘 প্রয়োজনে", () => setAsNeeded(true), "prn", true)]),
-    !m.asNeeded && PATTERN_LABELS[m.pattern.length].map((lab, i) => React.createElement("div", { key: lab, style: { display: "flex", alignItems: "center", gap: "6px", marginTop: "8px" } },
-      React.createElement("span", { style: { minWidth: "52px", fontSize: "14px", fontWeight: 600 } }, lab),
-      PATTERN_COUNTS.map((n) => chip(m.pattern[i] === n, toBn(n), () => setPattern(m.pattern.map((x, j) => (j === i ? n : x))), lab + n, true)))),
+    // বেলাপ্রতি সংখ্যা: ▲ / ▼ স্টেপার, বেলাগুলো পাশাপাশি (৩ বা ৪ কলাম); সীমা ০–সর্বোচ্চ PATTERN_COUNTS
+    !m.asNeeded && React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "8px" } }, PATTERN_LABELS[m.pattern.length].map((lab, i) => {
+      const n = m.pattern[i], max = PATTERN_COUNTS[PATTERN_COUNTS.length - 1];
+      const set = (v) => setPattern(m.pattern.map((x, j) => (j === i ? v : x)));
+      const stepBtn = (txt, dis, onClick, aria) => React.createElement("button", { type: "button", onClick, disabled: dis, "aria-label": aria, style: { width: "100%", minHeight: "44px", border: "1.5px solid #C3D2CA", background: "#fff", borderRadius: "12px", color: dis ? "#B5C2BC" : "var(--hs-primary, #6A4BB0)", fontSize: "16px", fontWeight: 800, cursor: dis ? "default" : "pointer", fontFamily: "inherit" } }, txt);
+      return React.createElement("div", { key: lab, style: { flex: "1 1 0", minWidth: 0, textAlign: "center" } },
+        React.createElement("div", { style: { fontSize: "13px", fontWeight: 700, color: "#1F2D2A", marginBottom: "4px" } }, lab),
+        stepBtn("▲", n >= max, () => set(Math.min(max, n + 1)), lab + " বাড়ান"),
+        React.createElement("div", { "aria-live": "polite", style: { minHeight: "40px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: 800, color: n > 0 ? "var(--hs-primary, #6A4BB0)" : "#8A9B95" } }, toBn(n)),
+        stepBtn("▼", n <= 0, () => set(Math.max(0, n - 1)), lab + " কমান"));
+    })),
     lblEl("খাবারের"),
     mealChips(m.meal, (k) => setMeal(m.meal === k ? "" : k)),
     !m.asNeeded && React.createElement(React.Fragment, null,
@@ -100,11 +108,20 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [openDef, setOpenDef] = useState(false);
+  const [openGroups, setOpenGroups] = useState({}); // "আমার তালিকা": অসুখ → খোলা কি না (শুরুতে সব বন্ধ)
   const [mode, setMode] = useState("allopathy"); // allopathy | homeopathy | herbal
   const [potencyInfo, setPotencyInfo] = useState(false); // পটেন্সির ⓘ ব্যাখ্যা
   const noun = MODE_NOUN[mode];
 
-  const openNew = (disease, med) => { const ms = Array.isArray(med) ? med : [med || emptyMed()]; setErr(null); setForm({ id: null, disease: disease || "", meds: ms, openKey: ms[0].key }); };
+  // নতুন ফর্ম: "কার জন্য" ডিফল্ট এডাল্ট (আগে থেকে বসানো থাকলে অপরিবর্তিত); সদস্যের বয়স ১২-র নিচে হলে ফর্ম খোলার পরে শিশু হয়ে যায়।
+  const openNew = (disease, med) => {
+    const ms = (Array.isArray(med) ? med : [med || emptyMed()]).map((m) => (m.ageGroup ? m : { ...m, ageGroup: "adult" }));
+    const keys = ms.filter((m) => m.ageGroup === "adult" && !(med && med.ageGroup)).map((m) => m.key);
+    setErr(null); setForm({ id: null, disease: disease || "", meds: ms, openKey: ms[0].key });
+    loadCareAge(familyId, selectedMemberId).then((age) => {
+      if (typeof age === "number" && age < 12) setForm((s) => (s && !s.id ? { ...s, meds: s.meds.map((m) => (keys.includes(m.key) && m.ageGroup === "adult" ? { ...m, ageGroup: "child" } : m)) } : s));
+    }).catch(() => {});
+  };
   // "আমার তালিকায় নিন": ফর্ম সাথে সাথে খোলে; ডোজ এলে শুধু ফাঁকা ঘরে বসে (সদস্য আগে কিছু লিখলে মোছে না)। সেভ সদস্যের নিজের চাপে।
   const takeWithDose = async (disease, med, getFill) => {
     openNew(disease, med);
@@ -146,6 +163,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
         const items = filledMeds(form.meds).map((m) => ({ docId: idsRef.current[m.key] || (idsRef.current[m.key] = newCareDocId(familyId)), fields: fieldsOf(m) }));
         await withTimeout(addCareBatch(familyId, selectedMemberId, callerMemberId, items));
       }
+      setOpenGroups((o) => ({ ...o, [disease]: true })); // সদ্য সংরক্ষিত তালিকাটি খোলা দেখায়
       setForm(null);
     } catch (e) {
       setErr(e && e.message === "timeout" ? "নেটওয়ার্ক ধীর বা বন্ধ — সংরক্ষণ নিশ্চিত হয়নি। ইন্টারনেট দেখে আবার চাপুন (দুবার সেভ হবে না)।" : "সংরক্ষণ করা যায়নি — অনুমতি/নেটওয়ার্ক দেখুন।");
@@ -171,8 +189,11 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
     loading && !records ? Skeleton(2, 64)
       : groups.length === 0 ? React.createElement("div", { style: { ...card, color: "#5B6B66", fontSize: "14px", textAlign: "center" } }, "এখনো কিছু নেই — নিচের সাধারণ তালিকা থেকে নিন, বা নতুন যোগ করুন।")
       : groups.map(([disease, rows]) => React.createElement("div", { key: disease, style: card },
-          React.createElement("div", { style: { fontSize: "14px", fontWeight: 800, color: "#1F2D2A", marginBottom: "4px" } }, disease),
-          splitByAge(rows).map(([ag, rs]) => React.createElement(React.Fragment, { key: "g" + ag },
+          React.createElement("button", { type: "button", "aria-expanded": !!openGroups[disease], onClick: () => setOpenGroups((o) => ({ ...o, [disease]: !o[disease] })), style: { width: "100%", minHeight: "44px", display: "flex", alignItems: "center", gap: "8px", margin: "-6px 0", padding: 0, border: "none", background: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit" } },
+            React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14.5px", fontWeight: 800, color: "#1F2D2A", overflowWrap: "anywhere" } }, disease),
+            React.createElement("span", { style: { flexShrink: 0, fontSize: "12px", fontWeight: 600, color: "#5B6B66", background: "#EEF3F0", borderRadius: "999px", padding: "2px 10px" } }, toBn(rows.length) + "টি " + noun),
+            React.createElement("span", { "aria-hidden": "true", style: { flexShrink: 0, color: "var(--hs-primary, #0E4B43)", fontSize: "13px" } }, openGroups[disease] ? "▲" : "▼")),
+          openGroups[disease] && React.createElement(React.Fragment, null, splitByAge(rows).map(([ag, rs]) => React.createElement(React.Fragment, { key: "g" + ag },
           (ag || splitByAge(rows).length > 1) && React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", margin: "8px 0 2px" } }, AGE_LABEL[ag]),
           rs.map((r) => React.createElement("div", { key: r.id, style: { display: "flex", alignItems: "center", gap: "4px", borderTop: "1px solid #EEF3F0", padding: "6px 0" } },
             React.createElement("div", { style: { flex: 1, minWidth: 0 } },
@@ -181,7 +202,7 @@ export function CommonCareSection({ familyId, callerMemberId, selectedMemberId }
               r.note && React.createElement("div", { style: { fontSize: "12.5px", color: "#5B6B66" } }, r.note)),
             React.createElement("button", { type: "button", "aria-label": "সম্পাদনা", title: "সম্পাদনা", style: iconBtn, onClick: () => { const m = { ...emptyMed(), brand: r.brand || "", generic: r.generic || "", dose: r.dose || "", frequency: r.frequency || "", note: r.note || "", potency: r.potency || "", prep: r.prep || "", pattern: patternFromString(r.pattern), meal: r.meal || "", days: Number.isInteger(r.days) ? r.days : null, asNeeded: /^প্রয়োজনে/.test(r.frequency || ""), ageGroup: r.ageGroup || "" }; setErr(null); setForm({ id: r.id, disease: r.disease || "", meds: [m], openKey: m.key }); } }, "✎"),
             React.createElement("button", { type: "button", "aria-label": "মুছুন", title: "মুছুন", style: iconBtn, onClick: () => setDel(r) }, "🗑"))))),
-          React.createElement("button", { type: "button", onClick: () => openNew(disease === "অন্যান্য" ? "" : disease), style: { marginTop: "4px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1.5px dashed var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ এই অসুখে আরেকটি " + noun))),
+          React.createElement("button", { type: "button", onClick: () => openNew(disease === "অন্যান্য" ? "" : disease), style: { marginTop: "4px", minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "1.5px dashed var(--hs-primary, #0E4B43)", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, "＋ এই অসুখে আরেকটি " + noun)))),
 
     React.createElement("button", { type: "button", onClick: () => setOpenDef((v) => !v), "aria-expanded": openDef, style: { width: "100%", minHeight: "44px", textAlign: "left", border: "none", background: "none", padding: 0, margin: "14px 0 8px", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer", fontFamily: "inherit" } }, (openDef ? "▾ " : "▸ ") + "সাধারণ তালিকা (সবার জন্য)"),
     openDef && mode === "allopathy" && COMMON_CARE_DEFAULTS.map((d) => React.createElement("div", { key: d.key, style: card },
