@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isReviewOpen, reviewWindow, remainParts, weakTip, lockedSplit } from "../../src/health/tracker/weekLock.js";
+import { isReviewOpen, reviewWindow, remainParts, weakTip, lockedSummary } from "../../src/health/tracker/weekLock.js";
 
 // ২০২৬-১১-১২ বৃহস্পতি; ১৩ শুক্র; ১৪ শনি; ১৫ রবি
 const at = (d, h, m = 0) => new Date(2026, 10, d, h, m);
@@ -44,15 +44,20 @@ test("remainParts", () => {
   assert.deepEqual(remainParts(10), { d: 0, h: 0, m: 1 });
 });
 
-const rep = (cur, lines, focusProgress) => ({ enough: true, cur: { metrics: cur }, lines, focusProgress });
+const rep = (cur, extra) => ({ enough: true, cur: { metrics: cur, avg: 79 }, prev: { logged: 5, avg: 67 }, lines: [], ...extra });
+const M = { calories: { logged: 6, hit: 5, pct: 83 }, exercise: { logged: 0, hit: 0, pct: null }, sleep: { logged: 0, hit: 0, pct: null }, water: { logged: 6, hit: 2, pct: 33 } };
 
-test("weakTip ও lockedSplit", () => {
-  const r = rep({ calories: { logged: 6, hit: 5, pct: 83 }, exercise: { logged: 0, hit: 0, pct: null }, sleep: { logged: 0, hit: 0, pct: null }, water: { logged: 6, hit: 2, pct: 33 } },
-    [{ kind: "up", text: "ভালো ছিল: ক্যালরি" }, { kind: "down", text: "দুর্বল ছিল: পানি" }, { kind: "flat", text: "ওজন" }],
-    { label: "পানি", from: 20, to: 33, kind: "up" });
-  assert.match(weakTip(r).text, /পানি 2\/6 দিন: খাবারের সময়/);
-  const s = lockedSplit(r);
-  assert.equal(s.good.length, 2); assert.equal(s.bad.length, 1);
+test("weakTip ও lockedSummary", () => {
+  assert.match(weakTip(rep(M)).text, /পানি 2\/6 দিন: খাবারের সময়/);
+  const s = lockedSummary(rep(M));
+  assert.equal(s.best.label, "ক্যালরি লক্ষ্য"); assert.equal(s.weak.key, "water");
+  assert.equal(s.avg, 79); assert.equal(s.delta, 12);
   assert.equal(weakTip({ enough: false }), null);
-  assert.deepEqual(lockedSplit({ enough: false }), { good: [], bad: [] });
+  assert.deepEqual(lockedSummary({ enough: false }), { enough: false, avg: null, delta: null, best: null, weak: null });
+});
+
+test("lockedSummary: সবই ভালো হলে weak নেই; আগের সপ্তাহে তথ্য কম হলে delta নেই", () => {
+  const good = { calories: { logged: 6, hit: 6, pct: 100 }, exercise: { logged: 5, hit: 4, pct: 80 }, sleep: { logged: 0, hit: 0, pct: null }, water: { logged: 0, hit: 0, pct: null } };
+  const s = lockedSummary(rep(good, { prev: { logged: 1, avg: null } }));
+  assert.equal(s.weak, null); assert.equal(s.delta, null); assert.equal(s.best.key, "calories");
 });

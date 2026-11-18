@@ -1,7 +1,7 @@
 // সাপ্তাহিক রিভিউ লক — pure (React/Firestore নেই)। শুধু দেখানোর সময়ের নিয়ম, নিরাপত্তা-সীমা নয়; কিছু সংরক্ষণ হয় না।
 // খোলা: বৃহস্পতি রাত ৯টা → শনি রাত ১১টা (ফোনের স্থানীয় সময়)। সপ্তাহ = শনি–শুক্র।
 import { shiftISO } from "./dateNav.js";
-import { weakestMetric, METRIC_LABEL } from "./reviewInsights.js";
+import { weakestMetric, METRIC_LABEL, MIN_LOGGED } from "./reviewInsights.js";
 
 export const OPEN_HOUR = 21; // বৃহস্পতি
 export const CLOSE_HOUR = 23; // শনি
@@ -53,13 +53,20 @@ export function weakTip(rep) {
   return { key: k, text: METRIC_LABEL[k] + " " + m.hit + "/" + m.logged + " দিন: " + TIPS[k] };
 }
 
-// লক-অবস্থার তিন কার্ডের উপাদান: ভালো / অবনতি (রিপোর্টের লাইন থেকে) + ফোকাস-অগ্রগতি
-export function lockedSplit(rep) {
-  const good = [], bad = [];
-  if (rep && rep.enough) {
-    rep.lines.forEach((l) => { if (l.kind === "up") good.push(l.text); else if (l.kind === "down") bad.push(l.text); });
-    const f = rep.focusProgress;
-    if (f && f.kind !== "flat") (f.kind === "up" ? good : bad).push("গত সপ্তাহের ফোকাস " + f.label + ": " + f.from + "% → " + f.to + "%");
+// লক-অবস্থার "এক নজরে" কার্ডের উপাদান (রিপোর্ট থেকে; নতুন হিসাব/সংরক্ষণ নেই)
+// → { enough, avg, delta (পয়েন্ট|null), best {key,label,hit,logged,pct}|null, weak (একইরকম)|null }
+export function lockedSummary(rep) {
+  const out = { enough: !!(rep && rep.enough), avg: null, delta: null, best: null, weak: null };
+  if (!out.enough) return out;
+  const m = rep.cur.metrics;
+  const mk = (k) => ({ key: k, label: METRIC_LABEL[k], hit: m[k].hit, logged: m[k].logged, pct: m[k].pct });
+  const ks = Object.keys(METRIC_LABEL).filter((k) => m[k] && m[k].logged >= MIN_LOGGED && m[k].pct !== null).sort((a, b) => m[b].pct - m[a].pct);
+  if (ks.length) {
+    if (m[ks[0]].pct >= 70) out.best = mk(ks[0]);
+    const low = ks[ks.length - 1];
+    if (m[low].pct < 70) out.weak = mk(low);
   }
-  return { good, bad };
+  out.avg = rep.cur.avg;
+  if (rep.cur.avg !== null && rep.prev.logged >= MIN_LOGGED && rep.prev.avg !== null) out.delta = rep.cur.avg - rep.prev.avg;
+  return out;
 }
