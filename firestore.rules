@@ -127,7 +127,7 @@ service cloud.firestore {
     // enum-মান client-এর src/health/mycare/carePrefsSchema.js-এর সাথে মেলাতে হবে (tests/mycare/prefs.test.mjs মিলিয়ে দেখে)।
     function carePrefsOk(d) {
       return d.keys().hasOnly(['v', 'memberId', 'skinType', 'skinConcerns', 'hairType', 'hairConcerns', 'oralConcerns',
-                               'avoidIngredients', 'preferences', 'region', 'breastfeeding',
+                               'avoidIngredients', 'preferences', 'region', 'breastfeeding', 'savedIds',
                                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
         && (!('v' in d) || d.v == 1)
         && (!('skinType' in d) || d.skinType == null || d.skinType in ['oily', 'dry', 'normal', 'combination', 'sensitive'])
@@ -142,6 +142,7 @@ service cloud.firestore {
         && (!('preferences' in d) || (d.preferences is list && d.preferences.size() <= 4
               && d.preferences.hasOnly(['general', 'herbal', 'ayurvedic', 'budget'])))
         && (!('region' in d) || d.region == null || (d.region is string && d.region.size() <= 30))
+        && (!('savedIds' in d) || (d.savedIds is list && d.savedIds.size() <= 20))
         && (!('breastfeeding' in d) || d.breastfeeding == null || d.breastfeeding is bool);
     }
 

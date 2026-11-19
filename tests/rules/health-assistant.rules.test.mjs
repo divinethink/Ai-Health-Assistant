@@ -1163,5 +1163,16 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA')));
       await assertFails(setDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA'), cp('mB', 'mB')));
     });
+
+    it('C6. savedIds: তালিকা ≤২০, তালিকা-ধরন; merge-এ প্রোফাইল-ফিল্ড অক্ষত', async () => {
+      const db = dbAs('uidA');
+      const ids = (n) => new Array(n).fill(0).map((_, i) => 'item-' + i);
+      await assertSucceeds(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', { savedIds: ids(20) })));
+      await assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', { savedIds: ids(21) })));
+      await assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', { savedIds: 'skin-moisturizer' })));
+      await assertSucceeds(setDoc(famDoc(db, 'carePrefs', 'mA'), { v: 1, memberId: 'mA', savedIds: ['skin-moisturizer'], lastEditedByMemberId: 'mA' }, { merge: true }));
+      const snap = await getDoc(famDoc(db, 'carePrefs', 'mA'));
+      if (snap.data().skinType !== 'dry') throw new Error('merge প্রোফাইল-ফিল্ড মুছে ফেলেছে');
+    });
   });
 });

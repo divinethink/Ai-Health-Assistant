@@ -2,19 +2,28 @@
 // ডক-ID = memberId → set(merge) তাই বারবার সেভে ডুপ্লিকেট নেই (idempotent); conflict = last-write-wins।
 // ডক না থাকলে null (ডিফল্ট আচরণ)। স্বাস্থ্য-তথ্য (অ্যালার্জি/বয়স/গর্ভাবস্থা) এখানে সংরক্ষণ হয় না।
 import { db } from "../../legacy/firebaseConfig.js";
-import { sanitizeCarePrefs } from "./carePrefsSchema.js";
+import { sanitizeCarePrefs, sanitizeSavedIds } from "./carePrefsSchema.js";
 
 const ref = (familyId, memberId) => db.collection("families").doc(familyId).collection("carePrefs").doc(memberId);
 const ts = () => firebase.firestore.FieldValue.serverTimestamp();
 
 export async function getCarePrefs(familyId, memberId) {
   const snap = await ref(familyId, memberId).get();
-  return snap.exists ? sanitizeCarePrefs(snap.data()) : null;
+  return snap.exists ? { ...sanitizeCarePrefs(snap.data()), savedIds: sanitizeSavedIds(snap.data().savedIds) } : null;
 }
 
 export async function saveCarePrefs(familyId, memberId, callerMemberId, prefs, existed) {
   await ref(familyId, memberId).set({
     ...sanitizeCarePrefs(prefs), memberId,
+    lastEditedByMemberId: callerMemberId, updatedAt: ts(),
+    ...(existed ? {} : { createdAt: ts() }),
+  }, { merge: true });
+}
+
+// সংরক্ষিত পরামর্শ — শুধু savedIds ফিল্ড merge হয়; প্রোফাইলের বাকি তথ্য অক্ষত থাকে।
+export async function saveSavedIds(familyId, memberId, callerMemberId, ids, existed) {
+  await ref(familyId, memberId).set({
+    v: 1, memberId, savedIds: sanitizeSavedIds(ids),
     lastEditedByMemberId: callerMemberId, updatedAt: ts(),
     ...(existed ? {} : { createdAt: ts() }),
   }, { merge: true });

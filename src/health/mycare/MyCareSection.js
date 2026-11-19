@@ -4,8 +4,8 @@ import { L, useLang, digits } from "../../shared/i18n.js";
 import { Skeleton, ErrorBox } from "../../shared/ui.js";
 import { histBind, histChange } from "../../shared/navHistory.js";
 import { useMemberHealth } from "../records/useMemberHealth.js";
-import { getCarePrefs, saveCarePrefs } from "./carePrefsData.js";
-import { sanitizeCarePrefs } from "./carePrefsSchema.js";
+import { getCarePrefs, saveCarePrefs, saveSavedIds } from "./carePrefsData.js";
+import { sanitizeCarePrefs, toggleSaved } from "./carePrefsSchema.js";
 import { recommend } from "./careEngine.js";
 import { seasonOf } from "./careSeason.js";
 import { buildOwnProfile, buildOtherProfile, prefsProgress } from "./careAdapter.js";
@@ -67,7 +67,18 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   const editProfile = () => setSheet(other ? "other" : "profile");
   const savePrefs = async (form) => {
     await saveCarePrefs(familyId, selectedMemberId, callerMemberId, form, pf.prefs != null);
-    setPf((s) => ({ ...s, prefs: sanitizeCarePrefs(form) }));
+    setPf((s) => ({ ...s, prefs: { ...sanitizeCarePrefs(form), savedIds: (s.prefs && s.prefs.savedIds) || [] } }));
+  };
+
+  const saved = (!other && pf.prefs && pf.prefs.savedIds) || [];
+  // সংরক্ষণ: আগে স্ক্রিনে বদল, ব্যর্থ হলে আগের অবস্থায় ফেরা। ফল: null | "full" | "error"
+  const toggleSave = async (id) => {
+    const r = toggleSaved(saved, id);
+    if (r.full) return "full";
+    const prev = pf.prefs;
+    setPf((s) => ({ ...s, prefs: { ...(s.prefs || sanitizeCarePrefs(null)), savedIds: r.ids } }));
+    try { await saveSavedIds(familyId, selectedMemberId, callerMemberId, r.ids, prev != null); return null; }
+    catch (e) { setPf((s) => ({ ...s, prefs: prev })); return "error"; }
   };
 
   const sheets = [
@@ -75,8 +86,8 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
     sheet === "other" && React.createElement(OtherSheet, { key: "o", initial: other, onApply: setOther, onClose: () => setSheet(null) }),
   ];
 
-  if (view !== "home" && CAT_META.some((c) => c[0] === view)) {
-    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onAskAI: other ? null : onAskAI, onBack: back, onEditProfile: editProfile }), sheets);
+  if (view !== "home" && (view === "saved" || CAT_META.some((c) => c[0] === view))) {
+    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onAskAI: other ? null : onAskAI, savedIds: other ? null : saved, onToggleSave: other ? null : toggleSave, onBack: back, onEditProfile: editProfile }), sheets);
   }
 
   const ageTxt = profile.ageYears == null ? "—" : digits(Math.floor(profile.ageYears)) + L(" বছর", " yrs");
@@ -116,6 +127,11 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
         const st = { position: "relative", minHeight: "128px", padding: "14px", borderRadius: "20px", border: "1px solid var(--hs-border)", borderTop: "3px solid " + color, background: "var(--hs-surface)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", justifyContent: "flex-start", textAlign: "left", fontFamily: "inherit", opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "default" };
         return React.createElement("button", { key: id, type: "button", disabled: !ready, "aria-disabled": !ready, onClick: () => openCat(id), style: st }, inner);
       })),
+    saved.length > 0 && React.createElement("button", { type: "button", onClick: () => openCat("saved"), style: { ...card, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "var(--hs-text)", display: "flex", alignItems: "center", gap: "12px", boxSizing: "border-box" } },
+      React.createElement(IconBox, { id: "saved", color: "#B8860B", size: 40 }),
+      React.createElement("span", { style: { flex: 1, fontSize: "16px", fontWeight: 800 } }, L("সংরক্ষিত পরামর্শ", "Saved advice")),
+      React.createElement("span", { style: { fontSize: "13px", fontWeight: 800, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary)" } }, digits(saved.length)),
+      React.createElement("span", { "aria-hidden": "true", style: { fontSize: "20px", color: "var(--hs-muted)" } }, "›")),
     !other && React.createElement("button", { type: "button", onClick: () => setSheet("profile"), style: { ...card, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "var(--hs-text)", display: "block", boxSizing: "border-box" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
         React.createElement("span", { style: { fontSize: "16px", fontWeight: 800 } }, "My Care Profile"),

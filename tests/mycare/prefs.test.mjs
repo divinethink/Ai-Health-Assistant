@@ -35,3 +35,29 @@ test("client enum ও firestore.rules-এর carePrefsOk হুবহু মে�
   for (const m of body.matchAll(/d\.(\w+)\.hasOnly\(\[([^\]]*)\]\)/g)) found[m[1]] = [...m[2].matchAll(/'([^']+)'/g)].map((x) => x[1]);
   for (const k of Object.keys(ENUMS)) assert.deepEqual([...(found[k] || [])].sort(), [...ENUMS[k]].sort(), k);
 });
+
+import { SAVED_LIMIT, sanitizeSavedIds, toggleSaved } from "../../src/health/mycare/carePrefsSchema.js";
+
+test("savedIds — sanitize: অবৈধ/ডুপ্লিকেট বাদ, সীমা প্রয়োগ; প্রোফাইল-sanitize এতে হাত দেয় না", () => {
+  assert.deepEqual(sanitizeSavedIds(["skin-moisturizer", "skin-moisturizer", "BAD ID", 5, "hair-a"]), ["skin-moisturizer", "hair-a"]);
+  assert.deepEqual(sanitizeSavedIds("x"), []);
+  assert.equal(sanitizeSavedIds(new Array(40).fill(0).map((_, i) => "i" + i)).length, SAVED_LIMIT);
+  assert.equal("savedIds" in sanitizeCarePrefs({ savedIds: ["a"] }), false);
+});
+
+test("savedIds — toggle: যোগ/সরানো/পূর্ণ", () => {
+  assert.deepEqual(toggleSaved([], "a1").ids, ["a1"]);
+  assert.deepEqual(toggleSaved(["a1", "b2"], "a1").ids, ["b2"]);
+  const full = new Array(SAVED_LIMIT).fill(0).map((_, i) => "i" + i);
+  const r = toggleSaved(full, "new-item");
+  assert.equal(r.full, true); assert.equal(r.ids.length, SAVED_LIMIT);
+  assert.equal(toggleSaved(full, "i3").full, false);
+});
+
+test("firestore.rules-এ savedIds allowlist ও সীমা client-এর সাথে মেলে", () => {
+  const rules = readFileSync(new URL("../../firestore.rules", import.meta.url), "utf8");
+  const fn = rules.slice(rules.indexOf("function carePrefsOk"));
+  const body = fn.slice(0, fn.indexOf("\n    }\n"));
+  assert.ok(body.includes("'savedIds'"));
+  assert.ok(body.includes("d.savedIds.size() <= " + SAVED_LIMIT));
+});

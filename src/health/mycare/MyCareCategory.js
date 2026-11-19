@@ -9,6 +9,7 @@ import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY, SEASON_LABEL } from "./careLabels.js";
 import { IconBox, CareIcon } from "./careIcons.js";
 import { buildAskText } from "./careAsk.js";
+import { filterBySearch } from "./careSearch.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
 import { explainWith } from "./careAiGuard.js";
@@ -64,21 +65,28 @@ function DetailSheet({ entry, safetyLine, familyId, explainOn, onClose }) {
     React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "8px" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")));
 }
 
-export function MyCareCategory({ catId, profile, season, familyId, canExplain, onAskAI, onBack, onEditProfile }) {
-  const meta = CAT_META.find((c) => c[0] === catId) || [catId, catId, catId, "#1F7A5C"];
+export function MyCareCategory({ catId, profile, season, familyId, canExplain, onAskAI, savedIds, onToggleSave, onBack, onEditProfile }) {
+  const isSaved = catId === "saved";
+  const meta = isSaved ? ["saved", "সংরক্ষিত", "Saved", "#B8860B"] : CAT_META.find((c) => c[0] === catId) || [catId, catId, catId, "#1F7A5C"];
   const concernKey = CONCERN_KEY[catId];
   const concerns = concernKey ? (LABELS[concernKey] ? Object.keys(LABELS[concernKey]) : []) : [];
   const [concern, setConcern] = useState("all");
   const [symptoms, setSymptoms] = useState([]);
   const [open, setOpen] = useState(null);
   const [flagsOpen, setFlagsOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [saveMsg, setSaveMsg] = useState(null);
 
-  const res = recommend(profile, ALL_ITEMS, { category: catId, season, symptoms, concern: concern === "all" ? null : concern });
+  const res = recommend(profile, ALL_ITEMS, { category: isSaved ? undefined : catId, season, symptoms, concern: concern === "all" ? null : concern });
   const typeKey = TYPE_KEY[catId];
   const typeMissing = !!typeKey && !profile[typeKey];
   const flagOpts = RED_FLAGS.filter((f) => f.cats === "*" || f.cats.includes(catId));
   const toggleSym = (id) => setSymptoms((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const hasAny = ALL_ITEMS.some((i) => i.category === catId && i.status === "verified");
+  const hasAny = isSaved || ALL_ITEMS.some((i) => i.category === catId && i.status === "verified");
+  const savedSet = new Set(savedIds || []);
+  const base = isSaved ? res.items.filter((e) => savedSet.has(e.item.id)) : res.items;
+  const shown = filterBySearch(base, q);
+  const toggle = async (id) => { const r = await onToggleSave(id); setSaveMsg(r); };
 
   const pills = concerns.length
     ? React.createElement("div", { style: { overflowX: "auto" } }, React.createElement("div", { style: { minWidth: (concerns.length + 1) * 84 + "px" } },
@@ -108,19 +116,25 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
     res.notices.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, res.notices.map((n) => React.createElement("div", { key: n.id }, "⚠ " + T(n)))),
     typeMissing && res.mode !== "referral" && React.createElement("button", { type: "button", onClick: onEditProfile, style: { ...warnBox, width: "100%", textAlign: "left", minHeight: "44px", cursor: "pointer", fontFamily: "inherit" } },
       L("সবচেয়ে নিরাপদ সাধারণ সেট দেখানো হচ্ছে — ধরন দেওয়া নেই। ধরন বাছুন ›", "Safe core set shown — type not set. Choose type ›")),
-    res.mode !== "referral" && res.items.length === 0 && React.createElement("div", { role: "status", style: { padding: "22px 12px", textAlign: "center", color: "var(--hs-muted, #5F716C)", fontSize: "14px", lineHeight: 1.6 } },
+    res.mode !== "referral" && base.length === 0 && React.createElement("div", { role: "status", style: { padding: "22px 12px", textAlign: "center", color: "var(--hs-muted, #5F716C)", fontSize: "14px", lineHeight: 1.6 } },
       React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: "8px" } }, React.createElement(IconBox, { id: catId, color: meta[3], size: 52 })),
-      hasAny ? L("আপনার তথ্যের সাথে মেলে এমন পরামর্শ এখন নেই। ধরন/সমস্যা বদলে দেখুন।", "No advice matches these details. Try changing type or concern.")
+      isSaved ? L("এখনো কিছু সংরক্ষণ করা হয়নি। কার্ডের ☆ চাপলে এখানে জমা হবে।", "Nothing saved yet. Tap ☆ on a card to keep it here.") : hasAny ? L("আপনার তথ্যের সাথে মেলে এমন পরামর্শ এখন নেই। ধরন/সমস্যা বদলে দেখুন।", "No advice matches these details. Try changing type or concern.")
         : L("এই বিভাগের যাচাইকৃত পরামর্শ শীঘ্রই আসছে।", "Verified advice for this section is coming soon.")),
-    res.mode !== "referral" && res.items.map((entry) => React.createElement("button", { key: entry.item.id, type: "button", onClick: () => setOpen(entry), style: { ...cardBox, display: "flex", alignItems: "flex-start", gap: "12px", borderLeft: "4px solid " + meta[3] } },
-      React.createElement(IconBox, { id: catId, color: meta[3], size: 40 }),
-      React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-        React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, overflowWrap: "anywhere" } }, T(entry.item.name)),
-        React.createElement("div", { style: { margin: "6px 0" } }, React.createElement(EvidenceBadge, { evidenceTier: entry.item.evidenceLevel, compact: true })),
-        React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
-        entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0]))),
-      React.createElement("span", { "aria-hidden": "true", style: { alignSelf: "center", fontSize: "20px", color: "var(--hs-muted, #5F716C)" } }, "›"))),
-    onAskAI && res.mode !== "referral" && React.createElement("button", { type: "button", onClick: () => onAskAI(buildAskText(catId, concern === "all" ? null : concern, L("bn", "en"))),
+    res.mode !== "referral" && base.length >= 3 && React.createElement("input", { type: "search", value: q, onChange: (e) => setQ(e.target.value), "aria-label": L("খুঁজুন", "Search"), placeholder: L("খুঁজুন (যেমন: রোদ, ব্রণ, মাড়ি)", "Search (e.g. sun, acne, gums)"),
+      style: { width: "100%", boxSizing: "border-box", minHeight: "44px", padding: "8px 14px", marginBottom: "10px", borderRadius: "14px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", color: "var(--hs-text, #1B2430)", fontSize: "14.5px", fontFamily: "inherit" } }),
+    saveMsg && React.createElement("div", { role: "status", style: warnBox }, saveMsg === "full" ? L("সর্বোচ্চ ২০টি সংরক্ষণ করা যায়। আগে কিছু সরিয়ে নিন।", "You can save up to 20. Remove one first.") : L("সংরক্ষণ করা যায়নি। পরে আবার চেষ্টা করুন।", "Could not save. Please try again.")),
+    res.mode !== "referral" && base.length >= 3 && q.trim() && shown.length === 0 && React.createElement("div", { role: "status", style: { padding: "14px 12px", textAlign: "center", color: "var(--hs-muted, #5F716C)", fontSize: "14px" } }, L("কিছু পাওয়া যায়নি। অন্য শব্দ দিয়ে দেখুন।", "Nothing found. Try another word.")),
+    res.mode !== "referral" && shown.map((entry) => React.createElement("div", { key: entry.item.id, style: { position: "relative" } },
+      React.createElement("button", { type: "button", onClick: () => setOpen(entry), style: { ...cardBox, display: "flex", alignItems: "flex-start", gap: "12px", borderLeft: "4px solid " + meta[3], paddingRight: onToggleSave ? "52px" : "14px" } },
+        React.createElement(IconBox, { id: isSaved ? entry.item.category : catId, color: isSaved ? (CAT_META.find((c) => c[0] === entry.item.category) || meta)[3] : meta[3], size: 40 }),
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, overflowWrap: "anywhere" } }, T(entry.item.name)),
+          React.createElement("div", { style: { margin: "6px 0" } }, React.createElement(EvidenceBadge, { evidenceTier: entry.item.evidenceLevel, compact: true })),
+          React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
+          entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0])))),
+      onToggleSave && React.createElement("button", { type: "button", "aria-pressed": savedSet.has(entry.item.id), "aria-label": savedSet.has(entry.item.id) ? L("সংরক্ষণ সরান", "Remove from saved") : L("সংরক্ষণ করুন", "Save"), onClick: () => toggle(entry.item.id),
+        style: { position: "absolute", top: "4px", right: "4px", width: "44px", height: "44px", border: "none", background: "none", fontSize: "24px", lineHeight: 1, cursor: "pointer", fontFamily: "inherit", color: savedSet.has(entry.item.id) ? "#B8860B" : "var(--hs-muted, #5F716C)" } }, savedSet.has(entry.item.id) ? "★" : "☆"))),
+    onAskAI && !isSaved && res.mode !== "referral" && React.createElement("button", { type: "button", onClick: () => onAskAI(buildAskText(catId, concern === "all" ? null : concern, L("bn", "en"))),
       style: { ...cardBox, display: "flex", alignItems: "center", gap: "12px", background: "linear-gradient(135deg, #0E4B43 0%, #1F7A5C 100%)", border: "none", color: "#fff", marginTop: "4px" } },
       React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px" } }, "✦"),
       React.createElement("span", { style: { flex: 1 } },
