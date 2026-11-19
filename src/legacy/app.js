@@ -20,7 +20,7 @@ import { Card, BootSplash, ErrorBox, CollapsibleSection } from "../shared/ui.js"
 import { histRestore } from "../shared/navHistory.js";
 import { Icon } from "../shared/icons.js";
 import { clearMemberHealthCache } from "../health/records/memberHealthStore.js";
-import { t, useLang, setLang, getLang } from "../shared/i18n.js";
+import { t, L, useLang, setLang, getLang } from "../shared/i18n.js";
 import { GoogleSignInGate } from "../components/GoogleSignInGate.js";
 import { rotateInviteLink, revokeInviteLink, getActiveInvite, startGoogleAccountChange, hasGoogleProvider } from "./googleAuth.js";
 import { GoogleRelinkGate } from "../components/GoogleRelinkGate.js";
@@ -33,6 +33,7 @@ import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
 import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
+import { MyCareSection } from "../health/mycare/MyCareSection.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
@@ -83,7 +84,7 @@ const NAV_TABS = [
   ["home", "home", "Home"],
   ["health", "health", "Health"],
   ["tracker", "tracker", "Tracker"],
-  ["blog", "blog", "Blog"],
+  ["mycare", "sparkles", "MyCare"],
   ["menu", "menu", "Menu"],
 ];
 
@@ -380,7 +381,7 @@ function InviteLinkPanel({ familyId, familyDoc, isAdmin }) {
 const MENU_ICONS = {
   family: ["users", "#1F7A5C"], timeline: ["clock", "#3B82B6"], data: ["save", "#D08A2E"], lock: ["lock", "#7A5BB0"],
   design: ["sliders", "#5F7A8A"], aimodel: ["bot", "#3E6BC4"], theme: ["palette", "#C25B8A"], lang: ["globe", "#2A9AA8"],
-  aichat: ["health", "#1F7A5C"], notif: ["bell", "#D08A2E"], doctor: ["cross", "#3B82B6"], emergency: ["phone", "#C0392B"],
+  aichat: ["health", "#1F7A5C"], notif: ["bell", "#D08A2E"], doctor: ["cross", "#3B82B6"], emergency: ["phone", "#C0392B"], blog: ["blog", "#5B8C3E"],
 };
 function menuBubble(id, size) {
   const [icon, color] = MENU_ICONS[id] || ["home", "#1F7A5C"];
@@ -389,7 +390,7 @@ function menuBubble(id, size) {
     Icon(icon, { size: Math.round(sz * 0.52), stroke: 1.9 }));
 }
 
-function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenUpload, chip, selectedMemberId }) {
+function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick, onOpenAIChat, onOpenBlog, onOpenUpload, chip, selectedMemberId }) {
   // মেনু-reorg ধাপ ক (owner-approved, ২০২৬-১১-০৮): প্রোফাইল-হেডার + সমান দুই দ্রুত-টাইল
   // (ডাক্তার/জরুরি) + পরিষ্কার সারি-তালিকা; সারিতে চাপলে নিজস্ব সাব-পেজ (← মেনু)।
   // কনটেন্ট component-গুলো অপরিবর্তিত — শুধু সাজানো/নেভিগেশন।
@@ -504,6 +505,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
     group([
+      row("blog", L("স্বাস্থ্য ব্লগ", "Health Blog"), L("স্বাস্থ্য-নির্দেশিকা ও লেখা", "Health guides & articles"), onOpenBlog),
       row("family", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
       row("timeline", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
       row("data", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data"), true),
@@ -567,7 +569,6 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   // "+ দ্রুত যোগ" (ধাপ ৯): বার্তা রেখে গন্তব্যে যাওয়া; হোমেই থাকলে হোম নতুন করে আঁকা (homeKey) যাতে ফর্ম খোলে
   const [quickOpen, setQuickOpen] = useState(false);
   const [homeKey, setHomeKey] = useState(0);
-  const [blogKey, setBlogKey] = useState(0); // ব্লগ ট্যাবে আবার ট্যাপ → ব্লগের হোমে ফেরা (পোস্ট/ক্যাটেগরি বন্ধ)
   const onQuickPick = (kind) => {
     const tab = quickTarget(kind);
     setQuickIntent(kind);
@@ -595,11 +596,13 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "tracker") {
     tabContent = React.createElement(TrackerPageSection, { mode: "plan", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onGoHome: goHome });
   } else if (activeTab === "blog") {
-    tabContent = React.createElement(WellnessGuideSection, { key: "blog-" + blogKey, familyId, isAdmin, myMemberId: memberId, onExit: goHome });
+    tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: () => setActiveTab("menu") });
+  } else if (activeTab === "mycare") {
+    tabContent = React.createElement(MyCareSection, { chip });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
-      onOpenAIChat: () => setActiveTab("aichat"), onOpenUpload: () => { setQuickIntent("report"); setActiveTab("health"); }, chip, selectedMemberId,
+      onOpenAIChat: () => setActiveTab("aichat"), onOpenBlog: () => setActiveTab("blog"), onOpenUpload: () => { setQuickIntent("report"); setActiveTab("health"); }, chip, selectedMemberId,
     });
   }
 
@@ -609,7 +612,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     React.createElement(TrackerReminderRunner, { familyId, memberId, members }),
     (activeTab === "home" || activeTab === "health") && selectedMemberId && React.createElement(QuickAddFab, { onOpen: () => setQuickOpen(true) }),
     React.createElement(QuickAddSheet, { open: quickOpen, onClose: () => setQuickOpen(false), onPick: onQuickPick, memberName: ((members || []).find((m) => m.id === selectedMemberId) || {}).name || "" }),
-    React.createElement(BottomNav, { active: activeTab === "aichat" ? "menu" : activeTab, onChange: (t) => { if (t === "blog" && activeTab === "blog") { setBlogKey((n) => n + 1); return; } setActiveTab(t); } })
+    React.createElement(BottomNav, { active: (activeTab === "aichat" || activeTab === "blog") ? "menu" : activeTab, onChange: (t) => setActiveTab(t) })
   );
 }
 
