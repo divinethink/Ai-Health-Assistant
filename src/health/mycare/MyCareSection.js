@@ -75,7 +75,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   ];
 
   if (view !== "home" && CAT_META.some((c) => c[0] === view)) {
-    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, onBack: back, onEditProfile: editProfile }), sheets);
+    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onBack: back, onEditProfile: editProfile }), sheets);
   }
 
   const ageTxt = profile.ageYears == null ? "—" : digits(Math.floor(profile.ageYears)) + L(" বছর", " yrs");

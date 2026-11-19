@@ -8,13 +8,41 @@ import { recommend } from "./careEngine.js";
 import { RED_FLAGS } from "./careRedFlags.js";
 import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY } from "./careLabels.js";
+import { askAI } from "../../ai/aiClient.js";
+import { renderRichText } from "../../shared/richText.js";
+import { explainWith } from "./careAiGuard.js";
 
 const { useState } = React;
+const AI_ON = !!import.meta.env.VITE_MEDIA_WORKER_URL; // AI বন্ধ থাকলে বাটন লুকানো; পেজ অপরিবর্তিত
 const T = (o) => (o ? L(o.bn, o.en) : "");
 const warnBox = { padding: "10px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13.5px", lineHeight: 1.5, marginBottom: "10px" };
 const cardBox = { width: "100%", textAlign: "left", boxSizing: "border-box", padding: "14px", marginBottom: "10px", borderRadius: "16px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer", display: "block" };
 
-function DetailSheet({ entry, safetyLine, onClose }) {
+// "সহজ করে বলুন" — শুধু আইটেমের লেখা AI-কে যায়; উত্তর careAiGuard-এ যাচাই হয়। ব্যর্থ হলে বাকি শিট অক্ষত।
+function ExplainBlock({ entry, familyId }) {
+  const lang = L("bn", "en");
+  const [st, setSt] = useState({ phase: "idle", text: "", fallback: null });
+  const run = async () => {
+    setSt({ phase: "loading", text: "", fallback: null });
+    const r = await explainWith(askAI, familyId, entry, lang, { maxRetries: 1 });
+    if (r.ok) setSt({ phase: "done", text: r.text, fallback: null });
+    else if (r.reason === "unavailable") setSt({ phase: "error", text: "", fallback: null });
+    else setSt({ phase: "blocked", text: "", fallback: r.fallback });
+  };
+  return React.createElement("div", { style: { marginTop: "14px" } },
+    React.createElement("button", { type: "button", onClick: run, disabled: st.phase === "loading", style: { width: "100%", minHeight: "48px", borderRadius: "14px", border: "none", background: "var(--hs-primary, #0E4B43)", color: "#fff", fontSize: "15px", fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: st.phase === "loading" ? 0.7 : 1 } },
+      st.phase === "loading" ? L("একটু অপেক্ষা করুন…", "Please wait…") : L("সহজ করে বলুন", "Explain simply")),
+    st.phase === "done" && React.createElement("div", { style: { marginTop: "10px", padding: "12px", borderRadius: "14px", background: "#EAF6F0", border: "1px solid #A9D8C4", fontSize: "14.5px", lineHeight: 1.6, color: "#1F2D2A", whiteSpace: "pre-wrap" } },
+      React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color: "#7A5B00", marginBottom: "4px" } }, L("AI ব্যাখ্যা — উপরের তথ্যেরই সহজ রূপ", "AI explanation — a simpler version of the details above")),
+      renderRichText(st.text)),
+    st.phase === "blocked" && React.createElement("div", { role: "status", style: { ...warnBox, marginTop: "10px", marginBottom: 0 } }, T(st.fallback)),
+    st.phase === "error" && React.createElement("div", { role: "status", style: { ...warnBox, marginTop: "10px", marginBottom: 0 } }, L("ব্যাখ্যা এখন পাওয়া যাচ্ছে না। পরে আবার চেষ্টা করুন।", "The explanation isn't available right now. Please try again later.")),
+    React.createElement("details", { style: { marginTop: "8px", fontSize: "12.5px", color: "#5F716C", lineHeight: 1.5 } },
+      React.createElement("summary", { style: { cursor: "pointer", minHeight: "32px" } }, L("🔒 AI-তে কী যায়?", "🔒 What is sent to AI?")),
+      L("শুধু এই আইটেমের নাম, কারণ, নিয়ম ও সতর্কতা পাঠানো হয় (ক্লাউড AI, Zero Data Retention)। আপনার নাম, জন্মতারিখ, স্বাস্থ্য-রেকর্ড বা প্রোফাইল কখনো যায় না। AI নতুন তথ্য বা পরিমাণ যোগ করতে পারে না; তেমন কিছু এলে উত্তর দেখানো হয় না।", "Only this item's name, reason, how-to and warnings are sent (cloud AI, Zero Data Retention). Your name, date of birth, health records or profile are never sent. If the AI adds new facts or amounts, the answer is not shown.")));
+}
+
+function DetailSheet({ entry, safetyLine, familyId, explainOn, onClose }) {
   const it = entry.item;
   const sec = (title, body) => body && React.createElement("div", { style: { marginTop: "14px" } },
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" } }, title),
@@ -30,11 +58,12 @@ function DetailSheet({ entry, safetyLine, onClose }) {
     sec(L("কারা নয়", "Not for"), notForText),
     warns.length > 0 && React.createElement("div", { style: { ...warnBox, marginTop: "14px", marginBottom: 0 } }, warns.map((w, i) => React.createElement("div", { key: i }, w))),
     React.createElement("div", { style: { ...warnBox, marginTop: "10px", marginBottom: 0 } }, T(safetyLine)),
+    explainOn && React.createElement(ExplainBlock, { entry, familyId }),
     src && React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "12px" } }, L("উৎস: ", "Source: ") + src),
     React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "8px" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")));
 }
 
-export function MyCareCategory({ catId, profile, season, onBack, onEditProfile }) {
+export function MyCareCategory({ catId, profile, season, familyId, canExplain, onBack, onEditProfile }) {
   const meta = CAT_META.find((c) => c[0] === catId) || [catId, catId, catId, "#1F7A5C"];
   const concernKey = CONCERN_KEY[catId];
   const concerns = concernKey ? (LABELS[concernKey] ? Object.keys(LABELS[concernKey]) : []) : [];
@@ -80,5 +109,5 @@ export function MyCareCategory({ catId, profile, season, onBack, onEditProfile }
       React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
       entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0])))),
     React.createElement("p", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, margin: "8px 0 0" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")),
-    open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, onClose: () => setOpen(null) }));
+    open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, familyId, explainOn: AI_ON && !!canExplain && !!familyId, onClose: () => setOpen(null) }));
 }
