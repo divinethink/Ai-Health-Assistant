@@ -122,6 +122,29 @@ service cloud.firestore {
       return planOk && foodsOk && logOk && fastOk && waterOk && weighOk && medOk && focusOk;
     }
 
+    // MyCare (ব্যক্তিগত যত্ন) — families/{fid}/carePrefs/{memberId}: প্রতি সদস্যে ১টি ডক। শুধু ধরন/সীমা এখানে;
+    // স্বাস্থ্য-তথ্য (অ্যালার্জি/বয়স/গর্ভাবস্থা) এখানে রাখা হয় না — সেগুলো বিদ্যমান healthRecords/members থেকে পড়া হয়।
+    // enum-মান client-এর src/health/mycare/carePrefsSchema.js-এর সাথে মেলাতে হবে (tests/mycare/prefs.test.mjs মিলিয়ে দেখে)।
+    function carePrefsOk(d) {
+      return d.keys().hasOnly(['v', 'memberId', 'skinType', 'skinConcerns', 'hairType', 'hairConcerns', 'oralConcerns',
+                               'avoidIngredients', 'preferences', 'region', 'breastfeeding',
+                               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+        && (!('v' in d) || d.v == 1)
+        && (!('skinType' in d) || d.skinType == null || d.skinType in ['oily', 'dry', 'normal', 'combination', 'sensitive'])
+        && (!('hairType' in d) || d.hairType == null || d.hairType in ['oily', 'dry', 'normal', 'curly'])
+        && (!('skinConcerns' in d) || (d.skinConcerns is list && d.skinConcerns.size() <= 5
+              && d.skinConcerns.hasOnly(['acne', 'scars', 'dryness', 'irritation', 'itching'])))
+        && (!('hairConcerns' in d) || (d.hairConcerns is list && d.hairConcerns.size() <= 5
+              && d.hairConcerns.hasOnly(['dandruff', 'itching', 'oiliness', 'hairfall', 'dryness'])))
+        && (!('oralConcerns' in d) || (d.oralConcerns is list && d.oralConcerns.size() <= 5
+              && d.oralConcerns.hasOnly(['gums', 'sensitivity', 'bad-breath', 'stains', 'dry-mouth'])))
+        && (!('avoidIngredients' in d) || (d.avoidIngredients is list && d.avoidIngredients.size() <= 20))
+        && (!('preferences' in d) || (d.preferences is list && d.preferences.size() <= 4
+              && d.preferences.hasOnly(['general', 'herbal', 'ayurvedic', 'budget'])))
+        && (!('region' in d) || d.region == null || (d.region is string && d.region.size() <= 30))
+        && (!('breastfeeding' in d) || d.breastfeeding == null || d.breastfeeding is bool);
+    }
+
     // ============================================================
     // GLOBAL COLLECTIONS (family-independent)
     // ============================================================
@@ -609,6 +632,17 @@ service cloud.firestore {
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
+      }
+
+      // MyCare — যত্ন-প্রোফাইল (ডক-ID = memberId)। বিদ্যমান ProfileShare/Admin নিয়মই; কড়া field-allowlist।
+      match /carePrefs/{memberId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, memberId, callerMemberIdOf(familyId));
+        allow create, update: if request.auth != null
+          && request.resource.data.memberId == memberId
+          && carePrefsOk(request.resource.data)
+          && hasWriteAccess(familyId, memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
       }
 
       match /healthCalendarEvents/{eventId} {

@@ -1105,4 +1105,63 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertSucceeds(deleteDoc(doc(dbAs(CREATOR), 'conditionGuides', 'ibs')));
     });
   });
+
+  describe('MyCare carePrefs (ধাপ ৩)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const cp = (memberId, editor, extra = {}) => ({
+      v: 1, memberId, skinType: 'dry', skinConcerns: ['acne'], hairType: 'normal', preferences: ['herbal'],
+      avoidIngredients: ['lanolin'], region: 'BD', lastEditedByMemberId: editor, createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+
+    it('C1. owner নিজের carePrefs তৈরি, পড়া, merge-update ও delete করতে পারেন', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA')));
+      await assertSucceeds(getDoc(famDoc(db, 'carePrefs', 'mA')));
+      await assertSucceeds(setDoc(famDoc(db, 'carePrefs', 'mA'), { memberId: 'mA', hairType: 'curly', lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(deleteDoc(famDoc(db, 'carePrefs', 'mA')));
+    });
+
+    it('C2. অন্য সদস্য শেয়ার ছাড়া পড়তে/লিখতে পারেন না; read-শেয়ারে শুধু পড়া; write-শেয়ারে লেখাও', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA')); });
+      await assertFails(getDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA'), cp('mA', 'mB')));
+      await seedShare('mA', 'mB', { read: true, write: false });
+      await assertSucceeds(getDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA'), cp('mA', 'mB')));
+      await seedShare('mA', 'mB', { read: true, write: true });
+      await assertSucceeds(setDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA'), cp('mA', 'mB')));
+    });
+
+    it('C3. অজানা ফিল্ড, ভুল memberId ও lastEditedBy spoof reject', async () => {
+      const db = dbAs('uidA');
+      await assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', { allergies: ['x'] })));
+      await assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mB', 'mA')));
+      await assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mB')));
+    });
+
+    it('C4. enum ও তালিকা-সীমা reject (skinType, concerns, preferences, avoidIngredients, region)', async () => {
+      const db = dbAs('uidA');
+      const bad = (x) => assertFails(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', x)));
+      await bad({ skinType: 'purple' });
+      await bad({ hairType: 'wavy' });
+      await bad({ skinConcerns: ['acne', 'bogus'] });
+      await bad({ skinConcerns: ['acne', 'scars', 'dryness', 'irritation', 'itching', 'acne'] });
+      await bad({ preferences: ['general', 'herbal', 'ayurvedic', 'budget', 'general'] });
+      await bad({ preferences: ['steroid'] });
+      await bad({ avoidIngredients: new Array(21).fill('x') });
+      await bad({ avoidIngredients: 'lanolin' });
+      await bad({ region: 'x'.repeat(31) });
+      await bad({ v: 2 });
+      await assertSucceeds(setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA', { skinType: null, breastfeeding: false })));
+    });
+
+    it('C5. non-owner delete reject; carePrefs অন্য family/সদস্যের নামে তৈরি করা যায় না', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'carePrefs', 'mA'), cp('mA', 'mA')); });
+      await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'carePrefs', 'mA'), cp('mB', 'mB')));
+    });
+  });
 });
