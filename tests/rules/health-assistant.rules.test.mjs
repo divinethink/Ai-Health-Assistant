@@ -1175,4 +1175,59 @@ describe('Health Assistant — Firestore Rules', function () {
       if (snap.data().skinType !== 'dry') throw new Error('merge প্রোফাইল-ফিল্ড মুছে ফেলেছে');
     });
   });
+
+  describe('MyCare careLog (ধাপ E)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const cl = (memberId, editor, extra = {}) => ({
+      v: 1, memberId, days: { '2026-11-19': ['skin-gentle-cleanser/morning', 'all'] },
+      lastEditedByMemberId: editor, createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+    const manyDays = (n) => Object.fromEntries(new Array(n).fill(0).map((_, i) => ['2026-01-' + String(i + 1).padStart(2, '0') + 'x' + i, ['a/morning']]));
+
+    it('L1. owner নিজের careLog তৈরি, পড়া, merge-update ও delete করতে পারেন; merge-এ অন্য দিন অক্ষত', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA')));
+      await assertSucceeds(getDoc(famDoc(db, 'careLog', 'mA')));
+      await assertSucceeds(setDoc(famDoc(db, 'careLog', 'mA'), { v: 1, memberId: 'mA', days: { '2026-11-20': ['oral-fluoride-brushing/night'] }, lastEditedByMemberId: 'mA' }, { merge: true }));
+      const snap = await getDoc(famDoc(db, 'careLog', 'mA'));
+      if (!snap.data().days['2026-11-19'] || !snap.data().days['2026-11-20']) throw new Error('merge আগের দিন মুছে ফেলেছে');
+      await assertSucceeds(deleteDoc(famDoc(db, 'careLog', 'mA')));
+    });
+
+    it('L2. অন্য সদস্য শেয়ার ছাড়া পড়তে/লিখতে পারেন না; read-শেয়ারে শুধু পড়া; write-শেয়ারে লেখাও', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA')); });
+      await assertFails(getDoc(famDoc(dbAs('uidB'), 'careLog', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'careLog', 'mA'), cl('mA', 'mB')));
+      await seedShare('mA', 'mB', { read: true, write: false });
+      await assertSucceeds(getDoc(famDoc(dbAs('uidB'), 'careLog', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'careLog', 'mA'), cl('mA', 'mB')));
+      await seedShare('mA', 'mB', { read: true, write: true });
+      await assertSucceeds(setDoc(famDoc(dbAs('uidB'), 'careLog', 'mA'), cl('mA', 'mB')));
+    });
+
+    it('L3. অজানা ফিল্ড, ভুল memberId, lastEditedBy spoof ও v:2 reject', async () => {
+      const db = dbAs('uidA');
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { allergies: ['x'] })));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mB', 'mA')));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mB')));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { v: 2 })));
+    });
+
+    it('L4. days: map ও ≤৬০ দিন; ৬১ দিন বা ভুল ধরন reject', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { days: manyDays(60) })));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { days: manyDays(61) })));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { days: ['a/morning'] })));
+      await assertFails(setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA', { days: 'x' })));
+    });
+
+    it('L5. non-owner delete reject; অন্যের নামে careLog তৈরি করা যায় না', async () => {
+      await seed(async (db) => { await setDoc(famDoc(db, 'careLog', 'mA'), cl('mA', 'mA')); });
+      await assertFails(deleteDoc(famDoc(dbAs('uidB'), 'careLog', 'mA')));
+      await assertFails(setDoc(famDoc(dbAs('uidB'), 'careLog', 'mA'), cl('mB', 'mB')));
+    });
+  });
 });

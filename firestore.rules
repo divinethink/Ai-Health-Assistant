@@ -146,6 +146,14 @@ service cloud.firestore {
         && (!('breastfeeding' in d) || d.breastfeeding == null || d.breastfeeding is bool);
     }
 
+    // MyCare রুটিন চেকলিস্ট — families/{fid}/careLog/{memberId}: প্রতি সদস্যে ১টি ডক; `days` = { "YYYY-MM-DD": [টিক-key...] }।
+    // এখানে শুধু ধরন ও আকার-সীমা (days ≤ ৬০ দিন); তারিখ/টিক-key-র গভীর যাচাই client-এর src/health/mycare/careLogCore.js-এ।
+    function careLogOk(d) {
+      return d.keys().hasOnly(['v', 'memberId', 'days', 'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+        && (!('v' in d) || d.v == 1)
+        && (!('days' in d) || (d.days is map && d.days.size() <= 60));
+    }
+
     // ============================================================
     // GLOBAL COLLECTIONS (family-independent)
     // ============================================================
@@ -642,6 +650,17 @@ service cloud.firestore {
         allow create, update: if request.auth != null
           && request.resource.data.memberId == memberId
           && carePrefsOk(request.resource.data)
+          && hasWriteAccess(familyId, memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
+      }
+
+      // MyCare রুটিন চেকলিস্ট (ডক-ID = memberId)। carePrefs-এর মতোই ProfileShare/Admin নিয়ম; কড়া field-allowlist।
+      match /careLog/{memberId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, memberId, callerMemberIdOf(familyId));
+        allow create, update: if request.auth != null
+          && request.resource.data.memberId == memberId
+          && careLogOk(request.resource.data)
           && hasWriteAccess(familyId, memberId, request.resource.data.lastEditedByMemberId);
         allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
       }

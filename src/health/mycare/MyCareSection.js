@@ -12,7 +12,8 @@ import { buildOwnProfile, buildOtherProfile, prefsProgress } from "./careAdapter
 import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, CAT_DESC, LABELS, AGE_BANDS, SEASON_LABEL } from "./careLabels.js";
 import { IconBox } from "./careIcons.js";
-import { TodayCareView } from "./TodayCareCard.js";
+import { TodayCareView, CareWeekCard } from "./TodayCareCard.js";
+import { useCareLog } from "./useCareLog.js";
 import { MyCareCategory } from "./MyCareCategory.js";
 import { CareProfileSheet, OtherSheet } from "./CareProfileSheets.js";
 
@@ -30,6 +31,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   const [other, setOther] = useState(null); // অন্যের জন্য ফর্ম — শুধু মেমরি
   const [pf, setPf] = useState({ loading: true, prefs: null, error: false });
   const health = useMemberHealth(familyId, selectedMemberId);
+  const careLog = useCareLog(familyId, selectedMemberId, callerMemberId);
   histBind(VIEW_KEY, view, setView);
 
   // সদস্য বদলালে: অস্থায়ী মোড ও খোলা বিভাগ রিসেট
@@ -115,7 +117,8 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
     other && React.createElement("div", { style: warnBox }, L("অস্থায়ী — সংরক্ষিত হয় না।", "Temporary — not saved.")),
     !other && !recordsOk && React.createElement("div", null, ErrorBox(L("স্বাস্থ্য-রেকর্ড পড়া যায়নি, তাই শুধু সবচেয়ে নিরাপদ সাধারণ পরামর্শ দেখানো হবে।", "Could not read health records, so only the safest basic advice is shown."))),
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
-    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, onOpen: (it) => { if (it) openCat(it.category); } }),
+    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
+    overview.mode !== "referral" && !other && React.createElement(CareWeekCard, { log: careLog }),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "14px" } },
       CAT_META.map(([id, bn, en, color]) => {
         const ready = ALL_ITEMS.some((i) => i.category === id && i.status === "verified");
