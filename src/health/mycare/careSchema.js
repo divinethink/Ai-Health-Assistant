@@ -1,4 +1,5 @@
 // MyCare — আইটেমের schema ও লেখার নিয়ম (pure; UI/DB-মুক্ত)। বিস্তারিত: MyCare_Plan.md §৮।
+import { SEASONS } from "./careSeason.js";
 export const CATEGORIES = ["skin", "hair", "oral", "body", "seasonal", "natural"];
 export const AVOID_KEYS = ["pregnancy", "breastfeeding", "under18", "under2", "kidney", "liver"];
 export const STATUSES = ["draft", "verified"];
@@ -44,6 +45,8 @@ export function validateItem(item) {
   }
   const bad = (item.avoidIf || []).filter((k) => !AVOID_KEYS.includes(k));
   if (bad.length) e.push("avoidIf-এ অচেনা মান: " + bad.join(","));
+  if (item.seasons != null && (!Array.isArray(item.seasons) || item.seasons.some((x) => !SEASONS.includes(x)))) e.push("seasons-এ অচেনা ঋতু");
+  if (item.category === "seasonal" && !(Array.isArray(item.seasons) && item.seasons.length)) e.push("ঋতুভিত্তিক আইটেমে seasons দরকার");
   const banned = hasBannedActive(item);
   if (banned) e.push("নিষিদ্ধ উপাদান: " + banned);
   if (item.isCoreSafe && (item.evidenceLevel !== 1 || item.herbal)) e.push("মূল-নিরাপদ আইটেম স্তর ১ ও non-herbal হতে হবে");

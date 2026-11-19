@@ -13,8 +13,9 @@ test("সব আইটেম schema-তে বৈধ ও id অনন্য", ()
   assert.ok(ALL_ITEMS.length >= 10);
 });
 
-test("সব আইটেম verified ও lastReviewed সহ", () => {
-  assert.ok(ALL_ITEMS.every((i) => i.status === "verified" && i.lastReviewed));
+test("Skin/Hair/Oral আইটেম verified; সব আইটেমে lastReviewed ও বৈধ status (নতুন ব্যাচ রিভিউ-অপেক্ষায় draft হতে পারে)", () => {
+  assert.ok(ALL_ITEMS.filter((i) => ["skin", "hair", "oral"].includes(i.category)).every((i) => i.status === "verified" && i.lastReviewed));
+  assert.ok(ALL_ITEMS.every((i) => i.lastReviewed && (i.status === "verified" || i.status === "draft")));
 });
 
 test("মূল-নিরাপদ সেট: ত্বকে ৩টি, চুলে ১টি", () => {
@@ -80,4 +81,53 @@ test("Oral: ব্র্যান্ড/ঔষধ/সংখ্যা-ঘনত�
     const t = JSON.stringify([i.name, i.how, i.why]);
     assert.equal(/ppm|\bmg\b|%|পিপিএম/i.test(t), false, i.id);
   }
+});
+
+const adult8 = { ageYears: 30, sex: "male", allergies: [] };
+const ids8 = (r) => r.items.map((x) => x.item.id);
+const inCat = (c) => ALL_ITEMS.filter((i) => i.category === c);
+
+test("ধাপ ৮: Seasonal/Body/Natural আইটেম আছে ও schema-বৈধ", () => {
+  assert.ok(inCat("seasonal").length >= 4 && inCat("body").length >= 1 && inCat("natural").length >= 2);
+  assert.ok(inCat("natural").every((i) => i.evidenceLevel === 3 && i.herbal && i.heavyMetalWarning === true && !i.isCoreSafe));
+});
+
+test("Seasonal: শুধু বর্তমান ঋতুর আইটেম দেখায় (বর্ষা≠শীত); ঋতু ছাড়া আইটেম ঢোকে না", () => {
+  const borsha = ids8(recommend(adult8, ALL_ITEMS, { category: "seasonal", includeDraft: true, season: "borsha" }));
+  const shit = ids8(recommend(adult8, ALL_ITEMS, { category: "seasonal", includeDraft: true, season: "shit" }));
+  assert.ok(borsha.includes("season-borsha-shoes-socks") && !borsha.includes("season-cool-dry-skin"));
+  assert.ok(shit.includes("season-cool-dry-skin") && !shit.includes("season-borsha-shoes-socks") && !shit.includes("season-heat-fluids"));
+  assert.ok(inCat("seasonal").every((i) => i.seasons.length > 0));
+});
+
+test("Seasonal: কিডনি-রোগীর জন্য 'বাড়তি তরল' লুকানো; অজানা-তথ্যে শুধু মূল সেট; লাল-পতাকা", () => {
+  const kid = ids8(recommend({ ...adult8, kidney: true }, ALL_ITEMS, { category: "seasonal", includeDraft: true, season: "grishmo" }));
+  assert.equal(kid.includes("season-heat-fluids"), false);
+  const unk = ids8(recommend({ ageYears: 30, sex: "male", allergies: null }, ALL_ITEMS, { category: "seasonal", includeDraft: true, season: "grishmo" }));
+  assert.deepEqual(unk, ["season-heat-shade"]);
+  assert.equal(recommend(adult8, ALL_ITEMS, { category: "seasonal", includeDraft: true, season: "grishmo", symptoms: ["heat-illness"] }).mode, "referral");
+});
+
+test("Natural: গর্ভবতী/দুগ্ধদানকারীর অ্যালোভেরা লুকানো; অ্যালার্জিতে বাদ; ভারী-ধাতুর নোট থাকে; ১৮-র নিচে/অজানায় নেই", () => {
+  const ok = recommend(adult8, ALL_ITEMS, { category: "natural", includeDraft: true });
+  assert.ok(ids8(ok).includes("natural-aloe-gel") && ok.items.every((x) => x.notes.length === 1));
+  assert.equal(ids8(recommend({ ageYears: 28, sex: "female", allergies: [], pregnant: true }, ALL_ITEMS, { category: "natural", includeDraft: true })).includes("natural-aloe-gel"), false);
+  assert.equal(ids8(recommend({ ...adult8, allergies: ["aloe"] }, ALL_ITEMS, { category: "natural", includeDraft: true })).includes("natural-aloe-gel"), false);
+  assert.equal(recommend({ ...adult8, ageYears: 15 }, ALL_ITEMS, { category: "natural", includeDraft: true }).items.length, 0);
+  assert.equal(recommend({ ageYears: 30, sex: "male", allergies: null }, ALL_ITEMS, { category: "natural", includeDraft: true }).items.length, 0);
+});
+
+test("Natural/Seasonal/Body: নিষিদ্ধ শব্দ ও সংখ্যা-ঘনত্ব নেই; draft ডিফল্টে লুকানো", () => {
+  for (const i of [...inCat("natural"), ...inCat("seasonal"), ...inCat("body")]) {
+    assert.equal(/ppm|\bmg\b|%/i.test(JSON.stringify([i.name, i.how, i.why])), false, i.id);
+  }
+  const draftN = inCat("natural").filter((i) => i.status === "draft").length;
+  assert.equal(recommend(adult8, ALL_ITEMS, { category: "natural" }).items.length, inCat("natural").length - draftN);
+});
+
+test("schema: seasonal আইটেমে seasons বাধ্যতামূলক; অচেনা ঋতু reject", () => {
+  const base = inCat("seasonal")[0];
+  assert.ok(validateItem({ ...base, seasons: [] }).length > 0);
+  assert.ok(validateItem({ ...base, seasons: ["xyz"] }).length > 0);
+  assert.deepEqual(validateItem(base), []);
 });

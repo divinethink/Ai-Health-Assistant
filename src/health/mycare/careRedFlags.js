@@ -7,6 +7,7 @@ export const RED_FLAGS = [
   { id: "blood-or-pus", level: "doctor", cats: "*", bn: "রক্ত বা পুঁজ আছে — ডাক্তার দেখান।", en: "Blood or pus is present — see a doctor." },
   { id: "blistering", level: "doctor", cats: "*", bn: "ফোস্কা পড়েছে — ব্যবহার বন্ধ করে ডাক্তার দেখান।", en: "Blisters appeared — stop use and see a doctor." },
   { id: "sudden-hair-loss", level: "doctor", cats: ["hair"], bn: "হঠাৎ অনেক চুল পড়া বা টাক-ছোপ — ডাক্তার দেখান।", en: "Sudden heavy hair loss or bald patches — see a doctor." },
+  { id: "heat-illness", level: "doctor", cats: ["seasonal"], bn: "গরমে অসুস্থ লাগছে ও জ্বর উঠেছে — heat exhaustion বা heatstroke হতে পারে; দ্রুত ডাক্তার দেখান।", en: "Feeling unwell with a high temperature in the heat — may be heat exhaustion or heatstroke; see a doctor promptly." },
   { id: "mouth-ulcer-2w", level: "doctor", cats: ["oral"], bn: "মুখের ঘা ২ সপ্তাহের বেশি — ডাক্তার/দন্তচিকিৎসক দেখান।", en: "Mouth ulcer for over 2 weeks — see a doctor or dentist." },
   { id: "gum-bleeding-recurrent", level: "doctor", cats: ["oral"], bn: "মাড়ি থেকে বারবার রক্ত — দন্তচিকিৎসক দেখান।", en: "Gums bleed repeatedly — see a dentist." },
   { id: "severe-tooth-pain-swelling", level: "doctor", cats: ["oral"], bn: "দাঁতে তীব্র ব্যথা বা ফোলা — আজই দন্তচিকিৎসক দেখান।", en: "Severe tooth pain or swelling — see a dentist today." },

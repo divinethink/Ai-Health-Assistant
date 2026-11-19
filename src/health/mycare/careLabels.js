@@ -20,6 +20,8 @@ export const LABELS = {
   sex: { male: P("পুরুষ", "Male"), female: P("নারী", "Female") },
 };
 
+export const SEASON_LABEL = { grishmo: ["গ্রীষ্ম", "Summer"], borsha: ["বর্ষা", "Monsoon"], shorot: ["শরৎ", "Autumn"], hemonto: ["হেমন্ত", "Late autumn"], shit: ["শীত", "Winter"], boshonto: ["বসন্ত", "Spring"] };
+
 // "অন্যের জন্য" মোডের বয়স-পরিসর → প্রতিনিধি বয়স (বছর)
 export const AGE_BANDS = [
   ["under2", "২ বছরের নিচে", "Under 2", 1],

@@ -7,7 +7,7 @@ import { EvidenceBadge } from "../treatment-modes/EvidenceBadge.js";
 import { recommend } from "./careEngine.js";
 import { RED_FLAGS } from "./careRedFlags.js";
 import { ALL_ITEMS } from "./data/index.js";
-import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY } from "./careLabels.js";
+import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY, SEASON_LABEL } from "./careLabels.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
 import { explainWith } from "./careAiGuard.js";
@@ -88,6 +88,7 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
       React.createElement("button", { type: "button", onClick: onBack, "aria-label": L("পেছনে", "Back"), style: { minWidth: "44px", minHeight: "44px", border: "none", background: "none", fontSize: "22px", cursor: "pointer", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit" } }, "←"),
       React.createElement("h2", { style: { fontSize: "21px", margin: 0, color: "var(--hs-primary, #0E4B43)" } }, L(meta[1], meta[2]))),
     pills,
+    catId === "seasonal" && SEASON_LABEL[season] && React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "2px 0 8px" } }, L("এখন ঋতু: ", "Season now: ") + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1])),
     flagOpts.length > 0 && React.createElement(CollapsibleSection, { title: L("কোনো সতর্ক লক্ষণ আছে?", "Any warning signs?") },
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } }, flagOpts.map((f) => {
         const on = symptoms.includes(f.id);

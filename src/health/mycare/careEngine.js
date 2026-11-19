@@ -72,6 +72,7 @@ export function recommend(profileRaw, items, opts = {}) {
   pool = pool.filter((i) => {
     const ft = i.forTypes || [];
     if (ft.length && (!type || !ft.includes(type))) return false;
+    if (o.category === "seasonal" && o.season && !(i.seasons || []).includes(o.season)) return false; // ঋতুভিত্তিক বিভাগে শুধু বর্তমান ঋতুর আইটেম
     const fc = i.forConcerns || [];
     if (o.concern && fc.length && !fc.includes(o.concern)) return false;
     return true;
