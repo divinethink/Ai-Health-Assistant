@@ -23,7 +23,8 @@ const { useState, useEffect } = React;
 const VIEW_KEY = "mycare-view";
 const card = { padding: "14px", borderRadius: "16px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", marginBottom: "12px" };
 const warnBox = { padding: "10px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13.5px", lineHeight: 1.5, marginBottom: "12px" };
-const heroBtn = { minHeight: "44px", padding: "6px 16px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" };
+const heroBtn = { minHeight: "44px", padding: 0, border: "none", background: "none", cursor: "pointer", fontFamily: "inherit" }; // ট্যাপ-এলাকা ৪৪px, দৃশ্যমান চিপ ছোট
+const heroChipStyle = { display: "inline-block", fontSize: "12px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.16)", color: "#fff", whiteSpace: "nowrap" };
 const T = (o) => (o ? L(o.bn, o.en) : "");
 
 export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId, members, onAskAI }) {
@@ -99,29 +100,27 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   const ageTxt = profile.ageYears == null ? "—" : digits(Math.floor(profile.ageYears)) + L(" বছর", " yrs");
   const sexTxt = profile.sex ? T(LABELS.sex[profile.sex]) : "—";
   const band = other && AGE_BANDS.find((b) => b[0] === other.ageBand);
-  const who = other ? (band ? L(band[1], band[2]) : "") + " · " + sexTxt : (member.name || "") + " · " + ageTxt + " · " + sexTxt;
+  const who = (band ? L(band[1], band[2]) : "") + " · " + sexTxt;
   const prog = prefsProgress(pf.prefs);
 
   return wrap(
-    React.createElement("div", { style: { display: "flex", marginBottom: "8px" } }, chip),
-    React.createElement("div", { style: { padding: "16px", borderRadius: "22px", background: "linear-gradient(135deg, #0E4B43 0%, #1F7A5C 100%)", color: "#fff", boxShadow: "0 8px 22px rgba(14,75,67,0.28)", marginBottom: "14px" } },
+    React.createElement("div", { style: { padding: "10px 14px", borderRadius: "18px", background: "linear-gradient(135deg, #0E4B43 0%, #1F7A5C 100%)", color: "#fff", boxShadow: "0 6px 16px rgba(14,75,67,0.25)", marginBottom: "12px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
-        React.createElement("h2", { style: { fontSize: "24px", fontWeight: 800, margin: 0, color: "#fff" } }, "MyCare"),
-        SEASON_LABEL[season] && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 700, padding: "4px 12px", borderRadius: "999px", background: "rgba(255,255,255,0.18)", whiteSpace: "nowrap" } }, L("ঋতু: ", "Season: ") + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1]))),
-      React.createElement("p", { style: { fontSize: "13.5px", opacity: 0.88, margin: "4px 0 12px" } }, L("প্রমাণভিত্তিক ব্যক্তিগত যত্নের গাইড", "Evidence-based personal care guide")),
-      React.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "10px" } },
-        React.createElement("div", { style: { fontSize: "12.5px", opacity: 0.8 } }, other ? L("এখন দেখছেন — অন্য একজন", "Viewing — someone else") : L("যার জন্য দেখছেন", "Viewing for")),
-        React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, margin: "2px 0 10px", overflowWrap: "anywhere" } }, who),
-        React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-          other
-            ? [React.createElement("button", { key: "e", type: "button", style: heroBtn, onClick: () => setSheet("other") }, L("তথ্য বদলান", "Edit")),
-              React.createElement("button", { key: "b", type: "button", style: heroBtn, onClick: () => setOther(null) }, L("নিজের তথ্যে ফিরুন", "Back to my details"))]
-            : React.createElement("button", { type: "button", style: heroBtn, onClick: () => setSheet("other") }, L("অন্যের জন্য দেখুন", "View for someone else"))))),
+        React.createElement("h2", { style: { fontSize: "22px", fontWeight: 800, margin: 0, color: "#fff" } }, "MyCare"),
+        other
+          ? React.createElement("span", { style: { display: "flex", gap: "6px" } },
+              React.createElement("button", { type: "button", style: heroBtn, onClick: () => setSheet("other") }, React.createElement("span", { style: heroChipStyle }, L("তথ্য বদলান", "Edit"))),
+              React.createElement("button", { type: "button", style: heroBtn, onClick: () => setOther(null) }, React.createElement("span", { style: heroChipStyle }, L("নিজের তথ্যে ফিরুন", "Back to mine"))))
+          : React.createElement("button", { type: "button", style: heroBtn, onClick: () => setSheet("other") }, React.createElement("span", { style: heroChipStyle }, L("অন্যের জন্য দেখুন", "For someone else")))),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", minHeight: "44px" } },
+        other ? null : chip,
+        React.createElement("span", { style: { fontSize: "14px", fontWeight: 700, opacity: 0.95, overflowWrap: "anywhere" } }, other ? L("অন্য একজন · ", "Someone else · ") + who : "· " + ageTxt + " · " + sexTxt),
+        SEASON_LABEL[season] && React.createElement("span", { style: { fontSize: "12px", fontWeight: 700, opacity: 0.85, marginLeft: "auto", whiteSpace: "nowrap" } }, L(SEASON_LABEL[season][0], SEASON_LABEL[season][1])))),
     other && React.createElement("div", { style: warnBox }, L("অস্থায়ী — সংরক্ষিত হয় না।", "Temporary — not saved.")),
     !other && !recordsOk && React.createElement("div", null, ErrorBox(L("স্বাস্থ্য-রেকর্ড পড়া যায়নি, তাই শুধু সবচেয়ে নিরাপদ সাধারণ পরামর্শ দেখানো হবে।", "Could not read health records, so only the safest basic advice is shown."))),
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
     !other && React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
-    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
+    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, collapsible: true, log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
     overview.mode !== "referral" && !other && React.createElement(CareWeekCard, { log: careLog }),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "14px" } },
       CAT_META.map(([id, bn, en, color]) => {

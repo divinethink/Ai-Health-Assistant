@@ -42,7 +42,6 @@ import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js"
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
 import { setChatPrefill } from "../shared/chatPrefill.js";
-import { HomeTodayCare } from "../health/mycare/TodayCareCard.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
@@ -123,6 +122,7 @@ function BottomNav({ active, onChange }) {
 // variant=="name": মেনুর প্রোফাইল-কার্ডের নামটাই ট্রিগার (ড্রপডাউন কার্ডের নিচে, কার্ড-প্রস্থে)। ডিফল্ট: আগের পিল-চিপ।
 function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId, onChangeMember, variant }) {
   const asName = variant === "name";
+  const asHero = variant === "hero";
   const [open, setOpen] = useState(false);
   const [confirmChange, setConfirmChange] = useState(false);
   const [changeBusy, setChangeBusy] = useState(false);
@@ -141,7 +141,11 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
     React.createElement(
       "button", {
         onClick: () => setOpen((o) => !o), "aria-label": memberDoc.name,
-        style: asName ? {
+        style: asHero ? {
+          display: "flex", alignItems: "center", gap: "4px", minHeight: "44px", maxWidth: "100%", minWidth: 0,
+          border: "none", background: "none", padding: 0, margin: 0, cursor: "pointer", fontFamily: "inherit",
+          color: "#fff", fontSize: "18px", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        } : asName ? {
           display: "flex", alignItems: "center", gap: "4px", minHeight: "36px", maxWidth: "100%", minWidth: 0,
           border: "none", background: "none", padding: 0, margin: 0, cursor: "pointer", fontFamily: "inherit",
           color: "var(--hs-primary)", fontSize: "16px", fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -152,7 +156,7 @@ function ProfileChip({ memberDoc, familyDoc, isAdmin, members, selectedMemberId,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         },
       },
-      (asName ? (memberDoc.name || "?") : first) + " ▾"
+      ((asName || asHero) ? (memberDoc.name || "?") : first) + " ▾"
     ),
     open && React.createElement("div", { onClick: () => setOpen(false), style: { position: "fixed", inset: 0, zIndex: 59, background: "rgba(0,0,0,0.15)" } }),
     open && React.createElement(
@@ -587,11 +591,14 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
     key: "profile-chip", memberDoc, familyDoc, isAdmin,
     members, selectedMemberId, onChangeMember: setSelectedMemberId,
   });
+  const heroChip = React.createElement(ProfileChip, {
+    key: "profile-chip-hero", memberDoc, familyDoc, isAdmin,
+    members, selectedMemberId, onChangeMember: setSelectedMemberId, variant: "hero",
+  });
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); },
-      homeCare: React.createElement(HomeTodayCare, { key: "care-" + selectedMemberId, familyId, callerMemberId: memberId, selectedMemberId, members, onOpen: () => setActiveTab("mycare") }) });
+    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); } });
   } else if (activeTab === "health") {
     tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, isAdmin, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
@@ -601,7 +608,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "mycare") {
-    tabContent = React.createElement(MyCareSection, { chip, familyId, callerMemberId: memberId, selectedMemberId, members, onAskAI: (text) => { setChatPrefill(text); setActiveTab("aichat"); } });
+    tabContent = React.createElement(MyCareSection, { chip: heroChip, familyId, callerMemberId: memberId, selectedMemberId, members, onAskAI: (text) => { setChatPrefill(text); setActiveTab("aichat"); } });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,

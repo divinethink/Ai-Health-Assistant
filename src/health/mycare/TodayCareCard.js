@@ -20,8 +20,9 @@ const colorOf = (cat) => (CAT_META.find((c) => c[0] === cat) || [0, 0, 0, "#1F7A
 const streakText = (n) => L("ধারাবাহিক " + digits(n) + " দিন", n + "-day streak");
 
 // log = { days, toggle } হলে চেকলিস্ট (টিক ও streak); null হলে আগের মতো শুধু তালিকা ("অন্যের জন্য" মোডে সবসময় null)
-export function TodayCareView({ profile, onOpen, compact, log }) {
+export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
   const [msg, setMsg] = useState("");
+  const [open, setOpen] = useState(false); // collapsible হলে শুরুতে বন্ধ
   const season = seasonOf(new Date());
   const care = pickTodayCare(profile, ALL_ITEMS, { season, date: new Date() });
   if (isEmptyCare(care)) return null;
@@ -41,13 +42,16 @@ export function TodayCareView({ profile, onOpen, compact, log }) {
     React.createElement("button", { type: "button", onClick: () => onOpen && onOpen(e.item), style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: "10px", padding: "4px 2px", border: "none", background: "none", textAlign: "left", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer" } },
       React.createElement(IconBox, { id: e.item.category, color: colorOf(e.item.category), size: 30 }),
       React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14.5px", fontWeight: 700, overflowWrap: "anywhere" } }, T(e.item.name))));
+  const hidden = !!collapsible && !open;
   const chip = { fontSize: "12.5px", fontWeight: 800, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)", whiteSpace: "nowrap" };
   return React.createElement("div", { style: { padding: "14px", borderRadius: "22px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", marginBottom: "12px" } },
-    React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "4px" } },
+    React.createElement(collapsible ? "button" : "div", collapsible ? { type: "button", onClick: () => setOpen((o) => !o), "aria-expanded": open, style: { width: "100%", minHeight: "44px", padding: 0, border: "none", background: "none", fontFamily: "inherit", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: open ? "4px" : 0 } } : { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "4px" } },
       React.createElement("span", { style: { fontSize: "17px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" } }, L("আজকের যত্ন", "Today's care")),
       React.createElement("span", { style: { display: "flex", alignItems: "center", gap: "6px" } },
         log && planned.length > 0 && React.createElement("span", { style: chip }, digits(doneN) + "/" + digits(planned.length)),
-        onOpen && compact && React.createElement("button", { type: "button", onClick: () => onOpen(null), style: { minHeight: "44px", padding: "0 6px", border: "none", background: "none", fontFamily: "inherit", fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer" } }, L("MyCare ›", "MyCare ›")))),
+        onOpen && compact && React.createElement("button", { type: "button", onClick: () => onOpen(null), style: { minHeight: "44px", padding: "0 6px", border: "none", background: "none", fontFamily: "inherit", fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer" } }, L("MyCare ›", "MyCare ›")),
+        collapsible && React.createElement("span", { "aria-hidden": "true", style: { fontSize: "16px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" } }, open ? "▴" : "▾"))),
+!hidden && React.createElement(React.Fragment, null,
     log && streak > 0 && React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "#B8860B", marginBottom: "2px" } }, streakText(streak)),
     log && isDayComplete(today) && React.createElement("div", { role: "status", style: { fontSize: "13px", fontWeight: 700, color: "#1F6B50", marginBottom: "2px" } }, L("আজকের যত্ন সম্পূর্ণ। ভালো করেছেন।", "Today's care is complete. Well done.")),
     GROUPS.map(([id, bn, en, color]) => care[id].length > 0 && React.createElement("div", { key: id, style: { marginTop: "6px" } },
@@ -58,7 +62,7 @@ export function TodayCareView({ profile, onOpen, compact, log }) {
       row(care.seasonTip, "tip", null)),
     msg && React.createElement("div", { role: "alert", style: { marginTop: "8px", fontSize: "13px", fontWeight: 700, color: "#B3261E" } }, msg),
     care.mode === "core-only" && React.createElement("div", { style: { marginTop: "8px", fontSize: "12.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5 } }, L("কিছু তথ্য জানা নেই, তাই শুধু সবচেয়ে নিরাপদ পরামর্শ।", "Some details are unknown, so only the safest advice is shown.")),
-    React.createElement("div", { style: { marginTop: "6px", fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")));
+    React.createElement("div", { style: { marginTop: "6px", fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice."))));
 }
 
 // সাপ্তাহিক চক্র (শনি–শুক্র): ✓ = দিনের সব ধাপ সম্পূর্ণ; সংখ্যা = আংশিক টিক। শুধু MyCare পেজে; "অন্যের জন্য" মোডে দেখানো হয় না।
