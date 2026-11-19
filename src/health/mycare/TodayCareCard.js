@@ -7,6 +7,8 @@ import { CAT_META, SEASON_LABEL } from "./careLabels.js";
 import { IconBox } from "./careIcons.js";
 import { useCareProfile } from "./useCareProfile.js";
 import { useCareLog } from "./useCareLog.js";
+import { usePatches } from "./carePatchStore.js";
+import { PatchCheckCard } from "./PatchCheckCard.js";
 import { plannedKeys, tickKey, isoOf, isDayComplete, streakOf, weekCells } from "./careLogCore.js";
 
 const { useState } = React;
@@ -87,6 +89,9 @@ export function CareWeekCard({ log }) {
 export function HomeTodayCare({ familyId, callerMemberId, selectedMemberId, members, onOpen }) {
   const { ready, profile } = useCareProfile(familyId, selectedMemberId, members);
   const log = useCareLog(familyId, selectedMemberId, callerMemberId);
+  const patches = usePatches(selectedMemberId);
   if (!ready) return null;
-  return React.createElement(TodayCareView, { profile, onOpen, compact: true, log });
+  return React.createElement(React.Fragment, null,
+    React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
+    React.createElement(TodayCareView, { profile, onOpen, compact: true, log }));
 }

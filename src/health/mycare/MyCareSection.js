@@ -14,6 +14,8 @@ import { CAT_META, CAT_DESC, LABELS, AGE_BANDS, SEASON_LABEL } from "./careLabel
 import { IconBox } from "./careIcons.js";
 import { TodayCareView, CareWeekCard } from "./TodayCareCard.js";
 import { useCareLog } from "./useCareLog.js";
+import { usePatches } from "./carePatchStore.js";
+import { PatchCheckCard } from "./PatchCheckCard.js";
 import { MyCareCategory } from "./MyCareCategory.js";
 import { CareProfileSheet, OtherSheet } from "./CareProfileSheets.js";
 
@@ -32,6 +34,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   const [pf, setPf] = useState({ loading: true, prefs: null, error: false });
   const health = useMemberHealth(familyId, selectedMemberId);
   const careLog = useCareLog(familyId, selectedMemberId, callerMemberId);
+  const patches = usePatches(selectedMemberId);
   histBind(VIEW_KEY, view, setView);
 
   // সদস্য বদলালে: অস্থায়ী মোড ও খোলা বিভাগ রিসেট
@@ -90,7 +93,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   ];
 
   if (view !== "home" && (view === "saved" || CAT_META.some((c) => c[0] === view))) {
-    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onAskAI: other ? null : onAskAI, savedIds: other ? null : saved, onToggleSave: other ? null : toggleSave, onBack: back, onEditProfile: editProfile }), sheets);
+    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onAskAI: other ? null : onAskAI, patch: other ? null : patches, savedIds: other ? null : saved, onToggleSave: other ? null : toggleSave, onBack: back, onEditProfile: editProfile }), sheets);
   }
 
   const ageTxt = profile.ageYears == null ? "—" : digits(Math.floor(profile.ageYears)) + L(" বছর", " yrs");
@@ -117,6 +120,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
     other && React.createElement("div", { style: warnBox }, L("অস্থায়ী — সংরক্ষিত হয় না।", "Temporary — not saved.")),
     !other && !recordsOk && React.createElement("div", null, ErrorBox(L("স্বাস্থ্য-রেকর্ড পড়া যায়নি, তাই শুধু সবচেয়ে নিরাপদ সাধারণ পরামর্শ দেখানো হবে।", "Could not read health records, so only the safest basic advice is shown."))),
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
+    !other && React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
     overview.mode !== "referral" && React.createElement(TodayCareView, { profile, log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
     overview.mode !== "referral" && !other && React.createElement(CareWeekCard, { log: careLog }),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "14px" } },

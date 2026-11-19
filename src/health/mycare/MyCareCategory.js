@@ -13,6 +13,8 @@ import { filterBySearch } from "./careSearch.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
 import { explainWith } from "./careAiGuard.js";
+import { needsPatchTest, patchState, startPatch, finishPatch } from "./carePatch.js";
+import { buildShareText, shareText } from "./careShare.js";
 
 const { useState } = React;
 const AI_ON = !!import.meta.env.VITE_MEDIA_WORKER_URL; // AI বন্ধ থাকলে বাটন লুকানো; পেজ অপরিবর্তিত
@@ -44,7 +46,28 @@ function ExplainBlock({ entry, familyId }) {
       L("শুধু এই আইটেমের নাম, কারণ, নিয়ম ও সতর্কতা পাঠানো হয় (ক্লাউড AI, Zero Data Retention)। আপনার নাম, জন্মতারিখ, স্বাস্থ্য-রেকর্ড বা প্রোফাইল কখনো যায় না। AI নতুন তথ্য বা পরিমাণ যোগ করতে পারে না; তেমন কিছু এলে উত্তর দেখানো হয় না।", "Only this item's name, reason, how-to and warnings are sent (cloud AI, Zero Data Retention). Your name, date of birth, health records or profile are never sent. If the AI adds new facts or amounts, the answer is not shown.")));
 }
 
-function DetailSheet({ entry, safetyLine, familyId, explainOn, onClose }) {
+// প্যাচ টেস্ট শুরু/অবস্থা + শেয়ার। শেয়ারে শুধু আইটেমের লেখা যায় (careShare.js); patch = null হলে (অন্যের মোড) প্যাচ-বাটন নেই।
+function ActionsBlock({ item, patch }) {
+  const [msg, setMsg] = useState("");
+  const now = Date.now();
+  const st = patch && needsPatchTest(item) ? patchState(patch.list, item.id, now) : null;
+  const canShare = typeof navigator !== "undefined" && (typeof navigator.share === "function" || (navigator.clipboard && typeof navigator.clipboard.writeText === "function"));
+  const lang = L("bn", "en");
+  const doShare = async () => {
+    const r = await shareText(T(item.name), buildShareText(item, lang));
+    setMsg(r === "copied" ? L("কপি হয়েছে।", "Copied.") : r === "error" || r === "unsupported" ? L("শেয়ার করা যায়নি।", "Could not share.") : "");
+  };
+  const b = { width: "100%", minHeight: "46px", padding: "8px 12px", borderRadius: "14px", border: "1px solid var(--hs-border, #C3D2CA)", background: "var(--hs-surface, #fff)", color: "var(--hs-primary, #0E4B43)", fontSize: "14.5px", fontWeight: 800, fontFamily: "inherit", cursor: "pointer" };
+  return React.createElement("div", { style: { marginTop: "14px", display: "flex", flexDirection: "column", gap: "8px" } },
+    patch && needsPatchTest(item) && (st === null || st === "expired") && React.createElement("button", { type: "button", onClick: () => patch.update((l) => startPatch(l, item.id, Date.now())), style: b }, L("প্যাচ টেস্ট শুরু করলাম — ২৪ ঘণ্টা পরে মনে করান", "Patch test started — remind me in 24 hours")),
+    st === "waiting" && React.createElement("div", { role: "status", style: { ...warnBox, marginBottom: 0 } }, L("প্যাচ টেস্ট চলছে। ২৪ ঘণ্টা পরে অ্যাপ জিজ্ঞেস করবে ত্বক কেমন আছে।", "Patch test in progress. The app will ask in 24 hours how your skin looks."),
+      React.createElement("button", { type: "button", onClick: () => patch.update((l) => finishPatch(l, item.id)), style: { display: "block", minHeight: "44px", marginTop: "4px", padding: "0", border: "none", background: "none", color: "#7A5B00", fontWeight: 800, fontFamily: "inherit", textDecoration: "underline", cursor: "pointer" } }, L("স্মরণ বাতিল করুন", "Cancel reminder"))),
+    st === "due" && React.createElement("div", { role: "status", style: { ...warnBox, marginBottom: 0 } }, L("২৪ ঘণ্টা পার হয়েছে। MyCare-এর প্রথম পাতায় ত্বকের অবস্থা জানান।", "24 hours have passed. Report how your skin looks on the MyCare main page.")),
+    canShare && React.createElement("button", { type: "button", onClick: doShare, style: b }, L("শেয়ার করুন", "Share")),
+    msg && React.createElement("div", { role: "status", style: { fontSize: "13px", color: "#5F716C" } }, msg));
+}
+
+function DetailSheet({ entry, safetyLine, familyId, explainOn, patch, onClose }) {
   const it = entry.item;
   const sec = (title, body) => body && React.createElement("div", { style: { marginTop: "14px" } },
     React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)" } }, title),
@@ -60,12 +83,13 @@ function DetailSheet({ entry, safetyLine, familyId, explainOn, onClose }) {
     sec(L("কারা নয়", "Not for"), notForText),
     warns.length > 0 && React.createElement("div", { style: { ...warnBox, marginTop: "14px", marginBottom: 0 } }, warns.map((w, i) => React.createElement("div", { key: i }, w))),
     React.createElement("div", { style: { ...warnBox, marginTop: "10px", marginBottom: 0 } }, T(safetyLine)),
+    React.createElement(ActionsBlock, { item: it, patch }),
     explainOn && React.createElement(ExplainBlock, { entry, familyId }),
     src && React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "12px" } }, L("উৎস: ", "Source: ") + src),
     React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "8px" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")));
 }
 
-export function MyCareCategory({ catId, profile, season, familyId, canExplain, onAskAI, savedIds, onToggleSave, onBack, onEditProfile }) {
+export function MyCareCategory({ catId, profile, season, familyId, canExplain, onAskAI, patch, savedIds, onToggleSave, onBack, onEditProfile }) {
   const isSaved = catId === "saved";
   const meta = isSaved ? ["saved", "সংরক্ষিত", "Saved", "#B8860B"] : CAT_META.find((c) => c[0] === catId) || [catId, catId, catId, "#1F7A5C"];
   const concernKey = CONCERN_KEY[catId];
@@ -142,5 +166,5 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
         React.createElement("span", { style: { display: "block", fontSize: "12.5px", opacity: 0.88, marginTop: "2px" } }, L("আপনার স্বাস্থ্য-প্রোফাইল দেখে উত্তর দেবে; প্রশ্ন বদলে নিতে পারবেন", "Answers using your health profile; you can edit the question first"))),
       React.createElement("span", { "aria-hidden": "true", style: { fontSize: "20px" } }, "›")),
     React.createElement("p", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, margin: "8px 0 0" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")),
-    open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, familyId, explainOn: AI_ON && !!canExplain && !!familyId, onClose: () => setOpen(null) }));
+    open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, familyId, explainOn: AI_ON && !!canExplain && !!familyId, patch, onClose: () => setOpen(null) }));
 }
