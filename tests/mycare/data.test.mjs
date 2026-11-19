@@ -13,8 +13,9 @@ test("সব আইটেম schema-তে বৈধ ও id অনন্য", ()
   assert.ok(ALL_ITEMS.length >= 10);
 });
 
-test("সব আইটেম verified ও lastReviewed সহ", () => {
-  assert.ok(ALL_ITEMS.every((i) => i.status === "verified" && i.lastReviewed));
+test("Skin/Hair আইটেম verified ও lastReviewed সহ; Oral ব্যাচ রিভিউ-অপেক্ষায় draft হতে পারে", () => {
+  assert.ok(ALL_ITEMS.filter((i) => i.category === "skin" || i.category === "hair").every((i) => i.status === "verified" && i.lastReviewed));
+  assert.ok(ALL_ITEMS.every((i) => i.lastReviewed && (i.status === "verified" || i.status === "draft")));
 });
 
 test("মূল-নিরাপদ সেট: ত্বকে ৩টি, চুলে ১টি", () => {
@@ -47,4 +48,37 @@ test("norm বাংলা যুক্তাক্ষর/মাত্রা ভ
   assert.equal(norm("জ্বালা/চুলকানি").includes("ব্লিচ"), false);
   assert.equal(norm("ল্যানোলিন"), "ল্যানোলিন");
   assert.equal(hasBannedActive({ name: { bn: "ব্লিচ ক্রিম", en: "x" } }), "ব্লিচ");
+});
+
+const oral = ALL_ITEMS.filter((i) => i.category === "oral");
+const adultOk = { ageYears: 30, sex: "male", allergies: [] };
+
+test("Oral: আইটেম আছে, মূল সেটে শুধু ফ্লুরাইড-ব্রাশ, draft ডিফল্টে লুকানো", () => {
+  assert.ok(oral.length >= 6);
+  assert.deepEqual(oral.filter((i) => i.isCoreSafe).map((i) => i.id), ["oral-fluoride-brushing"]);
+  const hiddenByDefault = recommend(adultOk, ALL_ITEMS, { category: "oral" });
+  assert.equal(hiddenByDefault.items.length, oral.filter((i) => i.status === "verified").length);
+  assert.ok(recommend(adultOk, ALL_ITEMS, { category: "oral", includeDraft: true }).items.length >= 6);
+});
+
+test("Oral: অজানা-তথ্যে শুধু মূল সেট; ২ বছরের নিচে রেফার; ফ্লুরাইড এড়ালে মূল আইটেম লুকায়", () => {
+  const unk = recommend({ ageYears: 30, sex: "male", allergies: null }, ALL_ITEMS, { category: "oral", includeDraft: true });
+  assert.deepEqual(unk.items.map((x) => x.item.id), ["oral-fluoride-brushing"]);
+  assert.equal(recommend({ ageYears: 1, sex: "male", allergies: [] }, ALL_ITEMS, { category: "oral", includeDraft: true }).mode, "referral");
+  const avoid = recommend({ ...adultOk, avoidIngredients: ["fluoride"] }, ALL_ITEMS, { category: "oral", includeDraft: true });
+  assert.equal(avoid.items.some((x) => x.item.id === "oral-fluoride-brushing"), false);
+});
+
+test("Oral: সমস্যা-পিল অনুযায়ী মিল; মাড়ি-red-flag হলে তালিকা নয়, রেফার", () => {
+  const gums = recommend(adultOk, ALL_ITEMS, { category: "oral", includeDraft: true, concern: "gums" }).items.map((x) => x.item.id);
+  assert.ok(gums.includes("oral-gum-care") && !gums.includes("oral-dry-mouth-care"));
+  const r = recommend(adultOk, ALL_ITEMS, { category: "oral", includeDraft: true, symptoms: ["gum-bleeding-recurrent"] });
+  assert.equal(r.mode, "referral"); assert.equal(r.items.length, 0);
+});
+
+test("Oral: ব্র্যান্ড/ঔষধ/সংখ্যা-ঘনত্ব নেই (ppm, mg, %)", () => {
+  for (const i of oral) {
+    const t = JSON.stringify([i.name, i.how, i.why]);
+    assert.equal(/ppm|\bmg\b|%|পিপিএম/i.test(t), false, i.id);
+  }
 });
