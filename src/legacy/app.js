@@ -598,7 +598,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "mycare") {
-    tabContent = React.createElement(MyCareSection, { chip });
+    tabContent = React.createElement(MyCareSection, { chip, familyId, callerMemberId: memberId, selectedMemberId, members });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,
