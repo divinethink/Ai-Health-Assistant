@@ -687,7 +687,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
 
 // ---------- মূল পেজ ----------
 // টপ-বারে প্রোফাইল-চিপ নেই; নির্বাচিত সদস্য ডিফল্টে নিজে (app.js), মেনু-পেজের চিপ থেকে বদলানো যায়।
-export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome, onOpenTrend }) {
+export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId, members, topOffsetPx, mode = "plan", onGoHome, onOpenTrend, homeCare }) {
   // mode "today" = হোম ট্যাব (আজ পেজ, পিল নেই); "plan" = ট্র্যাকার ট্যাব (লক্ষ্য ও প্ল্যান | ট্রেন্ড | রিমাইন্ডার)
   const isToday = mode === "today";
   // হোমের "এই সপ্তাহ" কার্ডের "ট্রেন্ড ›" থেকে এলে (quickIntent "trend") ট্র্যাকার সরাসরি ট্রেন্ড ট্যাবে খোলে; নইলে আগের মতো "লক্ষ্য ও প্ল্যান"।
@@ -743,7 +743,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       err && ErrorBox(err),
       (!selectedMemberId || (!data && !err)) && Skeleton(3, 88),
       data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onOpenTrend,
-        homeExtra: React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }) }),
+        homeExtra: React.createElement(React.Fragment, null, React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }), homeCare || null) }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && !isToday && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, ...tabProps }),
       data && !isToday && tab === "meal" && React.createElement(MealPlanTab, { key: selectedMemberId, ...tabProps }),

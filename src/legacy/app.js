@@ -42,6 +42,7 @@ import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js"
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
 import { setChatPrefill } from "../shared/chatPrefill.js";
+import { HomeTodayCare } from "../health/mycare/TodayCareCard.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
@@ -589,7 +590,8 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); } });
+    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); },
+      homeCare: React.createElement(HomeTodayCare, { key: "care-" + selectedMemberId, familyId, selectedMemberId, members, onOpen: () => setActiveTab("mycare") }) });
   } else if (activeTab === "health") {
     tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, isAdmin, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
