@@ -1,4 +1,4 @@
-// MyCare — দাঁত ও মুখ (Oral) আইটেম, ব্যাচ ১ (draft)। owner-রিভিউয়ের পরই status:"verified" হবে (প্ল্যান §৮, ধাপ ৬)।
+// MyCare — দাঁত ও মুখ (Oral) আইটেম, ব্যাচ ১। owner-রিভিউ শেষে status:"verified" (২০২৬-১১-১৯)।
 // ব্র্যান্ড নয়, ঘনত্ব/ppm নয়, ঔষধ নয়। উৎস: NHS (প্রধান), NIH/NIDCR। শিশুর টুথপেস্ট-পরিমাণ এখানে নেই — রিভিউয়ের পর আলাদা।
 const S = {
   clean: { org: "NHS", ref: "How to keep your teeth clean", url: "https://www.nhs.uk/live-well/healthy-teeth-and-gums/how-to-keep-your-teeth-clean/" },
@@ -9,7 +9,7 @@ const S = {
 };
 const MOUTH_WARN = { bn: "নতুন পণ্যে মুখে জ্বালা, ফোলা বা র‍্যাশ হলে ব্যবহার বন্ধ করে পরামর্শ নিন।", en: "If a new product causes mouth irritation, swelling or rash, stop it and seek advice." };
 const DENTIST = (bn, en) => ({ bn, en });
-const base = { category: "oral", avoidIf: [], sideEffectRank: 0, status: "draft", lastReviewed: "2026-11-19", seasons: [], forTypes: [] };
+const base = { category: "oral", avoidIf: [], sideEffectRank: 0, status: "verified", lastReviewed: "2026-11-19", seasons: [], forTypes: [] };
 
 export const ORAL_ITEMS = [
   {

@@ -13,9 +13,8 @@ test("সব আইটেম schema-তে বৈধ ও id অনন্য", ()
   assert.ok(ALL_ITEMS.length >= 10);
 });
 
-test("Skin/Hair আইটেম verified ও lastReviewed সহ; Oral ব্যাচ রিভিউ-অপেক্ষায় draft হতে পারে", () => {
-  assert.ok(ALL_ITEMS.filter((i) => i.category === "skin" || i.category === "hair").every((i) => i.status === "verified" && i.lastReviewed));
-  assert.ok(ALL_ITEMS.every((i) => i.lastReviewed && (i.status === "verified" || i.status === "draft")));
+test("সব আইটেম verified ও lastReviewed সহ", () => {
+  assert.ok(ALL_ITEMS.every((i) => i.status === "verified" && i.lastReviewed));
 });
 
 test("মূল-নিরাপদ সেট: ত্বকে ৩টি, চুলে ১টি", () => {
@@ -53,7 +52,7 @@ test("norm বাংলা যুক্তাক্ষর/মাত্রা ভ
 const oral = ALL_ITEMS.filter((i) => i.category === "oral");
 const adultOk = { ageYears: 30, sex: "male", allergies: [] };
 
-test("Oral: আইটেম আছে, মূল সেটে শুধু ফ্লুরাইড-ব্রাশ, draft ডিফল্টে লুকানো", () => {
+test("Oral: আইটেম আছে, মূল সেটে শুধু ফ্লুরাইড-ব্রাশ, সব verified দেখায়", () => {
   assert.ok(oral.length >= 6);
   assert.deepEqual(oral.filter((i) => i.isCoreSafe).map((i) => i.id), ["oral-fluoride-brushing"]);
   const hiddenByDefault = recommend(adultOk, ALL_ITEMS, { category: "oral" });
