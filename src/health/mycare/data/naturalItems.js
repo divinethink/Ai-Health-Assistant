@@ -1,10 +1,10 @@
-// MyCare — প্রাকৃতিক/ভেষজ (Natural) আইটেম, ব্যাচ ১ (draft)। owner-রিভিউয়ের পরই status:"verified" হবে (প্ল্যান §৮, ধাপ ৮)।
+// MyCare — প্রাকৃতিক/ভেষজ (Natural) আইটেম, ব্যাচ ১। owner-রিভিউ শেষে status:"verified" (২০২৬-১১-১৯)।
 // ডিফল্ট Evidence Level ৩ + ভারী ধাতুর ⚠ + "ঐতিহ্যগতভাবে ব্যবহৃত"। ব্র্যান্ড/ঘনত্ব নয়। উৎস: NCCIH।
 const S = {
   aloe: { org: "NCCIH", ref: "Aloe Vera", url: "https://www.nccih.nih.gov/health/aloe-vera" },
   ayur: { org: "NCCIH", ref: "Ayurvedic Medicine: In Depth", url: "https://www.nccih.nih.gov/health/ayurvedic-medicine-in-depth" },
 };
-const base = { category: "natural", herbal: true, heavyMetalWarning: true, evidenceLevel: 3, isCoreSafe: false, forConcerns: [], forTypes: [], sideEffectRank: 1, status: "draft", lastReviewed: "2026-11-19", seasons: [] };
+const base = { category: "natural", herbal: true, heavyMetalWarning: true, evidenceLevel: 3, isCoreSafe: false, forConcerns: [], forTypes: [], sideEffectRank: 1, status: "verified", lastReviewed: "2026-11-19", seasons: [] };
 
 export const NATURAL_ITEMS = [
   {

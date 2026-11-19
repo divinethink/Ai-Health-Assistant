@@ -1,11 +1,11 @@
-// MyCare — ঋতুভিত্তিক (Seasonal) আইটেম, ব্যাচ ১ (draft)। owner-রিভিউয়ের পরই status:"verified" হবে (প্ল্যান §৮, ধাপ ৮)।
+// MyCare — ঋতুভিত্তিক (Seasonal) আইটেম, ব্যাচ ১। owner-রিভিউ শেষে status:"verified" (২০২৬-১১-১৯)।
 // ঋতু আসে বর্তমান তারিখ থেকে (careSeason.js); আবহাওয়া API নয়। ব্র্যান্ড/ঔষধ/ঘনত্ব নয়। উৎস: NHS (প্রধান), AAD।
 const S = {
   heat: { org: "NHS", ref: "Heatwave: how to cope in hot weather", url: "https://www.nhs.uk/live-well/seasonal-health/heatwave-how-to-cope-in-hot-weather/" },
   feet: { org: "NHS", ref: "Athlete's foot (prevention)", url: "https://www.nhs.uk/conditions/athletes-foot/" },
   dry: { org: "AAD", ref: "Dermatologists' top tips for relieving dry skin", url: "https://www.aad.org/public/everyday-care/skin-care-basics/dry/dermatologists-tips-relieve-dry-skin" },
 };
-const base = { category: "seasonal", forConcerns: [], forTypes: [], ingredientAliases: [], avoidIf: [], sideEffectRank: 0, status: "draft", lastReviewed: "2026-11-19" };
+const base = { category: "seasonal", forConcerns: [], forTypes: [], ingredientAliases: [], avoidIf: [], sideEffectRank: 0, status: "verified", lastReviewed: "2026-11-19" };
 const HEAT = ["grishmo", "borsha", "shorot", "boshonto"];
 
 export const SEASONAL_ITEMS = [

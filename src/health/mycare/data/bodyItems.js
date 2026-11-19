@@ -1,7 +1,7 @@
-// MyCare — শরীর (Body) আইটেম, ব্যাচ ১ (draft)। owner-রিভিউয়ের পরই status:"verified" হবে (প্ল্যান §৮, ধাপ ৮)।
+// MyCare — শরীর (Body) আইটেম, ব্যাচ ১। owner-রিভিউ শেষে status:"verified" (২০২৬-১১-১৯)।
 // ব্র্যান্ড/ঔষধ/ঘনত্ব নয় (ছত্রাকের ক্রিম-স্প্রে এখানে নেই — "ফার্মাসিস্টের পরামর্শ" মাত্র)। উৎস: NHS।
 const S = { feet: { org: "NHS", ref: "Athlete's foot (prevention)", url: "https://www.nhs.uk/conditions/athletes-foot/" } };
-const base = { category: "body", forConcerns: [], forTypes: [], avoidIf: [], sideEffectRank: 0, status: "draft", lastReviewed: "2026-11-19", seasons: [] };
+const base = { category: "body", forConcerns: [], forTypes: [], avoidIf: [], sideEffectRank: 0, status: "verified", lastReviewed: "2026-11-19", seasons: [] };
 
 export const BODY_ITEMS = [
   {

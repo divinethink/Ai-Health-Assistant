@@ -13,9 +13,8 @@ test("সব আইটেম schema-তে বৈধ ও id অনন্য", ()
   assert.ok(ALL_ITEMS.length >= 10);
 });
 
-test("Skin/Hair/Oral আইটেম verified; সব আইটেমে lastReviewed ও বৈধ status (নতুন ব্যাচ রিভিউ-অপেক্ষায় draft হতে পারে)", () => {
-  assert.ok(ALL_ITEMS.filter((i) => ["skin", "hair", "oral"].includes(i.category)).every((i) => i.status === "verified" && i.lastReviewed));
-  assert.ok(ALL_ITEMS.every((i) => i.lastReviewed && (i.status === "verified" || i.status === "draft")));
+test("সব আইটেম verified ও lastReviewed সহ", () => {
+  assert.ok(ALL_ITEMS.every((i) => i.status === "verified" && i.lastReviewed));
 });
 
 test("মূল-নিরাপদ সেট: ত্বকে ৩টি, চুলে ১টি", () => {
@@ -117,12 +116,11 @@ test("Natural: গর্ভবতী/দুগ্ধদানকারীর অ
   assert.equal(recommend({ ageYears: 30, sex: "male", allergies: null }, ALL_ITEMS, { category: "natural", includeDraft: true }).items.length, 0);
 });
 
-test("Natural/Seasonal/Body: নিষিদ্ধ শব্দ ও সংখ্যা-ঘনত্ব নেই; draft ডিফল্টে লুকানো", () => {
+test("Natural/Seasonal/Body: নিষিদ্ধ শব্দ ও সংখ্যা-ঘনত্ব নেই; সব verified দেখায়", () => {
   for (const i of [...inCat("natural"), ...inCat("seasonal"), ...inCat("body")]) {
     assert.equal(/ppm|\bmg\b|%/i.test(JSON.stringify([i.name, i.how, i.why])), false, i.id);
   }
-  const draftN = inCat("natural").filter((i) => i.status === "draft").length;
-  assert.equal(recommend(adult8, ALL_ITEMS, { category: "natural" }).items.length, inCat("natural").length - draftN);
+  assert.equal(recommend(adult8, ALL_ITEMS, { category: "natural" }).items.length, inCat("natural").length);
 });
 
 test("schema: seasonal আইটেমে seasons বাধ্যতামূলক; অচেনা ঋতু reject", () => {
