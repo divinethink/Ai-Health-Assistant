@@ -41,6 +41,7 @@ import { ReminderPage } from "../health/tracker/ReminderPage.js";
 import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
+import { setChatPrefill } from "../shared/chatPrefill.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
@@ -598,7 +599,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
   } else if (activeTab === "blog") {
     tabContent = React.createElement(WellnessGuideSection, { familyId, isAdmin, myMemberId: memberId, onExit: () => setActiveTab("menu") });
   } else if (activeTab === "mycare") {
-    tabContent = React.createElement(MyCareSection, { chip, familyId, callerMemberId: memberId, selectedMemberId, members });
+    tabContent = React.createElement(MyCareSection, { chip, familyId, callerMemberId: memberId, selectedMemberId, members, onAskAI: (text) => { setChatPrefill(text); setActiveTab("aichat"); } });
   } else {
     tabContent = React.createElement(MenuPage, {
       uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refreshTick, setRefreshTick,

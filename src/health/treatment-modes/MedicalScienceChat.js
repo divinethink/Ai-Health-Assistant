@@ -17,6 +17,7 @@ import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
+import { peekChatPrefill, clearChatPrefill } from "../../shared/chatPrefill.js";
 
 const { useState, useEffect } = React;
 
@@ -26,11 +27,13 @@ export function MedicalScienceChat({ familyId, selectedMemberId }) {
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(() => peekChatPrefill()); // MyCare-এর আগে-লেখা প্রশ্ন (সম্পাদনযোগ্য; নিজে থেকে পাঠানো হয় না)
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [err, setErr] = useState(null);
   const [retryNote, setRetryNote] = useState(null);
+
+  useEffect(() => { clearChatPrefill(); }, []);
 
   useEffect(() => {
     listMembers(familyId)

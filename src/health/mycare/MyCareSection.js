@@ -22,7 +22,7 @@ const warnBox = { padding: "10px 12px", borderRadius: "12px", background: "#FFF6
 const heroBtn = { minHeight: "44px", padding: "6px 16px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" };
 const T = (o) => (o ? L(o.bn, o.en) : "");
 
-export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId, members }) {
+export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId, members, onAskAI }) {
   useLang();
   const [view, setView] = useState("home");
   const [sheet, setSheet] = useState(null); // "profile" | "other" | null
@@ -76,7 +76,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   ];
 
   if (view !== "home" && CAT_META.some((c) => c[0] === view)) {
-    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onBack: back, onEditProfile: editProfile }), sheets);
+    return wrap(React.createElement(MyCareCategory, { key: view + (other ? "-o" : ""), catId: view, profile, season, familyId, canExplain: !other, onAskAI: other ? null : onAskAI, onBack: back, onEditProfile: editProfile }), sheets);
   }
 
   const ageTxt = profile.ageYears == null ? "—" : digits(Math.floor(profile.ageYears)) + L(" বছর", " yrs");

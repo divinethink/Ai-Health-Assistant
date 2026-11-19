@@ -8,6 +8,7 @@ import { RED_FLAGS } from "./careRedFlags.js";
 import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY, SEASON_LABEL } from "./careLabels.js";
 import { IconBox, CareIcon } from "./careIcons.js";
+import { buildAskText } from "./careAsk.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
 import { explainWith } from "./careAiGuard.js";
@@ -63,7 +64,7 @@ function DetailSheet({ entry, safetyLine, familyId, explainOn, onClose }) {
     React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "8px" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")));
 }
 
-export function MyCareCategory({ catId, profile, season, familyId, canExplain, onBack, onEditProfile }) {
+export function MyCareCategory({ catId, profile, season, familyId, canExplain, onAskAI, onBack, onEditProfile }) {
   const meta = CAT_META.find((c) => c[0] === catId) || [catId, catId, catId, "#1F7A5C"];
   const concernKey = CONCERN_KEY[catId];
   const concerns = concernKey ? (LABELS[concernKey] ? Object.keys(LABELS[concernKey]) : []) : [];
@@ -119,6 +120,13 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
         React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
         entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0]))),
       React.createElement("span", { "aria-hidden": "true", style: { alignSelf: "center", fontSize: "20px", color: "var(--hs-muted, #5F716C)" } }, "›"))),
+    onAskAI && res.mode !== "referral" && React.createElement("button", { type: "button", onClick: () => onAskAI(buildAskText(catId, concern === "all" ? null : concern, L("bn", "en"))),
+      style: { ...cardBox, display: "flex", alignItems: "center", gap: "12px", background: "linear-gradient(135deg, #0E4B43 0%, #1F7A5C 100%)", border: "none", color: "#fff", marginTop: "4px" } },
+      React.createElement("span", { "aria-hidden": "true", style: { fontSize: "22px" } }, "✦"),
+      React.createElement("span", { style: { flex: 1 } },
+        React.createElement("span", { style: { display: "block", fontSize: "15.5px", fontWeight: 800 } }, concern === "all" ? L("AI Chat-এ জিজ্ঞেস করুন", "Ask in AI Chat") : L("এই সমস্যা নিয়ে AI Chat-এ জিজ্ঞেস করুন", "Ask AI Chat about this concern")),
+        React.createElement("span", { style: { display: "block", fontSize: "12.5px", opacity: 0.88, marginTop: "2px" } }, L("আপনার স্বাস্থ্য-প্রোফাইল দেখে উত্তর দেবে; প্রশ্ন বদলে নিতে পারবেন", "Answers using your health profile; you can edit the question first"))),
+      React.createElement("span", { "aria-hidden": "true", style: { fontSize: "20px" } }, "›")),
     React.createElement("p", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, margin: "8px 0 0" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")),
     open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, familyId, explainOn: AI_ON && !!canExplain && !!familyId, onClose: () => setOpen(null) }));
 }

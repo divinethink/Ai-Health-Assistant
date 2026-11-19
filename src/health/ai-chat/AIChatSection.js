@@ -25,6 +25,7 @@ import { TriageForm } from "../triage/TriageForm.js";
 import { MedicalScienceChat } from "../treatment-modes/MedicalScienceChat.js";
 import { RemedySection } from "../treatment-modes/RemedySection.js";
 import { NutritionGuidance } from "../nutrition-fitness/NutritionGuidance.js";
+import { peekChatPrefill } from "../../shared/chatPrefill.js";
 
 const { useState } = React;
 
@@ -38,7 +39,7 @@ const TABS = [
 ];
 
 export function AIChatSection({ familyId, callerMemberId, selectedMemberId, topOffsetPx, chip, onExit }) {
-  const [tab, setTab] = useState(TABS[0][0]);
+  const [tab, setTab] = useState(() => (peekChatPrefill() ? "medical-science" : TABS[0][0])); // MyCare থেকে এলে সাধারণ প্রশ্নের ট্যাব
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
   return React.createElement(
