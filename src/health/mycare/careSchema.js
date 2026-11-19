@@ -16,7 +16,7 @@ const FORBIDDEN_EN = /\b(cure[sd]?|proven|effective|guaranteed|heals?|treats?|so
 const FORBIDDEN_BN = ["নিরাময়", "প্রমাণিত", "কার্যকর", "সমাধান", "সারিয়ে"];
 
 export function norm(s) {
-  return String(s == null ? "" : s).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  return String(s == null ? "" : s).toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
 }
 
 const isBL = (o) => o && typeof o.bn === "string" && o.bn.trim() && typeof o.en === "string" && o.en.trim();
