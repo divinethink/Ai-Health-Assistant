@@ -1,13 +1,13 @@
 // MyCare — বিভাগ-পেজ (সাব-পিল → সুপারিশ-কার্ড → ডিটেইল শিট)। পরামর্শ আসে শুধু careEngine থেকে; এখানে বানানো কিছু নেই।
 import { L } from "../../shared/i18n.js";
 import { SubPills } from "../../shared/SubPills.js";
-import { CollapsibleSection } from "../../shared/ui.js";
 import { Sheet } from "../tracker/PlanEditSheets.js";
 import { EvidenceBadge } from "../treatment-modes/EvidenceBadge.js";
 import { recommend } from "./careEngine.js";
 import { RED_FLAGS } from "./careRedFlags.js";
 import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, LABELS, CONCERN_KEY, TYPE_KEY, SEASON_LABEL } from "./careLabels.js";
+import { IconBox, CareIcon } from "./careIcons.js";
 import { askAI } from "../../ai/aiClient.js";
 import { renderRichText } from "../../shared/richText.js";
 import { explainWith } from "./careAiGuard.js";
@@ -70,6 +70,7 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
   const [concern, setConcern] = useState("all");
   const [symptoms, setSymptoms] = useState([]);
   const [open, setOpen] = useState(null);
+  const [flagsOpen, setFlagsOpen] = useState(false);
 
   const res = recommend(profile, ALL_ITEMS, { category: catId, season, symptoms, concern: concern === "all" ? null : concern });
   const typeKey = TYPE_KEY[catId];
@@ -86,11 +87,16 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
   return React.createElement("div", null,
     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "6px", margin: "4px 0 8px" } },
       React.createElement("button", { type: "button", onClick: onBack, "aria-label": L("পেছনে", "Back"), style: { minWidth: "44px", minHeight: "44px", border: "none", background: "none", fontSize: "22px", cursor: "pointer", color: "var(--hs-primary, #0E4B43)", fontFamily: "inherit" } }, "←"),
+      React.createElement(IconBox, { id: catId, color: meta[3], size: 40 }),
       React.createElement("h2", { style: { fontSize: "21px", margin: 0, color: "var(--hs-primary, #0E4B43)" } }, L(meta[1], meta[2]))),
     pills,
     catId === "seasonal" && SEASON_LABEL[season] && React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "var(--hs-primary, #0E4B43)", margin: "2px 0 8px" } }, L("এখন ঋতু: ", "Season now: ") + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1])),
-    flagOpts.length > 0 && React.createElement(CollapsibleSection, { title: L("কোনো সতর্ক লক্ষণ আছে?", "Any warning signs?") },
-      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px" } }, flagOpts.map((f) => {
+    flagOpts.length > 0 && React.createElement("div", { style: { marginBottom: "10px", borderRadius: "16px", border: "1px solid #E8C2BC", background: "#FFF3F1", overflow: "hidden" } },
+      React.createElement("button", { type: "button", "aria-expanded": flagsOpen, onClick: () => setFlagsOpen((v) => !v), style: { width: "100%", minHeight: "48px", display: "flex", alignItems: "center", gap: "10px", padding: "8px 14px", border: "none", background: "none", fontFamily: "inherit", fontSize: "14.5px", fontWeight: 800, color: "#8A2A1E", cursor: "pointer", textAlign: "left" } },
+        React.createElement(CareIcon, { id: "alert", color: "#B3261E", size: 20 }),
+        React.createElement("span", { style: { flex: 1 } }, L("কোনো সতর্ক লক্ষণ আছে?", "Any warning signs?") + (symptoms.length ? " (" + symptoms.length + ")" : "")),
+        React.createElement("span", { "aria-hidden": "true" }, flagsOpen ? "▲" : "▼")),
+      flagsOpen && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "6px", padding: "0 12px 12px" } }, flagOpts.map((f) => {
         const on = symptoms.includes(f.id);
         return React.createElement("button", { key: f.id, type: "button", "aria-pressed": on, onClick: () => toggleSym(f.id),
           style: { textAlign: "left", minHeight: "44px", padding: "8px 12px", borderRadius: "12px", fontSize: "14px", fontFamily: "inherit", cursor: "pointer", fontWeight: on ? 800 : 500,
@@ -98,17 +104,21 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
       }))),
     res.redFlags.map((f) => React.createElement("div", { key: f.id, role: "alert", style: { padding: "12px 14px", marginBottom: "10px", borderRadius: "14px", fontSize: "14.5px", lineHeight: 1.5, fontWeight: 700,
       background: f.level === "emergency" ? "#FDECEA" : "#FFF6DD", border: "1px solid " + (f.level === "emergency" ? "#E5A29A" : "#E8D08A"), color: f.level === "emergency" ? "#7A1F14" : "#7A5B00" } }, (f.level === "emergency" ? "🚨 " : "⚠ ") + T(f))),
-    res.notices.map((n) => React.createElement("div", { key: n.id, style: warnBox }, "⚠ " + T(n))),
+    res.notices.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, res.notices.map((n) => React.createElement("div", { key: n.id }, "⚠ " + T(n)))),
     typeMissing && res.mode !== "referral" && React.createElement("button", { type: "button", onClick: onEditProfile, style: { ...warnBox, width: "100%", textAlign: "left", minHeight: "44px", cursor: "pointer", fontFamily: "inherit" } },
       L("সবচেয়ে নিরাপদ সাধারণ সেট দেখানো হচ্ছে — ধরন দেওয়া নেই। ধরন বাছুন ›", "Safe core set shown — type not set. Choose type ›")),
-    res.mode !== "referral" && res.items.length === 0 && React.createElement("div", { role: "status", style: { padding: "18px 12px", textAlign: "center", color: "var(--hs-muted, #5F716C)", fontSize: "14px", lineHeight: 1.6 } },
+    res.mode !== "referral" && res.items.length === 0 && React.createElement("div", { role: "status", style: { padding: "22px 12px", textAlign: "center", color: "var(--hs-muted, #5F716C)", fontSize: "14px", lineHeight: 1.6 } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: "8px" } }, React.createElement(IconBox, { id: catId, color: meta[3], size: 52 })),
       hasAny ? L("আপনার তথ্যের সাথে মেলে এমন পরামর্শ এখন নেই। ধরন/সমস্যা বদলে দেখুন।", "No advice matches these details. Try changing type or concern.")
         : L("এই বিভাগের যাচাইকৃত পরামর্শ শীঘ্রই আসছে।", "Verified advice for this section is coming soon.")),
-    res.mode !== "referral" && res.items.map((entry) => React.createElement("button", { key: entry.item.id, type: "button", onClick: () => setOpen(entry), style: cardBox },
-      React.createElement("div", { style: { fontSize: "16px", fontWeight: 800 } }, T(entry.item.name)),
-      React.createElement("div", { style: { margin: "6px 0" } }, React.createElement(EvidenceBadge, { evidenceTier: entry.item.evidenceLevel, compact: true })),
-      React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
-      entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0])))),
+    res.mode !== "referral" && res.items.map((entry) => React.createElement("button", { key: entry.item.id, type: "button", onClick: () => setOpen(entry), style: { ...cardBox, display: "flex", alignItems: "flex-start", gap: "12px", borderLeft: "4px solid " + meta[3] } },
+      React.createElement(IconBox, { id: catId, color: meta[3], size: 40 }),
+      React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+        React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, overflowWrap: "anywhere" } }, T(entry.item.name)),
+        React.createElement("div", { style: { margin: "6px 0" } }, React.createElement(EvidenceBadge, { evidenceTier: entry.item.evidenceLevel, compact: true })),
+        React.createElement("div", { style: { fontSize: "13.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } }, T(entry.item.how)),
+        entry.notes.length > 0 && React.createElement("div", { style: { fontSize: "13px", color: "#7A5B00", marginTop: "6px" } }, T(entry.notes[0]))),
+      React.createElement("span", { "aria-hidden": "true", style: { alignSelf: "center", fontSize: "20px", color: "var(--hs-muted, #5F716C)" } }, "›"))),
     React.createElement("p", { style: { fontSize: "12.5px", color: "var(--hs-muted, #5F716C)", lineHeight: 1.5, margin: "8px 0 0" } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")),
     open && React.createElement(DetailSheet, { entry: open, safetyLine: res.safetyLine, familyId, explainOn: AI_ON && !!canExplain && !!familyId, onClose: () => setOpen(null) }));
 }

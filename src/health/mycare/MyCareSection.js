@@ -10,7 +10,8 @@ import { recommend } from "./careEngine.js";
 import { seasonOf } from "./careSeason.js";
 import { buildOwnProfile, buildOtherProfile, prefsProgress } from "./careAdapter.js";
 import { ALL_ITEMS } from "./data/index.js";
-import { CAT_META, LABELS, AGE_BANDS } from "./careLabels.js";
+import { CAT_META, CAT_DESC, LABELS, AGE_BANDS, SEASON_LABEL } from "./careLabels.js";
+import { IconBox } from "./careIcons.js";
 import { MyCareCategory } from "./MyCareCategory.js";
 import { CareProfileSheet, OtherSheet } from "./CareProfileSheets.js";
 
@@ -18,7 +19,7 @@ const { useState, useEffect } = React;
 const VIEW_KEY = "mycare-view";
 const card = { padding: "14px", borderRadius: "16px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 2px 8px rgba(14,75,67,0.07)", marginBottom: "12px" };
 const warnBox = { padding: "10px 12px", borderRadius: "12px", background: "#FFF6DD", border: "1px solid #E8D08A", color: "#7A5B00", fontSize: "13.5px", lineHeight: 1.5, marginBottom: "12px" };
-const smallBtn = { minHeight: "44px", padding: "6px 14px", borderRadius: "999px", border: "none", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)", fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" };
+const heroBtn = { minHeight: "44px", padding: "6px 16px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.16)", color: "#fff", fontSize: "13.5px", fontWeight: 800, cursor: "pointer", fontFamily: "inherit" };
 const T = (o) => (o ? L(o.bn, o.en) : "");
 
 export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId, members }) {
@@ -85,17 +86,20 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
   const prog = prefsProgress(pf.prefs);
 
   return wrap(
-    React.createElement("div", { style: { display: "flex", marginBottom: "4px" } }, chip),
-    title,
-    React.createElement("p", { style: { fontSize: "14px", color: "var(--hs-muted)", margin: "0 0 12px" } }, L("প্রমাণভিত্তিক ব্যক্তিগত যত্নের গাইড", "Evidence-based personal care guide")),
-    React.createElement("div", { style: card },
-      React.createElement("div", { style: { fontSize: "12.5px", color: "var(--hs-muted)" } }, other ? L("এখন দেখছেন — অন্য একজন", "Viewing — someone else") : L("যার জন্য দেখছেন", "Viewing for")),
-      React.createElement("div", { style: { fontSize: "16px", fontWeight: 800, margin: "2px 0 8px", overflowWrap: "anywhere" } }, who),
-      React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
-        other
-          ? [React.createElement("button", { key: "e", type: "button", style: smallBtn, onClick: () => setSheet("other") }, L("তথ্য বদলান", "Edit")),
-            React.createElement("button", { key: "b", type: "button", style: smallBtn, onClick: () => setOther(null) }, L("নিজের তথ্যে ফিরুন", "Back to my details"))]
-          : React.createElement("button", { type: "button", style: smallBtn, onClick: () => setSheet("other") }, L("অন্যের জন্য দেখুন", "View for someone else")))),
+    React.createElement("div", { style: { display: "flex", marginBottom: "8px" } }, chip),
+    React.createElement("div", { style: { padding: "16px", borderRadius: "22px", background: "linear-gradient(135deg, #0E4B43 0%, #1F7A5C 100%)", color: "#fff", boxShadow: "0 8px 22px rgba(14,75,67,0.28)", marginBottom: "14px" } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" } },
+        React.createElement("h2", { style: { fontSize: "24px", fontWeight: 800, margin: 0, color: "#fff" } }, "MyCare"),
+        SEASON_LABEL[season] && React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 700, padding: "4px 12px", borderRadius: "999px", background: "rgba(255,255,255,0.18)", whiteSpace: "nowrap" } }, L("ঋতু: ", "Season: ") + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1]))),
+      React.createElement("p", { style: { fontSize: "13.5px", opacity: 0.88, margin: "4px 0 12px" } }, L("প্রমাণভিত্তিক ব্যক্তিগত যত্নের গাইড", "Evidence-based personal care guide")),
+      React.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.22)", paddingTop: "10px" } },
+        React.createElement("div", { style: { fontSize: "12.5px", opacity: 0.8 } }, other ? L("এখন দেখছেন — অন্য একজন", "Viewing — someone else") : L("যার জন্য দেখছেন", "Viewing for")),
+        React.createElement("div", { style: { fontSize: "17px", fontWeight: 800, margin: "2px 0 10px", overflowWrap: "anywhere" } }, who),
+        React.createElement("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+          other
+            ? [React.createElement("button", { key: "e", type: "button", style: heroBtn, onClick: () => setSheet("other") }, L("তথ্য বদলান", "Edit")),
+              React.createElement("button", { key: "b", type: "button", style: heroBtn, onClick: () => setOther(null) }, L("নিজের তথ্যে ফিরুন", "Back to my details"))]
+            : React.createElement("button", { type: "button", style: heroBtn, onClick: () => setSheet("other") }, L("অন্যের জন্য দেখুন", "View for someone else"))))),
     other && React.createElement("div", { style: warnBox }, L("অস্থায়ী — সংরক্ষিত হয় না।", "Temporary — not saved.")),
     !other && !recordsOk && React.createElement("div", null, ErrorBox(L("স্বাস্থ্য-রেকর্ড পড়া যায়নি, তাই শুধু সবচেয়ে নিরাপদ সাধারণ পরামর্শ দেখানো হবে।", "Could not read health records, so only the safest basic advice is shown."))),
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
@@ -103,11 +107,13 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
       CAT_META.map(([id, bn, en, color]) => {
         const ready = ALL_ITEMS.some((i) => i.category === id && i.status === "verified");
         const inner = [
-          React.createElement("span", { key: "r", "aria-hidden": "true", style: { width: "28px", height: "28px", borderRadius: "50%", border: "3px solid " + color } }),
-          React.createElement("span", { key: "t", style: { fontSize: "15px", fontWeight: 700, color: "var(--hs-text)" } }, L(bn, en)),
+          React.createElement(IconBox, { key: "i", id, color, size: 44 }),
+          React.createElement("span", { key: "t", style: { display: "block", marginTop: "10px" } },
+            React.createElement("span", { style: { display: "block", fontSize: "16px", fontWeight: 800, color: "var(--hs-text)" } }, L(bn, en)),
+            React.createElement("span", { style: { display: "block", fontSize: "12.5px", lineHeight: 1.4, marginTop: "2px", color: "var(--hs-muted)" } }, CAT_DESC[id] ? L(CAT_DESC[id][0], CAT_DESC[id][1]) : "")),
           !ready && React.createElement("span", { key: "s", style: { position: "absolute", top: "10px", right: "10px", fontSize: "11.5px", padding: "2px 8px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-muted)" } }, L("শীঘ্রই", "Soon")),
         ];
-        const st = { position: "relative", minHeight: "96px", padding: "14px", borderRadius: "18px", border: "1px solid var(--hs-border)", background: "var(--hs-surface)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between", textAlign: "left", fontFamily: "inherit", opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "default" };
+        const st = { position: "relative", minHeight: "128px", padding: "14px", borderRadius: "20px", border: "1px solid var(--hs-border)", borderTop: "3px solid " + color, background: "var(--hs-surface)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", justifyContent: "flex-start", textAlign: "left", fontFamily: "inherit", opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "default" };
         return React.createElement("button", { key: id, type: "button", disabled: !ready, "aria-disabled": !ready, onClick: () => openCat(id), style: st }, inner);
       })),
     !other && React.createElement("button", { type: "button", onClick: () => setSheet("profile"), style: { ...card, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "var(--hs-text)", display: "block", boxSizing: "border-box" } },
@@ -115,7 +121,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
         React.createElement("span", { style: { fontSize: "16px", fontWeight: 800 } }, "My Care Profile"),
         React.createElement("span", { style: { fontSize: "12.5px", fontWeight: 800, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary)" } }, prog.complete ? L("সম্পূর্ণ", "Complete") : L("সম্পূর্ণ করুন", "Complete it"))),
       React.createElement("div", { "aria-hidden": "true", style: { height: "8px", borderRadius: "4px", background: "var(--hs-chip-bg, #E4F0E9)", margin: "10px 0 6px", overflow: "hidden" } },
-        React.createElement("div", { style: { width: prog.percent + "%", height: "100%", background: "var(--hs-primary)" } })),
+        React.createElement("div", { style: { width: prog.percent + "%", height: "100%", background: "linear-gradient(90deg, #1F7A5C, #0E4B43)", borderRadius: "4px" } })),
       React.createElement("div", { style: { fontSize: "12.5px", color: "var(--hs-muted)" } }, pf.error ? L("প্রোফাইল পড়া যায়নি — পরে আবার চেষ্টা করুন।", "Could not read profile — try again later.") : L("ত্বক ও চুলের তথ্য দিলে পরামর্শ আরও মানানসই হয়", "Skin & hair details help tailor advice"))),
     React.createElement("p", { style: { fontSize: "12.5px", color: "var(--hs-muted)", lineHeight: 1.5, margin: 0 } }, L("এটি সাধারণ গাইড, চিকিৎসা পরামর্শ নয়।", "This is a general guide, not medical advice.")),
     sheets);

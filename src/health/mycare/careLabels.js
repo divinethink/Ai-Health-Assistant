@@ -8,6 +8,16 @@ export const CAT_META = [
   ["natural", "প্রাকৃতিক", "Natural Care", "#3F7F6A"],
 ];
 
+// বিভাগ-কার্ডের এক লাইনের বর্ণনা (শুধু দেখানোর জন্য)
+export const CAT_DESC = {
+  skin: ["ব্রণ, শুষ্কতা, রোদ-সুরক্ষা", "Acne, dryness, sun care"],
+  hair: ["খুশকি, চুল পড়া, রুক্ষতা", "Dandruff, hair fall, dryness"],
+  oral: ["মাড়ি, দাঁত, মুখের গন্ধ", "Gums, teeth, bad breath"],
+  body: ["পায়ের যত্ন ও দৈনন্দিন অভ্যাস", "Foot care & daily habits"],
+  seasonal: ["ঋতু অনুযায়ী যত্ন", "Care by season"],
+  natural: ["ঐতিহ্যগত ও ভেষজ — সতর্কতাসহ", "Traditional & herbal — with cautions"],
+};
+
 const P = (bn, en) => ({ bn, en });
 export const LABELS = {
   skinType: { oily: P("তৈলাক্ত", "Oily"), dry: P("শুষ্ক", "Dry"), normal: P("স্বাভাবিক", "Normal"), combination: P("মিশ্র", "Combination"), sensitive: P("সংবেদনশীল", "Sensitive") },
