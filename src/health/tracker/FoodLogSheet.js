@@ -102,7 +102,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   const back = () => { setKey(null); };
   const room = Math.max(0, MAX_LIST - count);
   const guardedClose = () => { if (multi && basket.length > 0) setAskClose(true); else onClose(); };
-  const closeAsk = askClose && React.createElement(ConfirmDialog, { title: "বাছা খাবার বাদ দেবেন?", message: bnNum(basket.length) + "টি খাবার বাছা আছে, এখনো যোগ হয়নি। বন্ধ করলে বাছাই মুছে যাবে।", confirmLabel: "বাদ দিন", cancelLabel: "বাছাই রাখুন", onConfirm: () => { setAskClose(false); onClose(); }, onCancel: () => setAskClose(false) });
+  const closeAsk = askClose && React.createElement(ConfirmDialog, { title: "বাছা খাবার বাদ দেবেন?", message: bnNum(basket.length) + "টি খাবার বাছা আছে, এখনো যোগ হয়নি। বন্ধ করলে বাছাই মুছে যাবে।", confirmLabel: "বাদ দিন", cancelLabel: "বাছাই রাখুন", zIndex: 300, onConfirm: () => { setAskClose(false); onClose(); }, onCancel: () => setAskClose(false) });
   // বাস্কেটে বাছা/বাদ। addOnly = সাম্প্রতিক-চিপ (দ্বিতীয়বার ট্যাপে বাদ নয়)। ✕ খাবারও বাছা যায়; সতর্কতা পরের পাতায়।
   const toggleBasket = (k, pre, addOnly) => {
     if (basket.some((x) => x.key === k)) { if (!addOnly) { setBasket((cur) => cur.filter((x) => x.key !== k)); setNotice(null); } return; }
@@ -111,7 +111,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
     setBasket((cur) => (cur.some((x) => x.key === k) ? cur : [...cur, { key: k, mId, q, gt }])); setNotice(null);
   };
   const patchItem = (k, patch) => setBasket((cur) => cur.map((x) => (x.key === k ? { ...x, ...patch } : x)));
-  const removeItem = (k) => { const next = basket.filter((x) => x.key !== k); setBasket(next); if (!next.length) setBasketOpen(false); };
+  const removeItem = (k) => { setBasket((cur) => cur.filter((x) => x.key !== k)); if (basket.length <= 1) setBasketOpen(false); };
 
   // সাম্প্রতিক খাবার: ✕ (এড়ানো/এলার্জি) স্ট্যাটাসের খাবার এখানে আসে না — খুঁজে সতর্কতাসহ যোগ করতে হবে।
   // তালিকার খাবার ট্যাপে পরিমাণ-ধাপ খোলে (আগের মাপ বসানো, কয়টি/কত গ্রাম দেখে "যোগ করুন"); শুধু নিজে-যোগ-করা (key নেই) খাবার সরাসরি যোগ হয়।

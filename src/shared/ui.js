@@ -179,14 +179,14 @@ export function accentVars(kind) {
 }
 
 // ---- ConfirmDialog: স্ট্যান্ডার্ড মোছার নিশ্চিতকরণ (মাঝখানে ডায়ালগ; ডিফল্ট ফোকাস "বাতিল") ----
-export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy, onConfirm, onCancel }) {
+export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, busy, onConfirm, onCancel, zIndex }) { // zIndex: শিট/ওভারলের (z=২০০) ওপরে খুলতে হলে বেশি দিন
   React.useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && !busy) onCancel(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel, busy]);
   const btn = { flex: 1, minHeight: "48px", borderRadius: "12px", fontSize: "15px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
+  const dlg = React.createElement("div", { style: { position: "fixed", inset: 0, zIndex: zIndex || 90, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     React.createElement("div", { onClick: busy ? undefined : onCancel, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" } }),
     React.createElement("div", { role: "alertdialog", "aria-modal": "true", "aria-label": title, style: { position: "relative", width: "100%", maxWidth: "340px", background: "#fff", borderRadius: "20px", padding: "20px 18px 16px", boxShadow: "0 16px 40px rgba(0,0,0,0.3)" } },
       React.createElement("div", { style: { fontSize: "18px", fontWeight: 800, color: "#1F2D2A" } }, title || "মুছে ফেলবেন?"),
