@@ -86,7 +86,7 @@ const NAV_TABS = [
   ["home", "home", "Home"],
   ["health", "health", "Health"],
   ["tracker", "tracker", "Tracker"],
-  ["mycare", "sparkles", "MyCare"],
+  ["mycare", "handHeart", "MyCare"],
   ["menu", "menu", "Menu"],
 ];
 
