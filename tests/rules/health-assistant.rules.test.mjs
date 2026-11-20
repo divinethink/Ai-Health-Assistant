@@ -922,6 +922,36 @@ describe('Health Assistant — Firestore Rules', function () {
     });
   });
 
+  // দৈনিক হাঁটার লক্ষ্য: goal-এর ঐচ্ছিক `stepsTarget` (পূর্ণসংখ্যা ১,০০০–৩০,০০০ বা null)
+  describe('12h-S. Tracker goal: stepsTarget', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const goal = (extra = {}) => ({
+      type: 'goal', memberId: 'mA', sources: {}, lastEditedByMemberId: 'mA', createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+
+    it('12h-S1. owner বৈধ stepsTarget লিখতে পারেন (সীমা ও null সহ); অন্যের ডকে পারেন না', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), goal({ stepsTarget: 8000 })));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { stepsTarget: 1000, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { stepsTarget: 30000, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertSucceeds(setDoc(famDoc(db, 'healthTracker', 'goal_mA'), { stepsTarget: null, lastEditedByMemberId: 'mA' }, { merge: true }));
+      await assertFails(updateDoc(famDoc(dbAs('uidB'), 'healthTracker', 'goal_mA'), { stepsTarget: 7000, lastEditedByMemberId: 'mB' }));
+    });
+
+    it('12h-S2. অবৈধ ধরন/সীমা reject; daily-ডকে চলে না', async () => {
+      const db = dbAs('uidA');
+      const f = (id, d) => assertFails(setDoc(famDoc(db, 'healthTracker', id), d));
+      await f('s1', goal({ stepsTarget: 999 }));
+      await f('s2', goal({ stepsTarget: 30001 }));
+      await f('s3', goal({ stepsTarget: 7000.5 }));
+      await f('s4', goal({ stepsTarget: '7000' }));
+      await f('s5', { ...goal({ stepsTarget: 7000 }), type: 'daily', date: '2026-11-08' });
+    });
+  });
+
   // সাপ্তাহিক ওজনের দিন: goal-এর ঐচ্ছিক `weighDay` (পূর্ণসংখ্যা ০–৬)
   describe('12i. Tracker goal: weighDay', () => {
     beforeEach(async () => {

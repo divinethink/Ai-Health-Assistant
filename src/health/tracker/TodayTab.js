@@ -127,7 +127,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
   const calc = !gate.blocked && goal && goal.calc ? goal.calc : null;
   const [sMin, sMax] = sleepTargetHours(age);
   const exTarget = exerciseTargetMinPerDay(age);
-  const stTarget = stepsTarget(age);
+  const stTarget = stepsTarget(age, { override: goal && goal.stepsTarget, bmi: bmiOf(info.weightKg, info.heightCm), goalType: goal && goal.goalType });
   const waterTarget = waterTargetFor(age, flags, goal && goal.waterTarget, info.weightKg);
   const ctx = { calorieTarget: calc ? calc.calorieTarget : null, exTarget, waterTarget, sleepMinH: sMin, fastDays };
   // পরিকল্পিত সিয়ামের দিন বনাম বাস্তব: দিনের বেলার খাবার লগ হলে onFast=false (fastDay.js)। সতর্কতা সবার জন্য খোলা (Approved Deviation)।

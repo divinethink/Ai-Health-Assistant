@@ -189,8 +189,29 @@ export function isFastDate(dateISO, fastDays) {
 export function exerciseTargetMinPerDay(age) {
   return age !== null && age !== undefined && age < 18 ? 60 : 30;
 }
-export function stepsTarget(age) {
-  return age !== null && age !== undefined && age >= 18 ? 7000 : null;
+// দৈনিক হাঁটার (স্টেপ) লক্ষ্য — সাধারণ গাইড, চিকিৎসা পরামর্শ নয়। শুধু ১৮+ (বয়স অজানা বা <১৮ হলে লক্ষ্য নেই; ওভাররাইডও এটা এড়াতে পারে না)।
+// অটো সাজেশন: সাধারণ ৭,০০০; ওজন কমানোর লক্ষ্য ৮,০০০; BMI ≥৩০ বা বয়স ৬৫+ হলে ৬,০০০ (ধীরে শুরু, জয়েন্টে চাপ কম)।
+// override (ঐচ্ছিক, goal.stepsTarget): ১,০০০–৩০,০০০ পূর্ণসংখ্যা হলে সেটা; অবৈধ হলে উপেক্ষা।
+export const STEPS_TARGET_MIN = 1000;
+export const STEPS_TARGET_MAX = 30000;
+export function sanitizeStepsTarget(raw) {
+  const n = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
+  return Number.isInteger(n) && n >= STEPS_TARGET_MIN && n <= STEPS_TARGET_MAX ? n : null;
+}
+export function checkStepsTargetInput(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") return null; // খালি = অটো
+  return sanitizeStepsTarget(raw) === null ? "হাঁটার লক্ষ্য " + STEPS_TARGET_MIN + "–" + STEPS_TARGET_MAX + " এর মধ্যে পূর্ণসংখ্যা দিন।" : null;
+}
+export function suggestedSteps(age, { bmi, goalType } = {}) {
+  if (age === null || age === undefined || Number.isNaN(age) || age < 18) return null;
+  if (age >= 65 || (Number.isFinite(bmi) && bmi >= 30)) return 6000;
+  return goalType === "lose" ? 8000 : 7000;
+}
+export function stepsTarget(age, { override, bmi, goalType } = {}) {
+  const base = suggestedSteps(age, { bmi, goalType });
+  if (base === null) return null;
+  const o = sanitizeStepsTarget(override);
+  return o !== null ? o : base;
 }
 
 export function sleepMinutes(bed, wake) {

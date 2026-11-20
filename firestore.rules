@@ -112,6 +112,9 @@ service cloud.firestore {
         && (d.fastDays.size() < 2 || (d.fastDays[1] is int && d.fastDays[1] >= 0 && d.fastDays[1] <= 6 && d.fastDays[1] != d.fastDays[0])));
       let waterOk = !('waterTarget' in d) || (d.type == 'goal'
         && (d.waterTarget == null || (d.waterTarget is int && d.waterTarget >= 1 && d.waterTarget <= 20)));
+      // ঐচ্ছিক goal-ফিল্ড `stepsTarget` — দৈনিক হাঁটার লক্ষ্য (পূর্ণসংখ্যা ১,০০০–৩০,০০০; null = অটো সাজেশন)। বয়স-গেট (<১৮ নেই) client-এ।
+      let stepsOk = !('stepsTarget' in d) || (d.type == 'goal'
+        && (d.stepsTarget == null || (d.stepsTarget is int && d.stepsTarget >= 1000 && d.stepsTarget <= 30000)));
       // সাপ্তাহিক ওজনের দিন: ঐচ্ছিক goal-ফিল্ড `weighDay` (পূর্ণসংখ্যা ০–৬; ডিফল্ট শুক্র = ৬, না থাকলে ডিফল্ট)।
       let weighOk = !('weighDay' in d) || (d.type == 'goal' && d.weighDay is int && d.weighDay >= 0 && d.weighDay <= 6);
       // ধাপ ২: ঐচ্ছিক daily-ফিল্ড `medTaken` (ওষুধ খেয়েছি — map, সর্বোচ্চ ৬০ key; key-মান যাচাই client-এর medTaken.js-এ)।
@@ -119,7 +122,7 @@ service cloud.firestore {
       // ধাপ B: ঐচ্ছিক goal-ফিল্ড `focusAreas` (ব্যায়াম-টার্গেট) — সর্বোচ্চ ৩টি, শুধু অনুমোদিত আইডি (client-এর homeWorkout.js FOCUS_AREAS-এর সাথে মেলাতে হবে)।
       let focusOk = !('focusAreas' in d) || (d.type == 'goal' && d.focusAreas is list && d.focusAreas.size() <= 3
         && d.focusAreas.hasOnly(['muscle', 'belly', 'chest', 'arms', 'legs', 'glute', 'core', 'posture']));
-      return planOk && foodsOk && logOk && fastOk && waterOk && weighOk && medOk && focusOk;
+      return planOk && foodsOk && logOk && fastOk && waterOk && stepsOk && weighOk && medOk && focusOk;
     }
 
     // MyCare (ব্যক্তিগত যত্ন) — families/{fid}/carePrefs/{memberId}: প্রতি সদস্যে ১টি ডক। শুধু ধরন/সীমা এখানে;
@@ -625,7 +628,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'weighDay', 'medTaken', 'focusAreas',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'stepsTarget', 'weighDay', 'medTaken', 'focusAreas',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
@@ -636,7 +639,7 @@ service cloud.firestore {
                'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
                'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
                'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
-               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'weighDay', 'medTaken', 'focusAreas',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'stepsTarget', 'weighDay', 'medTaken', 'focusAreas',
                'lastEditedByMemberId', 'createdAt', 'updatedAt'])
           && trackerPlanFieldsOk(request.resource.data)
           && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);

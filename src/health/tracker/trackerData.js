@@ -8,7 +8,7 @@
 import { db } from "../../legacy/firebaseConfig.js";
 import { createHealthRecord, updateHealthRecord, listHealthRecords } from "../records/healthRecordsData.js";
 import { sanitizePlanPrefs, sanitizeExtraFoods, sanitizeExerciseLog } from "./planPrefs.js";
-import { sanitizeFastDays, sanitizeWaterTarget } from "./trackerCalc.js";
+import { sanitizeFastDays, sanitizeWaterTarget, sanitizeStepsTarget } from "./trackerCalc.js";
 import { sanitizeWeighDay } from "./weighDay.js";
 import { sanitizeTaken } from "../records/medTaken.js";
 import { monthDatesISO } from "./dateNav.js";
@@ -54,12 +54,14 @@ export async function saveGoal(familyId, memberId, callerMemberId, { goalType, a
 // mergeFields — অন্য goal-ফিল্ড (লক্ষ্য/রিমাইন্ডার/planPrefs) ছোঁয় না; নির্দিষ্ট ডক-ID তাই retry-নিরাপদ।
 // সেফটি-গেট এখানে নেই (বয়স/রোগ এই স্তরে অজানা): সেভের আগে checkFastDaysInput ও পড়ার সময় activeFastDays গেট প্রয়োগ করে।
 // ঐচ্ছিক `weighDay` (০–৬, সাপ্তাহিক ওজনের দিন): শুধু পাঠালে লেখা হয় — না পাঠালে আগের মান অক্ষত।
-export async function saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget, weighDay }, prevGoal) {
+export async function saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget, weighDay, stepsTarget }, prevGoal) {
   const withDay = weighDay !== undefined;
-  const fields = ["type", "memberId", "fastDays", "waterTarget", ...(withDay ? ["weighDay"] : []), "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
+  const withSteps = stepsTarget !== undefined; // শুধু পাঠালে লেখা হয় — না পাঠালে আগের মান অক্ষত
+  const fields = ["type", "memberId", "fastDays", "waterTarget", ...(withDay ? ["weighDay"] : []), ...(withSteps ? ["stepsTarget"] : []), "lastEditedByMemberId", "updatedAt", ...(prevGoal ? [] : ["createdAt"])];
   await col(familyId).doc("goal_" + memberId).set({
     type: "goal", memberId, fastDays: sanitizeFastDays(fastDays), waterTarget: sanitizeWaterTarget(waterTarget),
     ...(withDay ? { weighDay: sanitizeWeighDay(weighDay) } : {}),
+    ...(withSteps ? { stepsTarget: sanitizeStepsTarget(stepsTarget) } : {}),
     lastEditedByMemberId: callerMemberId, updatedAt: ts(),
     ...(prevGoal ? {} : { createdAt: ts() }),
   }, { mergeFields: fields });

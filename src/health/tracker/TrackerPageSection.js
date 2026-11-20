@@ -40,7 +40,7 @@ import { conditionKeysOf } from "./avoidRules.js";
 import { explainMeal, explainExercise } from "./planExplain.js";
 import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
-  sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
+  sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor, checkStepsTargetInput, suggestedSteps } from "./trackerCalc.js";
 
 const { useState, useEffect, useCallback, useRef } = React;
 
@@ -523,6 +523,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const [diabetes, setDiabetes] = useState(!!(g.flags && g.flags.diabetes) || detected.diabetes);
   const [kidney, setKidney] = useState(!!(g.flags && g.flags.kidney) || detected.kidney);
   const [water, setWater] = useState(g.waterTarget ? String(g.waterTarget) : ""); // দৈনিক পানির লক্ষ্য (ঐচ্ছিক; খালি = ডিফল্ট)
+  const [steps, setSteps] = useState(g.stepsTarget ? String(g.stepsTarget) : ""); // দৈনিক হাঁটার লক্ষ্য (ঐচ্ছিক; খালি = অটো সাজেশন)
   const [fastDays, setFastDays] = useState(() => sanitizeFastDays(g.fastDays)); // ঐচ্ছিক সিয়াম/ফাস্টিং দিন — প্ল্যানের অংশ
   const [focus, setFocus] = useState(() => sanitizeFocusAreas(g.focusAreas, member && member.sex).filter((x) => x !== "muscle")); // শরীরের টার্গেট (ঐচ্ছিক, ≤৩) — ব্যায়াম-প্ল্যানে যায়
   const [busy, setBusy] = useState(false);
@@ -541,11 +542,13 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
   const waterTooYoung = age !== null && age !== undefined && age < 2;
   const waterRestricted = !waterTooYoung && !!(flags.kidney || flags.fluid); // কিডনি/ডায়ালাইসিস/হার্ট/লিভার/পানি জমা: সংখ্যা নেই, ডাক্তারের সীমা
   const waterLocked = waterTooYoung || waterRestricted;
+  const defaultSteps = suggestedSteps(age, { bmi, goalType }); // null = ১৮-র নিচে বা বয়স অজানা: লক্ষ্য নেই
+  const stepsLocked = defaultSteps === null;
 
   const submit = useCallback(async () => {
     setErr(null); setResult(null);
     const base = { goalType: goalType || null, activity: goalType ? activity : null, targetWeightKg: target, weeks, flags };
-    const wErr = (waterLocked ? null : checkWaterTargetInput(water)) || checkFastDaysInput(fastDays, { age, flags });
+    const wErr = (waterLocked ? null : checkWaterTargetInput(water)) || (stepsLocked ? null : checkStepsTargetInput(steps)) || checkFastDaysInput(fastDays, { age, flags });
     if (wErr) { setErr(wErr); return; }
     setBusy(true);
     try {
@@ -564,7 +567,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           const canFocusNow = age !== null && age >= 18 && !pregnant;
           const nextFocus = canFocusNow ? sanitizeFocusAreas(focus, member && member.sex).filter((x) => x !== "muscle") : cur;
           if (nextFocus.length !== cur.length || nextFocus.some((x) => !cur.includes(x))) await saveFocusAreas(familyId, memberId, callerMemberId, nextFocus, goal || {}); // আমার-এডিট-করা ব্যায়াম অক্ষত
-          await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget: waterLocked ? null : water }, goal || {});
+          await saveGoalExtras(familyId, memberId, callerMemberId, { fastDays, waterTarget: waterLocked ? null : water, stepsTarget: stepsLocked ? null : steps }, goal || {});
           setResult(calc); setEditing(false);
         }
       }
@@ -572,7 +575,7 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
     } catch (x) {
       setErr(x.code === "permission-denied" ? "এই সদস্যের লক্ষ্য সংরক্ষণের অনুমতি আপনার নেই।" : (x.message || String(x)));
     } finally { setBusy(false); }
-  }, [goalType, activity, target, weeks, water, waterLocked, fastDays, focus, pregnant, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
+  }, [goalType, activity, target, weeks, water, waterLocked, steps, stepsLocked, fastDays, focus, pregnant, flags, gate, member, age, heightCm, weightKg, goal, familyId, memberId, callerMemberId, onSaved]);
 
   // টিক-কার্ড: পুরো কার্ড ট্যাপযোগ্য; প্রোফাইল থেকে ধরা পড়লে লক
   const tile = (label, val, setter, locked) => React.createElement("button", { role: "checkbox", "aria-checked": !!val, disabled: locked, onClick: () => setter(!val),
@@ -673,6 +676,10 @@ function GoalTab({ info, familyId, callerMemberId, memberId, onSaved }) {
           React.createElement("label", { style: LABEL }, "গ্লাস/দিন — খালি রাখলে আপনার বয়স/ওজন অনুযায়ী গাইড: " + bnNum(defaultWater)),
           React.createElement("input", { type: "number", inputMode: "numeric", min: 1, max: 20, value: water, placeholder: String(defaultWater), onChange: (e) => setWater(e.target.value), style: INPUT }),
           React.createElement("div", { style: HINT }, "ডাক্তার/ডায়েটিশিয়ান আলাদা পরিমাণ বললে সেটা দিন। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।"))),
+    !stepsLocked && stepCard(needsTarget ? "৭" : "৫", "দৈনিক হাঁটার লক্ষ্য",
+      React.createElement("label", { style: LABEL }, "স্টেপ/দিন — খালি রাখলে আপনার বয়স, BMI ও লক্ষ্য অনুযায়ী গাইড: " + bnNum(defaultSteps)),
+      React.createElement("input", { type: "number", inputMode: "numeric", min: 1000, max: 30000, step: 500, value: steps, placeholder: String(defaultSteps), onChange: (e) => setSteps(e.target.value), style: INPUT }),
+      React.createElement("div", { style: HINT }, "ডাক্তার হাঁটার আলাদা সীমা বললে সেটা দিন। হাঁটুতে ব্যথা বা হৃদরোগ থাকলে ধীরে বাড়ান। সাধারণ গাইড চিকিৎসা পরামর্শ নয়।")),
     React.createElement(FastCard, { goal, age, flags, familyId, memberId, callerMemberId, onSaved, value: fastDays, onChange: setFastDays }),
     err && ErrorBox(err),
     result && result.blocked && React.createElement(Notice, null, result.reason),
