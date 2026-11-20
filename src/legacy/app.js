@@ -15,6 +15,7 @@
 // এখন MemberList.js-এর ভেতরেই সরাসরি per-member Read/Write checkbox দিয়ে
 // owner নিজে সরাসরি sharing নিয়ন্ত্রণ করেন।
 
+import { ErrorBoundary } from "../shared/ErrorBoundary.js";
 import { db, auth, initError } from "./firebaseConfig.js";
 import { Card, BootSplash, ErrorBox, CollapsibleSection } from "../shared/ui.js";
 import { histRestore } from "../shared/navHistory.js";
@@ -769,4 +770,4 @@ function App() {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 // GoogleRelinkGate App()-এর বাইরে: জিমেইল-বদলের মাঝপথের রিকভারি-পর্দা App-এর early-return-এ ঢাকা পড়ে না।
-root.render(React.createElement(React.Fragment, null, React.createElement(App), React.createElement(GoogleRelinkGate)));
+root.render(React.createElement(ErrorBoundary, null, React.createElement(React.Fragment, null, React.createElement(App), React.createElement(GoogleRelinkGate))));

@@ -13,7 +13,6 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
 <!-- Preconnect — DailyTask pattern reused -->
-<link rel="preconnect" href="https://cdn.tailwindcss.com" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
@@ -23,22 +22,6 @@
 <!-- শুধু বাংলা অঙ্ক (০–৯): Hind Siliguri-র ছোট ১ ঝাপসা/কাটা দেখায়, তাই অঙ্কের গ্লিফ Noto Sans Bengali থেকে; বাকি লেখা আগের ফন্টেই -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700;800&text=%E0%A7%A6%E0%A7%A7%E0%A7%A8%E0%A7%A9%E0%A7%AA%E0%A7%AB%E0%A7%AC%E0%A7%AD%E0%A7%AE%E0%A7%AF&display=swap" rel="stylesheet" />
 
-<script>
-  // cdn.tailwindcss.com-এর "production-এ ব্যবহার করবেন না" cosmetic warning suppress —
-  // DailyTask app-এর প্রমাণিত pattern, আচরণ অপরিবর্তিত
-  (function () {
-    const _origWarn = console.warn;
-    const SUPPRESSED_SUBSTRINGS = ["cdn.tailwindcss.com"];
-    console.warn = function (...args) {
-      const combined = args
-        .map((a) => (typeof a === "string" ? a : (a && a.message) || ""))
-        .join(" ");
-      if (SUPPRESSED_SUBSTRINGS.some((s) => combined.includes(s))) return;
-      _origWarn.apply(console, args);
-    };
-  })();
-</script>
-<script src="https://cdn.tailwindcss.com" defer></script>
 
 <!-- Google Identity Services — Google Drive Backup OAuth token-client-এর জন্য
      (Architecture Plan Part C §8.3, src/legacy/googleDrive.js)। Firebase

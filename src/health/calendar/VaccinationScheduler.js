@@ -10,6 +10,7 @@
 // (গ) CollapsibleSection-এ মোড়ানো (owner-request, ডিফল্ট বন্ধ)।
 
 import { ErrorBox, CollapsibleSection } from "../../shared/ui.js";
+import { localISO } from "../../shared/dates.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { computeVaccinationDueDates, CHILD_AGE_CUTOFF_YEARS } from "./epiSchedule.js";
 import { listCalendarEvents, createCalendarEvent } from "./calendarData.js";
@@ -45,7 +46,7 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
     try {
       await createCalendarEvent(familyId, callerMemberId, {
         memberId: targetMemberId, title: name, eventType: "vaccination",
-        date: new Date().toISOString().slice(0, 10), status: "done", doseId,
+        date: localISO(), status: "done", doseId,
       });
       setDoneDoseIds((prev) => [...prev, targetMemberId + "_" + doseId]);
     } catch (e) {
@@ -67,7 +68,7 @@ export function VaccinationScheduler({ familyId, callerMemberId, selectedMemberI
   }
 
   const schedule = targetMember ? computeVaccinationDueDates(targetMember.dob) : [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localISO();
 
   const Wrap = inline
     ? (props, ...kids) => React.createElement("div", { style: { background: "var(--hs-surface, #fff)", padding: "14px", borderRadius: "20px", border: "1px solid var(--hs-border, #D9E5DE)", boxShadow: "0 2px 10px rgba(14,75,67,0.08)" } }, React.createElement("h4", { style: { fontSize: "14px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, props.title), ...kids)

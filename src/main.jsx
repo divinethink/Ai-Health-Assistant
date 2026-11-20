@@ -14,8 +14,12 @@ function showBootError(label, err) {
   root.appendChild(box);
 }
 
-window.addEventListener("error", (e) => showBootError("window error", e.error || e.message));
-window.addEventListener("unhandledrejection", (e) => showBootError("unhandled promise rejection", e.reason));
+// বুট-স্প্ল্যাশ থেকে গেলে (অ্যাপ চালুই হয়নি) তবেই স্ক্রিনে ত্রুটি; নইলে শুধু console।
+window.addEventListener("error", (e) => {
+  if (document.querySelector(".hc-splash")) showBootError("window error", e.error || e.message);
+  else console.error("[window error]", e.error || e.message);
+});
+window.addEventListener("unhandledrejection", (e) => { console.error("[unhandled rejection]", e.reason); });
 
 // globals.js MUST be imported first: it attaches React/ReactDOM/firebase to
 // `window` before legacy/app.js (which reads them as bare globals,

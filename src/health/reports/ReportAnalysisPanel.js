@@ -20,8 +20,6 @@
 // (চুপচাপ ঠিক করা হয় না)। চূড়ান্ত যাচাই আগের মতোই mandatory user-verification-এ।
 
 import { ErrorBox, SuccessBox, SecondaryButton } from "../../shared/ui.js";
-import { extractPdfText } from "./pdfTextExtraction.js";
-import { ocrImageFile, ocrPdfPages } from "./ocrExtraction.js";
 import { assessOcr, findDoseConfusions, QUALITY_MESSAGES } from "./ocrQuality.js";
 import { fetchTestNameDictionary } from "./testDictionaryData.js";
 import { parseAndValidateReportText } from "./reportParsing.js";
@@ -102,18 +100,21 @@ export function ReportAnalysisPanel({ familyId, targetMemberId, callerMemberId, 
         rawText = preOcr.text; ocrResult = preOcr.ocr; method = preOcr.method;
       } else if (file.type === "application/pdf") {
         setStage("extracting");
+        const { extractPdfText } = await import("./pdfTextExtraction.js");
         const { hasTextLayer, text } = await extractPdfText(file);
         if (hasTextLayer) {
           rawText = text;
           method = "direct-text";
         } else {
           setStage("ocr");
+          const { ocrPdfPages } = await import("./ocrExtraction.js");
           ocrResult = await ocrPdfPages(file, setProgress, { scoreText });
           rawText = ocrResult.text;
           method = "ocr";
         }
       } else if (file.type && file.type.startsWith("image/")) {
         setStage("ocr");
+        const { ocrImageFile } = await import("./ocrExtraction.js");
         ocrResult = await ocrImageFile(file, setProgress, { scoreText });
         rawText = ocrResult.text;
         method = "ocr";

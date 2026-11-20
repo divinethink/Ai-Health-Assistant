@@ -13,7 +13,6 @@ import { buildHealthProfileExport } from "./doctorExportData.js";
 import { buildAiHealthSummary } from "./aiSummaryData.js";
 import { DoctorExportPrintView } from "./DoctorExportPrintView.js";
 import { AiSummaryPrintView } from "./AiSummaryPrintView.js";
-import { exportHealthProfileDocx, exportAiHealthSummaryDocx } from "./docxExport.js";
 import { DoctorDocumentPicker, exportCard } from "./DoctorDocumentPicker.js";
 
 const { useState, useEffect } = React;
@@ -60,7 +59,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
     try {
       const data = await buildHealthProfileExport(familyId, targetMemberId, callerMemberId, { includeTracker });
       if (mode === "pdf") setProfilePreview(data);
-      else await exportHealthProfileDocx(data);
+      else { const { exportHealthProfileDocx } = await import("./docxExport.js"); await exportHealthProfileDocx(data); }
     } catch (e) {
       setProfileErr(e.message || String(e));
     } finally {
@@ -74,7 +73,7 @@ export function DoctorExportSection({ familyId, callerMemberId, selectedMemberId
       const memberName = (members.find((m) => m.id === targetMemberId) || {}).name;
       const data = await buildAiHealthSummary(familyId, targetMemberId, memberName);
       if (mode === "pdf") setSummaryPreview(data);
-      else await exportAiHealthSummaryDocx(data);
+      else { const { exportAiHealthSummaryDocx } = await import("./docxExport.js"); await exportAiHealthSummaryDocx(data); }
     } catch (e) {
       setSummaryErr(e.message || String(e));
     } finally {

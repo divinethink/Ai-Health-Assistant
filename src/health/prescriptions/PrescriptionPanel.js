@@ -6,8 +6,6 @@
 // OCR-এর পড়া টেক্সট দেখায় ও হাতে যোগের পথ বলে।
 
 import { ErrorBox, SecondaryButton } from "../../shared/ui.js";
-import { extractPdfText } from "../reports/pdfTextExtraction.js";
-import { ocrImageFile, ocrPdfPages } from "../reports/ocrExtraction.js";
 import { assessOcr, QUALITY_MESSAGES } from "../reports/ocrQuality.js";
 import { parsePrescriptionText } from "./prescriptionParsing.js";
 import { loadPrescriptionContext } from "./prescriptionData.js";
@@ -37,11 +35,12 @@ export function PrescriptionPanel({ familyId, targetMemberId, callerMemberId, fi
       let text = "", ocr = null;
       if (preOcr) { text = preOcr.text; ocr = preOcr.ocr; } // ধাপ ৪-ঙ: আপলোডে আগেই পড়া — দুবার OCR নয়
       else if (file.type === "application/pdf") {
+        const { extractPdfText } = await import("../reports/pdfTextExtraction.js");
         const pdf = await extractPdfText(file);
         if (pdf.hasTextLayer) text = pdf.text;
-        else { setStage("ocr"); ocr = await ocrPdfPages(file, setProgress); text = ocr.text; }
+        else { setStage("ocr"); const { ocrPdfPages } = await import("../reports/ocrExtraction.js"); ocr = await ocrPdfPages(file, setProgress); text = ocr.text; }
       } else if (file.type && file.type.startsWith("image/")) {
-        setStage("ocr"); ocr = await ocrImageFile(file, setProgress); text = ocr.text;
+        setStage("ocr"); const { ocrImageFile } = await import("../reports/ocrExtraction.js"); ocr = await ocrImageFile(file, setProgress); text = ocr.text;
       } else { throw new Error("শুধু ছবি (jpg/png) বা PDF সমর্থিত।"); }
       setStage("parsing");
       const items = parsePrescriptionText(text);

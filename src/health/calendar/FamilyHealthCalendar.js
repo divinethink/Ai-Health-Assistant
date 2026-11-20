@@ -8,7 +8,7 @@ import { ErrorBox } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { listCalendarEvents, createCalendarEvent, updateCalendarEventStatus, deleteCalendarEvent } from "./calendarData.js";
 import { createAllDayCalendarEvent } from "../../legacy/googleCalendar.js";
-import { bnDate } from "../../shared/dates.js";
+import { bnDate, localISO } from "../../shared/dates.js";
 
 const { useState, useEffect } = React;
 
@@ -36,7 +36,7 @@ function googleCalendarLink(e) {
   const start = (e.date || "").replace(/-/g, "");
   const nextDay = new Date(e.date + "T00:00:00");
   nextDay.setDate(nextDay.getDate() + 1);
-  const end = nextDay.toISOString().slice(0, 10).replace(/-/g, "");
+  const end = localISO(nextDay).replace(/-/g, "");
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: e.title || "",

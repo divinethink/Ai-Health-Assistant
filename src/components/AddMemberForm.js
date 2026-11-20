@@ -5,6 +5,7 @@
 
 import { TextField, PrimaryButton, SecondaryButton, ErrorBox, SuccessBox } from "../shared/ui.js";
 import { addGuardianManagedMember } from "../legacy/googleAuth.js";
+import { localISO } from "../shared/dates.js";
 
 const { useState, useCallback } = React;
 
@@ -17,7 +18,7 @@ export function AddMemberForm({ familyId, onAdded }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [result, setResult] = useState(null); // { name, email }
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = localISO();
 
   const submit = useCallback(async () => {
     setErr(null);

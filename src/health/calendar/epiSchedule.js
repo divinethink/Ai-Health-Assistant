@@ -20,12 +20,15 @@ export const EPI_SCHEDULE = [
 
 // dob (YYYY-MM-DD) থেকে প্রতিটা dose-এর প্রত্যাশিত তারিখ হিসাব — pure client-side
 // গণনা, কোনো Firestore read লাগে না।
+import { localISO } from "../../shared/dates.js";
+
 export function computeVaccinationDueDates(dobStr) {
   if (!dobStr) return [];
   const dob = new Date(dobStr + "T00:00:00");
   if (Number.isNaN(dob.getTime())) return [];
   return EPI_SCHEDULE.map((d) => {
-    const due = new Date(dob.getTime() + d.ageWeeks * 7 * 24 * 60 * 60 * 1000);
-    return { ...d, dueDate: due.toISOString().slice(0, 10) };
+    const due = new Date(dob.getTime());
+    due.setDate(due.getDate() + d.ageWeeks * 7); // লোকাল তারিখ (UTC নয়)
+    return { ...d, dueDate: localISO(due) };
   });
 }
