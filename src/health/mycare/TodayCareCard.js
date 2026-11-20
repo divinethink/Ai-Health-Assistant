@@ -21,7 +21,7 @@ const streakText = (n) => L("ধারাবাহিক " + digits(n) + " দ�
 const tint = (c, pct) => "color-mix(in srgb, " + c + " " + pct + "%, var(--hs-surface, #fff))";
 export function TodayCareView({ profile, onOpen, compact, log, collapsible, showGut }) {
   const [msg, setMsg] = useState("");
-  const [open, setOpen] = useState(false); // collapsible হলে শুরুতে বন্ধ
+  const [open, setOpen] = useState(true); // collapsible হলেও শুরুতে খোলা (owner-request ২০২৬-১১-২০)
   const season = seasonOf(new Date());
   const care = pickTodayCare(profile, ALL_ITEMS, { season, date: new Date() });
   const tasks = log ? taskKeysFor(!!showGut) : [];
@@ -107,7 +107,7 @@ export function CareWeekCard({ log }) {
     React.createElement("div", { style: { marginTop: "8px", fontSize: "12px", color: "var(--hs-muted, #5F716C)" } }, L("✓ = সব ধাপ সম্পূর্ণ · সংখ্যা = যতটি টিক হয়েছে", "✓ = all steps done · number = steps ticked")));
 }
 
-// হোমে (পানি ও পেট ডায়েরির নিচে) ছোট এক-ট্যাপ কার্ড: ট্যাপে আজকের যত্ন সম্পন্ন ধরা হয় (আবার ট্যাপে বাতিল)।
+// হোমে (পানি ও পেট ডায়েরির মাঝে, সারির সিকি অংশ) এক-ট্যাপ টাইল: ট্যাপে আজকের যত্ন সম্পন্ন ধরা হয় (আবার ট্যাপে বাতিল)।
 // পড়া চলাকালীন, লগ না পড়া গেলে বা ফাঁকা হলে কিছুই দেখায় না (হোম অক্ষত)।
 export function HomeTodayCare({ familyId, callerMemberId, selectedMemberId, members, onOpen }) {
   const { ready, profile, showGut } = useCareProfile(familyId, selectedMemberId, members);
@@ -121,17 +121,11 @@ export function HomeTodayCare({ familyId, callerMemberId, selectedMemberId, memb
   const todayISO = isoOf(new Date());
   const planned = plannedKeys(care, tasks);
   const done = isDayComplete(log.days[todayISO] || []);
-  const streak = streakOf(log.days, todayISO);
   const tap = async () => { if (busy) return; setBusy(true); setErr(false); const r = await log.setDone(planned, !done); setBusy(false); if (r) setErr(true); };
-  const sub = err ? L("সংরক্ষণ হয়নি। আবার চেষ্টা করুন।", "Could not save. Please try again.")
-    : done ? L("আজকের যত্ন সম্পন্ন ✓", "Today's care done ✓") + (streak > 1 ? " · 🔥 " + streakText(streak) : "")
-    : L("রাতে ট্যাপ করুন — আজকের যত্ন হয়েছে", "Tap at night once today's care is done");
-  return React.createElement("div", { style: { display: "flex", alignItems: "stretch", gap: "6px", marginBottom: "8px", borderRadius: "22px", border: "1.5px solid " + (done ? "#1F7A5C" : "var(--hs-border, #D9E5DE)"), background: done ? tint("#1F7A5C", 12) : "linear-gradient(180deg, var(--hs-surface, #fff), " + tint("#1F7A5C", 4) + ")", boxShadow: "0 4px 14px rgba(14,75,67,0.09)" } },
-    React.createElement("button", { type: "button", role: "checkbox", "aria-checked": done, disabled: busy, onClick: tap, style: { flex: 1, minWidth: 0, minHeight: "56px", display: "flex", alignItems: "center", gap: "10px", padding: "8px 6px 8px 12px", border: "none", background: "none", fontFamily: "inherit", cursor: "pointer", textAlign: "left", color: "var(--hs-text, #1B2430)" } },
-      React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "12px", background: "linear-gradient(135deg, #2A9A74, #0E4B43)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, React.createElement(CareIcon, { id: "sparkle", color: "#fff", size: 19 })),
-      React.createElement("span", { style: { flex: 1, minWidth: 0 } },
-        React.createElement("span", { style: { display: "block", fontSize: "15px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", lineHeight: 1.2 } }, L("আজকের যত্ন", "Today's care")),
-        React.createElement("span", { role: err ? "alert" : undefined, style: { display: "block", fontSize: "12.5px", color: err ? "#B3261E" : "var(--hs-muted, #5F716C)", marginTop: "1px", lineHeight: 1.3 } }, sub)),
-      React.createElement("span", { "aria-hidden": "true", style: { width: "28px", height: "28px", borderRadius: "50%", flexShrink: 0, boxSizing: "border-box", border: "2px solid " + (done ? "#1F7A5C" : "var(--hs-border, #B9CFC5)"), background: done ? "linear-gradient(135deg, #2A9A74, #0E4B43)" : "var(--hs-surface, #fff)", display: "flex", alignItems: "center", justifyContent: "center" } }, done && React.createElement(CareIcon, { id: "check", color: "#fff", size: 16 }))),
-    onOpen && React.createElement("button", { type: "button", onClick: () => onOpen(null), "aria-label": L("MyCare খুলুন", "Open MyCare"), style: { minWidth: "44px", border: "none", background: "none", fontFamily: "inherit", fontSize: "20px", fontWeight: 800, color: "var(--hs-primary, #0E4B43)", cursor: "pointer" } }, "›"));
+  const lbl = err ? L("আবার চেষ্টা", "Retry") : L("আজকের যত্ন", "Today's care");
+  // হোমের সারিতে সিকি-জায়গার টাইল: যত্ন-আইকন বক্স; সম্পন্ন হলে সবুজ বক্সে টিক। উচ্চতা সারির সাথে সমান (streak/সাব-লাইন নেই)।
+  return React.createElement("button", { type: "button", role: "checkbox", "aria-checked": done, "aria-label": L("আজকের যত্ন", "Today's care") + (done ? " ✓" : ""), disabled: busy, onClick: tap,
+    style: { flex: "1 1 0", minWidth: 0, marginBottom: 0, padding: "4px 3px", minHeight: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", borderRadius: "22px", border: "1.5px solid " + (err ? "#B3261E" : done ? "#1F7A5C" : "var(--hs-border, #D9E5DE)"), background: done ? tint("#1F7A5C", 12) : "linear-gradient(180deg, var(--hs-surface, #fff), " + tint("#1F7A5C", 4) + ")", boxShadow: "0 4px 14px rgba(14,75,67,0.09)", fontFamily: "inherit", cursor: "pointer", color: err ? "#B3261E" : "var(--hs-primary, #0E4B43)", fontSize: "13px", fontWeight: 800, lineHeight: 1.2, textAlign: "center", opacity: busy ? 0.7 : 1 } },
+    React.createElement("span", { "aria-hidden": "true", style: { width: "34px", height: "34px", borderRadius: "12px", background: done ? "linear-gradient(135deg, #2A9A74, #0E4B43)" : tint("#1F7A5C", 14), boxShadow: done ? "0 3px 8px rgba(14,75,67,0.3)" : "none", display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "background .15s" } }, React.createElement(CareIcon, { id: done ? "check" : "sparkle", color: done ? "#fff" : "#1F7A5C", size: done ? 22 : 20 })),
+    React.createElement("span", { role: err ? "alert" : undefined }, lbl));
 }
