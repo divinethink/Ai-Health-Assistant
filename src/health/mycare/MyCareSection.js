@@ -126,13 +126,13 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
       CAT_META.map(([id, bn, en, color]) => {
         const ready = ALL_ITEMS.some((i) => i.category === id && i.status === "verified");
         const inner = [
-          React.createElement(IconBox, { key: "i", id, color, size: 44 }),
-          React.createElement("span", { key: "t", style: { display: "block", marginTop: "10px" } },
-            React.createElement("span", { style: { display: "block", fontSize: "16px", fontWeight: 800, color: "var(--hs-text)" } }, L(bn, en)),
-            React.createElement("span", { style: { display: "block", fontSize: "12.5px", lineHeight: 1.4, marginTop: "2px", color: "var(--hs-muted)" } }, CAT_DESC[id] ? L(CAT_DESC[id][0], CAT_DESC[id][1]) : "")),
-          !ready && React.createElement("span", { key: "s", style: { position: "absolute", top: "10px", right: "10px", fontSize: "11.5px", padding: "2px 8px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-muted)" } }, L("শীঘ্রই", "Soon")),
+          React.createElement("span", { key: "h", style: { display: "flex", alignItems: "center", gap: "10px", paddingRight: ready ? 0 : "44px" } },
+            React.createElement(IconBox, { id, color, size: 36 }),
+            React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "16px", fontWeight: 800, color: "var(--hs-text)", overflowWrap: "anywhere" } }, L(bn, en))),
+          React.createElement("span", { key: "d", style: { display: "block", fontSize: "12.5px", lineHeight: 1.4, marginTop: "6px", color: "var(--hs-muted)" } }, CAT_DESC[id] ? L(CAT_DESC[id][0], CAT_DESC[id][1]) : ""),
+          !ready && React.createElement("span", { key: "s", style: { position: "absolute", top: "10px", right: "8px", fontSize: "11.5px", padding: "2px 8px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-muted)" } }, L("শীঘ্রই", "Soon")),
         ];
-        const st = { position: "relative", minHeight: "128px", padding: "14px", borderRadius: "20px", border: "1px solid var(--hs-border)", borderTop: "3px solid " + color, background: "var(--hs-surface)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", justifyContent: "flex-start", textAlign: "left", fontFamily: "inherit", opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "default" };
+        const st = { position: "relative", padding: "12px", borderRadius: "18px", border: "1px solid var(--hs-border)", borderTop: "3px solid " + color, background: "var(--hs-surface)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "stretch", textAlign: "left", fontFamily: "inherit", opacity: ready ? 1 : 0.7, cursor: ready ? "pointer" : "default" };
         return React.createElement("button", { key: id, type: "button", disabled: !ready, "aria-disabled": !ready, onClick: () => openCat(id), style: st }, inner);
       })),
     saved.length > 0 && React.createElement("button", { type: "button", onClick: () => openCat("saved"), style: { ...card, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: "var(--hs-text)", display: "flex", alignItems: "center", gap: "12px", boxSizing: "border-box" } },

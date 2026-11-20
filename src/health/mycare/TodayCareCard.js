@@ -37,11 +37,11 @@ export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
     return React.createElement("button", { type: "button", role: "checkbox", "aria-checked": on, "aria-label": T(e.item.name), onClick: () => onTick(key), style: { width: "44px", height: "44px", margin: "0 -4px 0 -8px", padding: 0, border: "none", background: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontFamily: "inherit" } },
       React.createElement("span", { "aria-hidden": "true", style: { width: "26px", height: "26px", borderRadius: "8px", border: "2px solid " + (on ? "#1F7A5C" : "var(--hs-border, #B9CFC5)"), background: on ? "#1F7A5C" : "transparent", color: "#fff", fontSize: "16px", fontWeight: 800, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" } }, on ? "✓" : ""));
   };
-  const row = (e, key, slot) => React.createElement("div", { key, style: { display: "flex", alignItems: "center", gap: "4px" } },
+  const row = (e, key, slot, slim) => React.createElement("div", { key, style: { display: "flex", alignItems: "center", gap: "4px", minWidth: 0 } },
     log && slot && box(e, slot),
-    React.createElement("button", { type: "button", onClick: () => onOpen && onOpen(e.item), style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: "10px", padding: "4px 2px", border: "none", background: "none", textAlign: "left", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer" } },
-      React.createElement(IconBox, { id: e.item.category, color: colorOf(e.item.category), size: 30 }),
-      React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14.5px", fontWeight: 700, overflowWrap: "anywhere" } }, T(e.item.name))));
+    React.createElement("button", { type: "button", onClick: () => onOpen && onOpen(e.item), style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: slim ? "4px" : "10px", padding: "2px", border: "none", background: "none", textAlign: "left", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer" } },
+      !slim && React.createElement(IconBox, { id: e.item.category, color: colorOf(e.item.category), size: 30 }),
+      React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: slim ? "14px" : "14.5px", lineHeight: 1.35, fontWeight: 700, overflowWrap: "anywhere" } }, T(e.item.name))));
   const hidden = !!collapsible && !open;
   const chip = { fontSize: "12.5px", fontWeight: 800, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)", whiteSpace: "nowrap" };
   return React.createElement("div", { style: { padding: "14px", borderRadius: "22px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", marginBottom: "12px" } },
@@ -54,9 +54,11 @@ export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
 !hidden && React.createElement(React.Fragment, null,
     log && streak > 0 && React.createElement("div", { style: { fontSize: "13px", fontWeight: 800, color: "#B8860B", marginBottom: "2px" } }, streakText(streak)),
     log && isDayComplete(today) && React.createElement("div", { role: "status", style: { fontSize: "13px", fontWeight: 700, color: "#1F6B50", marginBottom: "2px" } }, L("আজকের যত্ন সম্পূর্ণ। ভালো করেছেন।", "Today's care is complete. Well done.")),
-    GROUPS.map(([id, bn, en, color]) => care[id].length > 0 && React.createElement("div", { key: id, style: { marginTop: "6px" } },
-      React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color } }, L(bn, en)),
-      care[id].map((e) => row(e, id + e.item.id, id)))),
+    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "10px" } },
+      GROUPS.map(([id, bn, en, color]) => care[id].length > 0 && React.createElement("div", { key: id, style: { marginTop: "6px", minWidth: 0, gridColumn: id === "anytime" ? "1 / -1" : "auto" } },
+        React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color } }, L(bn, en)),
+        React.createElement("div", { style: id === "anytime" ? { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "10px" } : null },
+          care[id].map((e) => row(e, id + e.item.id, id, true)))))),
     care.seasonTip && React.createElement("div", { style: { marginTop: "10px", padding: "8px 10px", borderRadius: "14px", background: "#EAF6F0", border: "1px solid #A9D8C4" } },
       React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color: "#1F6B50" } }, L("ঋতুর টিপ", "Season tip") + (SEASON_LABEL[season] ? " · " + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1]) : "")),
       row(care.seasonTip, "tip", null)),
