@@ -97,7 +97,11 @@ export const FOOD_EN = {
   shutkiBhorta: "Dried fish bhorta (Shutki)", shutkiTorkari: "Dried fish curry (Shutki)", machBhorta: "Fish bhorta (Mach bhorta)",
   chickenChaap: "Chicken chaap", eggPoach: "Poached egg", jolpai: "Indian olive (Jolpai)", narikel: "Coconut (fresh)",
   narikelLaddu: "Coconut laddu", rasmalai: "Rasmalai", kalojam: "Kalojam (Gulab jamun)", misti: "Mixed sweets (Misti)",
-  jellyMix: "Mixed fruit jelly", matha: "Buttermilk (Matha / Ghol)", labang: "Labang (Laban, yogurt drink)",
+  jellyMix: "Mixed fruit jelly", matha: "Buttermilk (Matha / Ghol)", labang: "Laban (yogurt drink)",
+  kalojiraBhorta: "Black cumin bhorta (Kalojira)", dhoniaBhorta: "Coriander leaf bhorta", puiShak: "Malabar spinach (Pui shak)", lalShak: "Red amaranth (Lal shak)",
+  dataShak: "Green amaranth (Data shak)", kolmiShak: "Water spinach (Kolmi shak)", pabda: "Pabda fish", mixFruit: "Mixed fruit", iceCream: "Ice cream",
+  toastSweet: "Sweet toast (biscuit)", toastPlain: "Plain toast (biscuit)", gingerSharbat: "Ginger drink (no sugar)", papayaJuice: "Ripe papaya juice",
+  mangoJuice: "Mango juice", smoothie: "Smoothie",
 };
 
 // খাবারের key → বাড়তি সার্চ-শব্দ (বাংলিশ/সমার্থক); বাংলা নাম ও ইংলিশ নাম আলাদাভাবেই মেলে
@@ -184,6 +188,31 @@ const FOOD_ALIAS_MORE2 = {
   labang: ["লাবান", "লাবঙ", "labang", "laban"],
 };
 for (const [k, v] of Object.entries(FOOD_ALIAS_MORE2)) FOOD_ALIAS[k] = [...(FOOD_ALIAS[k] || []), ...v];
+
+// ২০২৬-১১-২১: নতুন খাবার + বানান/নাম-সংশোধনের পুরনো নামের সার্চ (পুনরাবৃত্তি এড়াতে বিদ্যমান খাবারে আলাদা নামও যুক্ত)
+const FOOD_ALIAS_MORE3 = {
+  labang: ["লাবাং", "লাবঙ"],
+  banana: ["পাকা কলা", "ripe banana"],
+  begunBhaja: ["বেগুন ভাজি", "begun bhaji", "begun vaji"],
+  lau: ["লাউ সবজি", "লাউয়ের তরকারি", "lau shobji", "lau torkari"],
+  lemonWater: ["লেবুর শরবত (চিনি ছাড়া)", "লেবুর শরবত চিনি ছাড়া", "lemon sharbat no sugar", "nimbu pani"],
+  kalojiraBhorta: ["কালোজিরা", "কালিজিরা ভর্তা", "kalojira", "kalo jira", "kalijira", "nigella", "black cumin", "kalonji"],
+  dhoniaBhorta: ["ধনেপাতা ভর্তা", "ধনে পাতা ভর্তা", "ধনিয়া পাতা", "ধনেপাতা", "dhone pata", "dhonia pata", "dhania", "coriander", "cilantro"],
+  puiShak: ["পুই শাক", "পুঁইশাক", "পুইশাক", "pui", "pui shak", "puishak", "basella", "malabar spinach"],
+  lalShak: ["লালশাক", "lal shak", "lalshak", "red spinach", "red amaranth"],
+  dataShak: ["ডাঁটা শাক", "ডাটাশাক", "ডাঁটাশাক", "data shak", "datashak", "amaranth"],
+  kolmiShak: ["কলমীশাক", "কলমিশাক", "কলমী শাক", "kolmi", "kolmi shak", "kalmi shak", "water spinach", "kangkong"],
+  pabda: ["পাবদা", "pabo", "pabda", "pabda fish"],
+  mixFruit: ["মিক্স ফল", "মিক্সড ফ্রুট", "ফল মিক্স", "ফ্রুট সালাদ", "ফলের সালাদ", "fruit salad", "mixed fruit", "mix fruit"],
+  iceCream: ["আইস ক্রিম", "আইসক্রীম", "icecream", "ice cream", "ice-cream"],
+  toastSweet: ["মিষ্টি টোস্ট", "টোস্ট বিস্কুট", "sweet toast", "toast biscuit", "toast"],
+  toastPlain: ["প্লেন টোস্ট", "প্লেইন টোস্ট", "নোনতা টোস্ট", "plain toast", "toast"],
+  gingerSharbat: ["আদা শরবত", "আদার শরবত", "ginger sharbat", "ginger drink", "adar sharbat"],
+  papayaJuice: ["পেঁপে জুস", "পেপে জুস", "পাকা পেপে জুস", "papaya juice", "pepe juice"],
+  mangoJuice: ["আম জুস", "আমের রস", "mango juice", "aam juice"],
+  smoothie: ["স্মুদী", "smoothie", "smoothi", "ফল স্মুদি"],
+};
+for (const [k, v] of Object.entries(FOOD_ALIAS_MORE3)) FOOD_ALIAS[k] = [...(FOOD_ALIAS[k] || []), ...v];
 
 // ---------- ওষুধ ----------
 // জেনেরিক (COMMON_MEDS-এর হুবহু নাম) → [ব্র্যান্ড/বাংলা/বাংলিশ সার্চ-শব্দ]

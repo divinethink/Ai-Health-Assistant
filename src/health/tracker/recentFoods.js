@@ -17,10 +17,14 @@ export function recentDates(days = RECENT_DAYS, now = new Date()) {
   return Array.from({ length: days }, (_, i) => localISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)));
 }
 
+// নাম বদলের আগে লগ হওয়া ফ্রি-টেক্সট এন্ট্রি যাতে হারিয়ে না যায় — পুরনো নাম → key (২০২৬-১১-২১: কলা→পাকা কলা, পেঁপে→পাকা পেঁপে, লাবাং→লাবান)
+const LEGACY_NAMES = { "কলা": "banana", "পেঁপে": "papaya", "লাবাং (লাবান)": "labang" };
+
 function resolveKey(x) {
   if (x.key && FOODS[x.key]) return x.key;
   const hit = Object.keys(FOODS).find((k) => FOODS[k].n === x.name);
-  return hit || null;
+  if (hit) return hit;
+  return Object.prototype.hasOwnProperty.call(LEGACY_NAMES, x.name) ? LEGACY_NAMES[x.name] : null;
 }
 
 // → [{ key, date }] নতুন আগে, ডুপ্লিকেট নয়। plan = বর্তমান মিল-প্ল্যান বা null।

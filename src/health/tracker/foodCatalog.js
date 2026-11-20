@@ -35,7 +35,7 @@ export const POS_TAG_FOODS = {
     "hilshaBhaja", "hilshaJhol", "ruiJhol", "chotoMach", "chingri", "seaFishJhol", "beef", "mutton",
     "eggFry", "omelette", "eggCurry", "eggWhite", "eggVegBhuna", "chickenJhol",
     "tofu", "chhola", "mugDal", "daalSoup", "sprouts", "haleem", "tokDoi", "tokDoi100", "milk", "tonedMilk",
-    "shutkiBhorta", "shutkiTorkari", "machBhorta", "chickenChaap", "eggPoach",
+    "shutkiBhorta", "shutkiTorkari", "machBhorta", "chickenChaap", "eggPoach", "pabda",
   ],
   fibre: [
     "dal", "veg", "salad",
@@ -43,6 +43,7 @@ export const POS_TAG_FOODS = {
     "shak", "palongShak", "korolaBhaji", "dherosBhaji", "kakrol", "kochu", "mishtiKumra", "kanchaKola", "vegSoup",
     "chhola", "mugDal", "daalSoup", "sprouts", "oats", "redRice", "redRoti", "redChira", "vegKhichuri", "oatsVegKhichuri",
     "guava", "papaya", "apple", "orange", "nashpati", "pomegranate", "carrot", "dates", "tishi", "isabgol", "narikel",
+    "puiShak", "lalShak", "dataShak", "kolmiShak",
   ],
 };
 
@@ -118,6 +119,12 @@ export const CATALOG_FOODS = {
   mangoAchar: { n: "আমের আচার", u: "চা-চামচ", k: 18, g: "curry" },
   jolpaiAchar: { n: "জলপাই আচার", u: "চা-চামচ", k: 18, g: "curry" },
   mixAchar: { n: "আচার (মিক্স)", u: "চা-চামচ", k: 17, g: "curry" },
+  kalojiraBhorta: { n: "কালোজিরা ভর্তা", u: "পরিবেশন", k: 70, g: "curry" },
+  dhoniaBhorta: { n: "ধনিয়া পাতা ভর্তা", u: "পরিবেশন", k: 50, g: "curry" },
+  puiShak: { n: "পুঁই শাক", u: "বাটি", k: 76, g: "curry" },
+  lalShak: { n: "লাল শাক", u: "বাটি", k: 86, g: "curry" },
+  dataShak: { n: "ডাটা শাক", u: "বাটি", k: 76, g: "curry" },
+  kolmiShak: { n: "কলমি শাক", u: "বাটি", k: 104, g: "curry" },
   // মাছ-মাংস-ডিম
   hilshaBhaja: { n: "ইলিশ ভাজা", u: "টুকরা", k: 200, al: "fish", g: "protein" },
   hilshaJhol: { n: "ইলিশ ঝোল", u: "টুকরা", k: 170, al: "fish", g: "protein" },
@@ -153,11 +160,12 @@ export const CATALOG_FOODS = {
   machBhorta: { n: "মাছ ভর্তা", u: "পরিবেশন", k: 140, al: "fish", g: "protein" },
   chickenChaap: { n: "চিকেন চাপ", u: "টুকরা", k: 260, al: "chicken", g: "protein" },
   eggPoach: { n: "ডিম পোচ", u: "টি", k: 72, al: "egg", g: "protein" },
+  pabda: { n: "পাবদা মাছ", u: "টুকরা", k: 122, al: "fish", g: "protein" },
   // ফল
   mango: { n: "আম", u: "টি", k: 140, g: "fruit" },
   apple: { n: "আপেল", u: "টি", k: 95, g: "fruit", tg: ["gut"] },
   guava: { n: "পেয়ারা", u: "টি", k: 70, g: "fruit" },
-  papaya: { n: "পেঁপে", u: "বাটি", k: 60, g: "fruit" },
+  papaya: { n: "পাকা পেঁপে", u: "বাটি", k: 60, g: "fruit" },
   watermelon: { n: "তরমুজ", u: "বাটি", k: 45, g: "fruit", tg: ["gut"] },
   orange: { n: "কমলা", u: "টি", k: 60, g: "fruit" },
   grapes: { n: "আঙুর", u: "বাটি", k: 136, g: "fruit" },
@@ -175,6 +183,7 @@ export const CATALOG_FOODS = {
   tomato: { n: "টমেটো", u: "টি", k: 18, g: "fruit" },
   jolpai: { n: "জলপাই", u: "টি", k: 21, g: "fruit" },
   narikel: { n: "নারিকেল", u: "টুকরা", k: 78, g: "fruit" },
+  mixFruit: { n: "মিক্স ফ্রুট", u: "বাটি", k: 93, g: "fruit" },
   // নাস্তা-মিষ্টি
   biscuit: { n: "বিস্কুট", u: "টি", k: 35, al: "wheat", g: "snack" },
   singara: { n: "সিঙ্গারা", u: "টি", k: 260, al: "wheat", g: "snack", tg: ["gut"] },
@@ -232,6 +241,9 @@ export const CATALOG_FOODS = {
   kalojam: { n: "কালোজাম", u: "টি", k: 155, al: "dairy", g: "snack", tg: ["sugar"] },
   misti: { n: "মিষ্টি (মিক্স)", u: "টি", k: 143, al: "dairy", g: "snack", tg: ["sugar"] },
   jellyMix: { n: "জেলি (মিক্স)", u: "টেবিল-চামচ", k: 53, g: "snack", tg: ["sugar"] },
+  iceCream: { n: "আইসক্রিম", u: "স্কুপ", k: 137, al: "dairy", g: "snack", tg: ["gut", "sugar"] },
+  toastSweet: { n: "টোস্ট (মিষ্টি)", u: "টি", k: 62, al: "wheat", g: "snack", tg: ["sugar"] },
+  toastPlain: { n: "টোস্ট (প্লেইন)", u: "টি", k: 61, al: "wheat", g: "snack" },
   // পানীয়
   milkTea: { n: "দুধ চা (চিনিসহ)", u: "কাপ", k: 80, al: "dairy", g: "drink", tg: ["caffeine", "sugar"] },
   milk: { n: "গরুর দুধ", u: "গ্লাস", k: 150, al: "dairy", g: "drink", tg: ["gut", "medgap"] },
@@ -254,7 +266,11 @@ export const CATALOG_FOODS = {
   turmericTea: { n: "হলুদ চা", u: "কাপ", k: 3, g: "drink" },
   herbTea: { n: "হার্ব টি/মশলা চা (চিনি ছাড়া)", u: "কাপ", k: 0, g: "drink" },
   matha: { n: "মাঠা (ঘোল)", u: "গ্লাস", k: 83, al: "dairy", g: "drink", tg: ["medgap"] },
-  labang: { n: "লাবাং (লাবান)", u: "গ্লাস", k: 116, al: "dairy", g: "drink", tg: ["medgap"] },
+  labang: { n: "লাবান", u: "গ্লাস", k: 116, al: "dairy", g: "drink", tg: ["medgap"] },
+  gingerSharbat: { n: "আদার শরবত (চিনি ছাড়া)", u: "গ্লাস", k: 11, g: "drink" },
+  papayaJuice: { n: "পাকা পেঁপে জুস", u: "গ্লাস", k: 75, g: "drink", tg: ["sugar"] },
+  mangoJuice: { n: "আমের জুস", u: "গ্লাস", k: 131, g: "drink", tg: ["sugar"] },
+  smoothie: { n: "স্মুদি", u: "গ্লাস", k: 181, al: "dairy", g: "drink", tg: ["gut", "medgap", "sugar"] },
 };
 
 // foods: FOODS-এর মতো অবজেক্ট। ফল: [{ key, f }] — এলার্জি-মেলা বাদ নয় (allergy:true চিহ্ন, শুধু সতর্কতা), নাম-সার্চ ও গ্রুপ-ফিল্টার, সীমা limit।

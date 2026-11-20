@@ -33,7 +33,7 @@ const CORE_FOODS = {
   egg: { n: "সেদ্ধ ডিম", u: "টি", k: 75, al: "egg", swap: ["dal", 0.5], g: "protein" },
   fish: { n: "মাছ", u: "টুকরা", k: 130, al: "fish", swap: ["chicken", 1], g: "protein" },
   chicken: { n: "মুরগি", u: "টুকরা", k: 160, al: "chicken", swap: ["fish", 1], g: "protein" },
-  banana: { n: "কলা", u: "টি", k: 90, g: "fruit" },
+  banana: { n: "পাকা কলা", u: "টি", k: 90, g: "fruit" },
   muri: { n: "মুড়ি", u: "বাটি", k: 90, g: "snack" },
   tea: { n: "চা (চিনি ছাড়া)", u: "কাপ", k: 30, al: "dairy", swap: ["greentea", 1], g: "drink", tg: ["caffeine"] },
   greentea: { n: "গ্রিন টি", u: "কাপ", k: 0, g: "drink", tg: ["caffeine"] },
