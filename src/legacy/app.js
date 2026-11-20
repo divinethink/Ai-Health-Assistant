@@ -28,18 +28,8 @@ import { GoogleRelinkGate } from "../components/GoogleRelinkGate.js";
 import { AddMemberForm } from "../components/AddMemberForm.js";
 import { MemberList } from "../components/MemberList.js";
 import { NotificationsPanel } from "../components/NotificationsPanel.js";
-import { HealthRecordsPageSection } from "../health/records/HealthRecordsPageSection.js";
-import { DoctorInfoPage } from "../health/doctor-export/DoctorInfoPage.js";
-import { HealthTimeline } from "../health/timeline/HealthTimeline.js";
-import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js";
-import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
-import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
-import { MyCareSection } from "../health/mycare/MyCareSection.js";
 import { HomeTodayCare } from "../health/mycare/TodayCareCard.js";
-import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
-import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
-import { ReminderPage } from "../health/tracker/ReminderPage.js";
 import { QuickAddFab, QuickAddSheet } from "../health/quickadd/QuickAddSheet.js";
 import { quickTarget } from "../health/quickadd/quickAddTargets.js";
 import { setQuickIntent, setQuickOrigin } from "../shared/quickIntent.js";
@@ -47,12 +37,25 @@ import { setChatPrefill } from "../shared/chatPrefill.js";
 import { TrackerReminderRunner } from "../health/tracker/TrackerReminderRunner.js";
 import { listMembers } from "./familyIdentity.js";
 import { AppLockGate } from "../components/AppLockGate.js";
-import { PasscodeSettings } from "../components/PasscodeSettings.js";
-import { PageLayoutScreen } from "../components/PageLayoutScreen.js";
-import { AiModelSettings } from "../components/AiModelSettings.js";
 import { isAppCreatorUid } from "./appDesign.js";
 import { PAGE_IDS, PAGE_DEFS } from "../shared/pageLayout.js";
 import { clearPasscode } from "../shared/appLock.js";
+import { lazyScreen } from "../shared/lazyScreen.js";
+
+// পর্দা-স্তরের lazy load (শুধু ট্যাব/পেজ খুললে কোড নামে) — shared/lazyScreen.js
+const HealthRecordsPageSection = lazyScreen(() => import("../health/records/HealthRecordsPageSection.js"), "HealthRecordsPageSection");
+const DoctorInfoPage = lazyScreen(() => import("../health/doctor-export/DoctorInfoPage.js"), "DoctorInfoPage");
+const HealthTimeline = lazyScreen(() => import("../health/timeline/HealthTimeline.js"), "HealthTimeline");
+const VaccinationScheduler = lazyScreen(() => import("../health/calendar/VaccinationScheduler.js"), "VaccinationScheduler");
+const CareEscalationDirectory = lazyScreen(() => import("../health/emergency/CareEscalationDirectory.js"), "CareEscalationDirectory");
+const BackupRestoreSection = lazyScreen(() => import("../health/backup/BackupRestoreSection.js"), "BackupRestoreSection");
+const MyCareSection = lazyScreen(() => import("../health/mycare/MyCareSection.js"), "MyCareSection");
+const WellnessGuideSection = lazyScreen(() => import("../health/wellness-guide/WellnessGuideSection.js"), "WellnessGuideSection");
+const AIChatSection = lazyScreen(() => import("../health/ai-chat/AIChatSection.js"), "AIChatSection");
+const ReminderPage = lazyScreen(() => import("../health/tracker/ReminderPage.js"), "ReminderPage");
+const PageLayoutScreen = lazyScreen(() => import("../components/PageLayoutScreen.js"), "PageLayoutScreen");
+const AiModelSettings = lazyScreen(() => import("../components/AiModelSettings.js"), "AiModelSettings");
+const PasscodeSettings = lazyScreen(() => import("../components/PasscodeSettings.js"), "PasscodeSettings");
 
 const { useState, useEffect, useCallback } = React;
 
