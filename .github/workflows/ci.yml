@@ -30,7 +30,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       # pure-logic test (হিসাব/পার্সিং/নিয়ম) — package.json বদলানো ছাড়াই
-      - run: node --test tests/tracker/*.test.mjs tests/shared/*.test.mjs tests/doctor/*.test.mjs tests/mycare/*.test.mjs
+      - run: node --test tests/tracker/*.test.mjs tests/shared/*.test.mjs tests/doctor/*.test.mjs tests/mycare/*.test.mjs tests/commonCare/*.test.mjs tests/medicineVerify/*.test.mjs tests/records/*.test.mjs
 
   # Firestore Rules emulator test। আলাদা job — ব্যর্থ হলে build/lint ফল ঢাকা পড়ে না।
   rules:
