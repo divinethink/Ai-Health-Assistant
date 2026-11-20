@@ -42,7 +42,7 @@ import {
   GOAL_LABELS, ACTIVITY_LABELS, ageYears, bmiOf, computeGoal, safetyGate,
   sleepTargetHours, detectFlagsFromConditions, effectivePregnant, MAX_FAST_DAYS, activeFastDays, fastModeGate, isFastDate, sanitizeFastDays, checkFastDaysInput, checkWaterTargetInput, waterTargetFor } from "./trackerCalc.js";
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 const CARD = CARD_STYLE;
 const INPUT = { width: "100%", boxSizing: "border-box", padding: "12px", border: "1.5px solid " + T.inputBorder, borderRadius: "12px", fontSize: "14px" };
@@ -694,10 +694,12 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
   const [tab, setTab] = useState(() => { if (isToday) return "today"; return takeQuickIntent(["trend"]) === "trend" ? "trend" : "goal"; });
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const reqRef = useRef(0); // সদস্য বদলালে আগের সদস্যের দেরিতে-আসা ফল যেন নতুনের উপর না বসে
   const topPx = (topOffsetPx == null ? 44 : topOffsetPx) + "px";
 
   const load = useCallback(async () => {
     if (!selectedMemberId) return;
+    const reqId = ++reqRef.current;
     setErr(null);
     try {
       const [recs, goal, daily, recent] = await Promise.all([
@@ -706,6 +708,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
         getDaily(familyId, selectedMemberId, todayISO()),
         getWeekDaily(familyId, selectedMemberId, last30DatesISO()),
       ]);
+      if (reqId !== reqRef.current) return; // পুরনো অনুরোধ — বাদ
       const weekDates = weekDatesISO();
       const weekMin = recent.filter((x) => weekDates.includes(x.date)).reduce((a, x) => a + (x.exerciseMin || 0), 0);
       const allergyTags = allergyTagsOf(recs.filter((r) => r.resourceType === "allergy").map((r) => r.substance));
@@ -726,6 +729,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       const weightKg = (daily && daily.weightKg) || num(w);
       setData({ allergies, conds, condKeys: conditionKeysOf(recs), weekMin, recent, activeMeds: activeMedNames(recs), gutEntries: gutEntries(recs), fastDays: activeFastDays(goal, { age, flags }), allergyTags, member, goal, daily, age, flags, detected, heightCm: num(h), weightKg, latestWeight: num(w), gate: safetyGate({ age, flags }) });
     } catch (e) {
+      if (reqId !== reqRef.current) return;
       setData(null);
       setErr(e.code === "permission-denied" ? "এই সদস্যের ট্র্যাকার দেখার অনুমতি আপনার নেই।" : (e.message || String(e)));
     }

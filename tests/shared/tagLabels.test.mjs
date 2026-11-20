@@ -18,8 +18,8 @@ test("DB-র লিস্টের সব ট্যাগের লেবেল 
   const tags = ["anemia", "common cold", "constipation", "dengue", "diabetes", "diarrhea", "egg", "fatty liver", "fever", "gastritis", "gluten", "gout", "heart disease", "high cholesterol", "hypertension", "ibs", "jaundice", "kidney disease", "kidney stone", "migraine", "milk", "obese", "obesity", "osteoporosis", "overweight", "pcos", "peanut", "piles", "pregnancy", "shellfish", "thyroid", "typhoid", "underweight", "urinary tract infection"];
   tags.forEach((t) => assert.notEqual(tagLabel(t).text, t.trim(), t));
 });
-test("sourceLabels: ibs + কোড-নিয়মের শিরোনাম একই লেবেল → ডুপ্লিকেট নয়", () => {
-  assert.deepEqual(sourceLabels(["পেটের সমস্যা (IBS/গ্যাস্ট্রিক ইত্যাদি)", "overweight", "ibs"]).map((x) => x.text), ["পেটের সমস্যা (IBS)", "ওজন বেশি"]);
+test("sourceLabels: কোড-নিয়মের শিরোনাম সাধারণ নামেই দেখায় (কোষ্ঠকাঠিন্যে IBS লেখা আসে না)", () => {
+  assert.deepEqual(sourceLabels(["পেটের সমস্যা", "overweight", "constipation"]).map((x) => x.text), ["পেটের সমস্যা", "ওজন বেশি", "কোষ্ঠকাঠিন্য"]);
 });
 test("sourceLabels: একটাই অনন্য উৎস হলে কিছু দেখায় না", () => {
   assert.deepEqual(sourceLabels(["ibs", "IBS"]), []);

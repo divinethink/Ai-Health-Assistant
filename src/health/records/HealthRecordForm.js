@@ -15,6 +15,7 @@ import { OBS_PRESETS } from "../quickadd/quickAddTargets.js";
 import { fetchTestNameDictionary } from "../reports/testDictionaryData.js";
 import { findDictEntry, describeRangeBn, rangesOf, parseLabNumber } from "../reports/labAlerts.js";
 import { fetchMemberSex } from "./memberSex.js";
+import { suggestConditionNames } from "./conditionNames.js";
 import { listDocuments } from "../documents/documentsData.js";
 const { useState, useCallback, useEffect, useMemo, useRef } = React;
 
@@ -179,6 +180,8 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
   }, [familyId, targetMemberId, resourceType]);
   const candidates = useMemo(() => buildCandidates(directory, pastRecords), [directory, pastRecords]);
   const suggestions = useMemo(() => suggestDoctors(candidates, { query: phys.name, category: phys.specialtyCategory }), [candidates, phys.name, phys.specialtyCategory]);
+  // অসুখের নাম লেখার সময় সাজেশন-চিপ (সাধারণ তালিকা + এই সদস্যের আগের নাম)
+  const nameSuggestions = useMemo(() => (resourceType === "condition" ? suggestConditionNames(name, pastRecords.filter((r) => r.resourceType === "condition" && r.name).map((r) => r.name)) : []), [resourceType, name, pastRecords]);
   const canKeep = !!phys.name.trim() && !phys.doctorId && !directory.some((d) => isDuplicate(d, { name: phys.name, phone: phys.phone }));
 
   // typeFields = সবসময় দৃশ্যমান (ধরন + নাম/প্রয়োজনীয়); moreFields = "আরও যোগ করুন"-এর ভেতরে
@@ -188,6 +191,13 @@ export function HealthRecordForm({ familyId, targetMemberId, callerMemberId, onA
     const row = (cols) => ({ display: "grid", gridTemplateColumns: cols, gap: "8px" });
     const card = { border: "1px solid #D3E0D9", borderRadius: "12px", background: "#F6FAF7", padding: "0 10px 10px", minWidth: 0 };
     typeFields.push(TextField("অসুখের নাম", name, setName, "যেমন: জ্বর"));
+    if (nameSuggestions.length) {
+      typeFields.push(React.createElement("div", { key: "name-sugg", role: "listbox", "aria-label": "অসুখের নামের সাজেশন", style: { display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" } },
+        nameSuggestions.map((n) => React.createElement("button", {
+          key: n, type: "button", role: "option", onClick: () => setName(n),
+          style: { minHeight: "40px", padding: "8px 14px", border: "1.5px solid #C3D2CA", borderRadius: "999px", background: "#F6FAF7", color: "#0E4B43", fontSize: "14px", fontWeight: 600, cursor: "pointer" },
+        }, n))));
+    }
     moreFields.push(DateField(t("f.onset"), date, setDate));
     moreFields.push(React.createElement("div", { style: { ...row("minmax(0, 1fr) minmax(0, 1fr)"), marginTop: "4px" } },
       React.createElement("div", { style: card }, SelectField(t("f.category"), category, setCategory, [["A", "A"], ["B", "B"], ["C", "C"]])),

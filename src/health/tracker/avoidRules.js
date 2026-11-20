@@ -58,7 +58,7 @@ export const RULES = [
   { id: "young-food", domain: "food", title: "৫ বছরের কম বয়স", when: { ageMax: 4.999 }, src: [SRC.nhs],
     items: ["গোটা বাদাম, শক্ত/গোল খাবার গলায় আটকাতে পারে — গুঁড়া বা ছোট করে দিন", "চিনিযুক্ত পানীয় ও চা-কফি এড়ান"] },
 
-  { id: "gut-food", domain: "food", title: "পেটের সমস্যা (IBS/গ্যাস্ট্রিক ইত্যাদি)", when: { cond: "gut" }, src: [SRC.nhs],
+  { id: "gut-food", domain: "food", title: "পেটের সমস্যা", when: { cond: "gut" }, src: [SRC.nhs],
     items: ["ভাজাপোড়া, বেশি তেল-ঝাল-মসলা ও ফাস্টফুড সীমিত রাখুন", "চা-কফি, কার্বনেটেড/চিনিযুক্ত পানীয় সীমিত রাখুন", "যে খাবারে আপনার উপসর্গ বাড়ে তা লিখে রাখুন ও এড়ান; ডাক্তার/ডায়েটিশিয়ানের সাথে আলোচনা করুন"] },
   { id: "child-food", domain: "food", title: "১৩ বছরের কম বয়স", when: { ageMax: 12.999 }, src: [SRC.nhs, SRC.who],
     items: ["চিনিযুক্ত পানীয়, এনার্জি ড্রিংক ও চা-কফি এড়ান", "প্যাকেটজাত স্ন্যাকস ও মিষ্টি সীমিত রাখুন"] },
@@ -71,7 +71,7 @@ export const RULES = [
     items: ["তীব্র ব্যায়ামের আগে ডাক্তারের অনুমতি নিন", "বুকে চাপ/ব্যথা বা শ্বাসকষ্টে সাথে সাথে থামুন"] },
   { id: "asthma-ex", domain: "exercise", title: "হাঁপানি", when: { cond: "asthma" }, src: [SRC.who],
     items: ["ধুলো, ধোঁয়া বা খুব ঠান্ডা বাতাসে তীব্র ব্যায়াম এড়ান", "শ্বাসকষ্ট শুরু হলে থামুন"] },
-  { id: "gut-ex", domain: "exercise", title: "পেটের সমস্যা (IBS/গ্যাস্ট্রিক ইত্যাদি)", when: { cond: "gut" }, src: [SRC.nhs],
+  { id: "gut-ex", domain: "exercise", title: "পেটের সমস্যা", when: { cond: "gut" }, src: [SRC.nhs],
     items: ["খাওয়ার ঠিক পরে তীব্র ব্যায়াম এড়ান", "হাঁটা/স্ট্রেচিংয়ের মতো হালকা-মাঝারি ব্যায়াম বেছে নিন; পেটে চাপ পড়া ব্যায়ামে অস্বস্তি হলে থামুন"] },
   { id: "back-ex", domain: "exercise", title: "কোমর/পিঠ/ডিস্কের সমস্যা", when: { cond: "back" }, src: [SRC.nhs],
     items: ["ব্যথা বাড়ালে সাথে সাথে থামুন; ভারী ওজন তোলা ও সামনে ঝুঁকে জোর দেওয়া এড়ান", "কোন ব্যায়াম নিরাপদ তা ডাক্তার/ফিজিওথেরাপিস্টের সাথে ঠিক করুন"] },
@@ -115,7 +115,7 @@ export function avoidFor(domain, { age = null, flags = {}, condKeys = [] } = {})
 // ctx: { age, flags, condKeys }। কিছু ব্লক করে না — শুধু রঙ/কারণ।
 export function tagAvoidReason(tag, ctx = {}) {
   const { age = null, flags = {}, condKeys = [] } = ctx;
-  if (tag === "gut" && condKeys.includes("gut")) return "পেটের সমস্যায় (IBS/গ্যাস্ট্রিক) এড়িয়ে চলুন";
+  if (tag === "gut" && condKeys.includes("gut")) return "পেটের সমস্যায় এড়িয়ে চলুন";
   if (tag === "sugar" && flags.diabetes) return "ডায়াবেটিসে চিনি-জাতীয় খাবার এড়িয়ে চলুন";
   if (tag === "choke" && typeof age === "number" && age <= 4) return "৫ বছরের কম বয়সে গলায় আটকাতে পারে";
   if (tag === "caffeine" && typeof age === "number" && age <= 12) return "শিশুদের জন্য ক্যাফেইন এড়িয়ে চলুন";

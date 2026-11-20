@@ -8,7 +8,7 @@ import { EXERCISE_TYPES } from "./planPrefs.js";
 // অবস্থার আইডি → বাংলা লেবেল (condKeys: avoidRules.conditionKeysOf; kidney/pregnant: flags; senior: বয়স ৬৫+)
 export const COND_LABEL = {
   heart: "হৃদরোগ", hypertension: "উচ্চ রক্তচাপ", asthma: "হাঁপানি", kidney: "কিডনি রোগ", pregnant: "গর্ভাবস্থা",
-  gut: "পেটের সমস্যা (IBS/গ্যাস্ট্রিক)", back: "কোমর/পিঠ/ডিস্কের সমস্যা", joint: "হাঁটু/গিঁটের সমস্যা (আর্থ্রাইটিস)",
+  gut: "পেটের সমস্যা", back: "কোমর/পিঠ/ডিস্কের সমস্যা", joint: "হাঁটু/গিঁটের সমস্যা (আর্থ্রাইটিস)",
   hernia: "হার্নিয়া", senior: "৬৫+ বয়স",
   incont: "প্রস্রাব ধরে রাখতে সমস্যা", stone: "কিডনিতে পাথর", prostate: "প্রোস্টেটের সমস্যা",
 };

@@ -50,7 +50,8 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact, middl
   const targetMemberId = selectedMemberId;
 
   useEffect(() => {
-    if (!targetMemberId) return;
+    if (!targetMemberId) return undefined;
+    let alive = true; // সদস্য বদলালে আগের সদস্যের দেরিতে-আসা ফল বাদ
     setResult(null);
     Promise.all([
       listHealthRecords(familyId, targetMemberId), listDietGuidanceRules(),
@@ -58,6 +59,7 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact, middl
       getWeekDaily(familyId, targetMemberId, recentDates()).catch(() => []), // সাম্প্রতিক খাবার (গত ১৪ দিন); ব্যর্থ হলে শুধু বাকি অংশ
     ])
       .then(([records, allRules, members, goal, dailyDocs]) => {
+        if (!alive) return;
         const member = (members || []).find((m) => m.id === targetMemberId) || null;
         const relevantConditions = records
           .filter((r) => r.resourceType === "condition" && (r.status === "active" || r.status === "chronic"))
@@ -76,7 +78,8 @@ export function DietGuidanceSection({ familyId, selectedMemberId, compact, middl
         } catch (e) { recent = undefined; }
         setResult({ statusCtx: { allergyTags: allergyTagsOf(relevantAllergies), ctx: { age, flags, condKeys: conditionKeysOf(records), activeMeds } }, ...matchFoodGuidance(allRules, [...relevantConditions, ...relevantAllergies, ...(bmiTag ? [bmiTag] : [])], { records, age, goal }), recent });
       })
-      .catch((e) => setLoadErr(e.message || String(e)));
+      .catch((e) => { if (alive) setLoadErr(e.message || String(e)); });
+    return () => { alive = false; };
   }, [familyId, targetMemberId]);
 
   if (loadErr) return ErrorBox(loadErr);
