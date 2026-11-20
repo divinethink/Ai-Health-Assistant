@@ -13,7 +13,12 @@ const COND_PATTERNS = {
   gut: /\bibs\b|irritable|আইবিএস|gastr|gerd|reflux|ulcer|colitis|bowel|constipat|diarrh|dyspep|গ্যাস|অম্বল|বুকজ্বালা|আলসার|কোষ্ঠ|ডায়রিয়া|পাতলা পায়খানা|পেটের/i,
   // ব্যায়াম-গাইডের জন্য (শুধু ব্যায়াম-সতর্কতা): কোমর/পিঠ, হাঁটু/গিঁট, হার্নিয়া
   back: /back pain|backache|slip(ped)? disc|\bdisc\b|spondyl|sciatica|lumbar|কোমর|পিঠ(ে)? ?ব্যথা|ডিস্ক|স্পন্ডিলাইসিস|সায়াটিকা/i,
-  joint: /knee|arthrit|osteoarth|joint pain|হাঁটু|আর্থ্রাইটিস|অস্টিওআর্থ|গিঁট|গাঁটে|জয়েন্ট/i,
+  joint: /knee|arthrit|osteoarth|rheumat|gout|joint pain|হাঁটু|আর্থ্রাইটিস|অস্টিওআর্থ|রিউমাটয়েড|গাউট|বাত|গিঁট|গাঁটে|জয়েন্ট/i,
+  // মূত্রতন্ত্র: UTI, প্রোস্টেট, প্রস্রাব ধরে রাখতে না পারা, কিডনির সংক্রমণ (খাবারে ক্যাফেইন/অ্যালকোহল সতর্কতা)
+  urinary: /\buti\b|urinary tract|urine infection|cystitis|prostat|\bbph\b|pyelo|incontinen|overactive bladder|মূত্রনালি|মূত্রনালী|প্রস্রাব|প্রোস্টেট|কিডনি(র)?\s*সংক্রমণ/i,
+  incont: /incontinen|overactive bladder|প্রস্রাব\s*(ধরে\s*রাখ|ঝরা|চুঁইয়ে)|অনিয়ন্ত্রিত\s*প্রস্রাব|প্রস্রাবে\s*অসংযম/i,
+  prostate: /prostat|\bbph\b|প্রোস্টেট/i,
+  stone: /(kidney|renal|urinary|ureter|কিডনি|কিডনী|মূত্র).{0,12}(stone|calcul|পাথর)|urolith|nephrolith/i,
   hernia: /hernia|হার্নিয়া/i,
 };
 
@@ -42,6 +47,10 @@ export const RULES = [
     items: ["ভাজাপোড়া, ডালডা/বনস্পতি ও বেশি ঘি-তেল সীমিত রাখুন", "লাল মাংসের চর্বি ও প্রক্রিয়াজাত মাংস সীমিত রাখুন"] },
   { id: "kidney-food", domain: "food", title: "কিডনি রোগ", when: { flag: "kidney" }, src: [SRC.kdigo],
     items: ["বেশি লবণ ও প্রক্রিয়াজাত খাবার সীমিত রাখুন", "প্রোটিন, কলা/আলুর মতো পটাশিয়ামযুক্ত খাবার ও পানির পরিমাণ — ডাক্তারের নির্দেশ ছাড়া নিজে বদলাবেন না"] },
+  { id: "urinary-food", domain: "food", title: "মূত্রনালি/প্রোস্টেটের সমস্যা", when: { cond: "urinary" }, src: [SRC.nhs],
+    items: ["চা-কফি, কার্বনেটেড পানীয়, অ্যালকোহল ও বেশি ঝাল খাবার সীমিত রাখুন — জ্বালা ও ঘন ঘন প্রস্রাব বাড়াতে পারে", "ঘুমের আগে বেশি তরল এড়ান; দিনে পানি ডাক্তারের সীমা মেনে পর্যাপ্ত খান"] },
+  { id: "stone-food", domain: "food", title: "কিডনিতে পাথর", when: { cond: "stone" }, src: [SRC.nhs],
+    items: ["বেশি লবণ ও প্রক্রিয়াজাত খাবার সীমিত রাখুন", "লাল মাংস ও প্রাণিজ প্রোটিন বেশি পরিমাণে এড়ান", "ডাক্তার না বললে ক্যালসিয়াম সাপ্লিমেন্ট নেবেন না; খাবারের ক্যালসিয়াম বাদ দেবেন না"] },
   { id: "pregnant-food", domain: "food", title: "গর্ভাবস্থা", when: { flag: "pregnant" }, src: [SRC.who, SRC.nhs],
     items: ["কাঁচা/আধা-সেদ্ধ মাংস, মাছ ও ডিম এড়ান", "না-ফোটানো (অপাস্তুরিত) দুধ ও তার তৈরি খাবার এড়ান", "চা-কফির ক্যাফেইন সীমিত রাখুন"] },
   { id: "infant-food", domain: "food", title: "১ বছরের কম বয়স", when: { ageMax: 0.999 }, src: [SRC.nhs, SRC.who],
@@ -70,6 +79,12 @@ export const RULES = [
     items: ["লাফ-ঝাঁপ ও গভীর বসার ব্যায়াম এড়ান; হাঁটা/সাইকেল/সাঁতারের মতো নরম ব্যায়াম বেছে নিন", "গিঁটে ব্যথা বা ফোলা বাড়লে থামুন"] },
   { id: "hernia-ex", domain: "exercise", title: "হার্নিয়া", when: { cond: "hernia" }, src: [SRC.nhs],
     items: ["পেটে চাপ পড়া ব্যায়াম (সিট-আপ, ক্রাঞ্চ, লেগ রেইজ) ও ভারী ওজন তোলা এড়ান", "ডাক্তারের অনুমতি ছাড়া কোর-ব্যায়াম নয়"] },
+  { id: "incont-ex", domain: "exercise", title: "প্রস্রাব ধরে রাখতে সমস্যা", when: { cond: "incont" }, src: [SRC.nhs],
+    items: ["লাফ-ঝাঁপ ও আঘাতপ্রবণ ব্যায়ামে প্রস্রাব চুঁইয়ে পড়তে পারে — হাঁটা, সাইকেল বা সাঁতারের মতো নরম ব্যায়াম বেছে নিন", "ভারী ওজন তোলা ও দম আটকে জোর দেওয়া এড়ান; তলপেটের নিচের পেশির ব্যায়াম ডাক্তার/ফিজিওথেরাপিস্টের শেখানো মতো করুন"] },
+  { id: "stone-ex", domain: "exercise", title: "কিডনিতে পাথর", when: { cond: "stone" }, src: [SRC.nhs],
+    items: ["ঘাম বেশি হলে পানির ঘাটতি এড়ান — গরমে তীব্র ব্যায়াম নয়", "ব্যায়ামের সময় কোমরে তীব্র ব্যথা হলে থামুন ও ডাক্তারকে জানান"] },
+  { id: "prostate-ex", domain: "exercise", title: "প্রোস্টেটের সমস্যা", when: { cond: "prostate" }, src: [SRC.nhs],
+    items: ["দীর্ঘক্ষণ সাইকেল চালানো বা শক্ত আসনে বসা ব্যথা বাড়াতে পারে — নরম সিট নিন ও মাঝে বিরতি দিন"] },
   { id: "kidney-ex", domain: "exercise", title: "কিডনি রোগ", when: { flag: "kidney" }, src: [SRC.kdigo],
     items: ["তীব্র বা দীর্ঘ ব্যায়ামের আগে ডাক্তারের পরামর্শ নিন"] },
   { id: "pregnant-ex", domain: "exercise", title: "গর্ভাবস্থা", when: { flag: "pregnant" }, src: [SRC.acog, SRC.who],

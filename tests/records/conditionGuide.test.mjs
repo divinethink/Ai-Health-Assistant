@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { GUIDES, guideForCondition } from "../../src/health/records/conditionGuideData.js";
 
-test("১৮টা গাইড, প্রতিটায় সব অংশ আছে", () => {
-  assert.equal(GUIDES.length, 18);
+test("৩৪টা গাইড, প্রতিটায় সব অংশ আছে", () => {
+  assert.equal(GUIDES.length, 34);
   for (const g of GUIDES) {
     assert.ok(g.title && g.what && g.src.length, g.id);
     for (const k of ["causes", "habits", "food", "caution"]) assert.ok(g[k].length >= 1, g.id + "." + k);

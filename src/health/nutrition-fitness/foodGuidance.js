@@ -29,6 +29,8 @@ const COVERS = {
   "kidney-food": ["kidney disease"],
   "pregnant-food": ["pregnancy"],
   "gut-food": ["ibs", "gastritis", "constipation"],
+  "urinary-food": ["urinary tract infection", "bph", "prostatitis", "urinary incontinence", "pyelonephritis"],
+  "stone-food": ["kidney stone"],
 };
 
 export function mergeFoodGuidance(base, groups) {

@@ -226,7 +226,7 @@ export function detectFlagsFromConditions(records) {
     if (r.resourceType !== "condition" || r.status === "resolved") return;
     const n = (r.name || "").toLowerCase();
     if (/diabet|ডায়াবেটিস|বহুমূত্র|sugar/.test(n)) flags.diabetes = true;
-    if (/kidney|renal|ckd|কিডনি|বৃক্ক/.test(n)) flags.kidney = true;
+    if (/kidney|renal|ckd|nephr|glomerul|pyelo|hydronephro|\baki\b|কিডনি|বৃক্ক|নেফ্রাইটিস|নেফ্রো|গ্লোমেরুলো|পাইলোনেফ্র/.test(n)) flags.kidney = true;
     if (/dialysis|ডায়ালাইসিস|ডায়ালাইসিস|heart failure|হার্ট ফেইলিউর|হার্ট ফেলিউর|হৃদযন্ত্র বিকল|cirrhosis|সিরোসিস|edema|oedema|ascites|শোথ|ইডিমা|পানি জমা/.test(n)) flags.fluid = true;
   });
   return flags;
