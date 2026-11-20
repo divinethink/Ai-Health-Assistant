@@ -743,7 +743,7 @@ export function TrackerPageSection({ familyId, callerMemberId, selectedMemberId,
       err && ErrorBox(err),
       (!selectedMemberId || (!data && !err)) && Skeleton(3, 88),
       data && isToday && React.createElement(TodayTab, { key: selectedMemberId, info: data, familyId, callerMemberId, memberId: selectedMemberId, onSaved: load, onOpenTrend,
-        homeExtra: React.createElement(React.Fragment, null, React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId }), homeCare || null) }),
+        homeExtra: React.createElement(React.Fragment, null, React.createElement(TodaySummary, { key: "meds-" + selectedMemberId, onlyMeds: true, familyId, callerMemberId, selectedMemberId })), careSlot: homeCare || null }),
       // key: সদস্য বদলালে ফর্মের state নতুন করে শুরু হয়
       data && !isToday && tab === "goal" && React.createElement(GoalTab, { key: selectedMemberId, ...tabProps }),
       data && !isToday && tab === "meal" && React.createElement(MealPlanTab, { key: selectedMemberId, ...tabProps }),

@@ -63,6 +63,12 @@ export function toggleTick(dayTicks, key, planned) {
   return complete ? [...next, ALL] : next;
 }
 
+// এক ট্যাপে "আজকের যত্ন সম্পন্ন": দেখানো সব ধাপ + "all"; ফাঁকা planned হলে খালি
+export function dayDone(planned) {
+  const ks = [...new Set((Array.isArray(planned) ? planned : []).filter(isTickKey))].slice(0, DAY_TICKS_MAX);
+  return ks.length ? [...ks, ALL] : [];
+}
+
 export const tickCount = (dayTicks) => sanitizeDay(dayTicks).filter((k) => k !== ALL).length;
 export const isDayComplete = (dayTicks) => sanitizeDay(dayTicks).includes(ALL);
 

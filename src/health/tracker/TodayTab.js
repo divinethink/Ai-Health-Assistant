@@ -86,7 +86,7 @@ function AlertStrip({ allergies, conds, onDiet }) { // onDiet: রোগ থা�
       style: { marginLeft: "auto", minHeight: "36px", padding: "0 6px", border: "none", background: "none", color: T.green, fontSize: "14px", fontWeight: 600, fontFamily: "inherit", cursor: "pointer" } }, "ট্রিগার খাবার দেখুন ›"));
 }
 
-export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra, onOpenTrend }) {
+export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: onSavedProp, homeExtra, careSlot, onOpenTrend }) {
   const { daily, goal, age, flags, gate, recent } = info;
   const fastDays = info.fastDays || []; // সেফটি-গেট প্রয়োগের পর (activeFastDays)
   // নির্বাচিত দিন (ডিফল্ট আজ)। পরিসীমা গত ৩০ দিন = `recent`-এ লোড-করা ডক; আজকের ডক `daily`।
@@ -364,6 +364,7 @@ export function TodayTab({ info, familyId, callerMemberId, memberId, onSaved: on
       React.createElement("button", { type: "button", onClick: () => setGutOpen(true), "aria-label": "পেট ডায়েরি খুলুন" + (entriesOn(info.gutEntries, today).length ? " (আজ লগ আছে)" : ""),
         style: { ...HOME_CARD, flex: waterTarget ? 1 : "1 1 auto", minWidth: 0, marginBottom: 0, padding: "4px 3px", minHeight: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer", fontFamily: "inherit", fontSize: "13px", fontWeight: 800, color: T.green, textAlign: "center", lineHeight: 1.2,
           background: entriesOn(info.gutEntries, today).length ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)" } }, [Icon("notebook", { key: "i", size: 22 }), "পেট ডায়েরি"])),
+    careSlot || null, // আজকের যত্ন (এক-ট্যাপ) — পানি ও পেট ডায়েরির সারির নিচে
     // ওজনের দিন (আগের সন্ধ্যা ৭টা থেকে) ইনপুট বাকি থাকলে হোমে স্মরণ-লাইন — ট্যাপে ওজন-শিট (আগের কার্ডের মতোই)
     calc && weighCard.pending && React.createElement("button", { type: "button", onClick: openWeigh, className: weighCard.className, "aria-label": "ওজন যোগ/বদলান — " + weighCard.label,
       style: { ...HOME_CARD, width: "100%", marginBottom: "8px", minHeight: "44px", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: "pointer", fontFamily: "inherit", fontSize: "13.5px", fontWeight: 700, color: weighCard.color } }, "⚖️ " + weighCard.label),

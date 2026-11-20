@@ -9,7 +9,7 @@ import { bnNum } from "../../shared/dates.js";
 const { useState, useEffect } = React;
 const h = React.createElement;
 const DAYS = ["শনি", "রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র"];
-const TASKS = [[TASK_WATER, "water", "#3B82B6", "পানি পান"], [TASK_GUT, "gut", "#7A5BB0", "পেট ডায়েরি"]];
+const TASKS = [["all", "sparkle", "#1F7A5C", "আজকের যত্ন সম্পূর্ণ"], [TASK_WATER, "water", "#3B82B6", "পানি পান"], [TASK_GUT, "gut", "#7A5BB0", "পেট ডায়েরি"]];
 
 export function CareTaskCard({ familyId, memberId }) {
   const [days, setDays] = useState(null);
