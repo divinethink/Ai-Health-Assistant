@@ -34,6 +34,7 @@ import { VaccinationScheduler } from "../health/calendar/VaccinationScheduler.js
 import { CareEscalationDirectory } from "../health/emergency/CareEscalationDirectory.js";
 import { BackupRestoreSection } from "../health/backup/BackupRestoreSection.js";
 import { MyCareSection } from "../health/mycare/MyCareSection.js";
+import { HomeTodayCare } from "../health/mycare/TodayCareCard.js";
 import { WellnessGuideSection } from "../health/wellness-guide/WellnessGuideSection.js";
 import { AIChatSection } from "../health/ai-chat/AIChatSection.js";
 import { TrackerPageSection } from "../health/tracker/TrackerPageSection.js";
@@ -598,7 +599,7 @@ function Dashboard({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin }) {
 
   let tabContent;
   if (activeTab === "home") {
-    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); } });
+    tabContent = React.createElement(TrackerPageSection, { key: "home-" + homeKey, mode: "today", familyId, callerMemberId: memberId, selectedMemberId, members, topOffsetPx, onOpenTrend: () => { setQuickIntent("trend"); setActiveTab("tracker"); }, homeCare: React.createElement(HomeTodayCare, { key: "care-" + selectedMemberId, familyId, callerMemberId: memberId, selectedMemberId, members, onOpen: () => setActiveTab("mycare") }) });
   } else if (activeTab === "health") {
     tabContent = React.createElement(HealthRecordsPageSection, { key: "health-" + homeKey, mode: "health", familyId, callerMemberId: memberId, isAdmin, selectedMemberId, topOffsetPx, onExit: goHome });
   } else if (activeTab === "aichat") {
