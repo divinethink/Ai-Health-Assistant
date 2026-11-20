@@ -28,6 +28,40 @@ export function TextField(label, value, onChange, placeholder) {
   );
 }
 
+// চ্যাট-ধাঁচের ইনপুট (owner-request): ছোট বক্স দিয়ে শুরু, লিখতে লিখতে নিজে বড় হয় (সর্বোচ্চ ~৬ লাইন, তারপর স্ক্রল)।
+// Hooks লাগে বলে আলাদা component; ChatInput(...) শুধু TextField-এর মতো একই সিগনেচারে তাকে ডাকে।
+function AutoGrowTextArea({ value, onChange, placeholder, label }) {
+  const ref = React.useRef(null);
+  const [focus, setFocus] = React.useState(false);
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 168) + "px";
+  }, [value]);
+  return React.createElement("textarea", {
+    ref, rows: 1, value, placeholder, "aria-label": label,
+    onChange: (e) => onChange(e.target.value),
+    onFocus: () => setFocus(true), onBlur: () => setFocus(false),
+    style: {
+      width: "100%", boxSizing: "border-box", display: "block", resize: "none", overflowY: "auto",
+      minHeight: "56px", maxHeight: "168px", padding: "16px 18px", fontFamily: "inherit", fontSize: "16px", lineHeight: 1.55,
+      color: "#1F2D2A", background: focus ? "#FFFFFF" : "#FAFCFB",
+      border: "1.5px solid " + (focus ? "var(--hs-primary-2, #17705F)" : "#C9D8D1"), borderRadius: "20px", outline: "none",
+      boxShadow: focus ? "0 0 0 4px rgba(23,112,95,0.14), 0 6px 18px rgba(14,75,67,0.10)" : "0 1px 3px rgba(14,75,67,0.06)",
+      transition: "border-color .18s, box-shadow .18s, background .18s",
+    },
+  });
+}
+
+export function ChatInput(label, value, onChange, placeholder) {
+  return React.createElement(
+    "div", { style: { marginTop: "14px" } },
+    React.createElement("label", { style: { fontSize: "14px", fontWeight: 600, color: "#1F2D2A", display: "block", marginBottom: "8px" } }, label),
+    React.createElement(AutoGrowTextArea, { value, onChange, placeholder, label })
+  );
+}
+
 // disabled (ঐচ্ছিক ৪র্থ আর্গ): বাটন অচল ও ধূসর, কিন্তু লেখা বদলায় না (busy হলে "অপেক্ষা করুন...")
 export function PrimaryButton(label, onClick, busy, disabled) {
   const off = !!busy || !!disabled;

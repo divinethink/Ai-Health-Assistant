@@ -14,7 +14,7 @@
 // worker/src/index.js-এ SPECIALTY_NOTES["nutrition-fitness"] যোগ হয়েছে (§6.3
 // এভিডেন্স-হায়ারার্কি সংক্ষিপ্ত reminder হিসেবে)।
 
-import { TextField, PrimaryButton } from "../../shared/ui.js";
+import { ChatInput, PrimaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { assembleHealthContext } from "../../legacy/healthContextEngine.js";
 import { askAI } from "../../ai/aiClient.js";
@@ -27,12 +27,12 @@ const { useState, useEffect } = React;
 // (AIChatSection)-এর `selectedMemberId` প্রপ ব্যবহার।
 // focus: "nutrition" | "fitness" — পুষ্টি ও ব্যায়াম এখন আলাদা ট্যাব; AI-কে শুধু ওই বিষয়ে বলতে ইঙ্গিত যায়।
 const FOCUS_TEXT = {
-  nutrition: { title: "Nutrition / পুষ্টি", hint: "[বিষয়: শুধু খাদ্য ও পুষ্টি] ", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি", note: "সাধারণ খাদ্য-সংক্রান্ত পরামর্শ" },
-  fitness: { title: "Fitness / ব্যায়াম", hint: "[বিষয়: শুধু ব্যায়াম ও ফিটনেস] ", sample: "যেমন: ব্যায়ামের পরিকল্পনা, হাঁটার অভ্যাস", note: "সাধারণ ব্যায়াম-সংক্রান্ত পরামর্শ" },
+  nutrition: { title: "Nutrition / পুষ্টি", hint: "[বিষয়: শুধু খাদ্য ও পুষ্টি] ", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি" },
+  fitness: { title: "Fitness / ব্যায়াম", hint: "[বিষয়: শুধু ব্যায়াম ও ফিটনেস] ", sample: "যেমন: ব্যায়ামের পরিকল্পনা, হাঁটার অভ্যাস" },
 };
 
 export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
-  const ft = FOCUS_TEXT[focus] || { title: "Nutrition / Fitness", hint: "", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা", note: "সাধারণ খাদ্য/ব্যায়াম-সংক্রান্ত পরামর্শ" };
+  const ft = FOCUS_TEXT[focus] || { title: "Nutrition / Fitness", hint: "", sample: "যেমন: ওজন কমানোর জন্য ডায়েট, শিশুর পুষ্টি, ব্যায়ামের পরিকল্পনা" };
   const [members, setMembers] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
   const [targetMemberId, setTargetMemberId] = useState(null);
@@ -116,10 +116,7 @@ export function NutritionGuidance({ familyId, selectedMemberId, focus }) {
   return React.createElement(
     "div", { style: { marginTop: "20px", background: "#fff", padding: "16px", borderRadius: "10px", border: "1px solid #D3E0D9" } },
     React.createElement("h3", { style: { fontSize: "15px", color: "var(--hs-primary, #0E4B43)", margin: "0 0 8px" } }, ft.title),
-    React.createElement("div", { style: { fontSize: "14px", color: "#4B5C57", marginBottom: "6px" } },
-      ft.note + " — এটা লক্ষণ যাচাই বা জরুরি অবস্থার চেকলিস্ট নয়। গুরুতর বা জরুরি উপসর্গ থাকলে উপরের \"Symptom Check\" ব্যবহার করুন।"
-    ),
-    TextField("আপনার প্রশ্ন (" + ft.sample + ")", question, setQuestion, "এখানে লিখুন..."),
+    ChatInput("আপনার প্রশ্ন (" + ft.sample + ")", question, setQuestion, "এখানে লিখুন..."),
 
     // Cloud AI Hosting Disclosure (roadmap §13) — TriageForm.js-এর একই টেক্সট/প্যাটার্ন পুনর্ব্যবহার।
     React.createElement(

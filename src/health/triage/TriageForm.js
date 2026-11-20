@@ -15,7 +15,7 @@ import { renderRichText } from "../../shared/richText.js";
 // non-alarming "একটু অপেক্ষা করুন" note দেখানো হয়, raw error না।
 
 import { bnNum } from "../../shared/dates.js";
-import { ErrorBox, SelectField, TextField, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
+import { ErrorBox, SelectField, TextField, ChatInput, PrimaryButton, SecondaryButton } from "../../shared/ui.js";
 import { listMembers } from "../../legacy/familyIdentity.js";
 import { deriveAgeGroup, getChecklistForAgeGroup, isPediatricAgeGroup, runTriage, CHIEF_COMPLAINTS, CARDIAC_BYSTANDER_QUESTIONS, getAgeInYears } from "./triageEngine.js";
 import { TriageResultView } from "./TriageResultView.js";
@@ -498,7 +498,7 @@ export function TriageForm({ familyId, callerMemberId, selectedMemberId }) {
           SecondaryButton("নতুন Symptom Check শুরু করুন", handleArchiveAndStartNew)
         )
       ),
-      TextField("আরও জিজ্ঞাসা করুন (ঐচ্ছিক)", followUpText, setFollowUpText, "যেমন: এটার সাথে কি কিছু খাওয়া নিরাপদ?"),
+      ChatInput("আরও জিজ্ঞাসা করুন (ঐচ্ছিক)", followUpText, setFollowUpText, "যেমন: এটার সাথে কি কিছু খাওয়া নিরাপদ?"),
       PrimaryButton("পাঠান", handleSendFollowUp, followUpLoading),
       followUpRetryNote && React.createElement("div", { style: { fontSize: "14px", color: "#7A5B00", marginTop: "4px" } }, followUpRetryNote),
       followUpErr && React.createElement("div", { style: { fontSize: "14px", color: "#C0392B", marginTop: "6px" } }, "পাঠানো যায়নি: " + followUpErr)
