@@ -2,905 +2,696 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // owner-তালিকায় বর্তমান uid আছে কিনা(তালিকা সবসময় non-empty: googleUid বা sentinel)।
-    function isUnownedOrMineArray(uids) {
-      return uids.hasAny([request.auth.uid]);
+    // ============================================================
+    // GLOBAL HELPER FUNCTIONS
+    // ============================================================
+
+    function isAppCreator() {
+      return request.auth.uid == "bZrGqbY0dFVTkIXKvEAwfHbMhRk1";
     }
 
-    // --- Phase C prep: families/<familyId>/entries|weekly এর জন্য owner
-    // lookup (currentMemberOwner()-এর নতুন-subcollection সংস্করণ) ---
-    // ডকুমেন্ট আইডি কনভেনশন: "<memberId>_<date>" / "<memberId>_<yyyy-mm>"
-    // (Technical Design Document অনুযায়ী; colon-এর বদলে underscore, কারণ
-    // memberId নিজে hyphen ব্যবহার করে কিন্তু underscore নয় — তাই প্রথম
-    // "_"-এ split করলে memberId নিরাপদে আলাদা হয়ে যায়)। এই মুহূর্তে কোনো
-    // app code এই path পড়ে/লেখে না — শুধু future migration-এর জন্য rules
-    // আগে থেকে প্রস্তুত রাখা হচ্ছে।
-    //
-    // Phase-5 ধাপ ২-৩: member-এর একমাত্র owner = তার googleUid। ownerUids/ownerUid
-    // আর পড়া হয় না। member ডক না থাকলে, googleUid না থাকলে বা null হলে কখনো-না-মেলা
-    // sentinel রিটার্ন হয় — তাই শুধু admin(isAdminOfFamily OR-clause) লিখতে পারে;
-    // null/ফাঁকা array কখনো রিটার্ন হয় না(open-write হোল নয়)।
-    function currentMemberOwnerV2(familyId, docId) {
-      let memberId = docId.split('_')[0];
-      let memberPath = /databases/$(database)/documents/families/$(familyId)/members/$(memberId);
-      let m = exists(memberPath) ? get(memberPath).data : null;
-      return (m != null && ('googleUid' in m) && m.googleUid != null) ? [m.googleUid]
-        : ['__unclaimed_no_owner__'];
+    // ব্লগ (wellnessGuides) লেখা/এডিট/ডিলিট শুধু এই একজন ব্লগ-অ্যাডমিন।
+    // (পরিবার-অ্যাডমিন নয় — কারণ ব্লগ সব পরিবারের জন্য একটাই।)
+    function isBlogAdmin() {
+      return request.auth != null
+        && request.auth.uid == "bZrGqbY0dFVTkIXKvEAwfHbMhRk1";
     }
 
-    // --- Phase C: Admin-bypass (শুধু bulk migration-এর জন্য) ---
-    // request.auth.uid যদি families/<familyId>-এর adminUids array-তে থাকে,
-    // তাহলে সেই ব্যক্তি migration/Copy ধাপে ownerUid-নির্বিশেষে members/
-    // entries/weekly-তে লিখতে পারবে। এটি *শুধু* Admin-এর জন্য অতিরিক্ত
-    // permission — সাধারণ (non-Admin) ব্যবহারকারীর জন্য বিদ্যমান
-    // isUnownedOrMine()-ভিত্তিক per-owner write-lock সম্পূর্ণ অপরিবর্তিত
-    // থাকছে (নিচের rules-এ isUnownedOrMine(...) || isAdminOfFamily(...)
-    // — দুটোর যেকোনো একটা true হলেই যথেষ্ট)।
     function isAdminOfFamily(familyId) {
       let familyPath = /databases/$(database)/documents/families/$(familyId);
       return exists(familyPath)
         && get(familyPath).data.adminUids.hasAny([request.auth.uid]);
     }
 
-    // --- Access Approval Gate — Step 3: read enforcement (v2 only) ---
-    // Admin সবসময় approved (isAdminOfFamily)। Non-admin-এর জন্য
-    // families/{familyId}/accessRequests/{uid}.status == "approved" লাগবে —
-    // এটা grandfather migration script (migrateApprovedGrandfatherAccess())
-    // দিয়ে backfill করা হয় অথবা ভবিষ্যতে admin approve করলে তৈরি হয়।
-    // ইচ্ছাকৃতভাবে শুধু v2 (families/{familyId}/members|entries|weekly)
-    // subcollection-এ প্রয়োগ করা হচ্ছে — legacy top-level data_<code>
-    // collection এখনো touch করা হয়নি (আলাদা approval লাগবে)।
-    // --- §Google-Login Identity Migration(2_4 §৯, list-access) ---
-    // isApprovedMember()-এ নতুন googleUid-claimed সদস্যদের জন্য additive OR
-    // যোগ করার helper। Trust anchor member-doc-এর নিজস্ব googleUid field
-    // (isClaimedByGoogle, উপরে সংজ্ঞায়িত) — users/{uid} doc নিজে
-    // self-writable(forge-যোগ্য) বলে শুধু route-hint হিসেবে ব্যবহার হয়,
-    // চূড়ান্ত সত্যতা সবসময় member-doc থেকেই cross-verify হয়।
-    function isClaimedFamilyMember(familyId) {
-      let uPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(uPath)
-        && get(uPath).data.familyId == familyId
-        && isClaimedByGoogle(familyId, get(uPath).data.memberId);
+    // FIXED (Google Sign-in Amendment, Architecture Part A §3.0/§3.4.3) —
+    // পুরনো family-code-join-request approval (accessRequests) branch বাদ।
+    // এখন family-membership সরাসরি uidMemberIndex doc-এর existence দিয়েই
+    // নির্ধারিত হয় — যা প্রতিটা valid join-path-এ (প্রথম-admin creation,
+    // email-match auto-claim, invite-link self-join) claim-মুহূর্তেই লেখা হয়
+    // (নিচে members/{memberId} rule ও uidMemberIndex rule দ্রষ্টব্য)।
+    function isFamilyMember(familyId) {
+      let idxPath = /databases/$(database)/documents/families/$(familyId)/uidMemberIndex/$(request.auth.uid);
+      return isAdminOfFamily(familyId) || isAppCreator() || exists(idxPath);
     }
 
-    function isApprovedMember(familyId) {
-      // Phase-5: accessRequests-ভিত্তিক approval সরানো হয়েছে।
-      return isAdminOfFamily(familyId)
-        || isAppCreator()
-        || isClaimedFamilyMember(familyId);
-    }
-
-    // --- §Google-Login Identity Migration(2_4/2_4_1, dual-path, transitioning) ---
-    // সম্পূর্ণ additive — বিদ্যমান ownerUids/Member-Password-ভিত্তিক কোনো
-    // rule/function স্পর্শ করা হয়নি। শুধু নতুন googleUid-ভিত্তিক দাবির
-    // জন্য একটা helper: এই memberId-তে request.auth.uid ঠিক তার
-    // claimed googleUid হিসেবে match করে কিনা।
-    function isClaimedByGoogle(familyId, memberId) {
+    // FIXED (Google Sign-in Amendment) — আগে ownerUids array-based ছিল
+    // (multi-device claim/FIFO)। Google account নিজেই native multi-device
+    // সমর্থন করে বলে এখন সরাসরি সমতা-check যথেষ্ট (Architecture Part A
+    // §3.4.3 — "get()-based সরাসরি member.googleUid সমতা-verify pattern")।
+    function isOwnerOfMember(familyId, memberId) {
       let memberPath = /databases/$(database)/documents/families/$(familyId)/members/$(memberId);
       return exists(memberPath)
         && ('googleUid' in get(memberPath).data)
         && get(memberPath).data.googleUid == request.auth.uid;
     }
 
-    // --- App creator-only delete permission (স্থায়ী) ---
-    // এই ক্ষমতা কোনো family-র adminUids-এর সাথে কখনো coupled না — এটা
-    // family-membership থেকে সম্পূর্ণ স্বাধীন, app-wide, single-uid-ভিত্তিক
-    // permission। কোনো family admin (যত বড় family-র হোক) এই তিনটা
-    // metadata collection-এ কখনো delete করতে পারবে না — শুধু এই uid।
-    function isAppCreator() {
-      return request.auth.uid == "yiirNJKJHlM27guiiS10zsp2FYT2";
+    function callerMemberIdOf(familyId) {
+      let p = /databases/$(database)/documents/families/$(familyId)/uidMemberIndex/$(request.auth.uid);
+      return exists(p) ? get(p).data.memberId : null;
+    }
+
+    // পুরনো peer-to-peer approved accessGrants (structural Parent-Child<18
+    // সহ) — Google Sign-in Amendment-এর সম্পূর্ণ বাইরে, অপরিবর্তিত। এই
+    // amendment শুধু identity/login layer বদলেছে, §3.1/§3.1.1 permission/
+    // guardian model independent (Architecture Part A হেডার-নোট)।
+    function existsApprovedGrant(familyId, targetMemberId, callerMemberId) {
+      let grantPath = /databases/$(database)/documents/families/$(familyId)/accessGrants/$(targetMemberId + '_' + callerMemberId);
+      return exists(grantPath)
+        && get(grantPath).data.status == 'approved'
+        && get(grantPath).data.scope == 'read+write';
+    }
+
+    function hasAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && existsApprovedGrant(familyId, targetMemberId, callerMemberId));
+    }
+
+    // Owner-Controlled Profile Permission (ProfileShare) — অপরিবর্তিত,
+    // isOwnerOfMember()-এর নতুন definition-ই automatic propagate হয়।
+    function hasProfileShareFlag(familyId, targetMemberId, callerMemberId, flag) {
+      let sharePath = /databases/$(database)/documents/families/$(familyId)/profileShares/$(targetMemberId + '_' + callerMemberId);
+      return exists(sharePath) && (flag in get(sharePath).data) && get(sharePath).data[flag] == true;
+    }
+
+    function hasReadAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && (existsApprovedGrant(familyId, targetMemberId, callerMemberId)
+                || hasProfileShareFlag(familyId, targetMemberId, callerMemberId, 'read')));
+    }
+
+    function hasWriteAccess(familyId, targetMemberId, callerMemberId) {
+      return isAdminOfFamily(familyId)
+        || (targetMemberId == callerMemberId && isOwnerOfMember(familyId, callerMemberId))
+        || (isOwnerOfMember(familyId, callerMemberId)
+            && (existsApprovedGrant(familyId, targetMemberId, callerMemberId)
+                || hasProfileShareFlag(familyId, targetMemberId, callerMemberId, 'write')));
+    }
+
+    function hasDeleteAccess(familyId, targetMemberId) {
+      return isAdminOfFamily(familyId) || isOwnerOfMember(familyId, targetMemberId);
+    }
+
+    // healthTracker-এর নতুন ঐচ্ছিক ফিল্ড (ট্র্যাকার ধাপ B/পার্ট ১০): planPrefs/fastDays/waterTarget শুধু goal-ডকে,
+    // extraFoods/exerciseLog শুধু daily-ডকে; ধরন ও আকার-সীমা (গভীর যাচাই client-এর lib/planPrefs.js-এ)।
+    function trackerPlanFieldsOk(d) {
+      let planOk = !('planPrefs' in d) || (d.type == 'goal' && d.planPrefs is map
+        && d.planPrefs.keys().hasOnly(['v', 'meal', 'exercise', 'foods'])
+        && (!('foods' in d.planPrefs) || (d.planPrefs.foods is map && d.planPrefs.foods.size() <= 40))
+        && (!('meal' in d.planPrefs) || (d.planPrefs.meal is map && d.planPrefs.meal.size() <= 5))
+        && (!('exercise' in d.planPrefs) || (d.planPrefs.exercise is map && d.planPrefs.exercise.size() <= 7)));
+      let foodsOk = !('extraFoods' in d) || (d.type == 'daily' && d.extraFoods is list && d.extraFoods.size() <= 20);
+      let logOk = !('exerciseLog' in d) || (d.type == 'daily' && d.exerciseLog is list && d.exerciseLog.size() <= 20);
+      // পার্ট ১০: ঐচ্ছিক goal-ফিল্ড — fastDays (সর্বোচ্চ ২টি পূর্ণসংখ্যা, ০–৬; [] = মোড বন্ধ), waterTarget (পূর্ণসংখ্যা ১–২০; null = ডিফল্ট)।
+      // সেফটি-গেট (<১৮, গর্ভবতী, ডায়াবেটিস, কিডনি, ৬৫+) client-এর safetyGate-এ (rules-এ বয়স/রোগ নেই); এখানে শুধু ধরন ও সীমা।
+      let fastOk = !('fastDays' in d) || (d.type == 'goal' && d.fastDays is list && d.fastDays.size() <= 2
+        && (d.fastDays.size() < 1 || (d.fastDays[0] is int && d.fastDays[0] >= 0 && d.fastDays[0] <= 6))
+        && (d.fastDays.size() < 2 || (d.fastDays[1] is int && d.fastDays[1] >= 0 && d.fastDays[1] <= 6 && d.fastDays[1] != d.fastDays[0])));
+      let waterOk = !('waterTarget' in d) || (d.type == 'goal'
+        && (d.waterTarget == null || (d.waterTarget is int && d.waterTarget >= 1 && d.waterTarget <= 20)));
+      // সাপ্তাহিক ওজনের দিন: ঐচ্ছিক goal-ফিল্ড `weighDay` (পূর্ণসংখ্যা ০–৬; ডিফল্ট শুক্র = ৬, না থাকলে ডিফল্ট)।
+      let weighOk = !('weighDay' in d) || (d.type == 'goal' && d.weighDay is int && d.weighDay >= 0 && d.weighDay <= 6);
+      // ধাপ ২: ঐচ্ছিক daily-ফিল্ড `medTaken` (ওষুধ খেয়েছি — map, সর্বোচ্চ ৬০ key; key-মান যাচাই client-এর medTaken.js-এ)।
+      let medOk = !('medTaken' in d) || (d.type == 'daily' && d.medTaken is map && d.medTaken.size() <= 60);
+      // ধাপ B: ঐচ্ছিক goal-ফিল্ড `focusAreas` (ব্যায়াম-টার্গেট) — সর্বোচ্চ ৩টি, শুধু অনুমোদিত আইডি (client-এর homeWorkout.js FOCUS_AREAS-এর সাথে মেলাতে হবে)।
+      let focusOk = !('focusAreas' in d) || (d.type == 'goal' && d.focusAreas is list && d.focusAreas.size() <= 3
+        && d.focusAreas.hasOnly(['muscle', 'belly', 'chest', 'arms', 'legs', 'glute', 'core', 'posture']));
+      return planOk && foodsOk && logOk && fastOk && waterOk && weighOk && medOk && focusOk;
+    }
+
+    // MyCare (ব্যক্তিগত যত্ন) — families/{fid}/carePrefs/{memberId}: প্রতি সদস্যে ১টি ডক। শুধু ধরন/সীমা এখানে;
+    // স্বাস্থ্য-তথ্য (অ্যালার্জি/বয়স/গর্ভাবস্থা) এখানে রাখা হয় না — সেগুলো বিদ্যমান healthRecords/members থেকে পড়া হয়।
+    // enum-মান client-এর src/health/mycare/carePrefsSchema.js-এর সাথে মেলাতে হবে (tests/mycare/prefs.test.mjs মিলিয়ে দেখে)।
+    function carePrefsOk(d) {
+      return d.keys().hasOnly(['v', 'memberId', 'skinType', 'skinConcerns', 'hairType', 'hairConcerns', 'oralConcerns',
+                               'avoidIngredients', 'preferences', 'region', 'breastfeeding', 'savedIds',
+                               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+        && (!('v' in d) || d.v == 1)
+        && (!('skinType' in d) || d.skinType == null || d.skinType in ['oily', 'dry', 'normal', 'combination', 'sensitive'])
+        && (!('hairType' in d) || d.hairType == null || d.hairType in ['oily', 'dry', 'normal', 'curly'])
+        && (!('skinConcerns' in d) || (d.skinConcerns is list && d.skinConcerns.size() <= 5
+              && d.skinConcerns.hasOnly(['acne', 'scars', 'dryness', 'irritation', 'itching'])))
+        && (!('hairConcerns' in d) || (d.hairConcerns is list && d.hairConcerns.size() <= 5
+              && d.hairConcerns.hasOnly(['dandruff', 'itching', 'oiliness', 'hairfall', 'dryness'])))
+        && (!('oralConcerns' in d) || (d.oralConcerns is list && d.oralConcerns.size() <= 5
+              && d.oralConcerns.hasOnly(['gums', 'sensitivity', 'bad-breath', 'stains', 'dry-mouth'])))
+        && (!('avoidIngredients' in d) || (d.avoidIngredients is list && d.avoidIngredients.size() <= 20))
+        && (!('preferences' in d) || (d.preferences is list && d.preferences.size() <= 4
+              && d.preferences.hasOnly(['general', 'herbal', 'ayurvedic', 'budget'])))
+        && (!('region' in d) || d.region == null || (d.region is string && d.region.size() <= 30))
+        && (!('savedIds' in d) || (d.savedIds is list && d.savedIds.size() <= 20))
+        && (!('breastfeeding' in d) || d.breastfeeding == null || d.breastfeeding is bool);
+    }
+
+    // MyCare রুটিন চেকলিস্ট — families/{fid}/careLog/{memberId}: প্রতি সদস্যে ১টি ডক; `days` = { "YYYY-MM-DD": [টিক-key...] }।
+    // এখানে শুধু ধরন ও আকার-সীমা (days ≤ ৬০ দিন); তারিখ/টিক-key-র গভীর যাচাই client-এর src/health/mycare/careLogCore.js-এ।
+    function careLogOk(d) {
+      return d.keys().hasOnly(['v', 'memberId', 'days', 'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+        && (!('v' in d) || d.v == 1)
+        && (!('days' in d) || (d.days is map && d.days.size() <= 60));
     }
 
     // ============================================================
-    // §Public Tools — Phase E(ব্লগ)/F(কুইজ)/G(Editable Content)
+    // GLOBAL COLLECTIONS (family-independent)
     // ============================================================
-    // তিনটাই family-Firestore(families/{familyId}/..., data_<code>) থেকে
-    // সম্পূর্ণ independent, নতুন top-level collection — উপরের/নিচের কোনো
-    // বিদ্যমান match-block স্পর্শ করা হয়নি(সম্পূর্ণ additive)। isAppCreator()
-    // ছাড়া বাকি সব(isBlogWriter() ও এই তিনটা match-block) নতুন।
-    // সহায়ক ফাইল: 3_4_Blog_Feature_Plan.md §৩, 3_5_Quiz_Feature_Plan.md §৩,
-    // 3_6_Editable_Content_Plan.md §৩।
 
-    // --- Phase E: ব্লগ(multi-writer, owner-curated) ---
-    function isBlogWriter() {
-      return request.auth.token.email is string
-        && exists(/databases/$(database)/documents/blogWriters/$(request.auth.token.email.lower()));
-    }
-
-    match /blogWriters/{emailKey} {
-      allow read: if request.auth != null;
-      allow create, delete: if request.auth != null && isAppCreator();
-      allow update: if false;
-    }
-
-    match /blogPosts/{postId} {
-      allow read: if true;
-      allow create: if request.auth != null
-        && isBlogWriter()
-        && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if request.auth != null
-        && (resource.data.createdBy == request.auth.uid || isAppCreator());
-    }
-
-    // --- Phase F: কুইজ(single-owner — App Creator-only, ব্লগের চেয়ে সরল) ---
-    match /quizQuestions/{questionId} {
-      allow read: if true;
-      allow create, update, delete: if request.auth != null && isAppCreator();
-    }
-
-    // --- Phase G: Editable Content(single-owner — App Creator-only) ---
-    match /publicToolsContent/{sectionId} {
-      allow read: if true;
-      allow create, update, delete: if request.auth != null && isAppCreator();
-    }
-
-    // --- users/{uid}: Google-linked uid <-> familyCode mapping ---
-    // শুধুমাত্র নিজ uid-এর ডকুমেন্ট নিজে read/write করতে পারবে। এটি কোনো
-    // family/member ডাটা নয় — শুধু account-ভিত্তিক recovery mapping।
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-
-    // --- রিডিং-মোডের হাইলাইট/আন্ডারলাইন (ব্যক্তিগত): users/{uid}/readerMarks/{key} ---
-    // শুধু নিজ uid। Rules-এ list-iteration নেই, তাই প্রতিটা মার্কের ভেতরটা client sanitize করে
-    // (readerCore.sanitizeMarks); Rules শুধু ফিল্ড-সীমা ও তালিকার আকার (≤৩০০) বাঁধে।
-    match /users/{uid}/readerMarks/{key} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['v', 'marks', 'updatedAt'])
-        && request.resource.data.v == 1
-        && request.resource.data.marks is list
-        && request.resource.data.marks.size() <= 300
-        && request.resource.data.updatedAt is number
-        && key.size() <= 100;
-    }
-
-    // --- কুরআন-রিডার (ব্যক্তিগত): users/{uid}/quran/state — বুকমার্ক, পছন্দের আয়াত, শেষ পাঠ ---
-    // শুধু নিজ uid। এন্ট্রির ভেতরটা client যাচাই করে (quranCore.sanitizeMarks); Rules ফিল্ড-সীমা ও তালিকার আকার বাঁধে।
-    // marks ≤৩০০ (quranCore.MARKS_MAX-এর সাথে মেলানো), last ≤১০। শুধু doc-id "state"।
-    match /users/{uid}/quran/{docId} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && docId == 'state'
-        && request.resource.data.keys().hasOnly(['v', 'marks', 'last', 'updatedAt'])
-        && request.resource.data.v == 1
-        && request.resource.data.marks is list
-        && request.resource.data.marks.size() <= 300
-        && request.resource.data.last is list
-        && request.resource.data.last.size() <= 10
-        && request.resource.data.updatedAt is number;
-    }
-
-    // --- §Google-Login Identity Migration(2_4 §3/§10.2): familyMemberEmails ---
-    // Uniqueness-enforcing collection: doc-id = normalizeEmail(email)(trim+
-    // lowercase, 2_4 §১০.২ — client এই একই normalization প্রয়োগ করেই doc-id
-    // বানাবে, Rules নিজে normalize করে না, শুধু shape/uniqueness নিশ্চিত করে)।
-    // { familyId, memberId } — reverse-cleanup(family-leave)-এর জন্য
-    // composite(familyId+memberId) index client-side দরকার, Rules-এ প্রভাব
-    // নেই।
-    match /familyMemberEmails/{emailKey} {
-      // get: doc-id জানা থাকলে(email-match লগইন চেষ্টার সময়) যেকোনো
-      // authenticated user existence+টার্গেট familyId/memberId দেখতে পারবে
-      // — এটা email নিজে exposed করে না(doc-id already client-known), শুধু
-      // routing তথ্য। list বন্ধ(পুরো email-directory enumeration প্রতিরোধ)।
-      allow get: if request.auth != null;
-      allow list: if false;
-      // create — দুই বৈধ পথ, দুটোতেই doc-id(emailKey) 2_4 §১০.২-এর
-      // normalizeEmail()-এর সাথে explicitly cross-verified(আগে শুধু
-      // client-discipline-নির্ভর ছিল, এখন Rules-level enforced)। Critical
-      // #2 fix(claim-update clause)-এর একই কনভেনশন অনুসরণ করে শুধু
-      // .lower() ব্যবহার হয়েছে(trim দরকার নেই — Google account email-এ
-      // leading/trailing space থাকে না):
-      //   (ক) claimed-self(googleUid==request.auth.uid ঠিক সেই memberId-এ)
-      //       — emailKey অবশ্যই Firebase Auth-এর server-verified
-      //       token-email(request.auth.token.email, client দাবির উপর না)
-      //       এর normalize-করা রূপের সমান হতে হবে।
-      //   (খ) admin(proxy member যোগ করার সময়, একই batch-এ member.email
-      //       set হচ্ছে) — getAfter() দিয়ে সেই memberId-এর পোস্ট-transaction
-      //       email field পড়ে emailKey-এর সাথে মেলানো হয়(member.email
-      //       ইতিমধ্যে normalizeEmail()-প্রয়োগ করা থাকে, §১০.২)।
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['familyId', 'memberId'])
-        && request.resource.data.familyId is string
-        && request.resource.data.memberId is string
-        && (
-             (isClaimedByGoogle(request.resource.data.familyId, request.resource.data.memberId)
-               && request.auth.token.email is string
-               && emailKey == request.auth.token.email.lower())
-             || (isAdminOfFamily(request.resource.data.familyId)
-               && emailKey == getAfter(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(request.resource.data.memberId)).data.email)
-           );
-      allow update: if false;
-      // delete: family-leave/remove(§৫.৩) — admin অথবা নিজে(claimed
-      // owner) — mapping doc-এর familyId/memberId দিয়েই সংশ্লিষ্ট family
-      // যাচাই হয়(resource.data ব্যবহার, request না — delete-এ
-      // request.resource থাকে না)।
-      // §Cross-family stale-mapping fix(১৪ সেপ্টেম্বর ২০২৬, owner-reported):
-      // আগে শুধু isAdminOfFamily(resource.data.familyId)(mapping যে family-র,
-      // সেই family-র admin) অথবা isClaimedByGoogle() দিয়েই delete অনুমোদিত
-      // ছিল — admin কাউকে remove করলে(claimed member, email field ততক্ষণে
-      // claim-মুহূর্তেই মুছে গেছে বলে admin জানেনই না) এই mapping doc dangling
-      // থেকে যেত, এবং সেই email দিয়ে **অন্য** family-তে admin proxy-member
-      // যোগ করতে গেলে(addProxyMemberByAdmin()) block হতো(admin সেই পুরনো
-      // family-র admin না বলে delete করতে পারতেন না)। নতুন orphan-check:
-      // resource-এ উল্লিখিত familyId/memberId-এ member doc সত্যিই আর
-      // বিদ্যমান না থাকলে(exists()==false, অর্থাৎ mapping সত্যিকারের dead/
-      // orphaned), যেকোনো authenticated user সেটা delete করতে পারবে —
-      // কোনো লাইভ/active mapping এতে touch হয় না(exists()==true হলে এই
-      // arm সবসময় false, পুরনো দুই শর্তই তখনো একমাত্র পথ), তাই কোনো নতুন
-      // security-surface তৈরি হয় না — শুধু dead-index self-heal সহজ হলো।
-      allow delete: if request.auth != null
-        && (
-             isAdminOfFamily(resource.data.familyId)
-             || isClaimedByGoogle(resource.data.familyId, resource.data.memberId)
-             || !exists(/databases/$(database)/documents/families/$(resource.data.familyId)/members/$(resource.data.memberId))
-           );
-    }
-
-    // --- Phase A (Family ID Foundation) prep: familyCode -> familyId lookup ---
-    // শুধু প্রস্তুতিমূলক, additive collection — বিদ্যমান data_<familyCode>
-    // rules/logic এর কোনো অংশ বদলানো হয়নি। এই মুহূর্তে app শুধু create করে
-    // (একবারই, ensureFamilyCodeMapping()); update/delete এই Phase-এ বন্ধ
-    // রাখা হলো, কারণ Family Code migration (Phase D) এখনো implement হয়নি।
     match /familyCodes/{code} {
-      // Audit-fix(enumeration, ১৫ আগস্ট ২০২৬): আগে `allow read` (get+list
-      // দুটোই কভার করে) থাকায় যেকোনো authenticated user পুরো collection
-      // list করে সব family code দেখতে পারত। app.js grep-verify করে
-      // নিশ্চিত হওয়া গেছে যে কোনো collection-wide query ব্যবহৃত হয় না
-      // (শুধু .doc(code).get()) — তাই get আলাদা রেখে list বন্ধ করা হলো,
-      // existing lookup আচরণ অক্ষুণ্ণ।
       allow get: if request.auth != null;
       allow list: if false;
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['familyId', 'createdAt'])
-        && request.resource.data.familyId is string
-        && request.resource.data.familyId.size() > 0;
-      allow update: if false;
-      // §Fix(২১ আগস্ট ২০২৬, Family Username): আগে শুধু isAppCreator() delete
-      // করতে পারত, কিন্তু changeFamilyCodeForExistingFamily() স্বাভাবিক
-      // family admin দ্বারা পুরনো mapping doc (normalized+raw) delete করে —
-      // ফলে rename permission-denied দিয়ে fail করত। Fix: resource.data.familyId
-      // -এর admin হলেও delete অনুমোদিত (isAppCreator() ফলব্যাক হিসেবে থাকল)।
-      // §Fix-২(২১ আগস্ট ২০২৬): app.js dual-delete চেষ্টা করে normalized-key ও
-      // raw oldCode উভয় doc-id-তে — কিন্তু normalized-key doc যদি এই family-র
-      // জন্য কখনো তৈরিই না হয়ে থাকে (প্রথমবার rename), তাহলে non-existent doc
-      // delete-এ resource == null হয়, আর resource.data অ্যাক্সেস error ছুঁড়ে পুরো
-      // transaction deny করে দিত। resource == null (no-op delete, harmless)
-      // ক্ষেত্রে আলাদাভাবে allow করা হলো।
-      allow delete: if request.auth != null
-        && (resource == null || isAppCreator() || isAdminOfFamily(resource.data.familyId));
-    }
 
-    // --- legacyCollectionMap/{collectionName}: data_<code> কালেকশন থেকে
-    // familyId-এ reverse lookup (copyPhaseCData()-এর guard, ও
-    // healthCheckFamily()/auditAllFamiliesHealthCheck()-এর consistency
-    // check এখান থেকেই পড়ে; আজকের rollback fix-এও isLegacyRollbackBypass()
-    // এই একই collection থেকে familyId lookup করে)। আগে এই match ব্লক
-    // rules ফাইলে ছিল না বলে Firestore default-deny করছিল —
-    // "Missing or insufficient permissions" এর root cause এটাই। setOnce
-    // pattern: create শুধু একবারই (doc আগে থেকে না থাকলে), update/delete
-    // বন্ধ — ভুল entry হলে শুধু owner Firebase Console থেকে ম্যানুয়ালি
-    // ঠিক করবেন, client থেকে সম্ভব না (ইচ্ছাকৃত, owner-approved)।
-    match /legacyCollectionMap/{collectionName} {
-      // Audit-fix(enumeration, ১৫ আগস্ট ২০২৬): familyCodes-এর মতো একই
-      // কারণে — app.js grep-verify করে নিশ্চিত (শুধু .doc(name).get()/
-      // isApprovedLegacyMember()-এর ভেতরের get(), কোনো collection-query
-      // নেই) — get আলাদা রেখে list বন্ধ।
-      allow get: if request.auth != null;
-      allow list: if false;
+      // অপরিবর্তিত — এখন শুধু নতুন family তৈরির সময় ব্যবহৃত (Roadmap §3.3,
+      // বিদ্যমান family-তে join করার জন্য কোড আর ব্যবহৃত হয় না, Invite-Link-ই
+      // একমাত্র পথ)। rule-logic-এ কোনো পরিবর্তনের দরকার নেই।
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['familyId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['familyId', 'createdBy', 'createdAt'])
+        && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.familyId is string
-        && request.resource.data.familyId.size() > 0;
-      allow update: if false;
-      allow delete: if request.auth != null && isAppCreator();
-    }
-
-    // --- Phase A-2: families/{familyId} root/meta ডকুমেন্ট ---
-    // এই মুহূর্তে শুধু background prep — কোনো live UI feature এখনো এর ওপর
-    // নির্ভর করে না। "প্রথম Admin" নিয়ম এখানেই server-side enforce করা
-    // হচ্ছে (শুধু client-side check নয়): adminUids একবার ফাঁকা থেকে
-    // ফাঁকা-নয় হতে পারবে, শুধু তখনই যদি নতুন array-তে ঠিক request করা uid
-    // থাকে — এভাবে দুইজন প্রায় একইসাথে claim করার চেষ্টা করলেও (race
-    // condition) Firestore-এর atomic write guarantee-র কারণে মাত্র
-    // একজনই সফল হবে, দ্বিতীয়জনের request reject হবে (rules পুনরায় নতুন
-    // state দেখে দ্বিতীয়বার true হবে না)।
-    match /families/{familyId} {
-      // Audit-fix(Critical #1) — RE-ENABLED(১৫ আগস্ট ২০২৬) + PERFORMANCE FIX
-      // (একই দিন, পারফরম্যান্স রিগ্রেশনের পর): আগে এখানে isApprovedMember()
-      // ব্যবহার হতো, যেটা ভেতরে isAdminOfFamily() কল করে get(familyPath)
-      // দিয়ে এই *একই* ডকুমেন্ট আবার fetch করত (redundant self-read) —
-      // প্রতিটি listen/read-এ অতিরিক্ত round-trip, ফলে load time ২০-৩০
-      // সেকেন্ড পর্যন্ত বেড়ে যায় (spouse-এর ডিভাইসে observed)। Fix: admin
-      // check-এ get() না করে সরাসরি resource.data (already available,
-      // extra read লাগে না) ব্যবহার করা হলো। Security logic অভিন্ন — শুধু
-      // redundant read বাদ। accessRequests lookup (non-admin approval)-এর
-      // জন্য এক get() লাগবেই, সেটা অপরিবর্তিত।
-      // single-doc get: শুধু authenticated; list নিচের শর্তে গেটেড। family-root doc-এ কোনো secret নেই।
-      allow get: if request.auth != null;
-      allow list: if request.auth != null
+        && code.matches('^[A-Za-z0-9_-]{6,30}$')
         && (
-             resource.data.adminUids.hasAny([request.auth.uid])
-             || isAppCreator()
+             !exists(/databases/$(database)/documents/families/$(request.resource.data.familyId))
+             || get(/databases/$(database)/documents/families/$(request.resource.data.familyId)).data.adminUids.size() == 0
+             || isAdminOfFamily(request.resource.data.familyId)
            );
+
+      allow update: if false;
+      allow delete: if request.auth != null
+        && (isAppCreator() || isAdminOfFamily(resource.data.familyId));
+    }
+
+    // নতুন (Google Sign-in Amendment, Architecture Part A §3.0/§3.4.2) —
+    // fast-path returning-member lookup। শুধু নিজের doc নিজে read/write করতে
+    // পারবেন — অন্য কারো uid দিয়ে কখনো read/write সম্ভব না (self-scoped,
+    // DailyTask googleIdentity.js-এর প্রমাণিত pattern)। SECURITY (এই
+    // audit-এ ধরা পড়েছে ও ফিক্স করা হলো) — শুধু uid সমতা যথেষ্ট না; caller
+    // যেন ইচ্ছামতো অন্য কোনো family/member-এর দিকে নিজের mapping ইশারা করতে
+    // না পারেন (যা পরোক্ষে isFamilyMember() spoof করে দিত), তাই memberId
+    // সত্যিই caller-এর owned member কিনা (তার googleUid caller-এর uid)
+    // সরাসরি member doc থেকে cross-verify করা হচ্ছে। googleAuth.js-এর
+    // প্রতিটা write-path-এ member.googleUid এই write-এর আগেই সফলভাবে সেট
+    // হয়ে যায় বলে কোনো বৈধ flow ভাঙে না।
+    match /users/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['familyId', 'memberId'])
+        && exists(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(request.resource.data.memberId))
+        && get(/databases/$(database)/documents/families/$(request.resource.data.familyId)/members/$(request.resource.data.memberId)).data.googleUid == request.auth.uid;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // নতুন (Google Sign-in Amendment) — email-match auto-claim lookup।
+    // doc-id নিজেই normalized email বলে "get" (নির্দিষ্ট email জানা থাকলেই
+    // lookup সম্ভব) সব authenticated user-এর জন্য খোলা, কিন্তু "list"
+    // সম্পূর্ণ বন্ধ (email-enumeration প্রতিরোধ, DailyTask §১০.২ pattern)।
+    // Create শুধু Admin করতে পারবেন (guardian-managed member-এ future
+    // self-claim email set করার সময়, admin-add-member batch-write-এর
+    // অংশ)। Delete শুধু Admin (stale/re-registration cleanup)।
+    match /familyMemberEmails/{normalizedEmail} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if request.auth != null
+        && isAdminOfFamily(request.resource.data.familyId)
+        && request.resource.data.keys().hasOnly(['familyId', 'memberId']);
+      allow update: if false;
+      allow delete: if request.auth != null && isAdminOfFamily(resource.data.familyId);
+    }
+
+    match /medicineDatabase/{medicineId} {
+      allow read: if request.auth != null
+        && resource.data.status == 'verified';
+      allow write: if false;
+    }
+
+    match /conditionDatabase/{conditionId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /remedyDatabase/{remedyId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /careEscalationDirectory/{entryId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // অ্যাপ-ডিজাইন (পেজ-কার্ডের ক্রম/দৃশ্যমানতা/ভাঁজ) — গ্লোবাল, সবার জন্য এক।
+    // পড়া: যেকোনো সাইন-ইন সদস্য; লেখা: শুধু App Creator (isBlogAdmin — একই UID)। মোছা নয়।
+    // কাঠামো: { pages: { home: { main: [...] }, trend: { top: [...], week: [...] } }, updatedAt, updatedBy }
+    // গভীর যাচাই (কার্ড-id/fold) client-এর sanitize-এ; এখানে আকার-সীমা (প্রতি তালিকা ≤২০)।
+    function designListOk(v) {
+      return v is list && v.size() <= 20;
+    }
+    match /appDesign/{docId} {
+      allow read: if request.auth != null;
+      allow create, update: if isBlogAdmin()
+        && docId == 'layout'
+        && request.resource.data.keys().hasOnly(['pages', 'updatedAt', 'updatedBy'])
+        && request.resource.data.pages is map
+        && request.resource.data.pages.keys().hasOnly(['home', 'trend'])
+        && (!('home' in request.resource.data.pages)
+            || (request.resource.data.pages.home is map
+                && request.resource.data.pages.home.keys().hasOnly(['main'])
+                && designListOk(request.resource.data.pages.home.get('main', []))))
+        && (!('trend' in request.resource.data.pages)
+            || (request.resource.data.pages.trend is map
+                && request.resource.data.pages.trend.keys().hasOnly(['top', 'week'])
+                && designListOk(request.resource.data.pages.trend.get('top', []))
+                && designListOk(request.resource.data.pages.trend.get('week', []))));
+      // AI মডেল-সেটিং (provider + model নাম; API key কখনো নয়) — লেখা শুধু App Creator, পড়া সাইন-ইন সদস্য
+      // (Worker caller-এর token দিয়ে পড়ে)। model নামের ফরম্যাট-সীমা; অচেনা provider নয়।
+      allow create, update: if isBlogAdmin()
+        && docId == 'aiConfig'
+        && request.resource.data.keys().hasOnly(['provider', 'model', 'updatedAt', 'updatedBy'])
+        && request.resource.data.provider in ['groq', 'mistral', 'openrouter']
+        && request.resource.data.model is string
+        && request.resource.data.model.size() >= 3
+        && request.resource.data.model.size() <= 80
+        && request.resource.data.model.matches('^[A-Za-z0-9][A-Za-z0-9._:/-]+$')
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /wellnessGuides/{guideId} {
+      allow read: if request.auth != null;
+      allow create: if isBlogAdmin()
+        && isFamilyMember(request.resource.data.familyId)
+        && request.resource.data.authorId == callerMemberIdOf(request.resource.data.familyId)
+        && request.resource.data.keys().hasAll(['familyId', 'authorId', 'category', 'title', 'body'])
+        && request.resource.data.category in
+             ['general', 'diet-fitness', 'child-care', 'women-health', 'elderly-care',
+              'chronic-disease-prevention', 'mental-health', 'skin-beauty',
+              'sleep-lifestyle', 'first-aid-emergency',
+              'education-career', 'money-life-skills', 'digital-safety', 'outdoor-community'];
+      // এডিট ও ট্র্যাশ/রিস্টোর (deletedAt/deletedBy) — শুধু ব্লগ-অ্যাডমিন; অন্য কোনো ফিল্ড (familyId/authorId/createdAt) বদলানো যাবে না।
+      allow update: if isBlogAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             ['category', 'title', 'summary', 'body', 'tags', 'ageRangeYears',
+              'pregnancyMonthRange', 'sourceNote', 'updatedAt', 'deletedAt', 'deletedBy']);
+      // স্থায়ী মোছা শুধু ট্র্যাশে থাকা (deletedAt আছে) পোস্ট।
+      allow delete: if isBlogAdmin()
+        && resource.data.get('deletedAt', null) != null;
+    }
+
+    // ব্যক্তিগত রিডার-মার্ক (আন্ডারলাইন/হাইলাইট) — docId = uid + "_" + postId,
+    // শুধু মালিক পড়তে/লিখতে/মুছতে পারে।
+    match /wellnessGuideMarks/{markId} {
+      allow read, delete: if request.auth != null
+        && markId.matches(request.auth.uid + '_.+');
+      allow create, update: if request.auth != null
+        && markId.matches(request.auth.uid + '_.+')
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.marks is list
+        && request.resource.data.marks.size() <= 300;
+    }
+
+    // অসুখ গাইড (স্থির সাধারণ তথ্যের সংশোধন) — সবাই পড়ে; লেখা/মোছা শুধু অ্যাপ-ক্রিয়েটর (isAppCreator)।
+    // ডক না থাকলে অ্যাপ কোডের ডিফল্ট লেখা দেখায়। কোনো ডোজ/ফোন-নম্বরের বাধ্যবাধকতা rules-এ নেই (client সতর্ক করে)।
+    match /conditionGuides/{guideId} {
+      allow read: if request.auth != null;
+      allow create, update: if isAppCreator()
+        && request.resource.data.keys().hasOnly(['title', 'what', 'causes', 'habits', 'food', 'caution', 'status', 'verifiedAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['what', 'causes', 'habits', 'food', 'caution', 'status'])
+        && request.resource.data.status in ['draft', 'verified']
+        && request.resource.data.what is string && request.resource.data.what.size() <= 1500
+        && request.resource.data.causes is list && request.resource.data.causes.size() <= 12
+        && request.resource.data.habits is list && request.resource.data.habits.size() <= 12
+        && request.resource.data.food is list && request.resource.data.food.size() <= 12
+        && request.resource.data.caution is list && request.resource.data.caution.size() <= 12;
+      allow delete: if isAppCreator();
+    }
+
+    match /knowledgeItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /testNameDictionary/{testId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /dietGuidanceRules/{tagId} {
+      // মালিকের সিদ্ধান্ত (২০২৬-১১-১০): শুধু সতর্কবার্তা, verify-গেট নেই — লগইন-করা সবাই পড়ে; write বন্ধই
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ============================================================
+    // FAMILY-SCOPED DATA
+    // ============================================================
+
+    match /families/{familyId} {
+
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && isFamilyMember(familyId);
+
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(
-             ['familyId', 'familyCode', 'isCustomCode', 'createdAt',
-              'createdByUid', 'schemaVersion', 'adminUids', 'dataCollectionName',
-              'migrationState'])
-        // §English-only validation(২৩ আগস্ট ২০২৬, owner-approved): আগে
-        // creation-এ familyCode-এর নিজস্ব charset/length সরাসরি চেক হতো না
-        // (শুধু dataCollectionName দেওয়া হলে পরোক্ষভাবে বাঁধা পড়ত) — এখন
-        // client-side FAMILY_CODE_CHARSET_PATTERN/MIN/MAX-LENGTH-এর সাথে
-        // সামঞ্জস্যপূর্ণ সরাসরি চেক যোগ করা হয়েছে(নিচের rename clause-এর
-        // regex-এর সাথেই মিল)।
-        && request.resource.data.familyCode is string
-        && request.resource.data.familyCode.matches('^[A-Za-z0-9_-]{6,30}$')
-        // বাগ-ফিক্স(২৭.৩): createNewFamily() এখন creation-এই migrationState
-        // পাঠায়(নইলে joinExistingFamily() field-না-থাকা অবস্থায় "legacy"
-        // ধরে ব্লক করে দিত) — দেওয়া হলে অবশ্যই "v2" হতে হবে, অন্য কোনো মান
-        // দিয়ে forge করা যাবে না।
-        && (!('migrationState' in request.resource.data)
-            || request.resource.data.migrationState == 'v2')
-        && request.resource.data.adminUids == []
-        // §৫ fix: dataCollectionName ঐচ্ছিক নয় বলে জোর করা হয়নি (পুরনো
-        // client version সাময়িক সময়ের জন্য এই field ছাড়াই create করতে
-        // পারে), তবে দেওয়া হলে অবশ্যই ঠিক familyCode থেকে deterministic-ভাবে
-        // derive করা হতে হবে — forge করে ভিন্ন কোনো কালেকশনে redirect করা
-        // যাবে না।
-        && (!('dataCollectionName' in request.resource.data)
-            || request.resource.data.dataCollectionName == 'data_' + request.resource.data.familyCode);
-      // §First Admin Protection — claim-মুহূর্তেই firstAdminUid একবার সেট
-      // হয়(immutable — এই clause শুধু adminUids শূন্য থেকে অ-শূন্য হওয়ার
-      // সময়েই fire করে, তাই দ্বিতীয়বার আর কখনো ছোঁয়া যায় না)। নিচের
-      // Remove-Admin clause এই field ব্যবহার করে প্রথম Admin-কে অন্যদের
-      // দ্বারা বাদ পড়া থেকে রক্ষা করে।
+             ['familyId', 'familyCodeDisplay', 'createdBy', 'createdAt', 'adminUids'])
+        && request.resource.data.adminUids == [];
+
       allow update: if request.auth != null
         && resource.data.adminUids.size() == 0
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids', 'firstAdminUid', 'updatedAt'])
         && request.resource.data.adminUids == [request.auth.uid]
         && request.resource.data.firstAdminUid == request.auth.uid;
-      // §First Admin Protection — one-time backfill (backfillFirstAdminUid()):
-      // বিদ্যমান family(adminUids already non-empty)-তে firstAdminUid না
-      // থাকলে, বর্তমান কোনো admin একবার নিজেকে(বা অন্য কোনো বিদ্যমান
-      // admin-কে) firstAdminUid হিসেবে সেট করতে পারবেন। একবার সেট হলে এই
-      // clause আর কখনো match করবে না (immutable-once-set)।
-      allow update: if request.auth != null
-        && resource.data.adminUids.hasAny([request.auth.uid])
-        && !('firstAdminUid' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['firstAdminUid', 'updatedAt'])
-        && resource.data.adminUids.hasAny([request.resource.data.firstAdminUid]);
-      // §৫ fix — dataCollectionName one-time backfill (ensureDataCollectionName()):
-      // শুধু তখনই অনুমতি যখন এই field আগে থেকে ছিলই না (একবার সেট হলে আর
-      // কখনো এই clause দিয়ে বদলানো যাবে না — immutable-once-set) এবং নতুন
-      // মান অবশ্যই resource-এর *বর্তমান* familyCode থেকে deterministic-ভাবে
-      // derive করা হতে হবে (forge করে অন্য কালেকশনে redirect করা অসম্ভব)।
-      allow update: if request.auth != null
-        && !('dataCollectionName' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dataCollectionName', 'updatedAt'])
-        && request.resource.data.dataCollectionName == 'data_' + resource.data.familyCode;
-      // §৫ fix — controlled familyCode change (changeFamilyCodeForExistingFamily()):
-      // শুধু বিদ্যমান Admin-রা পারবেন, শুধু familyCode+updatedAt affected
-      // হতে পারবে (dataCollectionName এই clause দিয়ে কখনো বদলানো যায় না —
-      // তাই আসল ডাটা কালেকশন সবসময় অপরিবর্তিত থাকে), এবং নতুন কোড
-      // client-side চার্সেট/দৈর্ঘ্যের সাথে সামঞ্জস্যপূর্ণ হতে হবে।
-      // §Item(২১ আগস্ট ২০২৬): min-length ৯→৬ (client FAMILY_CODE_MIN_LENGTH-এর
-      // সাথে সমন্বয়ে, isAppCollection()-এর সাথেও মিল রাখা হয়েছে)।
-      // §English-only validation(২৩ আগস্ট ২০২৬, owner-approved): charset
-      // English letter/digit/underscore/hyphen-এ সংকুচিত, creation-rule ও
-      // isAppCollection()-এর regex-এর সাথে সামঞ্জস্যপূর্ণ।
-      allow update: if request.auth != null
-        && resource.data.adminUids.hasAny([request.auth.uid])
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyCode', 'updatedAt'])
-        && request.resource.data.familyCode is string
-        && request.resource.data.familyCode.matches('^[A-Za-z0-9_-]{6,30}$');
-      allow delete: if request.auth != null && isAppCreator();
 
-      // §Admin Visibility UI — Make Admin (add): বিদ্যমান admin-ই শুধু
-      // আরেকজনকে admin করতে পারবে। নতুন adminUids অবশ্যই পুরনো array-কে
-      // সম্পূর্ণ ধরে রাখবে (hasAll)। §Multi-device: একজন member-এর সব
-      // ownerUids(max 3) একসাথে admin করা যায়, তাই ১-৩টা নতুন uid যোগ
-      // অনুমোদিত(কোনো বিদ্যমান uid সরানো এই clause দিয়ে সম্ভব না)।
       allow update: if request.auth != null
         && resource.data.adminUids.hasAny([request.auth.uid])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids', 'updatedAt'])
-        && request.resource.data.adminUids.hasAll(resource.data.adminUids)
-        && request.resource.data.adminUids.size() > resource.data.adminUids.size()
-        && request.resource.data.adminUids.size() <= resource.data.adminUids.size() + 3;
-
-      // §Admin Visibility UI — Remove Admin (demote, নিজেকে বা অন্য
-      // admin-কে): বিদ্যমান admin-ই শুধু পারবে। নতুন adminUids অবশ্যই
-      // পুরনো array-এর subset হবে (কোনো নতুন uid যোগ করা যাবে না)।
-      // §Multi-device: একজন member-এর সব ownerUids(max 3) একসাথে বাদ
-      // দেওয়া যায়, তাই ১-৩টা uid কমা অনুমোদিত, আর ফলাফলে অন্তত ১ জন
-      // admin অবশিষ্ট থাকতে হবে (কখনো পুরো family admin-হীন হয়ে lockout
-      // হবে না)।
-      // §First Admin Protection(নতুন শর্ত): resource.data-এ firstAdminUid
-      // ট্র্যাক করা থাকলে, সেই uid নতুন array থেকে বাদ পড়তে পারবে শুধু
-      // তখনই যখন requester নিজেই firstAdminUid(অর্থাৎ শুধু নিজেকে নিজে
-      // demote করা যায়, অন্য কোনো admin firstAdminUid-কে বাদ দিতে পারবে
-      // না)। পুরনো family(firstAdminUid field নেই)-এ এই শর্ত স্বয়ংক্রিয়ভাবে
-      // bypass হয় — backward-compatible, backfill না হওয়া পর্যন্ত আগের
-      // আচরণ অপরিবর্তিত থাকে।
-      allow update: if request.auth != null
-        && resource.data.adminUids.hasAny([request.auth.uid])
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['adminUids', 'updatedAt'])
-        && resource.data.adminUids.hasAll(request.resource.data.adminUids)
-        && request.resource.data.adminUids.size() < resource.data.adminUids.size()
-        && request.resource.data.adminUids.size() >= resource.data.adminUids.size() - 3
-        && request.resource.data.adminUids.size() >= 1
-        && (!('firstAdminUid' in resource.data)
-            || request.resource.data.adminUids.hasAny([resource.data.firstAdminUid])
-            || request.auth.uid == resource.data.firstAdminUid);
-
-      // §Phase E prep — lastActiveAt stamp (scope-সীমিত, revised):
-      // Data Lifecycle Policy-এর জন্য family-level activity stamp। এই write
-      // stampLastActive() থেকে member/entry write-এর *একই atomic batch*-এ
-      // bundled হয় (app.js) — Firestore batch all-or-nothing, তাই এই
-      // clause-এর permission member/entry write-rule-এর সাথে সামঞ্জস্যপূর্ণ
-      // হতে হবে, নাহলে unapproved/unclaimed member-এর বৈধ save-ও পুরোপুরি
-      // fail করবে। member/entry write rule-এ isApprovedMember() লাগে না
-      // (শুধু ownership) — তাই এখানেও isApprovedMember বাদ দেওয়া হলো;
-      // security boundary field-scope দিয়েই বজায় থাকছে (*শুধু* lastActiveAt
-      // affected হতে পারবে, অন্য কোনো field না — পুরো family root doc নয়)।
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt'])
-        && request.resource.data.lastActiveAt is timestamp;
-
-      // --- §Google-Login Identity Migration(2_4_1 §৩/§৫, dual-path) ---
-      // সম্পূর্ণ additive, নতুন optional field-সেট। বিদ্যমান কোনো clause-এ
-      // হাত দেওয়া হয়নি — legacy/v2-data-structure ownerUids-based path
-      // অক্ষুণ্ণ থাকে যতক্ষণ না "google-only"।
-      //
-      // identityModel: "legacy"(default/absent) → "transitioning" →
-      // "google-only"। শুধু admin, শুধু forward-direction, এক-ধাপ-এক-ধাপ
-      // (skip করে সরাসরি legacy→google-only অনুমোদিত না — 2_4_1 §৫ Phase
-      // order অনুযায়ী)।
-      allow update: if request.auth != null
-        && isAdminOfFamily(familyId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['identityModel', 'updatedAt'])
         && (
-             (!('identityModel' in resource.data) && request.resource.data.identityModel == 'transitioning')
-             || (resource.data.identityModel == 'transitioning' && request.resource.data.identityModel == 'google-only')
+             (request.resource.data.adminUids.hasAll(resource.data.adminUids)
+              && request.resource.data.adminUids.size() > resource.data.adminUids.size())
+             ||
+             (resource.data.adminUids.hasAll(request.resource.data.adminUids)
+              && request.resource.data.adminUids.size() < resource.data.adminUids.size()
+              && request.resource.data.adminUids.size() >= 1
+              && (!('firstAdminUid' in resource.data)
+                  || request.resource.data.adminUids.hasAny([resource.data.firstAdminUid])
+                  || request.auth.uid == resource.data.firstAdminUid))
            );
 
-      // §Security-fix(৩ নভেম্বর ২০২৬): activeInviteToken আর এই root doc-এ
-      // লেখা যাবে না(root doc যেকোনো signed-in user "get" করতে পারে →
-      // token ফাঁস হতো)। নতুন জায়গা: নিচের inviteLinks/active(admin-only)।
-      // এখানে শুধু পুরনো field মুছে ফেলার অনুমতি(admin, field-delete only)।
-      allow update: if request.auth != null
-        && isAdminOfFamily(familyId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeInviteToken', 'updatedAt'])
-        && !('activeInviteToken' in request.resource.data);
+      allow delete: if request.auth != null && isAppCreator();
 
-      // status/orphanedAt(soft-delete, 2_4 §৫.৪): system নিজে(শেষ সদস্য
-      // leave/remove একই transaction-এ) সেট করে — সেই transaction-এর
-      // acting uid পূর্বে ownerUids/googleUid দিয়ে verified-owner ছিল বলে
-      // আলাদা admin-check এখানে না বসিয়ে শুধু field-scope+value-shape
-      // দিয়ে সীমাবদ্ধ করা হলো(orphaned সেট হওয়ার মুহূর্তে family-তে আর কোনো
-      // active admin নাও থাকতে পারে — isAdminOfFamily() তখন false হয়ে
-      // legitimate soft-delete-ই ব্লক করে দিত)।
-      // §Audit-fix(২০ নভেম্বর ২০২৬): এখন admin-only। ক্লায়েন্ট কোড এই field আদৌ লেখে না
-      // (grep যাচাই), তাই আচরণ বদলায় না; আগে যেকোনো signed-in ইউজার অন্য পরিবারকে
-      // orphaned করতে পারত। isAdminOfFamily() pre-write অবস্থা দেখে — শেষ admin leave
-      // করার transaction-এও কাজ করবে।
-      allow update: if request.auth != null
-        && isAdminOfFamily(familyId)
-        && !('status' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'orphanedAt', 'updatedAt'])
-        && request.resource.data.status == 'orphaned';
-      // Grace-period পুনরুদ্ধার(৭ দিনের মধ্যে reactivate, admin/নতুন-join
-      // দ্বারা) — শুধু status/orphanedAt field সরিয়ে দেওয়া(request.resource
-      // -এ এই দুই key অনুপস্থিত থাকলেই যথেষ্ট, keys().hasOnly দিয়ে যাচাই
-      // করা কঠিন কারণ absence-check — তাই diff().affectedKeys() ব্যবহার)।
-      // নোট(client-implementation reminder, security-audit ৯ সেপ্টেম্বর
-      // ২০২৬, Medium #3): এই clause ইচ্ছাকৃতভাবে admin-check ছাড়া রাখা
-      // হয়েছে(orphaned family-তে active admin নাও থাকতে পারে) — কিন্তু
-      // Invite-link join transaction(client, 2_4 §৫.২)-এ member-create-এর
-      // সাথে এই status-removal write একই atomic batch-এ bundle করা
-      // implementation-time-এ নিশ্চিত করতে হবে, নাহলে orphaned family
-      // নতুন সদস্য join করার পরও stale-orphaned থেকে যেতে পারে এবং
-      // manual TTL cleanup script grace-period-পরে ভুলবশত delete করে
-      // ফেলতে পারে(rules-change লাগে না, শুধু client discipline)।
-      allow update: if request.auth != null
-        && isApprovedMember(familyId)
-        && 'status' in resource.data
-        && resource.data.status == 'orphaned'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'orphanedAt', 'updatedAt'])
-        && !('status' in request.resource.data);
+      match /members/{memberId} {
+        allow get: if request.auth != null;
+        allow list: if request.auth != null && isFamilyMember(familyId);
 
-      // §Security-fix(৩ নভেম্বর ২০২৬): Invite token — শুধু admin পড়ে/লেখে।
-      // Join-যাচাই members create-rule-এর ভেতরে get() দিয়ে হয়(সেটা এই
-      // read-rule দ্বারা আটকায় না), তাই joiner নিজে token পড়তে পারে না।
-      match /inviteLinks/{linkId} {
-        allow get: if request.auth != null
-          && linkId == 'active'
-          && isAdminOfFamily(familyId);
-        allow list: if false;
+        // Admin-create — প্রথম-admin নিজের প্রোফাইল (family তৈরির ঠিক পরে,
+        // adminUids ততক্ষণে [uid]) ও guardian-managed member (email সহ/ছাড়া)
+        // দুটোই এই একই branch দিয়ে কভার হয় — অপরিবর্তিত।
+        allow create: if request.auth != null && isAdminOfFamily(familyId);
+
+        // Invite-Link দিয়ে self-join (non-admin)। token = `invites/{token}` ডকের ID;
+        // role শুধু 'self-managing'। (পুরনো families.activeInviteToken পথ ধাপ ৩-এ বন্ধ।)
+        allow create: if request.auth != null
+          && request.resource.data.googleUid == request.auth.uid
+          && request.resource.data.role == 'self-managing'
+          && request.resource.data.inviteTokenAttempt is string
+          && request.resource.data.inviteTokenAttempt.size() >= 20
+          && request.resource.data.inviteTokenAttempt.size() <= 64
+          && exists(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.inviteTokenAttempt))
+          && get(/databases/$(database)/documents/families/$(familyId)/invites/$(request.resource.data.inviteTokenAttempt)).data.revoked == false
+          && request.resource.data.keys().hasOnly(
+               ['name', 'dob', 'sex', 'role', 'googleUid', 'inviteTokenAttempt', 'createdAt', 'updatedAt']);
+
+        // প্রোফাইল-এডিট (Admin বা self) — role/guardianMemberIds/
+        // relationshipLabel এখনো Admin-only (অপরিবর্তিত guard)। googleUid/
+        // email এই branch দিয়ে কখনো বদলানো যাবে না — claim শুধু নিচের
+        // পৃথক branch দিয়েই হবে (privilege-escalation/accidental-unclaim
+        // প্রতিরোধ)।
+        allow update: if request.auth != null
+          && (!('role' in request.resource.data.diff(resource.data).affectedKeys())
+              || isAdminOfFamily(familyId))
+          && (!('guardianMemberIds' in request.resource.data.diff(resource.data).affectedKeys())
+              || isAdminOfFamily(familyId))
+          && (!('relationshipLabel' in request.resource.data.diff(resource.data).affectedKeys())
+              || isAdminOfFamily(familyId))
+          && !('googleUid' in request.resource.data.diff(resource.data).affectedKeys())
+          && !('email' in request.resource.data.diff(resource.data).affectedKeys())
+          && (isAdminOfFamily(familyId) || isOwnerOfMember(familyId, memberId));
+
+        // Email-match auto-claim (Architecture Part A §3.0, DailyTask
+        // googleIdentity.js §২.২-এর প্রমাণিত pattern) — unclaimed member
+        // (googleUid না-থাকা/null) নিজে claim করছেন। caller-এর Firebase
+        // Auth token-email resource-এ সংরক্ষিত member.email-এর সাথে সরাসরি
+        // সমতা-check হয় (উভয়ই normalize করা lowercase বলে সরাসরি তুলনা
+        // যথেষ্ট, hash-verify লাগে না — email secret না)। শুধু googleUid
+        // set + email field delete — অন্য কোনো field bundled থাকলে reject।
+        allow update: if request.auth != null
+          && !('googleUid' in resource.data && resource.data.googleUid != null)
+          && 'email' in resource.data
+          && request.auth.token.email == resource.data.email
+          && request.resource.data.googleUid == request.auth.uid
+          && !('email' in request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['googleUid', 'email', 'updatedAt']);
+
+        allow delete: if request.auth != null && isAdminOfFamily(familyId);
+      }
+
+      // ধাপ ১ — Invite token আলাদা ডকে। token জানা মানেই চাবি (doc-ID):
+      // get খোলা (ডকে সংবেদনশীল কিছু নেই), list/লেখা/মোছা শুধু Admin।
+      match /invites/{token} {
+        allow get: if request.auth != null;
+        allow list: if request.auth != null && isAdminOfFamily(familyId);
         allow create, update: if request.auth != null
-          && linkId == 'active'
           && isAdminOfFamily(familyId)
-          && request.resource.data.keys().hasOnly(['token', 'createdAt', 'revoked'])
-          && request.resource.data.token is string
-          && request.resource.data.token.size() >= 22
-          && request.resource.data.createdAt is number
+          && token.size() >= 20 && token.size() <= 64
+          && request.resource.data.keys().hasOnly(['revoked', 'createdAt', 'updatedAt'])
           && request.resource.data.revoked is bool;
+        allow delete: if request.auth != null && isAdminOfFamily(familyId);
+      }
+
+      match /uidMemberIndex/{uid} {
+        allow get: if request.auth != null
+          && (request.auth.uid == uid || isAdminOfFamily(familyId));
+        allow list: if false;
+        // SECURITY (এই audit-এ ধরা পড়েছে ও ফিক্স করা হলো) — users/{uid}-এর
+        // মতোই একই cross-verify: memberId সত্যিই caller-এর owned member
+        // কিনা (googleUid caller-এর uid) verify করা হচ্ছে, নাহলে caller
+        // ইচ্ছামতো memberId বসিয়ে isFamilyMember()/callerMemberIdOf()
+        // spoof করতে পারতেন। health-record rules নিজেরাই isOwnerOfMember()
+        // দিয়ে আলাদাভাবে cross-check করত বলে health data কখনো exposed
+        // হয়নি, কিন্তু healthCalendarEvents/doctors/wellnessGuides-এর
+        // মতো isFamilyMember()-নির্ভর collection-এ spoofing সম্ভব ছিল।
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['memberId'])
+          && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.resource.data.memberId))
+          && get(/databases/$(database)/documents/families/$(familyId)/members/$(request.resource.data.memberId)).data.googleUid == request.auth.uid;
         allow delete: if false;
       }
 
-      // --- Phase C prep: members/entries/weekly subcollection rules ---
-      // পুরোপুরি additive ও এই মুহূর্তে অব্যবহৃত — কোনো app code এখনো এই
-      // path পড়ে/লেখে না (app এখনো সম্পূর্ণভাবে data_<familyCode>-ই
-      // ব্যবহার করছে)। বর্তমান top-level isUnownedOrMine()/isWritable()-এর
-      // লজিক হুবহু পুনর্ব্যবহার করা হয়েছে, শুধু নতুন subcollection path-এর
-      // জন্য মানানসই করে — যাতে Phase C-এর আসল migration script চালানোর
-      // সময় rules নিয়ে আলাদা করে অপেক্ষা করতে না হয়।
-      match /members/{memberId} {
-        // single-doc get: শুধু authenticated; list (পুরো roster) isApprovedMember-গেটেড।
-        allow get: if request.auth != null;
-        allow list: if request.auth != null && isApprovedMember(familyId);
+      match /accessGrants/{grantId} {
+        // Google Sign-in Amendment-এর সম্পূর্ণ বাইরে — structural
+        // Parent-Child(<18) grant ও পুরনো approved peer-grant অপরিবর্তিত
+        // (Architecture Part A হেডার-নোট: identity vs permission layer
+        // স্বতন্ত্র)।
+        allow read: if request.auth != null && isFamilyMember(familyId);
 
-        // Admin সরাসরি member (proxy) তৈরি করতে পারেন।
-        allow create: if request.auth != null && isAdminOfFamily(familyId);
-
-        // §Google-Login — Invite-link self-join(2_4 §৫.২, additive):
-        // Admin ছাড়াই নতুন সদস্য নিজে token-validated create করতে পারবেন,
-        // শর্তে যে family-র activeInviteToken অবশ্যই আছে+revoked নয়+দেওয়া
-        // token হুবহু মেলে, এবং সৃষ্ট doc-এ googleUid ঠিক নিজের uid(claimed
-        // অবস্থাতেই তৈরি হয়, unclaimed-proxy আলাদা path §৫.১-এ)। role
-        // client "member"-ছাড়া কিছু পাঠাতে পারবে না(privilege-escalation
-        // guard — admin role এই path দিয়ে কখনো পাওয়া যাবে না)।
         allow create: if request.auth != null
-          && exists(/databases/$(database)/documents/families/$(familyId)/inviteLinks/active)
-          && get(/databases/$(database)/documents/families/$(familyId)/inviteLinks/active).data.revoked == false
-          && 'inviteTokenAttempt' in request.resource.data
-          && request.resource.data.inviteTokenAttempt
-               == get(/databases/$(database)/documents/families/$(familyId)/inviteLinks/active).data.token
-          && request.resource.data.googleUid == request.auth.uid
-          && request.resource.data.role == 'member'
-          && request.resource.data.keys().hasOnly(['name', 'gender', 'googleUid', 'role', 'inviteTokenAttempt', 'createdAt', 'updatedAt']);
+          && isAdminOfFamily(familyId)
+          && request.resource.data.keys().hasOnly(
+               ['granterId', 'granteeId', 'scope', 'relationshipType', 'status', 'revocable', 'grantedAt', 'createdAt'])
+          && request.resource.data.scope == 'read+write'
+          && request.resource.data.status == 'approved'
+          && request.resource.data.relationshipType == 'parent-child'
+          && request.resource.data.revocable == false;
 
-        // বাগ-ফিক্স(২৭.৪): আগে isUnownedOrMine(...) থাকায় self-owner
-        // নিজেও নিজের member delete করতে পারতো — শুধু Admin-ই member
-        // delete করতে পারবে, এই নিয়ম প্রয়োগ করতে isUnownedOrMine বাদ।
-        allow delete: if request.auth != null && isAdminOfFamily(familyId);
+        allow update: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isOwnerOfMember(familyId, resource.data.granterId) || isOwnerOfMember(familyId, resource.data.granteeId))
+          && resource.data.status == 'approved'
+          && resource.data.revocable == true
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy']);
 
-        // §Google-Login cutover-safe role-change(নতুন, additive): উপরের
-        // legacy block google-only-তে বন্ধ হওয়ায় role field আলাদা,
-        // narrow, ownerUids-নির্বিশেষে-সচল clause পাচ্ছে(Make/Remove
-        // Admin — 2_4 §৮ "অপরিবর্তিত" নীতি অনুযায়ী legacy ও google-only
-        // উভয় state-এই কাজ করবে)। শুধু role+updatedAt affected হতে পারবে।
         allow update: if request.auth != null
           && isAdminOfFamily(familyId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt']);
+          && resource.data.revocable == false
+          && resource.data.relationshipType == 'parent-child'
+          && resource.data.status == 'approved'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt', 'cancelledBy']);
 
-        // Activity-stamp: saveEntry()/saveWeekly()-এর একই atomic batch-এ member-doc-এ
-        // {lastActiveAt, updatedAt} merge-write হয় (memberData.js stampLastActive)।
-        // এই clause না থাকলে batch-এর মূল entry/weekly write-ও ব্যর্থ হতো।
-        // শুধু claimed সদস্য (googleUid == request.auth.uid), শুধু এই ২টা ফিল্ড।
-        allow update: if request.auth != null
-          && isClaimedByGoogle(familyId, memberId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt', 'updatedAt']);
-
-        // Admin-proxy activity-stamp: Admin যখন unclaimed proxy (googleUid অনুপস্থিত/null)-এর
-        // হয়ে entry সেভ করেন, একই batch-এর member-doc stamp-ও অনুমোদিত হতে হবে —
-        // নইলে পুরো batch ব্যর্থ হয়। শুধু unclaimed member, একই ২টা ফিল্ড।
         allow update: if request.auth != null
           && isAdminOfFamily(familyId)
-          && (!('googleUid' in resource.data) || resource.data.googleUid == null)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt', 'updatedAt']);
+          && resource.data.revocable == false
+          && resource.data.relationshipType == 'parent-child'
+          && resource.data.status == 'cancelled'
+          && request.resource.data.status == 'approved'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'grantedAt']);
 
-        // --- §Motivational Layer(নতুন, চ্যাট-approved plan, দুইটা clause) ---
-        // দুটোই সম্পূর্ণ additive, saveEntry()/stampLastActive()-এর কোনো
-        // clause স্পর্শ করা হয়নি(sensitive area — ১১ সেপ্টেম্বর ২০২৬-এর
-        // lock-out ইনসিডেন্ট এই একই ধরনের member-doc write-path-এ হয়েছিল,
-        // 2_4_1 §৫.১ দ্রষ্টব্য)। উভয় clause caller claimed member নিজে অথবা
-        // admin(unclaimed proxy-র জন্য) — উপরের existing pattern-এরই reuse।
-
-        // Phase 1.5 — bestScoreEver(denormalized "সর্বকালের সেরা দিন" score,
-        // memberData.js: updateBestScoreIfNeeded(), best-effort/non-blocking,
-        // saveEntry()-এর batch-এর অংশ না, সম্পূর্ণ আলাদা independent write)।
-        // Monotonic guard: নতুন value পুরনো bestScoreEver-এর চেয়ে বেশি হতেই
-        // হবে(কখনো কমতে পারবে না) — client bug/race-condition-এও পুরনো higher
-        // score ভুলবশত overwrite হবে না।
-        allow update: if request.auth != null
-          && (isClaimedByGoogle(familyId, memberId) || isAdminOfFamily(familyId))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bestScoreEver', 'updatedAt'])
-          && request.resource.data.bestScoreEver is number
-          && request.resource.data.bestScoreEver >= 0
-          && request.resource.data.bestScoreEver <= 100
-          && request.resource.data.bestScoreEver > (('bestScoreEver' in resource.data) ? resource.data.bestScoreEver : -1);
-
-        // Phase 2 — tomorrowFocus(পরদিনের auto-suggested/manual-override
-        // Focus field, memberData.js: saveTomorrowFocus(), explicit user-action
-        // থেকে সরাসরি ট্রিগার হয়, saveEntry() batch-এর অংশ না)।
-        allow update: if request.auth != null
-          && (isClaimedByGoogle(familyId, memberId) || isAdminOfFamily(familyId))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tomorrowFocus', 'updatedAt'])
-          && request.resource.data.tomorrowFocus.keys().hasOnly(['fieldKey', 'targetDateKey', 'setAt', 'source'])
-          && request.resource.data.tomorrowFocus.fieldKey is string
-          && request.resource.data.tomorrowFocus.fieldKey.size() > 0
-          && request.resource.data.tomorrowFocus.targetDateKey is string
-          && request.resource.data.tomorrowFocus.source in ['auto', 'manual'];
-
-        // Home layout(ধাপ ক, owner-approved) — সদস্যভিত্তিক হোম-কার্ডের ক্রম/দৃশ্যমানতা/ভাঁজ
-        // (memberData.js: saveHomeLayout(), explicit user-action, saveEntry() batch-এর অংশ না)।
-        // tomorrowFocus-clause-এর হুবহু একই caller-নিয়ম; শুধু homeLayout+updatedAt বদলাতে পারে,
-        // ঠিক {entry, below} দুটো তালিকা(প্রতিটা সর্বোচ্চ ২০টি) — এর বাইরের কিছু অনুমোদিত নয়।
-        allow update: if request.auth != null
-          && (isClaimedByGoogle(familyId, memberId) || isAdminOfFamily(familyId))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['homeLayout', 'updatedAt'])
-          && request.resource.data.homeLayout.keys().hasOnly(['entry', 'below'])
-          && request.resource.data.homeLayout.entry is list
-          && request.resource.data.homeLayout.entry.size() <= 20
-          && request.resource.data.homeLayout.below is list
-          && request.resource.data.homeLayout.below.size() <= 20;
-
-        // কাস্টম টাস্ক(সদস্যভিত্তিক, owner-approved) — member-ডকের ঐচ্ছিক customTasks: [{id,label,archived?}]।
-        // homeLayout-clause-এর হুবহু একই caller-নিয়ম; শুধু customTasks+updatedAt বদলাতে পারে।
-        // সক্রিয়+আর্কাইভ মিলিয়ে সর্বোচ্চ ৪০টি(client-এ সক্রিয় ২০টি সীমা)। আইটেমের গঠন rules-এ যাচাই হয় না
-        // (list-iteration নেই) — client sanitize করে; এটা শুধু আকার-সীমা ও ফিল্ড-সীমা।
-        allow update: if request.auth != null
-          && (isClaimedByGoogle(familyId, memberId) || isAdminOfFamily(familyId))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['customTasks', 'updatedAt'])
-          && request.resource.data.customTasks is list
-          && request.resource.data.customTasks.size() <= 40;
-
-        // নেভ-ট্যাব কাস্টমাইজ(সময়সূচি/আমল/সহায়িকা, owner-approved ২ নভেম্বর ২০২৬) — member-ডকের ঐচ্ছিক
-        // tabLayout ম্যাপ(memberData.js: saveTabLayout(), explicit user-action, saveEntry() batch-এর অংশ না)।
-        // homeLayout-clause-এর হুবহু একই caller-নিয়ম; শুধু tabLayout+updatedAt বদলাতে পারে, tabLayout-এর
-        // কী শুধু এই ছয়টা(প্রতিটা id-তালিকা, সর্বোচ্চ ২০টি) — এর বাইরের কিছু অনুমোদিত নয়।
-        allow update: if request.auth != null
-          && (isClaimedByGoogle(familyId, memberId) || isAdminOfFamily(familyId))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tabLayout', 'updatedAt'])
-          && request.resource.data.tabLayout.keys().hasOnly(['prayerOrder', 'prayerHidden', 'amolOrder', 'amolHidden', 'toolsOrder', 'toolsHidden'])
-          && request.resource.data.tabLayout.get('prayerOrder', []) is list
-          && request.resource.data.tabLayout.get('prayerOrder', []).size() <= 20
-          && request.resource.data.tabLayout.get('prayerHidden', []) is list
-          && request.resource.data.tabLayout.get('prayerHidden', []).size() <= 20
-          && request.resource.data.tabLayout.get('amolOrder', []) is list
-          && request.resource.data.tabLayout.get('amolOrder', []).size() <= 20
-          && request.resource.data.tabLayout.get('amolHidden', []) is list
-          && request.resource.data.tabLayout.get('amolHidden', []).size() <= 20
-          && request.resource.data.tabLayout.get('toolsOrder', []) is list
-          && request.resource.data.tabLayout.get('toolsOrder', []).size() <= 20
-          && request.resource.data.tabLayout.get('toolsHidden', []) is list
-          && request.resource.data.tabLayout.get('toolsHidden', []).size() <= 20;
-
-        // --- §Google-Login Identity Migration(2_4 §৪-৬, dual-path) ---
-        // সম্পূর্ণ additive — উপরের ownerUids-based clause-গুলো অপরিবর্তিত।
-        // এই নতুন clause-গুলো শুধু তখনই relevant যখন member doc-এ
-        // email/googleUid field ব্যবহার হচ্ছে(2_4_1-এর Phase-2 data-write
-        // থেকে); বাকি সব বিদ্যমান member(ownerUids-only) এই clause-গুলোর
-        // কোনো শর্তই match করবে না, causing no behavior change।
-
-        // Admin-added proxy member(unclaimed, 2_4 §৫.১) — email/googleUid:
-        // null সেট করে তৈরি। affectedKeys()-এ ইতিমধ্যে-অনুমোদিত keys()-এর
-        // বাইরের নতুন field হওয়ায় উপরের generic create rule(admin-only)-ই
-        // যথেষ্ট, আলাদা create-clause লাগে না।
-
-        // Admin — unclaimed proxy-র email edit/remove(§৫.১, §৫.৩ "মেইল
-        // সরান")। শুধু তখনই যখন member এখনো unclaimed(googleUid অনুপস্থিত
-        // বা null) — claimed member-এর email field ইতিমধ্যে delete করা
-        // (§৪), তাই এই clause claimed member-এ কখনো প্রযোজ্য না।
         allow update: if request.auth != null
           && isAdminOfFamily(familyId)
-          && (!('googleUid' in resource.data) || resource.data.googleUid == null)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'updatedAt']);
+          && resource.data.relationshipType == 'parent-child'
+          && resource.data.revocable == false
+          && request.resource.data.revocable == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revocable']);
 
-        // Admin — unclaimed proxy-র নাম/জেন্ডার edit(functional-gap fix)।
-        // নতুন-schema proxy member-এ ownerUids field-ই থাকে না বলে
-        // legacy ownerUids-block(admin-bypass সহ general-edit করত) এই
-        // doc-shape-এর জন্য নির্ভরযোগ্য না — তাই আলাদা explicit clause,
-        // legacy/google-only উভয় state-এই সচল(ownerUids-নিরপেক্ষ)।
+        allow delete: if false;
+      }
+
+      match /profileShares/{shareId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+
+        allow create: if request.auth != null
+          && request.resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, request.resource.data.ownerId)
+          && request.resource.data.ownerId != request.resource.data.granteeId
+          && shareId == request.resource.data.ownerId + '_' + request.resource.data.granteeId
+          && request.resource.data.keys().hasOnly(['ownerId', 'granteeId', 'read', 'write', 'updatedAt'])
+          && request.resource.data.read is bool
+          && request.resource.data.write is bool;
+
         allow update: if request.auth != null
-          && isAdminOfFamily(familyId)
-          && (!('googleUid' in resource.data) || resource.data.googleUid == null)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'gender', 'updatedAt']);
+          && resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, resource.data.ownerId)
+          && request.resource.data.ownerId == resource.data.ownerId
+          && request.resource.data.granteeId == resource.data.granteeId
+          && request.resource.data.keys().hasOnly(['ownerId', 'granteeId', 'read', 'write', 'updatedAt'])
+          && request.resource.data.read is bool
+          && request.resource.data.write is bool;
 
-        // Claim(email-match auto-bind বা invite-link join, 2_4 §৫.১/§৫.২):
-        // googleUid null→request.auth.uid সেট হওয়ার সাথে সাথে email field
-        // remove হয়(§৪, একই write-এ) — familyMemberEmails uniqueness-doc
-        // ইতিমধ্যে সংশ্লিষ্ট memberId পয়েন্ট করে বলে(অন্য কোনো path থেকে
-        // এই doc তৈরি না হলে claim সম্ভবই না) forge-সুরক্ষা মূলত সেই
-        // top-level collection-এর create-rule থেকেই আসে।
-        //
-        // §Google-Login fix(Critical #2, security-audit ৯ সেপ্টেম্বর ২০২৬):
-        // আগে এখানে request.auth-এর প্রকৃত email কখনো যাচাই হতো না — শুধু
-        // client দাবি করত যে সে সঠিক member match করেছে। কিন্তু
-        // familyMemberEmails/{emailKey}-এর "get" যেকোনো authenticated
-        // user-এর জন্য খোলা(§Google-Login Identity Migration comment
-        // দ্রষ্টব্য) — অর্থাৎ কেউ target-এর email জানলে/guess করলে সেই
-        // email দিয়ে normalize করে mapping doc পড়ে familyId/memberId বের
-        // করে নিজের uid দিয়ে claim করে নিতে পারত(Authentication ঠিক থাকলেও
-        // Authorization কখনো যাচাই হতো না — account/identity-takeover)।
-        // Fix: Firebase Auth-এর server-verified ID token email claim
-        // (request.auth.token.email, client দাবির উপর নির্ভরশীল নয়) এখন
-        // resource-এ সংরক্ষিত normalized email-এর সাথে মিলতেই হবে। §১০.২
-        // অনুযায়ী resource.data.email আগে থেকেই normalizeEmail()
-        // (trim+lowercase)-প্রয়োগ করা থাকে, তাই এখানে শুধু auth-token
-        // email-কে .lower() করেই তুলনা যথেষ্ট(trim দরকার নেই — Google
-        // account email-এ leading/trailing space থাকে না)।
-        allow update: if request.auth != null
-          && (!('googleUid' in resource.data) || resource.data.googleUid == null)
-          && request.resource.data.googleUid == request.auth.uid
-          && !('email' in request.resource.data)
-          && 'email' in resource.data
-          && request.auth.token.email is string
-          && request.auth.token.email.lower() == resource.data.email
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['googleUid', 'email', 'updatedAt']);
-
-        // Claimed member নিজে(googleUid==request.auth.uid) — profile-edit
-        // (নাম/জেন্ডার, 2_5 Screen E "প্রোফাইল এডিট")। role এখানে কখনো
-        // affected হতে পারবে না(উপরের top-level role-lock guard এই
-        // clause-এও প্রযোজ্য, কারণ সেটা match-level AND, সব clause কভার
-        // করে)।
-        allow update: if request.auth != null
-          && isClaimedByGoogle(familyId, memberId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'gender', 'updatedAt']);
-
-        // Family ত্যাগ(self-leave, 2_4 §৫.৩) — claimed member নিজে নিজের
-        // doc delete করতে পারবে, শুধু firstAdminUid না হলে(protection নিচের
-        // family-root-এর মতোই — firstAdminUid প্রথমে admin-transfer ছাড়া
-        // leave করতে পারবেন না)।
         allow delete: if request.auth != null
-          && isClaimedByGoogle(familyId, memberId)
-          && (
-               !('firstAdminUid' in get(/databases/$(database)/documents/families/$(familyId)).data)
-               || request.auth.uid != get(/databases/$(database)/documents/families/$(familyId)).data.firstAdminUid
-             );
+          && resource.data.ownerId == callerMemberIdOf(familyId)
+          && isOwnerOfMember(familyId, resource.data.ownerId);
       }
 
-      match /entries/{entryId} {
-        allow read: if request.auth != null && isApprovedMember(familyId);
-        allow create, update, delete: if request.auth != null
-          && (isUnownedOrMineArray(currentMemberOwnerV2(familyId, entryId)) || isAdminOfFamily(familyId));
+      match /healthRecords/{id} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && request.resource.data.resourceType in
+             ['condition', 'observation', 'medicationStatement', 'allergy', 'commonCare']
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && request.resource.data.resourceType == resource.data.resourceType
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
-      match /weekly/{weeklyId} {
-        allow read: if request.auth != null && isApprovedMember(familyId);
-        allow create, update, delete: if request.auth != null
-          && (isUnownedOrMineArray(currentMemberOwnerV2(familyId, weeklyId)) || isAdminOfFamily(familyId));
+      match /documents/{id} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
 
-      // --- reviews: ব্যক্তিগত সাপ্তাহিক মুহাসাবা (শুধু মালিক দেখবে) ---
-      // doc id: "<memberId>_<weekKey>", weekKey = সপ্তাহ-শুরুর তারিখ YYYY-MM-DD।
-      // read/write/delete: শুধু ওই member-এর আসল owner uid (ownerUids বা googleUid)।
-      // কোনো admin বা অন্য সদস্য পড়তে পারে না। একমাত্র ব্যতিক্রম: কেউ এখনো
-      // claim করেনি এমন proxy member (googleUid == null)-এর জন্য পরিবারের admin।
-      // weekly-র মতো "unowned ⇒ সবার জন্য খোলা" নীতি এখানে নেই — ফাঁকা owner = কেউ না।
-      // list বন্ধ: ক্লায়েন্ট id ধরে get করে।
-      function isReviewOwner(fid, reviewId) {
-        let owners = currentMemberOwnerV2(fid, reviewId);
-        return owners != null && owners.hasAny([request.auth.uid]);
-      }
-      function isUnclaimedProxyAdmin(fid, reviewId) {
-        let mp = /databases/$(database)/documents/families/$(fid)/members/$(reviewId.split('_')[0]);
-        return exists(mp)
-          && ('googleUid' in get(mp).data)
-          && get(mp).data.googleUid == null
-          && isAdminOfFamily(fid);
-      }
-      function canAccessReview(fid, reviewId) {
-        return request.auth != null
-          && (isReviewOwner(fid, reviewId) || isUnclaimedProxyAdmin(fid, reviewId));
-      }
-      function reviewStr(d, k, max) {
-        return !(k in d) || (d[k] is string && d[k].size() <= max);
-      }
-      function reviewList(d, k) {
-        return !(k in d) || (d[k] is list && d[k].size() <= 8);
-      }
-      // সীমা src/legacy/reviewSchema.js-এর LIMITS-এর সাথে মেলে। "বদ্ধ ঘর" ফিল্ড whitelist-এ নেই।
-      function validReview(reviewId) {
-        let d = request.resource.data;
-        return d.keys().hasOnly(['v', 'memberId', 'weekKey', 'updatedAt', 'step', 'done', 'goalResult',
-                                 'goalText', 'hardMoment', 'nextGoal', 'ifText', 'thenText', 'gratitude', 'gapKey',
-                                 'blockers', 'gapReasons', 'haqq'])
-          && d.keys().hasAll(['v', 'memberId', 'weekKey', 'updatedAt'])
-          && d.v == 1
-          && d.memberId is string
-          && d.weekKey is string
-          && d.weekKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-          && reviewId == d.memberId + '_' + d.weekKey
-          && d.updatedAt is number
-          && (!('step' in d) || (d.step is int && d.step >= 1 && d.step <= 5))
-          && (!('done' in d) || d.done is bool)
-          && (!('goalResult' in d) || d.goalResult in ['done', 'partial', 'none'])
-          && reviewStr(d, 'goalText', 200)
-          && reviewStr(d, 'hardMoment', 300)
-          && reviewStr(d, 'nextGoal', 200)
-          && reviewStr(d, 'ifText', 200)
-          && reviewStr(d, 'thenText', 200)
-          && reviewStr(d, 'gratitude', 300)
-          && reviewStr(d, 'gapKey', 40)
-          && reviewList(d, 'blockers')
-          && reviewList(d, 'gapReasons')
-          && reviewList(d, 'haqq');
+      match /healthEpisodes/{episodeId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if false;
+
+        match /triageResults/{triageId} {
+          allow read: if request.auth != null
+            && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+          allow create: if request.auth != null
+            && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+          allow update, delete: if false;
+        }
+
+        match /messages/{messageId} {
+          allow read: if request.auth != null
+            && hasReadAccess(familyId,
+                 get(/databases/$(database)/documents/families/$(familyId)/healthEpisodes/$(episodeId)).data.memberId,
+                 callerMemberIdOf(familyId));
+          allow create: if request.auth != null
+            && hasWriteAccess(familyId,
+                 get(/databases/$(database)/documents/families/$(familyId)/healthEpisodes/$(episodeId)).data.memberId,
+                 callerMemberIdOf(familyId));
+          allow update, delete: if false;
+        }
       }
 
-      match /reviews/{reviewId} {
-        allow get: if canAccessReview(familyId, reviewId);
-        allow list: if false;
-        allow create, update: if canAccessReview(familyId, reviewId) && validReview(reviewId);
-        allow delete: if canAccessReview(familyId, reviewId);
-      }
-
-      // --- §Notification System(নতুন) ---
-      // সাধারণ, extensible in-app notification framework(শুরুতে শুধু
-      // "admin_assigned" type)। শুধু নিজের(targetUid-matched) notification
-      // পড়া/read-mark করা যায়; create শুধু admin করতে পারবে(এই মুহূর্তে
-      // handleMakeAdmin() থেকে) — future-এ অন্য admin action-ও এই একই
-      // collection ব্যবহার করতে পারবে কোনো Rules পরিবর্তন ছাড়াই।
       match /notifications/{notifId} {
         allow read: if request.auth != null && request.auth.uid == resource.data.targetUid;
-        // "device_joined"(নতুন, ১৫ আগস্ট ২০২৬, Option A auto-approve-এর
-        // সাথে যোগ): নতুন self-approved(non-admin) member-ও admin-কে
-        // notify করতে পারবে — কিন্তু শুধু এই নির্দিষ্ট type-এ, শুধু
-        // approved member হলে, এবং targetUid অবশ্যই family-র প্রকৃত admin
-        // হতে হবে(resource.data.adminUids থেকে verify, forge করা যাবে না)।
-        // admin_assigned-এর পুরনো path(শুধু admin) অপরিবর্তিত।
         allow create: if request.auth != null
-          && request.resource.data.keys().hasOnly(['targetUid', 'type', 'message', 'createdAt', 'read'])
-          && request.resource.data.targetUid is string
-          && request.resource.data.type is string
-          && request.resource.data.message is string
-          && request.resource.data.read == false
-          && (
-               (request.resource.data.type == 'admin_assigned' && isAdminOfFamily(familyId))
-               || (request.resource.data.type == 'device_joined'
-                   && isApprovedMember(familyId)
-                   && get(/databases/$(database)/documents/families/$(familyId)).data.adminUids.hasAny([request.resource.data.targetUid]))
-             );
+          && isFamilyMember(familyId)
+          && exists(/databases/$(database)/documents/families/$(familyId)/uidMemberIndex/$(request.resource.data.targetUid))
+          && request.resource.data.keys().hasOnly(['targetUid', 'type', 'message', 'read', 'createdAt'])
+          && request.resource.data.read == false;
         allow update: if request.auth != null
           && request.auth.uid == resource.data.targetUid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
         allow delete: if request.auth != null && request.auth.uid == resource.data.targetUid;
       }
 
-    }
-
-    // --- legacy data_<code> কালেকশন (appStorage shared ডক) ---
-    // এখানে থাকে: মাসিক সভা (meeting_rows_v2:YYYY-MM), custom_fields, field_overrides,
-    // tazkirah_custom। আগে এই কালেকশনের কোনো match ছিল না ⇒ default-deny ⇒ সভা সেভে
-    // "Missing or insufficient permissions"। পরিবার চেনা হয় legacyCollectionMap/{নাম}.familyId
-    // থেকে (map না থাকলে অস্বীকৃত); অ্যাক্সেস = isApprovedMember (admin/creator/claimed সদস্য)।
-    // Read-এ ডক-id সীমা নেই (backup পুরো কালেকশন list করে); Write-এ id whitelist + আকার-সীমা।
-    match /{legacyCol}/{legacyDocId} {
-      function legacyMapPath() {
-        return /databases/$(database)/documents/legacyCollectionMap/$(legacyCol);
+      // হেলথ ট্র্যাকার (লক্ষ্য + দৈনিক ডাটা) — memberId-ভিত্তিক, healthRecords-এর
+      // একই hasReadAccess/hasWriteAccess/hasDeleteAccess। কড়া field-allowlist।
+      match /healthTracker/{docId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, resource.data.memberId, callerMemberIdOf(familyId));
+        allow create: if request.auth != null
+          && request.resource.data.type in ['goal', 'daily']
+          && request.resource.data.keys().hasOnly([
+               'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
+               'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'weighDay', 'medTaken', 'focusAreas',
+               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && trackerPlanFieldsOk(request.resource.data)
+          && hasWriteAccess(familyId, request.resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow update: if request.auth != null
+          && request.resource.data.memberId == resource.data.memberId
+          && request.resource.data.type == resource.data.type
+          && request.resource.data.keys().hasOnly([
+               'type', 'memberId', 'date', 'goalType', 'activity', 'targetWeightKg', 'weeks',
+               'flags', 'calc', 'reminders', 'weightKg', 'waterGlasses', 'steps', 'exerciseMin',
+               'sleep', 'sleepMinutes', 'caloriesIn', 'mealsEaten', 'exerciseDone', 'sources', 'weightObsId',
+               'planPrefs', 'extraFoods', 'exerciseLog', 'fastDays', 'waterTarget', 'weighDay', 'medTaken', 'focusAreas',
+               'lastEditedByMemberId', 'createdAt', 'updatedAt'])
+          && trackerPlanFieldsOk(request.resource.data)
+          && hasWriteAccess(familyId, resource.data.memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, resource.data.memberId);
       }
-      function legacyAccess() {
-        return request.auth != null
-          && legacyCol.matches('data_.*')
-          && exists(legacyMapPath())
-          && isApprovedMember(get(legacyMapPath()).data.familyId);
-      }
-      allow read: if legacyAccess();
-      allow create, update: if legacyAccess()
-        && legacyDocId.matches('meeting_rows_v2:[0-9]{4}-[0-9]{2}|custom_fields|field_overrides|tazkirah_custom')
-        && request.resource.data.keys().hasOnly(['value', 'updatedAt'])
-        && request.resource.data.value is string
-        && request.resource.data.value.size() <= 200000;
-      allow delete: if legacyAccess()
-        && isAdminOfFamily(get(legacyMapPath()).data.familyId);
-    }
 
-    // --- PWA ইনস্টল কাউন্টার (গ্লোবাল, কোনো নির্দিষ্ট পরিবারের ডাটা নয়) ---
-    match /app_stats/{statId} {
-      allow read: if request.auth != null;
-      // §Audit-fix(২০ নভেম্বর ২০২৬): শুধু একটি doc, count শুধু +১ করে বাড়ে।
-      allow create: if request.auth != null
-        && statId == 'pwa_installs'
-        && request.resource.data.keys().hasOnly(['count', 'lastInstalledAt'])
-        && request.resource.data.count == 1
-        && request.resource.data.lastInstalledAt is number;
-      allow update: if request.auth != null
-        && statId == 'pwa_installs'
-        && request.resource.data.keys().hasOnly(['count', 'lastInstalledAt'])
-        && request.resource.data.count == resource.data.count + 1
-        && request.resource.data.lastInstalledAt is number;
-      allow delete: if false;
+      // MyCare — যত্ন-প্রোফাইল (ডক-ID = memberId)। বিদ্যমান ProfileShare/Admin নিয়মই; কড়া field-allowlist।
+      match /carePrefs/{memberId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, memberId, callerMemberIdOf(familyId));
+        allow create, update: if request.auth != null
+          && request.resource.data.memberId == memberId
+          && carePrefsOk(request.resource.data)
+          && hasWriteAccess(familyId, memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
+      }
+
+      // MyCare রুটিন চেকলিস্ট (ডক-ID = memberId)। carePrefs-এর মতোই ProfileShare/Admin নিয়ম; কড়া field-allowlist।
+      match /careLog/{memberId} {
+        allow read: if request.auth != null
+          && hasReadAccess(familyId, memberId, callerMemberIdOf(familyId));
+        allow create, update: if request.auth != null
+          && request.resource.data.memberId == memberId
+          && careLogOk(request.resource.data)
+          && hasWriteAccess(familyId, memberId, request.resource.data.lastEditedByMemberId);
+        allow delete: if request.auth != null && hasDeleteAccess(familyId, memberId);
+      }
+
+      match /healthCalendarEvents/{eventId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+        allow create: if request.auth != null
+          && isFamilyMember(familyId)
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow update: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId))
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow delete: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
+      }
+
+      match /doctors/{doctorId} {
+        allow read: if request.auth != null && isFamilyMember(familyId);
+        allow create: if request.auth != null
+          && isFamilyMember(familyId)
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow update: if request.auth != null
+          && isFamilyMember(familyId)
+          && resource.data.lastEditedByMemberId == callerMemberIdOf(familyId)
+          && request.resource.data.lastEditedByMemberId == callerMemberIdOf(familyId);
+        allow delete: if request.auth != null
+          && isFamilyMember(familyId)
+          && (isAdminOfFamily(familyId) || resource.data.lastEditedByMemberId == callerMemberIdOf(familyId));
+      }
     }
   }
 }
