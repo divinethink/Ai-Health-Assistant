@@ -9,7 +9,7 @@ import { useCareProfile } from "./useCareProfile.js";
 import { useCareLog } from "./useCareLog.js";
 import { usePatches } from "./carePatchStore.js";
 import { PatchCheckCard } from "./PatchCheckCard.js";
-import { plannedKeys, tickKey, isoOf, isDayComplete, streakOf, weekCells } from "./careLogCore.js";
+import { plannedKeys, tickKey, isoOf, isDayComplete, streakOf, weekCells, taskKeysFor, TASK_WATER, TASK_GUT } from "./careLogCore.js";
 
 const { useState } = React;
 
@@ -20,14 +20,15 @@ const colorOf = (cat) => (CAT_META.find((c) => c[0] === cat) || [0, 0, 0, "#1F7A
 const streakText = (n) => L("ধারাবাহিক " + digits(n) + " দিন", n + "-day streak");
 
 // log = { days, toggle } হলে চেকলিস্ট (টিক ও streak); null হলে আগের মতো শুধু তালিকা ("অন্যের জন্য" মোডে সবসময় null)
-export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
+export function TodayCareView({ profile, onOpen, compact, log, collapsible, showGut }) {
   const [msg, setMsg] = useState("");
   const [open, setOpen] = useState(false); // collapsible হলে শুরুতে বন্ধ
   const season = seasonOf(new Date());
   const care = pickTodayCare(profile, ALL_ITEMS, { season, date: new Date() });
-  if (isEmptyCare(care)) return null;
+  const tasks = log ? taskKeysFor(!!showGut) : [];
+  if (care.mode === "referral" || (isEmptyCare(care) && !tasks.length)) return null;
   const todayISO = isoOf(new Date());
-  const planned = plannedKeys(care);
+  const planned = plannedKeys(care, tasks);
   const today = log ? (log.days[todayISO] || []) : [];
   const doneN = planned.filter((k) => today.includes(k)).length;
   const streak = log ? streakOf(log.days, todayISO) : 0;
@@ -42,6 +43,14 @@ export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
     React.createElement("button", { type: "button", onClick: () => onOpen && onOpen(e.item), style: { flex: 1, minWidth: 0, minHeight: "44px", display: "flex", alignItems: "center", gap: slim ? "4px" : "10px", padding: "2px", border: "none", background: "none", textAlign: "left", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer" } },
       !slim && React.createElement(IconBox, { id: e.item.category, color: colorOf(e.item.category), size: 30 }),
       React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: slim ? "14px" : "14.5px", lineHeight: 1.35, fontWeight: 700, overflowWrap: "anywhere" } }, T(e.item.name))));
+  const TASK_UI = { [TASK_WATER]: ["water", "#3B82B6", "পানি পান", "Water"], [TASK_GUT]: ["gut", "#7A5BB0", "পেট ডায়েরি", "Gut diary"] };
+  const taskTile = (key) => {
+    const [icon, color, bn, en] = TASK_UI[key], on = today.includes(key);
+    return React.createElement("button", { key, type: "button", role: "checkbox", "aria-checked": on, onClick: () => onTick(key), style: { minHeight: "52px", display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px 6px 8px", borderRadius: "16px", border: "1.5px solid " + (on ? "#1F7A5C" : "var(--hs-border, #D9E5DE)"), background: on ? "var(--hs-chip-bg, #E4F0E9)" : "var(--hs-surface, #fff)", boxShadow: on ? "none" : "0 2px 6px rgba(14,75,67,0.07)", fontFamily: "inherit", color: "var(--hs-text, #1B2430)", cursor: "pointer", textAlign: "left", minWidth: 0 } },
+      React.createElement(IconBox, { id: icon, color, size: 32 }),
+      React.createElement("span", { style: { flex: 1, minWidth: 0, fontSize: "14px", fontWeight: 700, lineHeight: 1.3 } }, L(bn, en)),
+      React.createElement("span", { "aria-hidden": "true", style: { width: "24px", height: "24px", borderRadius: "50%", flexShrink: 0, border: "2px solid " + (on ? "#1F7A5C" : "var(--hs-border, #B9CFC5)"), background: on ? "#1F7A5C" : "transparent", color: "#fff", fontSize: "14px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" } }, on ? "✓" : ""));
+  };
   const hidden = !!collapsible && !open;
   const chip = { fontSize: "12.5px", fontWeight: 800, padding: "2px 10px", borderRadius: "999px", background: "var(--hs-chip-bg, #E4F0E9)", color: "var(--hs-primary, #0E4B43)", whiteSpace: "nowrap" };
   return React.createElement("div", { style: { padding: "14px", borderRadius: "22px", border: "1px solid var(--hs-border, #D9E5DE)", background: "var(--hs-surface, #fff)", boxShadow: "0 4px 14px rgba(14,75,67,0.08)", marginBottom: "12px" } },
@@ -59,6 +68,7 @@ export function TodayCareView({ profile, onOpen, compact, log, collapsible }) {
         React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color } }, L(bn, en)),
         React.createElement("div", { style: id === "anytime" ? { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", columnGap: "10px" } : null },
           care[id].map((e) => row(e, id + e.item.id, id, true)))))),
+    tasks.length > 0 && React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(" + tasks.length + ", minmax(0, 1fr))", gap: "8px", marginTop: "10px" } }, tasks.map(taskTile)),
     care.seasonTip && React.createElement("div", { style: { marginTop: "10px", padding: "8px 10px", borderRadius: "14px", background: "#EAF6F0", border: "1px solid #A9D8C4" } },
       React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color: "#1F6B50" } }, L("ঋতুর টিপ", "Season tip") + (SEASON_LABEL[season] ? " · " + L(SEASON_LABEL[season][0], SEASON_LABEL[season][1]) : "")),
       row(care.seasonTip, "tip", null)),
@@ -93,11 +103,11 @@ export function CareWeekCard({ log }) {
 
 // হোমে বসানোর রূপ: নিজে profile পড়ে; পড়া চলাকালীন বা ফাঁকা হলে কিছুই দেখায় না (হোম অক্ষত)
 export function HomeTodayCare({ familyId, callerMemberId, selectedMemberId, members, onOpen }) {
-  const { ready, profile } = useCareProfile(familyId, selectedMemberId, members);
+  const { ready, profile, showGut } = useCareProfile(familyId, selectedMemberId, members);
   const log = useCareLog(familyId, selectedMemberId, callerMemberId);
   const patches = usePatches(selectedMemberId);
   if (!ready) return null;
   return React.createElement(React.Fragment, null,
     React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
-    React.createElement(TodayCareView, { profile, onOpen, compact: true, log }));
+    React.createElement(TodayCareView, { profile, onOpen, compact: true, log, showGut }));
 }

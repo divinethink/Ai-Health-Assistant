@@ -2,6 +2,7 @@
 import { useMemberHealth } from "../records/useMemberHealth.js";
 import { getCarePrefs } from "./carePrefsData.js";
 import { buildOwnProfile } from "./careAdapter.js";
+import { conditionKeysOf } from "../tracker/avoidRules.js";
 
 const { useState, useEffect } = React;
 
@@ -18,7 +19,7 @@ export function useCareProfile(familyId, memberId, members) {
     return () => { alive = false; };
   }, [familyId, memberId]);
   const member = (members || []).find((m) => m.id === memberId) || null;
-  if (!member || health.loading || pf.loading) return { ready: false, profile: null };
+  if (!member || health.loading || pf.loading) return { ready: false, profile: null, showGut: false };
   const recordsOk = !health.error && Array.isArray(health.records);
-  return { ready: true, profile: buildOwnProfile({ member, records: health.records, recordsOk, prefs: pf.prefs }) };
+  return { ready: true, profile: buildOwnProfile({ member, records: health.records, recordsOk, prefs: pf.prefs }), showGut: recordsOk && conditionKeysOf(health.records).includes("gut") };
 }

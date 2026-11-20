@@ -7,6 +7,7 @@ import { useMemberHealth } from "../records/useMemberHealth.js";
 import { getCarePrefs, saveCarePrefs, saveSavedIds } from "./carePrefsData.js";
 import { sanitizeCarePrefs, toggleSaved } from "./carePrefsSchema.js";
 import { recommend } from "./careEngine.js";
+import { conditionKeysOf } from "../tracker/avoidRules.js";
 import { seasonOf } from "./careSeason.js";
 import { buildOwnProfile, buildOtherProfile, prefsProgress } from "./careAdapter.js";
 import { ALL_ITEMS } from "./data/index.js";
@@ -120,7 +121,7 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
     !other && !recordsOk && React.createElement("div", null, ErrorBox(L("স্বাস্থ্য-রেকর্ড পড়া যায়নি, তাই শুধু সবচেয়ে নিরাপদ সাধারণ পরামর্শ দেখানো হবে।", "Could not read health records, so only the safest basic advice is shown."))),
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
     !other && React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
-    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, collapsible: true, log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
+    overview.mode !== "referral" && React.createElement(TodayCareView, { profile, collapsible: true, showGut: recordsOk && conditionKeysOf(health.records).includes("gut"), log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
     overview.mode !== "referral" && !other && React.createElement(CareWeekCard, { log: careLog }),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "14px" } },
       CAT_META.map(([id, bn, en, color]) => {

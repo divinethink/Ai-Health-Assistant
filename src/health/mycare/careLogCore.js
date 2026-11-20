@@ -39,11 +39,17 @@ export function overflowDates(days) {
   return Object.keys(days || {}).filter((k) => DATE_RE.test(k)).sort().reverse().slice(LOG_DAYS_MAX);
 }
 
-// আজকের দেখানো ধাপ → টিক-key তালিকা
-export function plannedKeys(care) {
+// ট্র্যাকার-টাস্ক (পানি/পেট ডায়েরি): আজকের যত্নের কার্ডে হাতে টিক; একই careLog-এ জমা হয়, ট্র্যাকারের রিভিউ এখান থেকে পড়ে
+export const TASK_WATER = "tracker-water/anytime";
+export const TASK_GUT = "tracker-gut/anytime";
+export const taskKeysFor = (showGut) => (showGut ? [TASK_WATER, TASK_GUT] : [TASK_WATER]);
+
+// আজকের দেখানো ধাপ → টিক-key তালিকা (tasks = অতিরিক্ত টাস্ক-key)
+export function plannedKeys(care, tasks) {
   if (!care) return [];
   const out = [];
   for (const slot of SLOTS) for (const e of care[slot] || []) { const k = tickKey(e.item.id, slot); if (!out.includes(k)) out.push(k); }
+  (Array.isArray(tasks) ? tasks : []).forEach((k) => { if (isTickKey(k) && !out.includes(k)) out.push(k); });
   return out;
 }
 

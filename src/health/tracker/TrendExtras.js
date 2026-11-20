@@ -9,6 +9,7 @@ import { T, HOME_CARD, GRADIENT_HERO } from "./trackerTheme.js";
 import { getMonthDaily, todayISO } from "./trackerData.js";
 import { targetCtxFor } from "./weeklyTrend.js";
 import { ReviewCards } from "./ReviewCards.js";
+import { CareTaskCard } from "./CareTaskCard.js";
 import { WeekLockGate } from "./WeekLockGate.js";
 import { DayReviewCard, ExerciseBoxCard, SleepCalCard } from "./TodayReviewCards.js";
 import { dayReview, exerciseWeek, restView, pickReviewDay, countInputs } from "./dayReview.js";
@@ -307,7 +308,7 @@ export function TrendRanges({ info, familyId, memberId, weekView, dayExtras }) {
   return React.createElement("div", null,
     err && ErrorBox(err),
     ...renderLayoutCards("trend", "top", topLayout, heatNodes),
-    title("সপ্তাহের চিত্র"), weekBody,
+    title("সপ্তাহের চিত্র"), weekBody, React.createElement(CareTaskCard, { familyId, memberId }),
     !err && title("মাসের চিত্র"), !err && monthBody,
     !err && title("৩ মাসের তুলনামূলক চিত্র"), !err && quarterBody);
 }
