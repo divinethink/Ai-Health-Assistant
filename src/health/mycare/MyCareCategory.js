@@ -113,8 +113,7 @@ export function MyCareCategory({ catId, profile, season, familyId, canExplain, o
   const toggle = async (id) => { const r = await onToggleSave(id); setSaveMsg(r); };
 
   const pills = concerns.length
-    ? React.createElement("div", { style: { overflowX: "auto" } }, React.createElement("div", { style: { minWidth: (concerns.length + 1) * 84 + "px" } },
-      SubPills([["all", L("সব", "All")], ...concerns.map((c) => [c, T(LABELS[concernKey][c])])], concern, setConcern, "mycare-" + catId, meta[2])))
+    ? SubPills([["all", L("সব", "All")], ...concerns.map((c) => [c, T(LABELS[concernKey][c])])], concern, setConcern, "mycare-" + catId, meta[2], true)
     : null;
 
   return React.createElement("div", null,

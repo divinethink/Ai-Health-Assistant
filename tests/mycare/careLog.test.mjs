@@ -96,7 +96,7 @@ test("plannedKeys: আজকের কার্ড থেকে slot-ভিত�
 test("অন্যের মোডে সংরক্ষণ নেই: MyCareSection log-কে null দেয়; careLog ডেটা-লেয়ার শুধু ডক-ID = memberId", () => {
   const sec = readFileSync("src/health/mycare/MyCareSection.js", "utf8");
   assert.ok(sec.includes("log: other ? null : careLog"));
-  assert.ok(sec.includes("!other && React.createElement(CareWeekCard"));
+  assert.ok(!sec.includes("CareWeekCard")); // সাপ্তাহিক কার্ড MyCare থেকে সরানো (owner-request ২০২৬-১১-২০); রিভিউ ট্র্যাকারে
   const data = readFileSync("src/health/mycare/careLogData.js", "utf8");
   assert.ok(data.includes('collection("careLog").doc(memberId)'));
   assert.ok(!/console\./.test(data) && !/analytics/i.test(data));

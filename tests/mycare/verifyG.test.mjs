@@ -81,7 +81,7 @@ test("G8 অন্যের মোড: নতুন ফাইলে কোনো
   for (const f of ["useCareLog.js", "TodayCareCard.js", "carePatchStore.js", "careLogData.js"]) assert.equal(/console\.|analytics|askAI|aiClient/i.test(strip(read("src/health/mycare/" + f))), false, f);
   const sec = read("src/health/mycare/MyCareSection.js");
   assert.ok(/log: other \? null : careLog/.test(sec) && /patch: other \? null : patches/.test(sec));
-  assert.ok(/!other && React\.createElement\(CareWeekCard/.test(sec) && /!other && React\.createElement\(PatchCheckCard/.test(sec));
+  assert.ok(/!other && React\.createElement\(PatchCheckCard/.test(sec));
   assert.ok(/useCareLog\(familyId, selectedMemberId, callerMemberId\)/.test(sec) && /usePatches\(selectedMemberId\)/.test(sec)); // other কখনো আর্গুমেন্ট নয়
   assert.equal(/(saveCareDay|saveCarePrefs|saveSavedIds|toggleSave)\([^)]*other/.test(sec), false);
   assert.ok(/onToggleSave: other \? null : toggleSave/.test(sec));

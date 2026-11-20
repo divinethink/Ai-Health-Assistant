@@ -13,7 +13,7 @@ import { buildOwnProfile, buildOtherProfile, prefsProgress } from "./careAdapter
 import { ALL_ITEMS } from "./data/index.js";
 import { CAT_META, CAT_DESC, LABELS, AGE_BANDS, SEASON_LABEL } from "./careLabels.js";
 import { IconBox } from "./careIcons.js";
-import { TodayCareView, CareWeekCard } from "./TodayCareCard.js";
+import { TodayCareView } from "./TodayCareCard.js";
 import { useCareLog } from "./useCareLog.js";
 import { usePatches } from "./carePatchStore.js";
 import { PatchCheckCard } from "./PatchCheckCard.js";
@@ -122,7 +122,6 @@ export function MyCareSection({ chip, familyId, callerMemberId, selectedMemberId
     warnLines.length > 0 && React.createElement("div", { style: warnBox, role: "status" }, warnLines.map((w, i) => React.createElement("div", { key: i }, "⚠ " + w))),
     !other && React.createElement(PatchCheckCard, { list: patches.list, update: patches.update }),
     overview.mode !== "referral" && React.createElement(TodayCareView, { profile, collapsible: true, showGut: recordsOk && conditionKeysOf(health.records).includes("gut"), log: other ? null : careLog, onOpen: (it) => { if (it) openCat(it.category); } }),
-    overview.mode !== "referral" && !other && React.createElement(CareWeekCard, { log: careLog }),
     React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", marginBottom: "14px" } },
       CAT_META.map(([id, bn, en, color]) => {
         const ready = ALL_ITEMS.some((i) => i.category === id && i.status === "verified");
