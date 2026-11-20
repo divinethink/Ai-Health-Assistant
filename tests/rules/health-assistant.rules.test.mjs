@@ -1260,4 +1260,162 @@ describe('Health Assistant — Firestore Rules', function () {
       await assertFails(setDoc(famDoc(dbAs('uidB'), 'careLog', 'mA'), cl('mB', 'mB')));
     });
   });
+
+  // ============================================================
+  // অডিট M৫ (২১ নভেম্বর ২০২৬): আগে test-বিহীন ৪টি collection — wellnessGuides, wellnessGuideMarks, doctors, healthCalendarEvents
+  describe('15. wellnessGuides (ব্লগ — শুধু App Creator লেখে)', () => {
+    const CREATOR = 'bZrGqbY0dFVTkIXKvEAwfHbMhRk1';
+    beforeEach(async () => {
+      await seedOwned('mC', CREATOR);
+      await seedOwned('mA', 'uidA');
+    });
+    const guide = (extra = {}) => ({
+      familyId: FAMILY_ID, authorId: 'mC', category: 'general', title: 'শিরোনাম', body: 'লেখা',
+      createdAt: OLD, updatedAt: OLD, ...extra,
+    });
+    const gRef = (db, id = 'g1') => doc(db, 'wellnessGuides', id);
+
+    it('W1. লগইনকারী সবাই পড়তে পারেন; লগআউট অবস্থায় নয়', async () => {
+      await seed(async (db) => { await setDoc(gRef(db), guide()); });
+      await assertSucceeds(getDoc(gRef(dbAs('uidA'))));
+      await assertFails(getDoc(gRef(testEnv.unauthenticatedContext().firestore())));
+    });
+
+    it('W2. শুধু Creator তৈরি করতে পারেন; সাধারণ সদস্য, ভুল authorId বা ভুল category reject', async () => {
+      await assertSucceeds(setDoc(gRef(dbAs(CREATOR)), guide()));
+      await assertFails(setDoc(gRef(dbAs('uidA'), 'g2'), guide({ authorId: 'mA' })));
+      await assertFails(setDoc(gRef(dbAs(CREATOR), 'g3'), guide({ authorId: 'mA' })));
+      await assertFails(setDoc(gRef(dbAs(CREATOR), 'g4'), guide({ category: 'nonsense' })));
+    });
+
+    it('W3. Creator শুধু লেখার ফিল্ড বদলাতে পারেন; familyId/authorId নয়; অন্য কেউ নয়', async () => {
+      await seed(async (db) => { await setDoc(gRef(db), guide()); });
+      await assertSucceeds(updateDoc(gRef(dbAs(CREATOR)), { title: 'নতুন', updatedAt: new Date() }));
+      await assertFails(updateDoc(gRef(dbAs(CREATOR)), { authorId: 'mA' }));
+      await assertFails(updateDoc(gRef(dbAs(CREATOR)), { familyId: 'other' }));
+      await assertFails(updateDoc(gRef(dbAs('uidA')), { title: 'হ্যাক' }));
+    });
+
+    it('W4. স্থায়ী মোছা শুধু ট্র্যাশে-থাকা (deletedAt আছে) পোস্ট, শুধু Creator', async () => {
+      await seed(async (db) => {
+        await setDoc(gRef(db, 'live'), guide());
+        await setDoc(gRef(db, 'trashed'), guide({ deletedAt: OLD, deletedBy: 'mC' }));
+      });
+      await assertFails(deleteDoc(gRef(dbAs(CREATOR), 'live')));
+      await assertFails(deleteDoc(gRef(dbAs('uidA'), 'trashed')));
+      await assertSucceeds(deleteDoc(gRef(dbAs(CREATOR), 'trashed')));
+    });
+  });
+
+  // ============================================================
+  describe('16. wellnessGuideMarks (ব্যক্তিগত পাঠক-মার্ক)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const mark = (uid, extra = {}) => ({ uid, marks: [], updatedAt: OLD, ...extra });
+    const mRef = (db, id) => doc(db, 'wellnessGuideMarks', id);
+
+    it('K1. মালিক নিজের মার্ক তৈরি, পড়া, বদল ও মোছা করতে পারেন', async () => {
+      const db = dbAs('uidA');
+      await assertSucceeds(setDoc(mRef(db, 'uidA_post1'), mark('uidA')));
+      await assertSucceeds(getDoc(mRef(db, 'uidA_post1')));
+      await assertSucceeds(updateDoc(mRef(db, 'uidA_post1'), { marks: [{ t: 'x' }] }));
+      await assertSucceeds(deleteDoc(mRef(db, 'uidA_post1')));
+    });
+
+    it('K2. অন্যের মার্ক পড়া/লেখা/মোছা যায় না; লগআউটেও নয়', async () => {
+      await seed(async (db) => { await setDoc(mRef(db, 'uidA_post1'), mark('uidA')); });
+      const b = dbAs('uidB');
+      await assertFails(getDoc(mRef(b, 'uidA_post1')));
+      await assertFails(setDoc(mRef(b, 'uidA_post1'), mark('uidB')));
+      await assertFails(deleteDoc(mRef(b, 'uidA_post1')));
+      await assertFails(getDoc(mRef(testEnv.unauthenticatedContext().firestore(), 'uidA_post1')));
+    });
+
+    it('K3. ভুল uid-ফিল্ড, ৩০১টি মার্ক ও list-নয় এমন মান reject', async () => {
+      const db = dbAs('uidA');
+      await assertFails(setDoc(mRef(db, 'uidA_post2'), mark('uidB')));
+      await assertFails(setDoc(mRef(db, 'uidA_post2'), mark('uidA', { marks: new Array(301).fill(1) })));
+      await assertSucceeds(setDoc(mRef(db, 'uidA_post2'), mark('uidA', { marks: new Array(300).fill(1) })));
+      await assertFails(setDoc(mRef(db, 'uidA_post3'), mark('uidA', { marks: 'x' })));
+    });
+  });
+
+  // ============================================================
+  describe('17. doctors (পারিবারিক ডাক্তার-তালিকা)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const dr = (editor, extra = {}) => ({ name: 'ডা. টেস্ট', specialtyCategory: 'general', status: 'no-image', lastEditedByMemberId: editor, createdAt: OLD, updatedAt: OLD, ...extra });
+    const dRef = (db, id = 'd1') => famDoc(db, 'doctors', id);
+
+    it('D1. পরিবারের সদস্য পড়তে পারেন; বাইরের লোক ও লগআউট নয়', async () => {
+      await seed(async (db) => { await setDoc(dRef(db), dr('mA')); });
+      await assertSucceeds(getDoc(dRef(dbAs('uidB'))));
+      await assertFails(getDoc(dRef(dbAs('outsider-uid'))));
+      await assertFails(getDoc(dRef(testEnv.unauthenticatedContext().firestore())));
+    });
+
+    it('D2. সদস্য নিজের নামে তৈরি করতে পারেন; অন্যের lastEditedBy বসালে বা বাইরের লোকের তৈরি reject', async () => {
+      await assertSucceeds(setDoc(dRef(dbAs('uidA')), dr('mA')));
+      await assertFails(setDoc(dRef(dbAs('uidA'), 'd2'), dr('mB')));
+      await assertFails(setDoc(dRef(dbAs('outsider-uid'), 'd3'), dr('mA')));
+    });
+
+    it('D3. edit শুধু creator; অন্য সদস্য ও Admin নয়; lastEditedBy spoof নয়', async () => {
+      await seed(async (db) => { await setDoc(dRef(db), dr('mA')); });
+      await assertSucceeds(updateDoc(dRef(dbAs('uidA')), { phone: '01700000000', lastEditedByMemberId: 'mA' }));
+      await assertFails(updateDoc(dRef(dbAs('uidB')), { phone: '1', lastEditedByMemberId: 'mB' }));
+      await assertFails(updateDoc(dRef(dbAs(ADMIN_UID)), { phone: '1', lastEditedByMemberId: 'memberAdmin' }));
+      await assertFails(updateDoc(dRef(dbAs('uidA')), { phone: '2', lastEditedByMemberId: 'mB' }));
+    });
+
+    it('D4. মোছা creator বা Admin পারেন; অন্য সদস্য নয়', async () => {
+      await seed(async (db) => {
+        await setDoc(dRef(db, 'x1'), dr('mA'));
+        await setDoc(dRef(db, 'x2'), dr('mA'));
+      });
+      await assertFails(deleteDoc(dRef(dbAs('uidB'), 'x1')));
+      await assertSucceeds(deleteDoc(dRef(dbAs('uidA'), 'x1')));
+      await assertSucceeds(deleteDoc(dRef(dbAs(ADMIN_UID), 'x2')));
+    });
+  });
+
+  // ============================================================
+  describe('18. healthCalendarEvents (পারিবারিক ক্যালেন্ডার)', () => {
+    beforeEach(async () => {
+      await seedOwned('mA', 'uidA');
+      await seedOwned('mB', 'uidB');
+    });
+    const ev = (editor, extra = {}) => ({ title: 'টিকা', date: '2026-12-01', lastEditedByMemberId: editor, createdAt: OLD, updatedAt: OLD, ...extra });
+    const eRef = (db, id = 'e1') => famDoc(db, 'healthCalendarEvents', id);
+
+    it('E1. সদস্য পড়তে ও নিজের নামে তৈরি করতে পারেন; বাইরের লোক বা spoof নয়', async () => {
+      await assertSucceeds(setDoc(eRef(dbAs('uidA')), ev('mA')));
+      await assertSucceeds(getDoc(eRef(dbAs('uidB'))));
+      await assertFails(getDoc(eRef(dbAs('outsider-uid'))));
+      await assertFails(setDoc(eRef(dbAs('uidA'), 'e2'), ev('mB')));
+      await assertFails(setDoc(eRef(dbAs('outsider-uid'), 'e3'), ev('mA')));
+    });
+
+    it('E2. edit creator বা Admin পারেন; অন্য সদস্য নয়; lastEditedBy সবসময় caller-এর', async () => {
+      await seed(async (db) => { await setDoc(eRef(db), ev('mA')); });
+      await assertSucceeds(updateDoc(eRef(dbAs('uidA')), { title: 'নতুন', lastEditedByMemberId: 'mA' }));
+      await assertFails(updateDoc(eRef(dbAs('uidB')), { title: 'হ্যাক', lastEditedByMemberId: 'mB' }));
+      await assertSucceeds(updateDoc(eRef(dbAs(ADMIN_UID)), { title: 'অ্যাডমিন', lastEditedByMemberId: 'memberAdmin' }));
+      await assertFails(updateDoc(eRef(dbAs('uidA')), { title: 'spoof', lastEditedByMemberId: 'mB' }));
+    });
+
+    it('E3. মোছা creator বা Admin পারেন; অন্য সদস্য নয়', async () => {
+      await seed(async (db) => {
+        await setDoc(eRef(db, 'y1'), ev('mA'));
+        await setDoc(eRef(db, 'y2'), ev('mA'));
+      });
+      await assertFails(deleteDoc(eRef(dbAs('uidB'), 'y1')));
+      await assertSucceeds(deleteDoc(eRef(dbAs('uidA'), 'y1')));
+      await assertSucceeds(deleteDoc(eRef(dbAs(ADMIN_UID), 'y2')));
+    });
+  });
 });

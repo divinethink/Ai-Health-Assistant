@@ -62,6 +62,23 @@ async function sha1Hex(message) {
   return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Cloudinary মোছা/আপলোডে নিরাপত্তা-গার্ড (অডিট M২/M৩): Firestore-ডকের ফিল্ড-মানকে অন্ধভাবে বিশ্বাস নয়।
+// publicId শুধু নিজের পরিবারের ফোল্ডার (বা শুধু docId) হলেই মোছা হবে; resourceType শুধু পরিচিত তিনটি।
+function safeCloudTarget(fields, docId, folderPrefix) {
+  const pid = String(fields.cloudinaryPublicId || docId);
+  const okId = pid === docId || pid.startsWith(folderPrefix);
+  const rt = ["image", "raw", "video"].includes(fields.cloudinaryResourceType) ? fields.cloudinaryResourceType : "image";
+  return okId ? { publicId: pid, resourceType: rt } : null;
+}
+
+// আপলোড-সাইন শুধু নতুন-তৈরি (status "pending") ডকে; "ready" ডকে নয় — শুধু-Read সদস্য বিদ্যমান ফাইল overwrite করতে পারবেন না।
+async function isFreshPendingDoc(getRes) {
+  try {
+    const f = fsFieldsToPlain((await getRes.json()).fields);
+    return f.status === "pending" && !f.cloudinaryPublicId;
+  } catch (e) { return false; }
+}
+
 // --- AI-চ্যাট (§6.7) সংযুক্ত হেল্পার ---
 
 // ধাপ ১: idToken-এর signature Firebase-এর public JWK দিয়ে verify করা (Admin SDK ছাড়াই, §6.7.1)।
@@ -936,6 +953,7 @@ export default {
           headers: { Authorization: `Bearer ${idToken}` },
         });
         if (!getRes.ok) return json(env, { error: "forbidden" }, 403);
+        if (!(await isFreshPendingDoc(getRes))) return json(env, { error: "forbidden" }, 403);
 
         const timestamp = Math.floor(Date.now() / 1000);
         const folder = `health-docs/${familyId}`;
@@ -961,15 +979,17 @@ export default {
         if (!getRes.ok) return json(env, { error: "not-found-or-forbidden" }, 404);
         const doc = await getRes.json();
         const fields = fsFieldsToPlain(doc.fields);
-        const publicId = fields.cloudinaryPublicId || docId;
-        const resourceType = fields.cloudinaryResourceType || "image";
+        const target = safeCloudTarget(fields, docId, `health-docs/${familyId}/`);
 
         const delRes = await fetch(docUrl, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
         if (!delRes.ok) return json(env, { error: "forbidden" }, 403);
 
-        const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
-        const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${resourceType}/upload?public_ids[]=${encodeURIComponent(publicId)}`;
-        await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+        // অচেনা publicId হলে শুধু Firestore-ডক মুছেছে; Cloudinary ছোঁয়া হয় না।
+        if (target) {
+          const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
+          const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${target.resourceType}/upload?public_ids[]=${encodeURIComponent(target.publicId)}`;
+          await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+        }
 
         return json(env, { ok: true });
       }
@@ -987,6 +1007,7 @@ export default {
           headers: { Authorization: `Bearer ${idToken}` },
         });
         if (!getRes.ok) return json(env, { error: "forbidden" }, 403);
+        if (!(await isFreshPendingDoc(getRes))) return json(env, { error: "forbidden" }, 403);
 
         const timestamp = Math.floor(Date.now() / 1000);
         const folder = `health-doctors/${familyId}`;
@@ -1012,15 +1033,17 @@ export default {
         if (!getRes.ok) return json(env, { error: "not-found-or-forbidden" }, 404);
         const doc = await getRes.json();
         const fields = fsFieldsToPlain(doc.fields);
-        const publicId = fields.cloudinaryPublicId || doctorId;
-        const resourceType = fields.cloudinaryResourceType || "image";
+        const target = safeCloudTarget(fields, doctorId, `health-doctors/${familyId}/`);
 
         const delRes = await fetch(docUrl, { method: "DELETE", headers: { Authorization: `Bearer ${idToken}` } });
         if (!delRes.ok) return json(env, { error: "forbidden" }, 403);
 
-        const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
-        const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${resourceType}/upload?public_ids[]=${encodeURIComponent(publicId)}`;
-        await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+        // অচেনা publicId হলে শুধু Firestore-ডক মুছেছে; Cloudinary ছোঁয়া হয় না।
+        if (target) {
+          const basicAuth = "Basic " + btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`);
+          const cloudDelUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/resources/${target.resourceType}/upload?public_ids[]=${encodeURIComponent(target.publicId)}`;
+          await fetch(cloudDelUrl, { method: "DELETE", headers: { Authorization: basicAuth } });
+        }
 
         return json(env, { ok: true });
       }
