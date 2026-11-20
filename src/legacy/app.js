@@ -501,7 +501,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
     React.createElement(
       "div", { style: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "6px", marginBottom: "12px" } },
       tile("aichat", t("nav.aichat"), onOpenAIChat, false),
-      tile("notif", t("menu.notifShort"), () => setSub("reminder"), false), // রিমাইন্ডার ও ক্যালেন্ডার এখন মেনুর ভেতরেই
+      tile("blog", L("স্বাস্থ্য ব্লগ", "Health Blog"), onOpenBlog, false),
       tile("doctor", t("menu.doctorShort"), () => setSub("doctor"), false),
       tile("emergency", t("menu.emergencyShort").replace("📞 ", ""), () => setShowCare((v) => !v), true)
     ),
@@ -511,7 +511,7 @@ function MenuPage({ uid, familyId, familyDoc, memberId, memberDoc, isAdmin, refr
       React.createElement(CareEscalationDirectory, { key: "care-escalation" + refreshTick })
     ),
     group([
-      row("blog", L("স্বাস্থ্য ব্লগ", "Health Blog"), L("স্বাস্থ্য-নির্দেশিকা ও লেখা", "Health guides & articles"), onOpenBlog),
+      row("notif", t("menu.notifShort"), L("রিমাইন্ডার ও ক্যালেন্ডার", "Reminders & calendar"), () => setSub("reminder")), // রিমাইন্ডার ও ক্যালেন্ডার মেনুর ভেতরেই
       row("family", t("menu.familyTitle"), t("menu.familySub"), () => setSub("family")),
       row("timeline", "টাইমলাইন", "স্বাস্থ্য-ঘটনা ও টিকা, মাস অনুযায়ী", () => setSub("timeline")),
       row("data", t("menu.dataTitle"), t("menu.dataSub"), () => setSub("data"), true),
