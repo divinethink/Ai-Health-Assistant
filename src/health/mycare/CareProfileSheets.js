@@ -8,6 +8,17 @@ import { splitIngredients } from "./careAdapter.js";
 const { useState } = React;
 const lbl = (group, id) => { const o = (LABELS[group] || {})[id]; return o ? L(o.bn, o.en) : id; };
 
+// কমপ্যাক্ট চিপ (৩৮px; আগে ৪৪px) — নির্বাচিত হলে গাঢ় সবুজ। aria-pressed ও ✓ থাকায় শুধু রঙের উপর নির্ভর নয়।
+const chipStyle = (on) => ({ minHeight: "38px", padding: "4px 12px", borderRadius: "999px", fontSize: "13.5px", fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "background .15s, box-shadow .15s",
+  border: on ? "1px solid #0E4B43" : "1px solid #D5E0DA", background: on ? "linear-gradient(135deg, #0E4B43, #1F7A5C)" : "#fff", color: on ? "#fff" : "#2B3A36", boxShadow: on ? "0 2px 6px rgba(14,75,67,0.22)" : "none" });
+
+// গ্রুপ-কার্ড: সম্পর্কিত প্রশ্ন এক কার্ডে, বাঁ-পাশে রঙিন দাগ
+function Section({ title, color, children }) {
+  return React.createElement("section", { style: { marginTop: "12px", padding: "2px 12px 12px", borderRadius: "16px", background: "#FBFDFC", border: "1px solid #E3ECE7", borderLeft: "4px solid " + color } },
+    React.createElement("div", { style: { fontSize: "12.5px", fontWeight: 800, color, paddingTop: "10px" } }, title),
+    children);
+}
+
 function ChipRow({ title, options, group, value, multi, onChange, max }) {
   const sel = multi ? (value || []) : (value ? [value] : []);
   const toggle = (id) => {
@@ -16,14 +27,12 @@ function ChipRow({ title, options, group, value, multi, onChange, max }) {
       else if (!max || sel.length < max) onChange([...sel, id]);
     } else onChange(sel[0] === id ? null : id);
   };
-  return React.createElement("div", { style: { marginTop: "14px" } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, title),
-    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
+  return React.createElement("div", { style: { marginTop: "10px" } },
+    React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, title),
+    React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
       options.map((id) => {
         const on = sel.includes(id);
-        return React.createElement("button", { key: id, type: "button", onClick: () => toggle(id), "aria-pressed": on,
-          style: { minHeight: "44px", padding: "6px 14px", borderRadius: "999px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit",
-            border: on ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "#fff", color: on ? "var(--hs-primary, #0E4B43)" : "#2B3A36" } },
+        return React.createElement("button", { key: id, type: "button", onClick: () => toggle(id), "aria-pressed": on, style: chipStyle(on) },
           (on ? "✓ " : "") + (group ? lbl(group, id) : id));
       })));
 }
@@ -31,14 +40,13 @@ function ChipRow({ title, options, group, value, multi, onChange, max }) {
 // হ্যাঁ/না — আবার চাপলে অজানা (null)
 function YesNoRow({ title, value, onChange }) {
   const opts = [[true, L("হ্যাঁ", "Yes")], [false, L("না", "No")]];
-  return React.createElement("div", { style: { marginTop: "14px" } },
-    React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, title),
-    React.createElement("div", { style: { display: "flex", gap: "8px" } },
+  return React.createElement("div", { style: { marginTop: "10px" } },
+    React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, title),
+    React.createElement("div", { style: { display: "flex", gap: "6px" } },
       opts.map(([v, label]) => {
         const on = value === v;
         return React.createElement("button", { key: String(v), type: "button", "aria-pressed": on, onClick: () => onChange(on ? null : v),
-          style: { flex: 1, minHeight: "44px", borderRadius: "12px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit",
-            border: on ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "#fff", color: on ? "var(--hs-primary, #0E4B43)" : "#2B3A36" } }, label);
+          style: { ...chipStyle(on), flex: 1, borderRadius: "12px" } }, label);
       })));
 }
 
@@ -69,17 +77,25 @@ export function CareProfileSheet({ prefs, sex, onSave, onClose }) {
     }
   };
   return React.createElement(Sheet, { title: "My Care Profile", subtitle: L("ঐচ্ছিক — বয়স, অ্যালার্জি, রোগ অ্যাপ থেকেই নেওয়া হয়", "Optional — age, allergies and conditions are read from the app automatically"), onClose, soft: true },
+    React.createElement(Section, { title: L("ত্বক", "SKIN"), color: "#1F7A5C" },
     React.createElement(ChipRow, { title: L("ত্বকের ধরন", "Skin type"), options: ENUMS.skinType, group: "skinType", value: f.skinType, onChange: set("skinType") }),
     React.createElement(ChipRow, { title: L("ত্বকের সমস্যা", "Skin concerns"), options: ENUMS.skinConcerns, group: "skinConcerns", value: f.skinConcerns, multi: true, max: LIMITS.concerns, onChange: set("skinConcerns") }),
+    ),
+    React.createElement(Section, { title: L("চুল", "HAIR"), color: "#3B7FC4" },
     React.createElement(ChipRow, { title: L("চুল/স্কাল্পের ধরন", "Hair/scalp type"), options: ENUMS.hairType, group: "hairType", value: f.hairType, onChange: set("hairType") }),
     React.createElement(ChipRow, { title: L("চুলের সমস্যা", "Hair concerns"), options: ENUMS.hairConcerns, group: "hairConcerns", value: f.hairConcerns, multi: true, max: LIMITS.concerns, onChange: set("hairConcerns") }),
+    ),
+    React.createElement(Section, { title: L("দাঁত ও মুখ", "ORAL"), color: "#C9811F" },
     React.createElement(ChipRow, { title: L("দাঁত-মুখের সমস্যা", "Oral concerns"), options: ENUMS.oralConcerns, group: "oralConcerns", value: f.oralConcerns, multi: true, max: LIMITS.concerns, onChange: set("oralConcerns") }),
+    ),
+    React.createElement(Section, { title: L("অন্যান্য", "MORE"), color: "#7A5BC4" },
     sex === "female" && React.createElement(YesNoRow, { title: L("বুকের দুধ খাওয়াচ্ছেন?", "Breastfeeding?"), value: f.breastfeeding, onChange: set("breastfeeding") }),
-    React.createElement("div", { style: { marginTop: "14px" } },
-      React.createElement("label", { htmlFor: "mc-avoid", style: { display: "block", fontSize: "14px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, L("এড়াতে চাওয়া উপাদান (কমা দিয়ে)", "Ingredients to avoid (comma separated)")),
+    React.createElement("div", { style: { marginTop: "10px" } },
+      React.createElement("label", { htmlFor: "mc-avoid", style: { display: "block", fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, L("এড়াতে চাওয়া উপাদান (কমা দিয়ে)", "Ingredients to avoid (comma separated)")),
       React.createElement("input", { id: "mc-avoid", type: "text", value: f.avoidText, onChange: (e) => set("avoidText")(e.target.value), maxLength: 400, style: INPUT, placeholder: L("যেমন: ল্যানোলিন, সুগন্ধি", "e.g. lanolin, fragrance") }),
       React.createElement("div", { style: { fontSize: "12.5px", color: "#5F716C", marginTop: "4px" } }, L("অ্যালার্জি আলাদা লাগবে না — তা অ্যাপের স্বাস্থ্য-রেকর্ড থেকেই নেওয়া হয়।", "No need to repeat allergies — they are read from health records."))),
     React.createElement(ChipRow, { title: L("পছন্দ", "Preference"), options: ENUMS.preferences, group: "preferences", value: f.preferences, multi: true, max: LIMITS.preferences, onChange: set("preferences") }),
+    ),
     Note(L("পছন্দ শুধু ক্রমে সামান্য প্রভাব ফেলে; নিরাপত্তা বা প্রমাণ-স্তর বদলায় না।", "Preferences only nudge the order; they never override safety or evidence level.")),
     err && Msg(err, "err"),
     React.createElement("div", { style: { display: "flex", gap: "8px", marginTop: "16px" } }, primaryBtn(L("সংরক্ষণ করুন", "Save"), save, busy)));
@@ -95,12 +111,11 @@ export function OtherSheet({ initial, onApply, onClose }) {
     React.createElement(ChipRow, { title: L("লিঙ্গ", "Sex"), options: ["male", "female"], group: "sex", value: f.sex, onChange: (v) => setF((s) => ({ ...s, sex: v, pregnantOrNursing: null })) }),
     React.createElement("div", { style: { marginTop: "14px" } },
       React.createElement("div", { style: { fontSize: "14px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, L("বয়স-পরিসর (বাধ্যতামূলক)", "Age range (required)")),
-      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "8px" } },
+      React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
         AGE_BANDS.map(([id, bn, en]) => {
           const on = f.ageBand === id;
           return React.createElement("button", { key: id, type: "button", "aria-pressed": on, onClick: () => set("ageBand")(id),
-            style: { minHeight: "44px", padding: "6px 14px", borderRadius: "999px", fontSize: "14px", fontWeight: on ? 800 : 600, cursor: "pointer", fontFamily: "inherit",
-              border: on ? "1.5px solid var(--hs-primary, #0E4B43)" : "1px solid #C3D2CA", background: on ? "var(--hs-chip-bg, #E4F0E9)" : "#fff", color: on ? "var(--hs-primary, #0E4B43)" : "#2B3A36" } }, (on ? "✓ " : "") + L(bn, en));
+            style: chipStyle(on) }, (on ? "✓ " : "") + L(bn, en));
         }))),
     React.createElement(ChipRow, { title: L("ত্বকের ধরন", "Skin type"), options: ENUMS.skinType, group: "skinType", value: f.skinType, onChange: set("skinType") }),
     React.createElement(ChipRow, { title: L("চুলের ধরন", "Hair type"), options: ENUMS.hairType, group: "hairType", value: f.hairType, onChange: set("hairType") }),
