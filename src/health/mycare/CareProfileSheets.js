@@ -19,7 +19,7 @@ function Section({ title, color, children }) {
     children);
 }
 
-function ChipRow({ title, options, group, value, multi, onChange, max }) {
+function ChipRow({ title, noneChip, options, group, value, multi, onChange, max }) {
   const sel = multi ? (value || []) : (value ? [value] : []);
   const toggle = (id) => {
     if (multi) {
@@ -30,6 +30,9 @@ function ChipRow({ title, options, group, value, multi, onChange, max }) {
   return React.createElement("div", { style: { marginTop: "10px" } },
     React.createElement("div", { style: { fontSize: "13.5px", fontWeight: 700, color: "#1F2D2A", marginBottom: "6px" } }, title),
     React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: "6px" } },
+      // "স্বাভাবিক" = সমস্যা নেই: শুধু দেখার চিপ, আলাদা কিছু সংরক্ষিত হয় না (তালিকা ফাঁকা = নেই)। schema/rules অপরিবর্তিত।
+      noneChip && React.createElement("button", { key: "__none", type: "button", "aria-pressed": sel.length === 0, onClick: () => onChange([]), style: chipStyle(sel.length === 0) },
+        (sel.length === 0 ? "✓ " : "") + L("স্বাভাবিক", "Normal")),
       options.map((id) => {
         const on = sel.includes(id);
         return React.createElement("button", { key: id, type: "button", onClick: () => toggle(id), "aria-pressed": on, style: chipStyle(on) },
@@ -79,14 +82,14 @@ export function CareProfileSheet({ prefs, sex, onSave, onClose }) {
   return React.createElement(Sheet, { title: "My Care Profile", subtitle: L("ঐচ্ছিক — বয়স, অ্যালার্জি, রোগ অ্যাপ থেকেই নেওয়া হয়", "Optional — age, allergies and conditions are read from the app automatically"), onClose, soft: true },
     React.createElement(Section, { title: L("ত্বক", "SKIN"), color: "#1F7A5C" },
     React.createElement(ChipRow, { title: L("ত্বকের ধরন", "Skin type"), options: ENUMS.skinType, group: "skinType", value: f.skinType, onChange: set("skinType") }),
-    React.createElement(ChipRow, { title: L("ত্বকের সমস্যা", "Skin concerns"), options: ENUMS.skinConcerns, group: "skinConcerns", value: f.skinConcerns, multi: true, max: LIMITS.concerns, onChange: set("skinConcerns") }),
+    React.createElement(ChipRow, { title: L("ত্বকের সমস্যা", "Skin concerns"), noneChip: true, options: ENUMS.skinConcerns, group: "skinConcerns", value: f.skinConcerns, multi: true, max: LIMITS.concerns, onChange: set("skinConcerns") }),
     ),
     React.createElement(Section, { title: L("চুল", "HAIR"), color: "#3B7FC4" },
     React.createElement(ChipRow, { title: L("চুল/স্কাল্পের ধরন", "Hair/scalp type"), options: ENUMS.hairType, group: "hairType", value: f.hairType, onChange: set("hairType") }),
-    React.createElement(ChipRow, { title: L("চুলের সমস্যা", "Hair concerns"), options: ENUMS.hairConcerns, group: "hairConcerns", value: f.hairConcerns, multi: true, max: LIMITS.concerns, onChange: set("hairConcerns") }),
+    React.createElement(ChipRow, { title: L("চুলের সমস্যা", "Hair concerns"), noneChip: true, options: ENUMS.hairConcerns, group: "hairConcerns", value: f.hairConcerns, multi: true, max: LIMITS.concerns, onChange: set("hairConcerns") }),
     ),
     React.createElement(Section, { title: L("দাঁত ও মুখ", "ORAL"), color: "#C9811F" },
-    React.createElement(ChipRow, { title: L("দাঁত-মুখের সমস্যা", "Oral concerns"), options: ENUMS.oralConcerns, group: "oralConcerns", value: f.oralConcerns, multi: true, max: LIMITS.concerns, onChange: set("oralConcerns") }),
+    React.createElement(ChipRow, { title: L("দাঁত-মুখের সমস্যা", "Oral concerns"), noneChip: true, options: ENUMS.oralConcerns, group: "oralConcerns", value: f.oralConcerns, multi: true, max: LIMITS.concerns, onChange: set("oralConcerns") }),
     ),
     React.createElement(Section, { title: L("অন্যান্য", "MORE"), color: "#7A5BC4" },
     sex === "female" && React.createElement(YesNoRow, { title: L("বুকের দুধ খাওয়াচ্ছেন?", "Breastfeeding?"), value: f.breastfeeding, onChange: set("breastfeeding") }),
