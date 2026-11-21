@@ -1,24 +1,26 @@
 name: populate-diet-rules
 
-# খাদ্য নির্দেশিকা তালিকা (dietGuidanceRules) Firestore-এ আপডেট — পিসি ছাড়াই।
+# খাদ্য নির্দেশিকা (dietGuidanceRules) Firestore-এ আপডেট — পিসি ছাড়াই।
 # Actions → populate-diet-rules → Run workflow।
-#  ১) প্রথমে mode = dry-run (কিছু লেখে না, শুধু preview) — লগ দেখে নিন।
-#  ২) ঠিক থাকলে mode = sync-lists এবং confirm ঘরে SYNC লিখুন।
-# sync-lists: শুধু avoidFoods/includeFoods/habitTips বদলায়; status (verified) অক্ষত থাকে।
+#  ১) dry-run: কিছু লেখে না, শুধু তালিকা-আপডেটের preview।
+#  ২) sync-lists + confirm ঘরে SYNC: বিদ্যমান ডকের শুধু খাবার/অভ্যাস-তালিকা বদলায়; status (verified) অক্ষত।
+#  ৩) create-missing: যে ডক Firestore-এ নেই (যেমন BMI-র ৩টি) শুধু সেগুলো draft হিসেবে বানায়।
+#     confirm ফাঁকা = শুধু preview; আসল লেখতে confirm ঘরে CREATE লিখুন। বিদ্যমান ডক overwrite হয় না।
 # Secret: FIREBASE_SERVICE_ACCOUNT (deploy-rules-এর একই secret)।
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'dry-run (preview) অথবা sync-lists (আসল আপডেট)'
+        description: 'dry-run, sync-lists অথবা create-missing'
         type: choice
         required: true
         default: dry-run
         options:
           - dry-run
           - sync-lists
+          - create-missing
       confirm:
-        description: 'sync-lists হলে SYNC লিখুন (dry-run-এ ফাঁকা রাখুন)'
+        description: 'sync-lists হলে SYNC, create-missing-এর আসল লেখায় CREATE (preview-তে ফাঁকা)'
         required: false
 
 permissions:
@@ -26,7 +28,7 @@ permissions:
 
 jobs:
   populate:
-    if: ${{ inputs.mode == 'dry-run' || inputs.confirm == 'SYNC' }}
+    if: ${{ inputs.mode == 'dry-run' || inputs.mode == 'create-missing' || inputs.confirm == 'SYNC' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -49,3 +51,13 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: node scripts/populateDietGuidanceRules.js --confirm --sync-lists
+      - name: Create missing (preview, কিছু লেখা হবে না)
+        if: ${{ inputs.mode == 'create-missing' && inputs.confirm != 'CREATE' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateDietGuidanceRules.js
+      - name: Create missing (আসল write — শুধু না-থাকা ডক)
+        if: ${{ inputs.mode == 'create-missing' && inputs.confirm == 'CREATE' }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/populateDietGuidanceRules.js --confirm

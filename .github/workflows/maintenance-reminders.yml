@@ -1,0 +1,71 @@
+name: maintenance-reminders
+
+# রক্ষণাবেক্ষণের স্মরণ-তালিকা: নিয়মমতো নিজে GitHub Issue খোলে — GitHub মোবাইল অ্যাপে নোটিফিকেশন আসে।
+#  প্রতি মাসের ১ তারিখ: মাসিক তালিকা (backup, Dependabot, কোটা)
+#  জানুয়ারি/এপ্রিল/জুলাই/অক্টোবর: সাথে ত্রৈমাসিক (restore drill)
+#  জানুয়ারি: সাথে বার্ষিক (secret বদল)
+# একই নামের Issue আগে থাকলে নতুন খোলে না। কাজ শেষে Issue বন্ধ (Close) করে দিন।
+# অ্যাপ-কোড, secret বা নতুন dependency লাগে না। হাতে চালাতে: Actions → maintenance-reminders → Run workflow।
+on:
+  schedule:
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Issue খোলা
+        shell: bash
+        run: |
+          set -euo pipefail
+          YM="$(date -u +%Y-%m)"
+          MONTH="$(date -u +%m)"
+
+          open_issue() {
+            local title="$1" body="$2"
+            if gh issue list --state all --search "\"$title\" in:title" --json title --jq '.[].title' | grep -Fxq "$title"; then
+              echo "আগে থেকেই আছে: $title"
+            else
+              gh issue create --title "$title" --body "$body"
+            fi
+          }
+
+          open_issue "রক্ষণাবেক্ষণ — মাসিক ($YM)" "$(cat <<'BODY'
+          - [ ] **Backup:** অ্যাপের মেনু ▸ ডেটা ব্যাকআপ থেকে "পরিবারের ডেটা" ও "আমার ডেটা" দুটোই নিন (Drive বা ফোনে)। মনে রাখুন, ট্র্যাকার ও MyCare-এর ডেটা এই ব্যাকআপে ধরা পড়ে না।
+          - [ ] **Dependabot:** Pull requests-এ খোলা PR আছে কিনা দেখুন; CI সবুজ হলে merge, লাল হলে বাদ।
+          - [ ] **কোটা/খরচ:** Groq, Mistral, Cerebras, OpenRouter, Exa-র ব্যবহার; Firebase (Spark) ও Cloudflare (Workers/Pages) usage সীমার কাছে কিনা; কোথাও কার্ড বা বিলিং যোগ হয়নি তো।
+          - [ ] **Actions:** শেষ ci ও deploy সবুজ কিনা দেখুন।
+          BODY
+          )"
+
+          case "$MONTH" in
+            01|04|07|10)
+              open_issue "রক্ষণাবেক্ষণ — ত্রৈমাসিক restore drill ($YM)" "$(cat <<'BODY'
+          - [ ] সাম্প্রতিক ব্যাকআপ ফাইল দিয়ে অ্যাপের ডেটা ব্যাকআপ পেজে "যাচাই করুন" চাপুন (dry-run)।
+          - [ ] Preview ঠিক দেখালে ছোট একটা সদস্যের ডেটায় আসল restore করে দেখুন সব ফিরে আসে কিনা।
+          - [ ] সমস্যা হলে এখানে লিখে রাখুন; পারিবারিক ডেটায় আসল restore-এর আগে ব্যাকআপ আবার নিন।
+          BODY
+              )"
+              ;;
+          esac
+
+          if [ "$MONTH" = "01" ]; then
+            open_issue "রক্ষণাবেক্ষণ — বার্ষিক secret বদল ($(date -u +%Y))" "$(cat <<'BODY'
+          নতুন key বানিয়ে পুরনোটা বাতিল করুন। Worker-এর secret `wrangler secret put` বা GitHub Secrets-এ বদলে `deploy-worker` চালান।
+          - [ ] Groq, Mistral, Cerebras, OpenRouter, Exa API key
+          - [ ] Cloudinary key/secret
+          - [ ] Google OAuth Client Secret
+          - [ ] `FIREBASE_SERVICE_ACCOUNT` (নতুন key বানিয়ে পুরনো মুছুন)
+          - [ ] Cloudflare API token ও GitHub-এর অন্য কোনো token
+          - [ ] বদলের পর অ্যাপে AI চ্যাট, ফাইল আপলোড ও লগইন একবার পরীক্ষা করুন।
+          BODY
+            )"
+          fi
