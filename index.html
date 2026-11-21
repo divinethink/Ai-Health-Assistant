@@ -120,6 +120,24 @@
     --hs-primary: #3E6092; --hs-primary-contrast: #FFFFFF; --hs-border: #C9D2E4; --hs-chip-bg: #E8EDF6;
     --hs-input-border: #AEBAD2; --hs-primary-2: #5078AE; --hs-hero-1: #3E6092; --hs-hero-2: #5078AE;
   }
+
+  /* ট্যাবলেট ও পিসি লেআউট (মোবাইল-first; <768px-এ কিছুই বদলায় না)।
+     --hs-pl/--hs-pr = পেজের বাম/ডান ফাঁক (কনটেন্ট মাঝখানে কলামে), --hs-nav-b = নিচের নেভ-বারের জায়গা।
+     ট্যাবলেট (≥768px): নিচের নেভ থাকে, কনটেন্ট ৮২০px কলামে। পিসি (≥1100px): নিচের নেভ বাঁ-পাশের সাইডবারে, কনটেন্ট ১০৪০px পর্যন্ত। */
+  :root { --hs-pl: 0px; --hs-pr: 0px; --hs-nav-b: 56px; --hs-fab-b: 68px; }
+  @media (min-width: 768px) {
+    :root { --hs-pl: max(0px, calc((100vw - 820px) / 2)); --hs-pr: max(0px, calc((100vw - 820px) / 2)); }
+    #root { margin-left: var(--hs-pl); margin-right: var(--hs-pr); }
+  }
+  @media (min-width: 1100px) {
+    :root { --hs-pl: calc(220px + max(0px, calc((100vw - 220px - 1040px) / 2))); --hs-pr: max(0px, calc((100vw - 220px - 1040px) / 2)); --hs-nav-b: 0px; --hs-fab-b: 24px; }
+    .hs-bottomnav { top: 0 !important; right: auto !important; width: 220px; height: auto !important; flex-direction: column !important; justify-content: flex-start !important; gap: 6px; padding: 72px 12px 16px; box-sizing: border-box; border-top: none !important; border-right: 1px solid var(--hs-border); box-shadow: none !important; }
+    .hs-bottomnav::before { content: "Health Companion"; position: absolute; top: 22px; left: 20px; right: 12px; font-size: 18px; font-weight: 700; color: var(--hs-primary); }
+    .hs-bottomnav .hs-bn-btn { flex: none !important; flex-direction: row !important; justify-content: flex-start !important; width: 100%; max-width: none !important; margin: 0 !important; min-height: 48px !important; gap: 10px !important; padding: 0 8px !important; border-radius: 14px !important; }
+    .hs-bottomnav .hs-bn-btn:hover { background: var(--hs-chip-bg) !important; }
+    .hs-bottomnav .hs-bn-btn > span:first-child { padding: 4px 8px !important; }
+    .hs-bottomnav .hs-bn-btn > span:last-child { font-size: 15px !important; }
+  }
   html, body { background: var(--hs-bg); margin: 0; padding: 0; font-family: 'Noto Sans Bengali', 'Hind Siliguri', sans-serif; }
   html, body { color: var(--hs-text); -webkit-font-smoothing: antialiased; }
 

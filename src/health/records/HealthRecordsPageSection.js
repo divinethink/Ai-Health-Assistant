@@ -97,7 +97,7 @@ export function HealthRecordsPageSection({ familyId, callerMemberId, isAdmin, se
   histBind(hk + "rec", recOpen, setRecOpen);
 
   return React.createElement(
-    "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
+    "div", { className: "hs-page", style: { position: "fixed", top: topPx, left: "var(--hs-pl, 0px)", right: "var(--hs-pr, 0px)", bottom: "var(--hs-nav-b, 56px)", zIndex: 40, display: "flex", flexDirection: "column", background: "#F1F6F2", fontFamily: "'Noto Sans Bengali', 'Hind Siliguri', sans-serif" } },
     isHealth && React.createElement(
       "div", { className: "hs-noscroll", style: { display: "flex", justifyContent: "safe center", overflowX: "auto", gap: "6px", padding: "8px 10px", background: "#fff", borderBottom: "1px solid #D9E5DE", boxShadow: "0 2px 6px rgba(14,75,67,0.06)", flexShrink: 0, alignItems: "center" } },
       chip || null,

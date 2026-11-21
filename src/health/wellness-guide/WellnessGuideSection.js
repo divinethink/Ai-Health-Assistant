@@ -390,7 +390,7 @@ export function WellnessGuideSection({ familyId, myMemberId, onExit }) {
   }
 
   return React.createElement(
-    "div", { style: { position: "fixed", top: 0, left: 0, right: 0, bottom: "56px", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: 0, left: "var(--hs-pl, 0px)", right: "var(--hs-pr, 0px)", bottom: "var(--hs-nav-b, 56px)", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
     headerBar,
     React.createElement(
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },

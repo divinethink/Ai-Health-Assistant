@@ -148,7 +148,7 @@ export function DoctorDetailsSection({ familyId, callerMemberId, isAdmin, onExit
   );
 
   return React.createElement(
-    "div", { style: { position: "fixed", inset: 0, zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
+    "div", { style: { position: "fixed", top: 0, bottom: 0, left: "var(--hs-pl, 0px)", right: "var(--hs-pr, 0px)", zIndex: 40, display: "flex", flexDirection: "column", background: "#fff", fontFamily: "'Hind Siliguri', sans-serif" } },
     headerBar,
     React.createElement(
       "div", { style: { flex: 1, display: "flex", minHeight: 0, position: "relative" } },

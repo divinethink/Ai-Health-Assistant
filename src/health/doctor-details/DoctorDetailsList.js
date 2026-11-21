@@ -105,7 +105,7 @@ export function DoctorDetailsList({ familyId, category, refreshTick, callerMembe
     openDoc && React.createElement(
       React.Fragment, null,
       React.createElement("div", { onClick: () => { setOpenId(null); setConfirmId(null); }, style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 90 } }),
-      React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": openDoc.name, style: { position: "fixed", left: 0, right: 0, bottom: "56px", maxHeight: "70vh", overflowY: "auto", background: "#F1F6F2", borderRadius: "18px 18px 0 0", padding: "10px 12px 14px", zIndex: 91, boxShadow: "0 -4px 16px rgba(0,0,0,0.2)" } },
+      React.createElement("div", { role: "dialog", "aria-modal": "true", "aria-label": openDoc.name, style: { position: "fixed", left: "var(--hs-pl, 0px)", right: "var(--hs-pr, 0px)", bottom: "var(--hs-nav-b, 56px)", maxHeight: "70vh", overflowY: "auto", background: "#F1F6F2", borderRadius: "18px 18px 0 0", padding: "10px 12px 14px", zIndex: 91, boxShadow: "0 -4px 16px rgba(0,0,0,0.2)" } },
         React.createElement("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "6px" } },
           React.createElement("button", { onClick: () => { setOpenId(null); setConfirmId(null); }, "aria-label": "বন্ধ করুন", style: { width: "44px", height: "44px", borderRadius: "50%", border: "1px solid #C3D2CA", background: "#fff", color: "var(--hs-primary, #0E4B43)", fontSize: "18px", cursor: "pointer" } }, "✕")),
         renderCard(openDoc))));

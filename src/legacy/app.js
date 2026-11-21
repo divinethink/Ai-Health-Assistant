@@ -97,6 +97,7 @@ const NAV_TABS = [
 function BottomNav({ active, onChange }) {
   return React.createElement(
     "div", {
+      className: "hs-bottomnav",
       style: {
         position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 45,
         display: "flex", background: "var(--hs-surface)", borderTop: "1px solid var(--hs-border)",
@@ -107,7 +108,7 @@ function BottomNav({ active, onChange }) {
       const isActive = id === active;
       return React.createElement(
         "button", {
-          key: id, onClick: () => onChange(id),
+          key: id, onClick: () => onChange(id), className: "hs-bn-btn",
           style: {
             flex: 1, maxWidth: "160px", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", gap: "2px", border: "none", background: "none", minHeight: 0,

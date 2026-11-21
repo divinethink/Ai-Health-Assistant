@@ -8,7 +8,7 @@ const h = React.createElement;
 export function QuickAddFab({ onOpen }) {
   return h("button", {
     type: "button", onClick: onOpen, "aria-label": "দ্রুত যোগ করুন",
-    style: { position: "fixed", right: "12px", bottom: "68px", zIndex: 60, width: "50px", height: "50px", borderRadius: "50%", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "28px", lineHeight: 1, cursor: "pointer", boxShadow: "0 8px 20px rgba(14,75,67,0.38), inset 0 1px 0 rgba(255,255,255,0.25)", fontFamily: "inherit" },
+    style: { position: "fixed", right: "calc(var(--hs-pr, 0px) + 12px)", bottom: "var(--hs-fab-b, 68px)", zIndex: 60, width: "50px", height: "50px", borderRadius: "50%", border: "none", background: "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))", color: "#fff", fontSize: "28px", lineHeight: 1, cursor: "pointer", boxShadow: "0 8px 20px rgba(14,75,67,0.38), inset 0 1px 0 rgba(255,255,255,0.25)", fontFamily: "inherit" },
   }, "+");
 }
 
@@ -16,7 +16,7 @@ export function QuickAddSheet({ open, onClose, onPick, memberName }) {
   if (!open) return null;
   return h("div", { style: { position: "fixed", inset: 0, zIndex: 80 } },
     h("div", { onClick: onClose, "aria-hidden": "true", style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" } }),
-    h("div", { role: "dialog", "aria-modal": "true", "aria-label": "কী যোগ করবেন?", style: { position: "absolute", left: 0, right: 0, bottom: 0, background: T.canvas, borderRadius: "28px 28px 0 0", padding: "10px 16px 16px", fontFamily: "'Hind Siliguri', sans-serif", maxHeight: "92%", overflowY: "auto" } },
+    h("div", { role: "dialog", "aria-modal": "true", "aria-label": "কী যোগ করবেন?", style: { position: "absolute", left: 0, right: 0, bottom: 0, maxWidth: "640px", margin: "0 auto", background: T.canvas, borderRadius: "28px 28px 0 0", padding: "10px 16px 16px", fontFamily: "'Hind Siliguri', sans-serif", maxHeight: "92%", overflowY: "auto" } },
       h("div", { style: { width: "44px", height: "5px", borderRadius: "3px", background: T.border, margin: "0 auto 8px" } }),
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
         h("div", { style: { fontSize: "20px", fontWeight: 800, color: T.green } }, "কী যোগ করবেন?"),
