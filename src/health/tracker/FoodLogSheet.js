@@ -30,8 +30,9 @@ function initPick(k, pre) {
   return { mId, q, gt };
 }
 
+const bid = (b) => b.key + "|" + b.slot; // বাস্কেট-আইটেমের পরিচয় (খাবার + বেলা)
 const unitModeOf = (k) => !nutritionOf(k) || hasFoodOverride(k);
-const entryOfItem = (b, slot) => buildFoodEntry(b.key, slot, unitModeOf(b.key) ? { qty: b.q } : { measureId: b.mId, qty: b.q, grams: b.gt });
+const entryOfItem = (b, slot) => buildFoodEntry(b.key, b.slot || slot, unitModeOf(b.key) ? { qty: b.q } : { measureId: b.mId, qty: b.q, grams: b.gt });
 
 const GREEN = "var(--hs-primary, #0E4B43)";
 const MUTED = "#5F716C";
@@ -39,7 +40,7 @@ const chip = (on) => ({ ...BTN, fontWeight: 600, padding: "6px 12px", border: "1
 const MACROS = [["প্রোটিন", "p", "#2FAE6B"], ["কার্ব", "c", "#E88A2D"], ["ফ্যাট", "f", "#7C69C9"], ["ফাইবার", "fib", "#3B8ED8"]];
 
 // বাস্কেটের একটি সারি (কমপ্যাক্ট, ২ লাইন): নাম + ক্যালরি + ✕ / [− সংখ্যা +] + মাপ-ড্রপডাউন (বাটি ▾ | গ্রাম)। onChange(patch) = {q, mId, gt}।
-function BasketRow({ b, slot, allergyTags, avoidCtx, activeMeds, onChange, onRemove }) {
+function BasketRow({ b, slot, slotText, allergyTags, avoidCtx, activeMeds, onChange, onRemove }) {
   const h = React.createElement;
   const k = b.key, f = FOODS[k], unit = unitModeOf(k), ms = measuresOf(k), gramMode = b.mId === "g";
   const entry = entryOfItem(b, slot);
@@ -47,12 +48,12 @@ function BasketRow({ b, slot, allergyTags, avoidCtx, activeMeds, onChange, onRem
   const notes = medFoodNotes(activeMeds, k);
   const maxQty = unit ? MAX_QTY : MAX_MEASURE_QTY;
   const step = (d) => onChange({ q: Math.max(0.5, Math.round((b.q + d) * 2) / 2) });
-  const incOk = !gramMode && b.q + 0.5 <= maxQty && (unit || buildFoodEntry(k, slot, { measureId: b.mId, qty: b.q + 0.5 }));
+  const incOk = !gramMode && b.q + 0.5 <= maxQty && (unit || buildFoodEntry(k, b.slot || slot, { measureId: b.mId, qty: b.q + 0.5 }));
   const sm = (label, onClick, disabled, aria) => h("button", { type: "button", onClick, disabled, "aria-label": aria, style: { width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "#E4ECE7", color: GREEN, fontSize: "20px", fontWeight: 700, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, flexShrink: 0, fontFamily: "inherit", padding: 0 } }, label);
   const onMeasure = (e) => { const v = e.target.value; if (v === "g") onChange({ mId: "g", gt: entry && entry.grams ? String(entry.grams) : b.gt }); else onChange({ mId: v, q: 1 }); };
   return h("div", { style: { border: "1px solid " + (st.level === "green" ? "rgba(127,150,140,0.25)" : sc.border), background: "#fff", borderRadius: "14px", padding: "8px 10px", marginTop: "6px" } },
     h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-      h("div", { style: { flex: 1, minWidth: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A", overflowWrap: "anywhere", lineHeight: 1.25 } }, f.n),
+      h("div", { style: { flex: 1, minWidth: 0, fontSize: "15px", fontWeight: 800, color: "#1F2D2A", overflowWrap: "anywhere", lineHeight: 1.25 } }, f.n, slotText && h("span", { style: { marginLeft: "6px", fontSize: "11px", fontWeight: 700, color: MUTED, background: "#E4ECE7", borderRadius: "8px", padding: "1px 6px", whiteSpace: "nowrap" } }, slotText)),
       h("div", { style: { flexShrink: 0, color: GREEN, fontWeight: 800, fontSize: "16px", whiteSpace: "nowrap" } }, entry ? bnNum(entry.kcal) : "—", h("span", { style: { fontSize: "11px", fontWeight: 500, color: "#8A9B95" } }, " কিলোক্যালরি")),
       h("button", { type: "button", onClick: onRemove, "aria-label": f.n + " বাদ দিন", style: { width: "32px", height: "32px", flexShrink: 0, borderRadius: "50%", border: "none", background: "#EEF3F0", color: "#5F716C", fontSize: "13px", cursor: "pointer", fontFamily: "inherit", padding: 0 } }, "✕")),
     st.level !== "green" && h("div", { style: { fontSize: "12.5px", color: sc.text, marginTop: "3px", lineHeight: 1.4 } }, st.icon + " " + st.label + (st.reasons.length ? " — " + st.reasons.join("; ") : "")),
@@ -104,14 +105,16 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   const guardedClose = () => { if (multi && basket.length > 0) setAskClose(true); else onClose(); };
   const closeAsk = askClose && React.createElement(ConfirmDialog, { title: "বাছা খাবার বাদ দেবেন?", message: bnNum(basket.length) + "টি খাবার বাছা আছে, এখনো যোগ হয়নি। বন্ধ করলে বাছাই মুছে যাবে।", confirmLabel: "বাদ দিন", cancelLabel: "বাছাই রাখুন", zIndex: 300, onConfirm: () => { setAskClose(false); onClose(); }, onCancel: () => setAskClose(false) });
   // বাস্কেটে বাছা/বাদ। addOnly = সাম্প্রতিক-চিপ (দ্বিতীয়বার ট্যাপে বাদ নয়)। ✕ খাবারও বাছা যায়; সতর্কতা পরের পাতায়।
+  // একই খাবার আলাদা বেলায় আলাদা আইটেম: পরিচয় = খাবার + বেলা
+  const sameItem = (x, k, sl) => x.key === k && x.slot === sl;
   const toggleBasket = (k, pre, addOnly) => {
-    if (basket.some((x) => x.key === k)) { if (!addOnly) { setBasket((cur) => cur.filter((x) => x.key !== k)); setNotice(null); } return; }
+    if (basket.some((x) => sameItem(x, k, slot))) { if (!addOnly) { setBasket((cur) => cur.filter((x) => !sameItem(x, k, slot))); setNotice(null); } return; }
     if (basket.length >= room) { setNotice("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ।"); return; }
     const { mId, q, gt } = initPick(k, pre);
-    setBasket((cur) => (cur.some((x) => x.key === k) ? cur : [...cur, { key: k, mId, q, gt }])); setNotice(null);
+    setBasket((cur) => (cur.some((x) => sameItem(x, k, slot)) ? cur : [...cur, { key: k, mId, q, gt, slot }])); setNotice(null);
   };
-  const patchItem = (k, patch) => setBasket((cur) => cur.map((x) => (x.key === k ? { ...x, ...patch } : x)));
-  const removeItem = (k) => { setBasket((cur) => cur.filter((x) => x.key !== k)); if (basket.length <= 1) setBasketOpen(false); };
+  const patchItem = (id, patch) => setBasket((cur) => cur.map((x) => (bid(x) === id ? { ...x, ...patch } : x)));
+  const removeItem = (id) => { setBasket((cur) => cur.filter((x) => bid(x) !== id)); if (basket.length <= 1) setBasketOpen(false); };
 
   // সাম্প্রতিক খাবার: ✕ (এড়ানো/এলার্জি) স্ট্যাটাসের খাবার এখানে আসে না — খুঁজে সতর্কতাসহ যোগ করতে হবে।
   // তালিকার খাবার ট্যাপে পরিমাণ-ধাপ খোলে (আগের মাপ বসানো, কয়টি/কত গ্রাম দেখে "যোগ করুন"); শুধু নিজে-যোগ-করা (key নেই) খাবার সরাসরি যোগ হয়।
@@ -180,6 +183,9 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
   // ---------- বাস্কেট: সব বাছা খাবারের পরিমাণ একসাথে ----------
   if (!key && multi && basketOpen && basket.length > 0) {
     const items = basket.map((b) => ({ b, entry: entryOfItem(b, slot) }));
+    const labelOf = (id) => (slotList.find((s) => s.id === id) || {}).label || slotLabel;
+    const usedSlots = [...new Set(basket.map((b) => b.slot || slot))];
+    const basketLabel = usedSlots.length > 1 ? "একাধিক বেলা" : labelOf(usedSlots[0]);
     const total = items.reduce((t, x) => t + (x.entry ? x.entry.kcal : 0), 0);
     const allOk = items.every((x) => x.entry);
     const anyRed = basket.some((b) => foodStatus(b.key, FOODS[b.key], { allergyTags, ctx: avoidCtx }).level === "red");
@@ -187,19 +193,19 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
     const submitAll = async () => {
       if (busy || !allOk || tooMany || !onAddMany) return;
       const ok = await onAddMany(items.map((x) => x.entry));
-      if (ok) { setNotice("✓ " + bnNum(items.length) + "টি খাবার যোগ হয়েছে (" + slotLabel + ")"); setBasket([]); setBasketOpen(false); }
+      if (ok) { setNotice("✓ " + bnNum(items.length) + "টি খাবার যোগ হয়েছে (" + basketLabel + ")"); setBasket([]); setBasketOpen(false); }
     };
-    return React.createElement(Sheet, { title: "পরিমাণ ঠিক করুন", subtitle: slotLabel + " · " + bnNum(items.length) + "টি খাবার", onClose: guardedClose, soft: true },
+    return React.createElement(Sheet, { title: "পরিমাণ ঠিক করুন", subtitle: basketLabel + " · " + bnNum(items.length) + "টি খাবার", onClose: guardedClose, soft: true },
       closeAsk,
       React.createElement("button", { onClick: () => setBasketOpen(false), style: { ...BTN, border: "none", background: "transparent", color: GREEN, padding: "0 4px", justifyContent: "flex-start", flex: "0 0 auto", minHeight: "44px" } }, "← আরও খাবার বাছুন"),
-      items.map((x) => React.createElement(BasketRow, { key: x.b.key, b: x.b, slot, allergyTags, avoidCtx, activeMeds, onChange: (patch) => patchItem(x.b.key, patch), onRemove: () => removeItem(x.b.key) })),
+      items.map((x) => React.createElement(BasketRow, { key: bid(x.b), b: x.b, slot, slotText: usedSlots.length > 1 ? labelOf(x.b.slot || slot) : null, allergyTags, avoidCtx, activeMeds, onChange: (patch) => patchItem(bid(x.b), patch), onRemove: () => removeItem(bid(x.b)) })),
       !allOk && Msg("কোনো খাবারের পরিমাণ সঠিক নয় — গ্রাম ১–২০০০-এর মধ্যে দিন।", "err"),
       anyRed && Msg("⚠ কিছু খাবার আপনার জন্য এড়ানোর কথা। ডাক্তারের পরামর্শ প্রাধান্য পায়; তবু খেলে যোগ করতে পারেন।", "warn"),
       tooMany && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি); আরও " + bnNum(room) + "টি যোগ করা যাবে। কিছু বাদ দিন।", "warn"),
       err && Msg(err, "err"),
       React.createElement("div", { style: { position: "sticky", bottom: 0, marginTop: "10px", padding: "8px 0 env(safe-area-inset-bottom, 0px)", background: "#F3F7F4", boxShadow: "0 -8px 10px -2px #F3F7F4", borderTop: "1px solid #DCE6E0", display: "flex", alignItems: "center", gap: "10px" } },
         React.createElement("div", { style: { flex: "0 0 auto", lineHeight: 1.2 } }, React.createElement("div", { style: { fontSize: "11.5px", color: MUTED } }, "মোট"), React.createElement("div", { style: { fontSize: "15px", fontWeight: 800, color: GREEN, whiteSpace: "nowrap" } }, bnNum(total) + " কিলোক্যালরি")),
-        primaryBtn((anyRed ? "তবু " : "") + "সবগুলো যোগ করুন (" + slotLabel + ")", submitAll, busy, !allOk || tooMany)));
+        primaryBtn((anyRed ? "তবু " : "") + "সবগুলো যোগ করুন (" + basketLabel + ")", submitAll, busy, !allOk || tooMany)));
   }
 
   // ---------- ধাপ ১: খোঁজা ----------
@@ -215,7 +221,7 @@ export function FoodLogSheet({ editEntry, dateText, slots, initialSlot, pickFirs
             boxShadow: on ? "0 4px 10px rgba(14,75,67,0.32), inset 0 -3px 0 rgba(255,255,255,0.35)" : "none",
             background: on ? "linear-gradient(135deg, var(--hs-primary, #0E4B43), var(--hs-primary-2, #17705F))" : "transparent", color: on ? "#fff" : "#3E524C" } }, s.label); })),
       // খোঁজা-বার "কোন বেলা?"-র ঠিক নিচে; তার নিচে নোটিশ ও সাম্প্রতিক খাবার (owner-request ২০২৬-১১-১৪)
-      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: multi ? (k) => toggleBasket(k) : pick, selected: multi ? basket.map((x) => x.key) : undefined, layout: "list",
+      React.createElement(FoodPicker, { allergyTags, avoidCtx, onPick: multi ? (k) => toggleBasket(k) : pick, selected: multi ? basket.filter((x) => x.slot === slot).map((x) => x.key) : undefined, layout: "list",
         between: React.createElement(React.Fragment, null,
         notice && React.createElement("div", { role: "status", style: { padding: "8px 12px", borderRadius: "12px", background: "#E4F0E9", border: "1px solid #9CC5B4", color: GREEN, fontSize: "13px", fontWeight: 600, marginBottom: "8px" } }, notice),
         full && Msg("আজকের জন্য নিজে-যোগ-করা খাবারের সীমা (" + bnNum(MAX_LIST) + "টি) পূর্ণ। নতুন যোগ করতে আগের কোনোটি মুছুন।", "warn"),
